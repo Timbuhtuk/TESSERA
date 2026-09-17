@@ -93,7 +93,7 @@ jobs:
           Tessera is a standalone Windows app for preparing pixel art and icons.
           It began as a way to correct uneven grids and inconsistent pixel sizes in AI-generated pixel art.
 
-          Align grids, reduce cells to single pixels, downscale images, choose palettes, keep result histories and export multi-size ICO files with transparency. Optional solid-color background removal runs locally with adjustable tolerance.
+          Align grids, reduce cells to single pixels, downscale images, choose palettes, keep result histories and export multi-size ICO files with transparency. Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. Optional solid-color background removal works globally or from connected image edges, with adjustable tolerance; the CLI also provides remove-background and remove-bg commands.
 
           Download Tessera.exe or Tessera-win-x64.zip for the desktop app, or Tessera-cli-win-x64.zip for the CLI. No .NET installation is required. SHA256SUMS.txt contains the download checksums.
 

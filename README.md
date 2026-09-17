@@ -15,8 +15,9 @@ Today, Tessera brings the rest of that workflow together:
 - Keep source images and a history of results in a local library.
 - Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
 - Create Windows ICO files containing several icon sizes.
-- Remove a solid background color locally, with adjustable tolerance.
+- Remove a solid background with adjustable tolerance: globally by color or only through background regions connected to the image edges, preserving enclosed colors.
 - Preserve transparency and export the result.
+- Drop several Aseprite animations to create PNG sprite sheets with JSON frame timings, then save individual results or the whole batch.
 
 Everything runs locally, without an internet connection. Download, unpack and launch.
 

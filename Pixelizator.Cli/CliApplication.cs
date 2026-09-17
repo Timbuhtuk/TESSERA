@@ -16,8 +16,10 @@ internal static class CliApplication
                        tessera --input <изображение> --output <результат.png>
                        tessera align <изображение> --cell-size 8
                        tessera ico <изображение> -o <иконка.ico>
+                       tessera remove-background <изображение> -o <результат.png>
         Отдельное выравнивание сетки без даунскейла: tessera align --help.
         Создание многоразмерной иконки Windows: tessera ico --help.
+        Удаление однотонного фона: tessera remove-background --help.
 
         Файлы:
           -i, --input PATH           Исходное изображение.
@@ -78,6 +80,8 @@ internal static class CliApplication
             return GridAlignmentCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] is "ico" or "icon")
             return IconCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] is "remove-background" or "remove-bg")
+            return BackgroundCommand.Run(args[1..], output, error);
         if (args.Length == 0 || args is ["--help"] or ["-h"])
         {
             output.WriteLine(Help);
@@ -262,4 +266,3 @@ internal static class CliApplication
         }
     }
 }
-

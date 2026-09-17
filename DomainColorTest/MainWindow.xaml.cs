@@ -66,7 +66,7 @@ public partial class MainWindow : Window
         saveButton.Click += SaveImage;
         alignButton.Click += AlignImage;
         resetProfileButton.Click += ResetProfile;
-        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } };
+        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } };
         Closed += (_, _) =>
         {
             _restoringHistory = true;
@@ -80,6 +80,7 @@ public partial class MainWindow : Window
         InitializeImageActions();
         InitializeHome();
         InitializeIcons();
+        InitializeAseprite();
         UpdatePreviewSettings();
     }
 

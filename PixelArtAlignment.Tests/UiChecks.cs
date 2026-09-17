@@ -17,7 +17,7 @@ internal static class UiChecks
         Exception? failure = null;
         var thread = new Thread(() =>
         {
-            try { WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); } catch (Exception e) { failure = e; }
+            try { WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); } catch (Exception e) { failure = e; }
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();

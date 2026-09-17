@@ -114,6 +114,7 @@ internal static class IconWorkspaceChecks
                 {
                     graphics.Clear(System.Drawing.Color.White);
                     graphics.FillRectangle(System.Drawing.Brushes.Red, 8, 8, 16, 16);
+                    graphics.FillRectangle(System.Drawing.Brushes.White, 12, 12, 8, 8);
                 }
                 icons.SetImage(backgroundFixture, "background.png");
                 Get<CheckBox>("iconRemoveBackground").IsChecked = true;
@@ -122,7 +123,13 @@ internal static class IconWorkspaceChecks
                     "Background controls missing");
                 var sourcePixels = new byte[32 * 32 * 4];
                 ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
-                Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 255, "Background removal not shown in large preview");
+                Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 0 &&
+                    icons.GetOptions().BackgroundRemovalMode == BackgroundRemovalMode.GlobalColor, "Original removal mode changed");
+                Get<ComboBox>("iconBackgroundMode").SelectedIndex = 1;
+                WaitIdle();
+                ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
+                Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 255 &&
+                    icons.GetOptions().BackgroundRemovalMode == BackgroundRemovalMode.EdgeConnected, "Edge mode did not preserve enclosed color in preview");
                 var backgroundOutput = Path.Combine(folder, "transparent.ico");
                 Wait(icons.SaveAsync(backgroundOutput));
                 using (var stream = File.OpenRead(backgroundOutput))
@@ -133,8 +140,16 @@ internal static class IconWorkspaceChecks
                         var pixels = new byte[frame.PixelWidth * frame.PixelHeight * 4];
                         frame.CopyPixels(pixels, frame.PixelWidth * 4, 0);
                         Require(pixels[3] == 0, "One of the exported sizes retained the background");
+                        int center = (frame.PixelHeight / 2 * frame.PixelWidth + frame.PixelWidth / 2) * 4 + 3;
+                        Require(pixels[center] == 255, "Export erased enclosed color in edge mode");
                     }
                 }
+                Get<ComboBox>("iconBackgroundColor").SelectedIndex = 2;
+                Get<ComboBox>("iconBackgroundMode").SelectedIndex = 0;
+                Get<ComboBox>("iconBackgroundColor").SelectedIndex = 0;
+                WaitIdle();
+                ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
+                Require(sourcePixels[(16 * 32 + 16) * 4 + 3] == 0, "Switching back to global removal did not refresh preview");
                 Get<ComboBox>("iconBackgroundColor").SelectedIndex = 2;
                 Get<Slider>("iconBackgroundTolerance").Value = 12;
                 Wait(icons.RefreshFramesAsync());

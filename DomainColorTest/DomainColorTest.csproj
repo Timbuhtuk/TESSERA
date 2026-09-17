@@ -16,11 +16,13 @@
   <ItemGroup>
     <ProjectReference Include="..\PixelArtDownscale\PixelArtDownscale.csproj" />
     <ProjectReference Include="..\PixelArtAlignment\PixelArtAlignment.csproj" />
+    <ProjectReference Include="..\PixelArtAseprite\PixelArtAseprite.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\app-icon.png" />
     <Resource Include="Assets\landscape.png" />
+    <Resource Include="Assets\animation-banner.png" />
   </ItemGroup>
 </Project>

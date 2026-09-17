@@ -26,9 +26,15 @@ The upper filmstrip contains results for the current source; the lower filmstrip
 
 The icon banner opens a separate ICO workspace. Open or drop an image, or use the editor's source or result. Select several standard sizes from 16 to 256 pixels, or add a custom size from 1 to 256. Choose the resizing and fitting modes, inspect the previews and save all selected sizes into one ICO file.
 
-Optional background removal makes a solid color transparent. It can infer the color from the edges or use white or black; tolerance ranges from 0 to 100%. The preview and saved ICO show the same transparency, and the original stays unchanged. Matching colors inside the foreground may also be removed. This is color-based removal, not object segmentation for complex photographic backgrounds.
+Optional background removal makes a solid color transparent. It can infer the color from the edges or use white or black; tolerance ranges from 0 to 100%. Choose global removal to remove matching colors everywhere, or edge-connected removal to preserve enclosed matching areas inside the foreground. An open passage to the border can still expose an area to removal. The preview and saved ICO show the same transparency, and the original stays unchanged. Both modes remove a solid color rather than segmenting a complex photographic background.
 
 Ctrl+O opens an image for the currently active workspace.
+
+## Aseprite animations
+
+The animation banner opens a separate workspace. Open or drop several `.ase` or `.aseprite` files to convert them automatically into PNG sprite sheets with JSON frame timings. Choose horizontal, vertical or grid layout and adjust columns and transparent gaps. Save one ready result or the whole batch; conflicting output names receive numeric suffixes. A failed file does not stop other files in the batch.
+
+The current converter supports RGBA files with one visible ordinary layer and normal blending. Unsupported features produce an error rather than an incomplete export; see the [supported subset](../PixelArtAseprite/README.md). Animation imports are temporary session data, so save results before closing the app.
 
 ## Storage and updates
 

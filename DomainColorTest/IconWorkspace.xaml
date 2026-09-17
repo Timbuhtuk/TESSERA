@@ -61,8 +61,15 @@
                             </StackPanel>
                         </WrapPanel>
                         <StackPanel Margin="0,10,0,0">
-                            <CheckBox x:Name="iconRemoveBackground" Content="Удалить фон" ToolTip="Удаляет однотонный цвет, включая замкнутые участки внутри изображения. Исходник не изменяется."/>
+                            <CheckBox x:Name="iconRemoveBackground" Content="Удалить фон" ToolTip="Выберите удаление цвета по всему изображению или только фона, связанного с краями. Исходник не изменяется."/>
                             <WrapPanel x:Name="iconBackgroundSettings" Visibility="Collapsed" Margin="0,8,0,0">
+                                <StackPanel Margin="0,0,22,12">
+                                    <TextBlock Text="Способ удаления" Margin="0,0,0,6"/>
+                                    <ComboBox x:Name="iconBackgroundMode" Width="180" SelectedIndex="0" AutomationProperties.Name="Способ удаления фона">
+                                        <ComboBoxItem Content="По цвету везде" ToolTip="Удаляет выбранный цвет с допуском по всему изображению, включая участки внутри объекта."/>
+                                        <ComboBoxItem Content="От краёв" ToolTip="Удаление распространяется от всех краёв по соседним пикселям фона. Замкнутые участки внутри объекта сохраняются."/>
+                                    </ComboBox>
+                                </StackPanel>
                                 <StackPanel Margin="0,0,16,8">
                                     <TextBlock Text="Цвет фона" Margin="0,0,0,6"/>
                                     <ComboBox x:Name="iconBackgroundColor" Width="180" SelectedIndex="0">

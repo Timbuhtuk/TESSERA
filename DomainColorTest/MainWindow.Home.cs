@@ -23,7 +23,8 @@ public partial class MainWindow
         {
             if (e.Key == Key.O && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
+                if (asepriteWorkspace.Visibility == Visibility.Visible) _ = asepriteWorkspace.OpenAsync();
+                else if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
                 else OpenImage(this, EventArgs.Empty);
                 e.Handled = true;
             }
@@ -35,14 +36,15 @@ public partial class MainWindow
 
     private void RefreshHome()
     {
-        if (!_homeReady) return;
+        if (!_homeReady || asepriteWorkspace.IsBusy) return;
         SetVisible(emptyLibrary, _sources.Count == 0);
     }
 
     private void ShowHome()
     {
-        if (!_homeReady || _processing || iconWorkspace.IsBusy) return;
+        if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) return;
         RefreshHome();
+        SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
         SetVisible(homeScroll, true);
         SetVisible(workspaceHost, false);
@@ -56,8 +58,9 @@ public partial class MainWindow
 
     private void ShowEditor()
     {
-        if (!_homeReady) return;
+        if (!_homeReady || asepriteWorkspace.IsBusy) return;
         SetVisible(homeScroll, false);
+        SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
         SetVisible(workspaceHost, true);
         SetVisible(editorToolbar, true);
@@ -93,13 +96,16 @@ public partial class MainWindow
 
     private void UpdateResponsiveLayout()
     {
-        if (!_homeReady) return;
+        if (!_homeReady || asepriteWorkspace.IsBusy) return;
         bool compact = ActualWidth < 940;
         homeContent.Margin = new Thickness(compact ? 18 : 32, 8, compact ? 18 : 32, 24);
         heroCopy.Margin = new Thickness(compact ? 22 : 32, 28, compact ? 22 : 32, 28);
         heroTitle.FontSize = compact ? 29 : 34;
         iconBannerTitle.FontSize = compact ? 29 : 34;
+        asepriteBannerTitle.FontSize = compact ? 29 : 34;
         iconBannerCopy.Margin = heroCopy.Margin;
+        asepriteBannerCopy.Margin = heroCopy.Margin;
+        SetVisible(asepriteBannerArt, ActualWidth >= 1100);
         SetVisible(iconBannerArt, ActualWidth >= 1000);
         heroTitle.LineHeight = compact ? 36 : 42;
         if (_compactLayout != compact || workspaceGrid.RowDefinitions.Count == 0)

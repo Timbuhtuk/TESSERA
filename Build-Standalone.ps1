@@ -17,6 +17,7 @@ Push-Location -LiteralPath $projectRoot
 try {
     Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" --nologo
     if (!$SkipChecks) {
+        Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
         Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --ui --invariants
         Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
     }
@@ -37,6 +38,10 @@ Open images with the Open button, Ctrl+O or drag and drop.
 The home screen keeps your source library and result histories.
 The editor offers downscaling, palettes, grid alignment and cell reduction.
 Save exports the selected result to a separate file.
+
+The centred animation banner opens Aseprite conversion. Drop multiple files
+to prepare sprite sheets automatically; save one result or the entire batch
+as PNG + JSON. Existing output files receive distinct names.
 
 The icon banner opens ICO creation: choose an image and several sizes,
 inspect the previews, then save them together in one icon file.

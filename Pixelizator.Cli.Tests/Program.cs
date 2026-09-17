@@ -100,6 +100,83 @@ try
         File.WriteAllText(corrupt, "not an image");
         Require(Run(["ico", corrupt, "-o", output]).Code == 1, "Corrupt ICO input");
     });
+    Check("Background command exposes global and edge-connected removal", () =>
+    {
+        string sourcePath = Path.Combine(directory, "background-source.png");
+        using (var fixture = new Bitmap(7, 7, PixelFormat.Format32bppArgb))
+        {
+            using var graphics = Graphics.FromImage(fixture);
+            graphics.Clear(Color.White);
+            for (int y = 2; y <= 4; y++)
+                for (int x = 2; x <= 4; x++)
+                    if (x is 2 or 4 || y is 2 or 4) fixture.SetPixel(x, y, Color.Black);
+            fixture.Save(sourcePath, ImageFormat.Png);
+        }
+
+        string edgeOutput = Path.Combine(directory, "background-edges.png");
+        var edgeRun = Run(["remove-background", sourcePath, "-o", edgeOutput, "--mode", "edges",
+            "--background-color", "#FFFFFF", "--tolerance", "0", "--json"]);
+        Require(edgeRun.Code == 0 && edgeRun.Error.Length == 0, edgeRun.Error);
+        using (var result = new Bitmap(edgeOutput))
+        {
+            Require(result.Size == new Size(7, 7), "Background removal changed the canvas");
+            Require(result.GetPixel(0, 0).A == 0, "Edge background remained");
+            Require(result.GetPixel(3, 3).A == 255, "Edge mode removed an enclosed matching color");
+            Require(result.GetPixel(2, 2).ToArgb() == Color.Black.ToArgb(), "Foreground changed");
+        }
+        using (var report = JsonDocument.Parse(edgeRun.Output))
+        {
+            Require(report.RootElement.GetProperty("process").GetString() == "background-removal", "Wrong background process");
+            Require(report.RootElement.GetProperty("mode").GetString() == "edges", "Wrong background mode report");
+            Require(report.RootElement.GetProperty("backgroundColor").GetString() == "#FFFFFF", "Wrong color report");
+            Require(report.RootElement.GetProperty("tolerance").GetInt32() == 0, "Wrong tolerance report");
+        }
+
+        string globalOutput = Path.Combine(directory, "background-global.png");
+        ExpectSuccess(["remove-bg", sourcePath, "-o", globalOutput, "--mode", "global",
+            "--background-color", "white", "--tolerance", "0"]);
+        using (var result = new Bitmap(globalOutput))
+            Require(result.GetPixel(0, 0).A == 0 && result.GetPixel(3, 3).A == 0, "Global mode retained matching colors");
+
+        string defaultInput = Path.Combine(directory, "background-default.png");
+        File.Copy(sourcePath, defaultInput);
+        Require(Run(["remove-background", defaultInput, "--mode", "edges"]).Code == 0, "Automatic background removal failed");
+        string defaultOutput = Path.Combine(directory, "background-default_transparent.png");
+        using (var result = new Bitmap(defaultOutput))
+            Require(result.GetPixel(0, 0).A == 0 && result.GetPixel(3, 3).A == 255, "Default background options changed");
+
+        Require(Run(["remove-background", sourcePath, "-o", edgeOutput]).Code == 1, "Existing transparent PNG accepted");
+        Require(Run(["remove-background", sourcePath, "-o", edgeOutput, "--overwrite"]).Code == 0, "Background overwrite failed");
+        Require(Run(["remove-background", "--help"]).Code == 0 && Run(["remove-bg", "--help"]).Code == 0,
+            "Background command help failed");
+    });
+
+    Check("Background command rejects invalid parameters and reports file failures", () =>
+    {
+        string output = Path.Combine(directory, "invalid-background.png");
+        string[][] invalid =
+        [
+            ["--mode", "all"], ["--background-color", "#12345"], ["--background-color", "#GGGGGG"],
+            ["--tolerance", "-1"], ["--tolerance", "101"], ["--tolerance", "1.5"],
+            ["--overwrite=true"], ["--json=true"], ["--unknown"], ["--sizes", "16"],
+            ["-o", Path.Combine(directory, "invalid-background.jpg")]
+        ];
+        foreach (var extra in invalid)
+        {
+            var run = Run(["remove-background", input, "-o", output, .. extra]);
+            Require(run.Code == 2 && run.Output.Length == 0 && run.Error.Length > 0,
+                $"Expected background usage error for {string.Join(' ', extra)}; got {run.Code}: {run.Error}");
+            Require(!File.Exists(output), "Invalid background arguments created output");
+        }
+
+        Require(Run(["remove-background"]).Code == 0, "Background command without arguments should show help");
+        Require(Run(["remove-background", input, "-o", input, "--overwrite"]).Code == 2, "Background command overwrote source");
+        Require(Run(["remove-background", Path.Combine(directory, "missing-background.png"), "-o", output]).Code == 1,
+            "Missing background input");
+        string corrupt = Path.Combine(directory, "bad-background-source.png");
+        File.WriteAllText(corrupt, "not an image");
+        Require(Run(["remove-background", corrupt, "-o", output]).Code == 1, "Corrupt background input");
+    });
     Check("Alignment is an independent full-size operation with no 64-color quantization", () =>
     {
         string sourcePath = Path.Combine(directory, "alignment-source.png");
@@ -553,4 +630,3 @@ static int DistinctColors(Bitmap bitmap)
             colors.Add(bitmap.GetPixel(x, y).ToArgb());
     return colors.Count;
 }
-

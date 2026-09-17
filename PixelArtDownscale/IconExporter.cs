@@ -61,7 +61,7 @@ public static class IconExporter
             throw new ArgumentException("Размеры ICO не должны повторяться.", nameof(options));
         Array.Sort(sizes);
 
-        using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(source, options.BackgroundTolerance, options.BackgroundColor, cancellationToken) : null;
+        using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(source, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellationToken) : null;
         var frames = new List<byte[]>(sizes.Length);
         foreach (int size in sizes)
         {

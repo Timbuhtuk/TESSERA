@@ -14,9 +14,14 @@
 
 ## Solid background removal
 
-Set `RemoveBackground = true` in `IconExportOptions`. `BackgroundTolerance` ranges from 0 to 100% (default 8). `BackgroundColor` accepts an explicit color or `null` to infer it from the edges. Removal runs once before resizing. All matching pixels, including enclosed areas, become transparent; other pixels retain their RGB and alpha. In automatic mode, a predominantly transparent border leaves the image unchanged. An explicit color can be supplied for an already transparent image.
+Set `RemoveBackground = true` in `IconExportOptions`. `BackgroundTolerance` ranges from 0 to 100% (default 8). `BackgroundColor` accepts an explicit color or `null` to infer it from the edges. Removal runs once before resizing. Other pixels retain their RGB and alpha. In automatic mode, a predominantly transparent border leaves the image unchanged. An explicit color can be supplied for an already transparent image.
 
-`BackgroundRemover.Remove` returns a separate preview bitmap, leaves the source unchanged and supports cancellation. `CreateFrame` accepts a prepared image; `Encode`, `Save` and `Convert` apply the option themselves. This removes a solid color, without segmenting an object from a complex photographic background. Foreground pixels matching the background color will also be removed.
+Choose `BackgroundRemovalMode` in the export options or the removal method selector in the ICO workspace:
+
+- `GlobalColor` is the existing default: every matching pixel becomes transparent, including enclosed areas inside an object.
+- `EdgeConnected` starts at matching pixels on all four borders and follows connected background pixels. Enclosed matching colors remain intact. Connectivity uses four horizontal/vertical neighbors; diagonal contact alone does not cross a contour. Already transparent pixels are traversable regardless of hidden RGB. Every candidate is compared to the original detected or selected background color; tolerance does not accumulate along gradients.
+
+`BackgroundRemover.Remove(source, mode, tolerance, background, cancellationToken)` returns a separate preview bitmap, leaves the source unchanged and supports cancellation. Existing calls without `mode` keep global removal. `CreateFrame` accepts a prepared image; `Encode`, `Save` and `Convert` apply the option themselves. Both modes remove a solid background, without segmenting complex photographs. In edge mode a matching area is still removed if an open background passage connects it to the border.
 
 ## Converting a file
 

@@ -16,6 +16,7 @@ Individual commands:
 
 ```powershell
 dotnet build Pixelizator.sln -c Release
+dotnet run --project PixelArtAseprite.Tests -c Release
 dotnet run --project PixelArtAlignment.Tests -c Release -- --ui --invariants
 dotnet run --project Pixelizator.Cli.Tests -c Release
 dotnet publish DomainColorTest -c Release -p:PublishProfile=win-x64
@@ -31,6 +32,8 @@ Historical project and namespace names are retained:
 - `DomainColorTest`: WPF desktop application, including its embedded assets.
 - `PixelArtDownscale`: downscaling, quantization, palettes, sprites and [ICO export](../PixelArtDownscale/ICO.md).
 - `PixelArtAlignment`: [grid alignment and cell reduction](../PixelArtAlignment/README.md).
+- `PixelArtAseprite`: offline [Aseprite decoding and sprite sheet export](../PixelArtAseprite/README.md).
+- `PixelArtAseprite.Tests`: synthetic format, transparency, export, limits and cancellation checks.
 - `Pixelizator.Cli`: [command-line interface](CLI.md) to the image algorithms.
 - `PixelArtAlignment.Tests`: algorithms, editor, library and navigation checks.
 - `Pixelizator.Cli.Tests`: CLI integration and image-processing checks.

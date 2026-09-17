@@ -10,7 +10,7 @@ public partial class MainWindow
         iconWorkspace.SourceRequested += (_, _) => UseEditorImageForIcon(false);
         iconWorkspace.ResultRequested += (_, _) => UseEditorImageForIcon(true);
         iconWorkspace.StatusChanged += message => statusLabel.Text = message;
-        iconWorkspace.BusyChanged += (_, _) => SetVisible(busyIndicator, _processing || iconWorkspace.IsBusy);
+        iconWorkspace.BusyChanged += (_, _) => SetVisible(busyIndicator, _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy);
         Closed += (_, _) => iconWorkspace.Dispose();
     }
 
@@ -18,7 +18,8 @@ public partial class MainWindow
 
     private void ShowIconWorkspace()
     {
-        if (_processing || iconWorkspace.IsBusy) return;
+        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) return;
+        SetVisible(asepriteWorkspace, false);
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
         SetVisible(editorToolbar, false);
@@ -29,7 +30,7 @@ public partial class MainWindow
 
     private void UseEditorImageForIcon(bool result)
     {
-        if (_processing || iconWorkspace.IsBusy) return;
+        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) return;
         var image = result ? _downscaledResult : _sourceImage;
         if (image is null) return;
         string label = _activeSource?.Label ?? "Изображение";

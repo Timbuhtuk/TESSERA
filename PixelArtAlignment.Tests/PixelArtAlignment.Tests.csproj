@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\PixelArtAseprite.Tests\Fixtures.cs" Link="AsepriteFixtures.cs" />
     <Using Include="System.Drawing" />
     <Using Include="System.IO" />
     <ProjectReference Include="..\PixelArtAlignment\PixelArtAlignment.csproj" />

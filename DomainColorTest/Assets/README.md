@@ -11,3 +11,9 @@
 Historical generation prompt, recorded under the former Pixelizator product name:
 
 Use case: stylized-concept. Asset type: wide hero background for PIXELIZATOR desktop pixel art editor. A beautiful strictly monochrome retro computer pixel-art landscape, panoramic 1536x1024 composition: distant mountain peaks, pale moon in upper right sky, conifer forest silhouettes, reflective calm lake and angular rocky shoreline. Broad layered silhouettes with sparse ordered dithering, meticulously crafted visible square pixels like a high-quality 1-bit adventure game on an old Macintosh. Black, white and four neutral grays only. Quiet, contemplative, timeless. Put the interesting moon and highest peaks in the right two thirds; left third darker and simpler for white heading overlay. Crisp pixel-art, no smooth vector curves, no blur, no photographic textures, no text, no logos, no interface elements, no border. This is the actual artwork asset, not a mockup.
+
+## Animation banner
+
+animation-banner.png: generated monochrome pixel-art film strip with consecutive character poses, used on the Aseprite export banner. The original image is embedded unchanged; the banner frames the artwork on the right and uses nearest-neighbor scaling.
+
+Prompt: Strictly monochrome retro pixel art for Tessera's desktop animation export banner. A curving film strip with consecutive frames of a running cloaked adventurer, unfolding into an animation sprite sheet. Black, white and neutral grays, crisp square pixels and sparse dithering. Artwork in the right two thirds, dark empty left third. No text, logos or interface.

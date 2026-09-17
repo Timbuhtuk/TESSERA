@@ -1,6 +1,6 @@
 # Tessera CLI reference
 
-The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/PIXELIZATOR/releases/latest). It downscales images, aligns pixel grids and exports ICO files. Supported inputs are PNG, JPEG, BMP, GIF and TIFF.
+The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/PIXELIZATOR/releases/latest). It downscales images, aligns pixel grids, removes solid backgrounds and exports ICO files. Supported inputs are PNG, JPEG, BMP, GIF and TIFF.
 
 Run these examples from the repository root after building; replace the sample input paths with your own:
 
@@ -9,6 +9,7 @@ Run these examples from the repository root after building; replace the sample i
 .\artifacts\cli\tessera.exe input.png -o result.png --width 64 --height 64 --palette db32
 .\artifacts\cli\tessera.exe align input.png -o aligned.png --cell-size 4
 .\artifacts\cli\tessera.exe ico input.png -o application.ico --sizes 16,32,48,256 --resize nearest-neighbor
+.\artifacts\cli\tessera.exe remove-background input.png -o transparent.png --mode edges --tolerance 8
 ```
 
 The application interface and CLI messages currently use Russian. This reference describes the commands in English.
@@ -79,6 +80,18 @@ The image decoder is shared with the desktop application. Corrupt or unsupported
 | `--overwrite`, `--json` | Shared output replacement and reporting options |
 
 Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. See the [algorithm and API](../PixelArtAlignment/README.md).
+
+## Background removal
+
+`remove-background` (alias `remove-bg`) saves a full-size PNG with a solid background made transparent. It uses the same algorithm as the ICO workspace.
+
+```powershell
+.\artifacts\cli\tessera.exe remove-background input.png -o transparent.png --mode edges --background-color auto --tolerance 8
+```
+
+`--mode global` removes every matching pixel in the image. `--mode edges` starts from all four borders and preserves matching colors enclosed inside the foreground. The default mode is `global`.
+
+`--background-color` accepts `auto`, `white`, `black` or an RGB color such as `"#35A7C8"`. Automatic detection chooses the predominant opaque border color; a mostly transparent border leaves the image unchanged. `--tolerance` accepts 0–100% and defaults to 8. Existing output requires `--overwrite`; `--json` reports the effective settings. Without `--output`, the result is `<name>_transparent.png` beside the input.
 
 ## ICO export
 

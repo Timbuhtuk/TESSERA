@@ -54,6 +54,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         iconRemoveBackground.Unchecked += (_, _) => { iconBackgroundSettings.Visibility = Visibility.Collapsed; SchedulePreview(); };
         iconBackgroundTolerance.ValueChanged += (_, _) => SchedulePreview();
         iconBackgroundColor.SelectionChanged += (_, _) => SchedulePreview();
+        iconBackgroundMode.SelectionChanged += (_, _) => SchedulePreview();
         _previewTimer.Tick += async (_, _) => { _previewTimer.Stop(); await RefreshFramesAsync(); };
         SizeChanged += (_, _) => UpdateLayoutForWidth();
     }
@@ -138,6 +139,7 @@ public partial class IconWorkspace : UserControl, IDisposable
             Sizes = sizes.Distinct().Order().ToArray(),
             ResizeMode = iconResizeMode.SelectedIndex == 0 ? IconResizeMode.NearestNeighbor : IconResizeMode.Smooth,
             RemoveBackground = iconRemoveBackground.IsChecked == true,
+            BackgroundRemovalMode = iconBackgroundMode.SelectedIndex == 1 ? BackgroundRemovalMode.EdgeConnected : BackgroundRemovalMode.GlobalColor,
             BackgroundTolerance = (int)iconBackgroundTolerance.Value,
             BackgroundColor = iconBackgroundColor.SelectedIndex switch { 1 => System.Drawing.Color.White, 2 => System.Drawing.Color.Black, _ => (System.Drawing.Color?)null },
             FitMode = (IconFitMode)Math.Clamp(iconFitMode.SelectedIndex, 0, 2)
@@ -181,7 +183,7 @@ public partial class IconWorkspace : UserControl, IDisposable
             {
                 using (image)
                 {
-                    using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(image, options.BackgroundTolerance, options.BackgroundColor, cancellation.Token) : null;
+                    using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(image, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellation.Token) : null;
                     var preview = PixelPreview.ToBitmapSource(prepared ?? image);
                     var result = new List<FramePreview>();
                     foreach (int size in options.Sizes)
