@@ -1,6 +1,8 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -29,6 +31,9 @@ internal static class UiChecks
     {
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
         var window = new MainWindow(Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "ui-library-" + Guid.NewGuid().ToString("N")))) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+        // Exercise wide layouts even when the CI desktop is narrower than the test window.
+        // Native monitor bounds and normal resizing are covered by WindowChromeChecks.
+        window.SourceInitialized += (_, _) => HwndSource.FromHwnd(new WindowInteropHelper(window).Handle)!.AddHook(AllowWideLayout);
         string directory = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification"));
         Directory.CreateDirectory(directory);
         try
@@ -60,6 +65,8 @@ internal static class UiChecks
             Require(Get<StackPanel>("settingsPanel").Visibility == Visibility.Collapsed &&
                 Get<Grid>("workspaceGrid").ColumnDefinitions.Count <= 1, "The old settings sidebar is still visible");
             window.Width = 1600; Pump();
+            Require(Math.Abs(window.ActualWidth - 1600) < 1,
+                $"Wide layout fixture was constrained to {window.ActualWidth} instead of 1600");
             double toolbarY = Get<Button>("backToLibraryButton").TranslatePoint(new System.Windows.Point(), window).Y;
             Require(Math.Abs(Get<Button>("gridToolButton").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5 &&
                 Math.Abs(Get<ComboBox>("zoomInput").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5,
@@ -324,6 +331,20 @@ internal static class UiChecks
         var frame = new DispatcherFrame();
         Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() => frame.Continue = false));
         Dispatcher.PushFrame(frame);
+    }
+    private static nint AllowWideLayout(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
+    {
+        if (message != 0x24) return 0; // WM_GETMINMAXINFO
+        var bounds = Marshal.PtrToStructure<MinMaxInfo>(lParam);
+        bounds.MaxTrackSize = new NativePoint { X = 4096, Y = 4096 };
+        Marshal.StructureToPtr(bounds, lParam, false);
+        handled = true;
+        return 0;
+    }
+    [StructLayout(LayoutKind.Sequential)] private struct NativePoint { public int X, Y; }
+    [StructLayout(LayoutKind.Sequential)] private struct MinMaxInfo
+    {
+        public NativePoint Reserved, MaxSize, MaxPosition, MinTrackSize, MaxTrackSize;
     }
     private static void EqualPixels(Bitmap actual, Bitmap expected, string context)
     {
