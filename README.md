@@ -11,12 +11,12 @@ The name comes from a *tessera*, an individual piece of a mosaic.
 Today, Tessera brings the rest of that workflow together:
 
 - Align a pixel grid and reduce each cell to a single pixel.
-- Change image size and colors independently, or combine both steps. Choose a palette without changing image dimensions.
+- Enlarge pixels without blur, reduce image size and adjust colors independently, or combine size and palette processing.
 - Keep source images and a history of results in a local library.
 - Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
 - Create Windows ICO files containing several icon sizes.
 - Remove a solid background in its own workspace and save a transparent PNG, or apply it while creating an ICO. Adjust tolerance and remove matching colors globally or only from edge-connected regions.
-- Preserve transparency and export the result.
+- Preserve transparency and export one result or all results for an image.
 - Drop several Aseprite animations to create PNG sprite sheets with JSON frame timings, then save individual results or the whole batch.
 
 Everything runs locally, without an internet connection. Download, unpack and launch.

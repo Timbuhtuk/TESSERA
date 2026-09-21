@@ -6,9 +6,9 @@ The application interface currently uses Russian labels. This guide describes th
 
 ## Library and editor
 
-Open images with the Open button, Ctrl+O or drag and drop. The home screen shows your library, image dimensions and result counts. Open a card to edit its source. The back arrow returns to the library; the layout adapts to narrower windows.
+Open images from **File → Open**, with Ctrl+O or by drag and drop. The home screen shows your library, image dimensions and result counts. Open a card to edit its source. The back arrow returns to the library; the layout adapts to narrower windows.
 
-The editor has three starting profiles:
+The editor keeps the image previews in the main window. The top toolbar opens separate windows for **Grid**, **Size** (including frame, transparency and pixel selection), **Color**, and **Mode** (including execution settings). **File → Save** exports the selected result, **File → Save all results** exports every result for the current source to a chosen folder, and **Process** inside the **Mode** window runs the selected mode on the chosen input. The editor has three processing profiles:
 
 | Profile | Intended use | Initial settings |
 | --- | --- | --- |
@@ -16,11 +16,13 @@ The editor has three starting profiles:
 | Scene | Shapes, lighting and color transitions | K-Means LAB, automatic block selection, RGB step 16 |
 | Details | Sprites, outlines and transparency | Median Cut, no additional palette, full image, 75% alpha coverage |
 
-The editor can run size and color work independently. Choose **Source** or **Selected result** as the input, then use **Change size** to downscale without changing source colors, or **Apply colors** to quantize and use a palette without changing dimensions or transparency. You can chain them in either order; each operation adds a separate result to the history. **Size + color** keeps the original combined workflow and starts from the source. Grid alignment is another separate operation that preserves canvas dimensions and selects original colors. Reducing grid cells to one pixel compresses an aligned result without quantizing it again.
+The editor can run size and color work independently. Choose **Source** or **Selected result** on the toolbar as the input. **Change size** enlarges or reduces the image using source pixel colors. Enlargement copies pixels and their alpha without smoothing; reduction uses the selected pixel and transparency settings. **Apply colors** changes colors without changing dimensions or alpha. You can chain these operations in either order; each adds a separate result to the history.
+
+Selecting a mode leaves the current controls unchanged. **Process** applies that mode's preset when clicked and runs the combined reduction on the chosen input; use **Change size** to enlarge. Grid alignment is another separate operation that preserves canvas dimensions and selects original colors. Reducing grid cells to one pixel compresses an aligned result without quantizing it again.
 
 Previews preserve aspect ratio and enlarge pixels without smoothing. Ctrl+mouse wheel changes zoom; source and result scrolling stay synchronized. Choose a checkerboard, dark or light preview background.
 
-The upper filmstrip contains results for the current source; the lower filmstrip contains sources. Drag a result to the source filmstrip to process it independently. Removing a library item leaves external originals and exported files intact. Save exports the selected result; use PNG for transparency.
+On wide windows, the result and source filmstrips sit above their previews; on narrow windows, the source filmstrip moves below them. Drag a result to the source filmstrip to process it independently. Removing a library item leaves external originals and exported files intact. Use PNG when saving transparency.
 
 ## Icons
 
@@ -38,7 +40,7 @@ The current converter supports RGBA files with one visible ordinary layer and no
 
 ## Storage and updates
 
-The library is saved automatically in `%LOCALAPPDATA%\Pixelizator\Library`. This historical path is retained by Tessera to preserve existing images and histories. To move the library to another computer, copy that directory separately.
+The library is saved automatically in `%LOCALAPPDATA%\Tessera\Library`. On the first launch after updating, Tessera copies existing images and result histories from `%LOCALAPPDATA%\Pixelizator\Library` into the new library. The old directory remains as a backup and is not read again after a successful migration. To move the library to another computer, copy the Tessera library directory separately.
 
 Download the new executable to update the application. GitHub releases are generated automatically, but the installed application does not replace itself.
 

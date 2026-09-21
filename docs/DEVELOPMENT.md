@@ -51,7 +51,7 @@ The editable Tessera mark and its generation script are documented in the [asset
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library stays at `%LOCALAPPDATA%\Pixelizator\Library` so existing source images and result histories remain available. Do not rename or delete this directory as part of a branding change.
+Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library now lives at `%LOCALAPPDATA%\Tessera\Library`. On first launch, `LibraryLocation` copies entries from `%LOCALAPPDATA%\Pixelizator\Library` without deleting the old directory. A marker in the Tessera data directory prevents removed entries from being imported again on later launches.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 

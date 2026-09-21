@@ -12,11 +12,26 @@ public static class IndependentImageProcessor
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
         int width = options.TargetWidth, height = options.TargetHeight;
-        if (width <= 0 || height <= 0 || width > source.Width || height > source.Height)
-            throw new ArgumentOutOfRangeException(nameof(options), "Размер результата должен быть положительным и не больше исходника.");
+        if (width <= 0 || height <= 0)
+            throw new ArgumentOutOfRangeException(nameof(options), "Размер результата должен быть положительным.");
         if (options.BlockMode == BlockSelectionMode.Manual && options.ManualCriteria is null)
             throw new ArgumentException("Для ручного выбора пикселя нужны критерии.", nameof(options));
         if (width == source.Width && height == source.Height) return CopyArgb(source);
+        if (width > source.Width || height > source.Height)
+        {
+            int[] enlargedInput = ReadArgb(source);
+            int[] enlargedOutput = new int[checked(width * height)];
+            for (int y = 0; y < height; y++)
+            {
+                int sourceY = (int)((long)y * source.Height / height);
+                for (int x = 0; x < width; x++)
+                {
+                    int sourceX = (int)((long)x * source.Width / width);
+                    enlargedOutput[y * width + x] = enlargedInput[sourceY * source.Width + sourceX];
+                }
+            }
+            return WriteArgb(enlargedOutput, width, height);
+        }
 
         int cropWidth = options.SpriteMode ? source.Width : width * (source.Width / width);
         int cropHeight = options.SpriteMode ? source.Height : height * (source.Height / height);

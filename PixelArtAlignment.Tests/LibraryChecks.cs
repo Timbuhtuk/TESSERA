@@ -49,13 +49,13 @@ internal static class LibraryChecks
             Get<IntegerInput>("quantizationColorsInput").Value = 8;
             Click("processButton"); Wait();
             Require(sources[0].Generations.Count == 2, "A generation replaced earlier history");
-            Require(Get<CheckBox>("ditheringInput").IsChecked == true, "Restoring while busy lost dithering");
+            Require(Get<CheckBox>("ditheringInput").IsChecked == false, "Processing did not apply the scene profile");
             using var downscaled = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
             Get<ListBox>("generationStrip").SelectedItem = sources[0].Generations[0]; Pump();
             Require(Get<bool>("_resultIsAlignment") && Get<Bitmap>("_downscaledResult").Size == first.Size, "Generation strip did not restore alignment");
             Require(Get<IntegerInput>("gridCellInput").Value == 16, "Alignment options not restored");
             Get<ListBox>("generationStrip").SelectedItem = sources[0].Generations[1]; Pump();
-            Require(Get<IntegerInput>("widthInput").Value == 160 && Get<IntegerInput>("quantizationColorsInput").Value == 8, "Downscale options not restored");
+            Require(Get<IntegerInput>("widthInput").Value == 160 && Get<IntegerInput>("quantizationColorsInput").Value == 64, "Processed profile was not restored");
             EqualPixels(downscaled, Get<Bitmap>("_downscaledResult"));
 
             // Both axes and both directions: different image dimensions must use fractional offsets.
@@ -94,7 +94,7 @@ internal static class LibraryChecks
             Require(restored.Length == 3 && restored[0].Generations.Count == 2 && restored[1].Generations.Count == 1, "History did not survive restart");
             Get<ListBox>("sourceStrip").SelectedItem = restored[0]; Pump();
             EqualPixels(downscaled, Get<Bitmap>("_downscaledResult"));
-            Require(Get<IntegerInput>("quantizationColorsInput").Value == 8, "Restart lost generation parameters");
+            Require(Get<IntegerInput>("quantizationColorsInput").Value == 64, "Restart lost generation parameters");
             Invoke("SaveResult", Path.Combine(folder, "restored-export.png"));
             using var exported = new Bitmap(Path.Combine(folder, "restored-export.png")); EqualPixels(downscaled, exported);
             // A damaged entry must not hide other saved sources or overwrite anything.

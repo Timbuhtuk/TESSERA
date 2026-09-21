@@ -97,11 +97,13 @@ jobs:
 
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
-          The CLI includes resize, colors, aseprite, align, ico and remove-background commands for scripted workflows.
+          The editor now opens Grid, Size, Color and Mode controls in separate tool windows. Enlarge pixel art without blur, preserve its transparency, and export all results for the current image from the File menu.
+
+          The CLI includes resize, colors, aseprite, align, reduce-grid, ico and remove-background commands for scripted workflows. Use reduce-grid (also available as compact-grid) to turn uniform aligned cells into individual pixels.
 
           Download Tessera.exe or Tessera-win-x64.zip for the desktop app, or Tessera-cli-win-x64.zip for the CLI. No .NET installation is required. SHA256SUMS.txt contains the download checksums.
 
-          Previously named Pixelizator. Existing libraries remain at %LOCALAPPDATA%\Pixelizator\Library. The application interface currently uses Russian labels.
+          Previously named Pixelizator. The library is now stored at %LOCALAPPDATA%\Tessera\Library. On first launch, the old Pixelizator library is copied into it and retained as a backup. The application interface currently uses Russian labels.
           '@
               Invoke-Gh release create $tag --target $env:GITHUB_SHA --title "Tessera $tag" --notes $notes --generate-notes --draft
           }

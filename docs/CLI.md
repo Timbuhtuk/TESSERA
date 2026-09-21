@@ -8,6 +8,7 @@ Run these examples from the repository root after building; replace the sample i
 .\artifacts\cli\tessera.exe --help
 .\artifacts\cli\tessera.exe input.png -o result.png --width 64 --height 64 --palette db32
 .\artifacts\cli\tessera.exe align input.png -o aligned.png --cell-size 4
+.\artifacts\cli\tessera.exe reduce-grid aligned.png -o pixels.png --cell-size 4
 .\artifacts\cli\tessera.exe ico input.png -o application.ico --sizes 16,32,48,256 --resize nearest-neighbor
 .\artifacts\cli\tessera.exe remove-background input.png -o transparent.png --mode edges --tolerance 8
 .\artifacts\cli\tessera.exe resize input.png -o smaller.png --width 32 --height 32
@@ -73,7 +74,7 @@ The image decoder is shared with the desktop application. Corrupt or unsupported
 
 ## Independent size and color operations
 
-`tessera resize` changes pixel dimensions through the editor's `IndependentImageProcessor.Scale` algorithm. It selects colors already present in each source block; it does not run quantization or a palette. Supply `--width` and `--height` (48 × 48 by default). The target cannot exceed the source. `--sprite` keeps the full frame and enables `--alpha-threshold` (1–100%, default 50); otherwise `--crop-horizontal` and `--crop-vertical` choose which remainder to discard. The block representative can be `automatic` or `manual` with `--brightness`, `--contrast`, `--saturation` and `--edge` (0–100).
+`tessera resize` changes pixel dimensions through the editor's `IndependentImageProcessor.Scale` algorithm. It selects colors already present in each source block; it does not run quantization or a palette. Supply `--width` and `--height` (48 × 48 by default). A larger target repeats exact source pixels with nearest-neighbor sampling, preserving colors and alpha without smoothing. If either dimension grows, nearest-neighbor sampling is used on both axes. For reduction, `--sprite` keeps the full frame and enables `--alpha-threshold` (1–100%, default 50); otherwise `--crop-horizontal` and `--crop-vertical` choose which remainder to discard. The block representative can be `automatic` or `manual` with `--brightness`, `--contrast`, `--saturation` and `--edge` (0–100).
 
 `tessera colors` applies quantization and an optional palette to every pixel at the original dimensions. It preserves the input alpha values. It accepts `--palette`, `--palette-step`, `--quantization`, `--quantization-colors`, `--color-weights` and `--dithering`. Size and crop options are rejected.
 
@@ -81,6 +82,7 @@ Both commands take one image file, including a result saved by an earlier CLI or
 
 ```powershell
 .\artifacts\cli\tessera.exe resize sprite.png -o sprite-small.png --width 32 --height 32 --sprite --alpha-threshold 75
+.\artifacts\cli\tessera.exe resize sprite-small.png -o sprite-large.png --width 256 --height 256
 .\artifacts\cli\tessera.exe colors sprite-small.png -o sprite-colored.png --palette db32 --quantization-colors 32
 ```
 
@@ -96,6 +98,17 @@ Both commands take one image file, including a result saved by an earlier CLI or
 | `--overwrite`, `--json` | Shared output replacement and reporting options |
 
 Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. See the [algorithm and API](../PixelArtAlignment/README.md).
+
+## Reduce an aligned grid
+
+`tessera reduce-grid` (alias `compact-grid`) applies the editor's “one pixel per grid cell” operation to a previously aligned image. `--cell-size` is required because CLI files do not carry the editor's history metadata; use the size reported by `tessera align` (or its JSON `cellSize`). Each uniform cell contributes one original ARGB pixel, including partial cells on the right and bottom edges. A nonuniform grid is rejected; no palette or quantization is applied.
+
+```powershell
+.\artifacts\cli\tessera.exe align input.png -o aligned.png --cell-size 4
+.\artifacts\cli\tessera.exe reduce-grid aligned.png -o pixels.png --cell-size 4
+```
+
+The output is PNG, defaulting to `<name>_pixels.png`. `--overwrite` and `--json` work as in the other standalone commands. The input and output paths must differ.
 
 ## Background removal
 

@@ -8,6 +8,7 @@ internal static class IndependentImageProcessorChecks
     public static void Run(Action<string, Action> check)
     {
         check("Size-only operation keeps source colors despite palette settings", ScaleKeepsColors);
+        check("Size-only enlargement repeats exact source pixels and alpha", UpscaleRepeatsPixels);
         check("Color-only operation keeps dimensions and alpha", ColorsKeepCanvasAndAlpha);
     }
 
@@ -28,6 +29,38 @@ internal static class IndependentImageProcessorChecks
         for (int x = 0; x < result.Width; x++)
             if (!original.Contains(result.GetPixel(x, 0).ToArgb()))
                 throw new Exception("Scaling introduced a color absent from the source.");
+    }
+
+    private static void UpscaleRepeatsPixels()
+    {
+        using var source = new Bitmap(3, 2, PixelFormat.Format32bppArgb);
+        Color[] colors =
+        [
+            Color.FromArgb(255, 240, 30, 20), Color.FromArgb(128, 20, 160, 230), Color.Transparent,
+            Color.FromArgb(255, 12, 42, 86), Color.FromArgb(64, 210, 118, 40), Color.FromArgb(255, 72, 33, 210)
+        ];
+        for (int q = 0; q < colors.Length; q++) source.SetPixel(q % 3, q / 3, colors[q]);
+
+        foreach (var size in new[] { new Size(6, 4), new Size(7, 5), new Size(6, 1) })
+        {
+            using var result = IndependentImageProcessor.Scale(source, new DownscaleOptions
+            {
+                TargetWidth = size.Width, TargetHeight = size.Height, SpriteMode = true,
+                Palette = PaletteKind.GameBoy, QuantizationColors = 1
+            });
+            if (result.Size != size) throw new Exception("Enlargement returned the wrong dimensions.");
+            for (int y = 0; y < size.Height; y++)
+                for (int x = 0; x < size.Width; x++)
+                {
+                    int sourceX = (int)((long)x * source.Width / size.Width);
+                    int sourceY = (int)((long)y * source.Height / size.Height);
+                    if (result.GetPixel(x, y).ToArgb() != source.GetPixel(sourceX, sourceY).ToArgb())
+                        throw new Exception("Enlargement blended colors or changed alpha.");
+                }
+        }
+        for (int q = 0; q < colors.Length; q++)
+            if (source.GetPixel(q % 3, q / 3).ToArgb() != colors[q].ToArgb())
+                throw new Exception("Enlargement changed the source.");
     }
 
     private static void ColorsKeepCanvasAndAlpha()

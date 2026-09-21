@@ -8,15 +8,15 @@ namespace Pixelizator.Cli;
 internal static class IndependentCommand
 {
     internal const string ScaleHelp = """
-        Tessera resize — изменить размер без квантования и палитры.
+        Tessera resize — уменьшить или увеличить изображение без квантования и палитры.
         Использование: tessera resize input.png -o result.png --width 48 --height 48
 
           -i, --input PATH       Исходное изображение или ранее сохранённый результат.
           -o, --output PATH      PNG; по умолчанию <имя>_resized.png.
           --width N             Ширина результата: 1–3840 (48).
           --height N            Высота результата: 1–2160 (48).
-          --sprite              Весь кадр без обрезки, с порогом покрытия альфы.
-          --alpha-threshold N   Порог покрытия: 1–100% (50), только --sprite.
+          --sprite              Весь кадр без обрезки; порог альфы действует при уменьшении.
+          --alpha-threshold N   Порог покрытия: 1–100% (50), только --sprite при уменьшении.
           --crop-horizontal V   center, left, right (center).
           --crop-vertical V     center, top, bottom (center).
           --block-mode V        automatic или manual (automatic).
@@ -28,7 +28,7 @@ internal static class IndependentCommand
           --json                Отчёт JSON.
           -h, --help            Эта справка.
 
-        Выбирается цвет исходного пикселя; новые цвета не создаются.
+        Выбирается цвет исходного пикселя; новые цвета не создаются. Увеличение — без сглаживания.
         Для обработки уже готового результата передайте путь к нему как input.
         """;
 
@@ -93,8 +93,6 @@ internal static class IndependentCommand
                 throw new IOException("Результат уже существует. Укажите другое имя или --overwrite.");
 
             using var source = CliApplication.LoadImage(parsed.Input);
-            if (scale && (parsed.Options.TargetWidth > source.Width || parsed.Options.TargetHeight > source.Height))
-                throw new CliUsageException("Размер результата не должен превышать размер исходника.");
 
             var timer = Stopwatch.StartNew();
             using var result = scale

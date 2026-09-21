@@ -17,7 +17,7 @@ internal static class UiChecks
         Exception? failure = null;
         var thread = new Thread(() =>
         {
-            try { WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); } catch (Exception e) { failure = e; }
+            try { LibraryLocationChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); } catch (Exception e) { failure = e; }
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
@@ -35,7 +35,8 @@ internal static class UiChecks
         {
             window.Show();
             Pump();
-            Require(!Get<Button>("processButton").IsEnabled && !Get<Button>("saveButton").IsEnabled, "Empty state permits processing/saving");
+            Require(!Get<Button>("processButton").IsEnabled && !Get<Button>("saveButton").IsEnabled &&
+                !Get<Button>("saveAllButton").IsEnabled, "Empty state permits processing/saving");
             Require(Get<ScrollViewer>("homeScroll").Visibility == Visibility.Visible && Get<Border>("emptyLibrary").Visibility == Visibility.Visible, "Startup home or empty library missing");
             Capture("empty.png");
             window.Width = 560; Capture("home-narrow.png");
@@ -56,6 +57,47 @@ internal static class UiChecks
             var card = (Button)VisualTreeHelper.GetChild(item, 0);
             card.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(Get<ScrollViewer>("homeScroll").Visibility == Visibility.Collapsed && ReferenceEquals(Get<SourceEntry>("_activeSource"), cardSource), "Library card did not open its source");
+            Require(Get<StackPanel>("settingsPanel").Visibility == Visibility.Collapsed &&
+                Get<Grid>("workspaceGrid").ColumnDefinitions.Count <= 1, "The old settings sidebar is still visible");
+            window.Width = 1600; Pump();
+            double toolbarY = Get<Button>("backToLibraryButton").TranslatePoint(new System.Windows.Point(), window).Y;
+            Require(Math.Abs(Get<Button>("gridToolButton").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5 &&
+                Math.Abs(Get<ComboBox>("zoomInput").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5,
+                "Wide editor toolbar did not fit onto one row");
+            Require(Get<PixelPreview>("sourcePreview").TranslatePoint(new System.Windows.Point(), window).X >
+                Get<PixelPreview>("resultPreview").TranslatePoint(new System.Windows.Point(), window).X + 200,
+                "Wide editor previews were not placed side by side");
+            Capture("editor-wide.png");
+            window.Width = 1220; Pump();
+            var action = Get<Button>("processButton");
+            Require(action.Visibility == Visibility.Visible && action.Content?.ToString() == "Обработать" &&
+                !Get<WrapPanel>("editorToolbar").Children.Contains(action), "Processing action remained in the main toolbar");
+            Click("fileMenuButton");
+            Require(Get<System.Windows.Controls.Primitives.Popup>("fileMenuPopup").IsOpen &&
+                Get<Button>("openButton").IsEnabled && !Get<Button>("saveButton").IsEnabled &&
+                !Get<Button>("saveAllButton").IsEnabled, "File menu did not expose Open and Save");
+            Get<System.Windows.Controls.Primitives.Popup>("fileMenuPopup").IsOpen = false;
+            Click("gridToolButton"); Pump();
+            var gridTool = Window.GetWindow(Get<IntegerInput>("gridCellInput"));
+            Require(gridTool is not null && gridTool != window && gridTool.IsVisible, "Grid tool did not open a separate window");
+            Click("sizeToolButton"); Pump();
+            var sizeTool = Window.GetWindow(Get<IntegerInput>("widthInput"));
+            Require(sizeTool is not null && sizeTool != window && sizeTool != gridTool &&
+                ReferenceEquals(Window.GetWindow(Get<Slider>("brightnessInput")), sizeTool) &&
+                ReferenceEquals(Window.GetWindow(Get<CheckBox>("spriteInput")), sizeTool), "Size, frame and pixel tools were not grouped");
+            Click("colorToolButton"); Pump();
+            var colorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
+            Require(colorTool is not null && colorTool != sizeTool, "Color tool did not open a separate window");
+            Click("profileToolButton"); Pump();
+            var profileTool = Window.GetWindow(Get<TextBox>("processingLog"));
+            Require(profileTool is not null && profileTool != colorTool &&
+                ReferenceEquals(Window.GetWindow(Get<RadioButton>("sceneMode")), profileTool) &&
+                ReferenceEquals(Window.GetWindow(action), profileTool), "Profile and processing tools were not grouped");
+            CaptureTool(sizeTool!, "size-tool.png");
+            CaptureTool(colorTool!, "color-tool.png");
+            CaptureTool(profileTool!, "mode-tool.png");
+            foreach (var tool in new[] { gridTool, sizeTool, colorTool, profileTool }) tool!.Close();
+            Require(ReferenceEquals(Window.GetWindow(Get<IntegerInput>("widthInput")), window), "Tool settings were lost after closing their window");
             Get<IntegerInput>("widthInput").Value = 13;
             Get<IntegerInput>("heightInput").Value = 7;
             Get<ComboBox>("paletteInput").SelectedIndex = 4;
@@ -75,10 +117,41 @@ internal static class UiChecks
             Get<IntegerInput>("gridCellInput").Value = 4;
             Click("alignButton");
             Wait();
+            window.Width = 1600; Pump();
+            Require(Get<Button>("saveAllButton").IsEnabled, "Batch save was not enabled after processing");
+            Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("historyRow")) &&
+                ReferenceEquals(Get<TextBlock>("sourceCaption").Parent, Get<ListBox>("sourceStrip").Parent) &&
+                Get<TextBlock>("sourceCaption").Text.StartsWith("ИСХОДНИК ·") &&
+                Get<ListBox>("sourceStrip").TranslatePoint(new System.Windows.Point(), window).X >
+                Get<ListBox>("generationStrip").TranslatePoint(new System.Windows.Point(), window).X + 200 &&
+                Math.Abs(Get<ListBox>("generationStrip").ActualWidth - Get<ListBox>("sourceStrip").ActualWidth) < 20,
+                "Wide editor did not place source history beside result history");
+            Capture("history-wide.png");
+            string batchDirectory = Path.Combine(directory, "all-results-" + Guid.NewGuid().ToString("N"));
+            Invoke("SaveAllResults", batchDirectory);
+            int batchCount = Get<SourceEntry>("_activeSource").Generations.Count;
+            var exported = Directory.GetFiles(batchDirectory, "*.png");
+            Require(exported.Length == batchCount, "Batch save missed results");
+            foreach (string path in exported)
+            {
+                using var image = new Bitmap(path);
+                EqualPixels(image, Get<Bitmap>("_downscaledResult"), "Batch export changed a saved result");
+            }
+            Invoke("SaveAllResults", batchDirectory);
+            Require(Directory.GetFiles(batchDirectory, "*.png").Length == batchCount * 2, "Batch save replaced earlier exports");
+            window.Width = 1220; Pump();
             Capture("alignment.png");
             window.Width = window.MinWidth;
             window.Height = window.MinHeight;
             Capture("minimum.png");
+            var sourceSelector = Get<ComboBox>("operationSourceInput");
+            Require(sourceSelector.TranslatePoint(new System.Windows.Point(sourceSelector.ActualWidth, 0), window).X <
+                window.ActualWidth - 8, "Narrow toolbar clips the input selector");
+            Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("previewArea")) &&
+                Grid.GetRow(Get<Border>("sourceTray")) == 2, "Narrow editor did not return source history below previews");
+            Require(Get<PixelPreview>("sourcePreview").TranslatePoint(new System.Windows.Point(), window).Y >
+                Get<PixelPreview>("resultPreview").TranslatePoint(new System.Windows.Point(), window).Y + 100,
+                "Narrow editor previews were not stacked");
             Require(Get<PixelPreview>("resultPreview").ActualWidth > 350 && Get<PixelPreview>("sourcePreview").ActualHeight > 120, "Previews collapsed at minimum window size");
             string alignedPath = Path.Combine(directory, "aligned.png");
             Invoke("SaveResult", alignedPath);
@@ -86,18 +159,22 @@ internal static class UiChecks
             Reject("SaveResult", inputPath);
             Reject("SaveResult", Path.Combine(directory, "alpha.jpg"));
             using (var original = new Bitmap(inputPath)) EqualPixels(original, source, "Original was overwritten");
+            Click("profileToolButton"); Pump();
             Click("processButton");
             Wait();
+            Window.GetWindow(action)!.Close();
             Require(!Get<bool>("_resultIsAlignment") && Get<Bitmap>("_downscaledResult").Width == 15, "Downscale no longer works independently");
             var options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
-            Require(options.QuantizationColors == 7 && options.UseColorWeights, "Color options lost during migration");
+            Require(options.QuantizationColors == 64 && !options.UseColorWeights &&
+                options.Quantization == QuantizationMethod.KMeansLab, "Process did not apply the selected scene profile");
             var expected = new PixelArtDownscaler().Process(source, options);
             using (expected.Downscaled)
             using (expected.CroppedSource) EqualPixels(expected.Downscaled, Get<Bitmap>("_downscaledResult"), "WPF result differs from shared algorithm");
             Get<IntegerInput>("gridCellInput").Value = 5;
             Require(!Get<bool>("_resultStale"), "Grid size invalidated downscale");
-            Get<CheckBox>("colorWeightsInput").IsChecked = false;
+            Get<CheckBox>("colorWeightsInput").IsChecked = true;
             Require(Get<bool>("_resultStale"), "Color options did not invalidate downscale");
+            Get<ComboBox>("paletteInput").SelectedIndex = 4;
             Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
             Click("scaleOnlyButton"); Wait();
             var sizeOnly = Get<Bitmap>("_downscaledResult");
@@ -120,16 +197,35 @@ internal static class UiChecks
             Click("colorOnlyButton"); Wait();
             Require(Get<Bitmap>("_downscaledResult").Size == source.Size && Get<SourceEntry>("_activeSource").SelectedGeneration!.ParentGenerationId is null,
                 "Color operation on the source unexpectedly scaled or chained a result");
-            Get<CheckBox>("advancedToggle").IsChecked = true;
+            Click("sizeToolButton"); Pump();
             Get<RadioButton>("manualInput").IsChecked = true;
             Get<Slider>("brightnessInput").Value = 73;
             Require(((DownscaleOptions)Invoke("BuildOptionsFromUi")!).ManualCriteria?.TargetBrightness == .73, "Manual criteria mapping failed");
-            Get<ScrollViewer>("settingsScroller").ScrollToBottom();
-            Capture("advanced.png");
+            Capture("editor-tools.png");
+            Window.GetWindow(Get<IntegerInput>("widthInput"))!.Close();
+            var selectedParent = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            var beforeMode = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
             Get<RadioButton>("detailsMode").IsChecked = true;
             options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
-            Require(options.SpriteMode && options.Quantization == QuantizationMethod.MedianCut && options.Palette == PaletteKind.None && options.AlphaThreshold == 75 && options.QuantizationColors == 64 && !options.UseColorWeights && options.TargetWidth == 15 && options.TargetHeight == 7, "Profile reset did not preserve size/defaults");
+            Require(options.SpriteMode == beforeMode.SpriteMode &&
+                options.Quantization == beforeMode.Quantization &&
+                options.Palette == beforeMode.Palette &&
+                options.ManualCriteria?.TargetBrightness == .73,
+                "Choosing a mode changed settings before processing");
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            Click("profileToolButton"); Pump();
+            Click("processButton"); Wait();
+            Window.GetWindow(action)!.Close();
+            options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
+            Require(options.SpriteMode && options.Quantization == QuantizationMethod.MedianCut &&
+                options.Palette == PaletteKind.None && options.AlphaThreshold == 75 &&
+                options.QuantizationColors == 64 && !options.UseColorWeights &&
+                options.TargetWidth == 15 && options.TargetHeight == 7,
+                "Processing did not apply the details profile");
+            Require(Get<SourceEntry>("_activeSource").SelectedGeneration?.ParentGenerationId == selectedParent.Id,
+                "Mode processing ignored the selected result");
             Require(!Get<CheckBox>("ditheringInput").IsEnabled, "Sprite mode permits dithering");
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
             Get<CheckBox>("aspectLock").IsChecked = true;
             Get<IntegerInput>("widthInput").Value = 24;
             Require(Get<IntegerInput>("heightInput").Value == (int)Math.Round(24.0 * source.Height / source.Width), "Aspect ratio failed");
@@ -168,6 +264,14 @@ internal static class UiChecks
             var until = DateTime.UtcNow.AddSeconds(25);
             while (Get<bool>("_processing") && DateTime.UtcNow < until) { Pump(); Thread.Sleep(5); }
             Require(!Get<bool>("_processing"), "Processing timeout");
+        }
+        void CaptureTool(Window tool, string name)
+        {
+            tool.UpdateLayout(); Pump();
+            var screenshot = new RenderTargetBitmap((int)Math.Ceiling(tool.ActualWidth), (int)Math.Ceiling(tool.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            screenshot.Render(tool);
+            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(screenshot));
+            using var stream = File.Create(Path.Combine(directory, name)); encoder.Save(stream);
         }
         void Capture(string name)
         {

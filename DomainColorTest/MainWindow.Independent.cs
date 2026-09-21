@@ -17,17 +17,13 @@ public partial class MainWindow
         DownscaleOptions options = settings.Downscale;
         bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
-        if (changeSize && (options.TargetWidth > basis.Width || options.TargetHeight > basis.Height))
-        {
-            statusLabel.Text = "Размер результата не должен превышать размер выбранной основы.";
-            return;
-        }
+        bool enlarged = options.TargetWidth > basis.Width || options.TargetHeight > basis.Height;
 
         var document = _activeSource;
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
         using var source = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = changeSize ? "Изменение размера…" : "Обработка цветов…";
+        statusLabel.Text = changeSize ? enlarged ? "Увеличение изображения…" : "Изменение размера…" : "Обработка цветов…";
         try
         {
             var generation = await Task.Run(() =>
@@ -35,16 +31,16 @@ public partial class MainWindow
                 using var result = changeSize
                     ? IndependentImageProcessor.Scale(source, options)
                     : IndependentImageProcessor.ApplyColors(source, options);
-                string operation = changeSize ? "РАЗМЕР" : "ЦВЕТ";
+                string operation = changeSize ? enlarged ? "УВЕЛИЧЕНИЕ" : "РАЗМЕР" : "ЦВЕТ";
                 return _library.SaveGeneration(document, result, null, new GenerationEntry
                 {
                     Settings = settings,
-                    Operation = changeSize ? "Размер" : "Цвет",
+                    Operation = changeSize ? enlarged ? "Увеличение" : "Размер" : "Цвет",
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = $"{operation} · {result.Width} × {result.Height}",
                     Log = changeSize
-                        ? $"Изменён размер {source.Width} × {source.Height} → {result.Width} × {result.Height}. Цвета не преобразованы."
+                        ? $"Изменён размер {source.Width} × {source.Height} → {result.Width} × {result.Height}. Цвета не преобразованы." + (enlarged ? " Увеличение без сглаживания." : "")
                         : $"Обработаны цвета без изменения размера {result.Width} × {result.Height}."
                 });
             });

@@ -95,7 +95,6 @@ public partial class MainWindow
                 statusLabel.Text = $"История открыта. Не удалось прочитать записей: {_library.LoadWarnings.Count}.";
         }
         catch (Exception ex) { statusLabel.Text = $"Не удалось загрузить историю: {ex.Message}"; }
-        UpdateFilmstripLabels();
     }
 
     private static string[] DropPaths(DragEventArgs e) => e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] paths ? paths : [];
@@ -128,7 +127,7 @@ public partial class MainWindow
                 : $"Добавлено: {added}. Не удалось открыть: {failures.Count}. {failures[0]}";
             statusLabel.ToolTip = failures.Count == 0 ? null : string.Join(Environment.NewLine, failures);
         }
-        finally { UpdateFilmstripLabels(); SetProcessingState(false); }
+        finally { SetProcessingState(false); }
     }
 
     private void LoadImage(string path)
@@ -171,15 +170,11 @@ public partial class MainWindow
         }
         sourcePreview.ScrollToRelativePosition(0, 0);
         resultPreview.ScrollToRelativePosition(0, 0);
-        UpdateFilmstripLabels();
         SetProcessingState(_processing);
     }
 
     private void ClearDisplayedResult()
     {
-        showCropInput.IsChecked = false;
-        showCropInput.IsEnabled = false;
-        _croppedImage?.Dispose(); _croppedImage = null;
         resultPreview.Image = null;
         _downscaledResult?.Dispose(); _downscaledResult = null;
         _resultStale = _resultPreservesTransparency = _resultIsAlignment = false;
@@ -191,17 +186,11 @@ public partial class MainWindow
     {
         if (_activeSource is null || !_activeSource.Generations.Contains(generation)) return;
         var output = ImageLibrary.ReadBitmap(_library.ResultPath(_activeSource, generation));
-        System.Drawing.Bitmap? crop;
-        try { crop = generation.HasCrop ? ImageLibrary.ReadBitmap(_library.CropPath(_activeSource, generation)) : null; }
-        catch { output.Dispose(); throw; }
         RestoreSettings(generation.Settings);
         _restoringHistory = true;
         try
         {
-            showCropInput.IsChecked = false;
             sourcePreview.Image = null;
-            _croppedImage?.Dispose(); _croppedImage = crop;
-            showCropInput.IsEnabled = crop is not null;
             resultPreview.Image = null;
             _downscaledResult?.Dispose(); _downscaledResult = output;
             resultPreview.Image = output;
@@ -217,14 +206,8 @@ public partial class MainWindow
         finally { _restoringHistory = false; }
         UpdateSourcePreview();
         UpdateSizeHint();
-        UpdateFilmstripLabels();
         SetProcessingState(_processing);
         statusLabel.Text = $"Результат от {generation.CreatedAt:dd.MM.yyyy HH:mm:ss}. Сохранён в истории.";
-    }
-
-    private void UpdateFilmstripLabels()
-    {
-        sourcesCaption.Text = $"Исходники ({_sources.Count})";
     }
 
     private void RemoveLibraryItem(object sender, RoutedEventArgs e)
@@ -238,7 +221,7 @@ public partial class MainWindow
             else if (element.DataContext is GenerationEntry generation) RemoveGeneration(generation);
         }
         catch (Exception ex) { statusLabel.Text = $"Не удалось удалить запись или открыть соседнюю: {ex.Message}"; }
-        finally { UpdateFilmstripLabels(); SetProcessingState(_processing); }
+        finally { SetProcessingState(_processing); }
     }
 
     private void RemoveSource(SourceEntry source)
@@ -320,7 +303,7 @@ public partial class MainWindow
         try
         {
             (settings.Mode == 2 ? detailsMode : settings.Mode == 0 ? backgroundMode : sceneMode).IsChecked = true;
-            ApplyProfile(restoring: true);
+            UpdateModeDescription();
             var options = settings.Downscale;
             widthInput.Value = options.TargetWidth; heightInput.Value = options.TargetHeight;
             spriteInput.IsChecked = options.SpriteMode; alphaInput.Value = options.AlphaThreshold;

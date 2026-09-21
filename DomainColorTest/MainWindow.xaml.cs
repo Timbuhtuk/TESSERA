@@ -16,7 +16,6 @@ public partial class MainWindow : Window
     private readonly PixelArtDownscaler _downscaler = new();
     private string? _selectedFilePath;
     private Bitmap? _sourceImage;
-    private Bitmap? _croppedImage;
     private Bitmap? _downscaledResult;
     private bool _resultPreservesTransparency;
     private bool _resultIsAlignment;
@@ -28,7 +27,7 @@ public partial class MainWindow : Window
     private readonly OpenFileDialog openDialog = new() { Filter = "Изображения|*.jpg;*.jpeg;*.png;*.bmp;*.gif", Title = "Добавить изображения", Multiselect = true };
     private readonly SaveFileDialog saveDialog = new() { DefaultExt = ".png", AddExtension = true, OverwritePrompt = true, Title = "Сохранить результат" };
 
-    public MainWindow() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Pixelizator", "Library")) { }
+    public MainWindow() : this(LibraryLocation.PrepareDefault()) { }
 
     public MainWindow(string libraryDirectory)
     {
@@ -37,7 +36,7 @@ public partial class MainWindow : Window
         InitializeWindowFrame();
         threadsInput.Maximum = threadsInput.Value = Math.Max(1, Environment.ProcessorCount);
         foreach (var mode in new[] { backgroundMode, sceneMode, detailsMode })
-            mode.Checked += (_, _) => ApplyProfile();
+            mode.Checked += (_, _) => UpdateModeDescription();
         foreach (var box in new[] { paletteInput, quantizationInput, cropHorizontalInput, cropVerticalInput })
             box.SelectionChanged += SettingsChanged;
         foreach (var input in new[] { paletteStepInput, alphaInput, quantizationColorsInput })
@@ -54,28 +53,24 @@ public partial class MainWindow : Window
         aspectLock.Checked += (_, _) => SizeChangedByUser(widthChanged: true);
         zoomInput.SelectionChanged += (_, _) => UpdatePreviewSettings();
         backgroundInput.SelectionChanged += (_, _) => UpdatePreviewSettings();
-        showCropInput.Checked += (_, _) => UpdateSourcePreview();
-        showCropInput.Unchecked += (_, _) => UpdateSourcePreview();
-        advancedToggle.Checked += (_, _) => SetVisible(advancedPanel, true);
-        advancedToggle.Unchecked += (_, _) => SetVisible(advancedPanel, false);
         detectGridInput.Checked += (_, _) => { gridCellInput.IsEnabled = false; AlignmentSettingsChanged(); };
         detectGridInput.Unchecked += (_, _) => { gridCellInput.IsEnabled = true; AlignmentSettingsChanged(); };
         gridCellInput.ValueChanged += (_, _) => AlignmentSettingsChanged();
-        openButton.Click += OpenImage;
+        openButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; OpenImage(sender, e); };
         processButton.Click += ProcessImage;
         scaleOnlyButton.Click += ScaleOnlyImage;
         colorOnlyButton.Click += ApplyColorsOnly;
         operationSourceInput.SelectionChanged += (_, _) => { UpdateSizeHint(); SetProcessingState(_processing); };
-        saveButton.Click += SaveImage;
+        saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
+        saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
-        resetProfileButton.Click += ResetProfile;
         Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } };
         Closed += (_, _) =>
         {
+            CloseEditorTools();
             _restoringHistory = true;
             sourcePreview.Image = resultPreview.Image = null;
             _sourceImage?.Dispose(); _sourceImage = null;
-            _croppedImage?.Dispose(); _croppedImage = null;
             _downscaledResult?.Dispose(); _downscaledResult = null;
         };
         sceneMode.IsChecked = true;
@@ -85,14 +80,26 @@ public partial class MainWindow : Window
         InitializeIcons();
         InitializeAseprite();
         InitializeBackground();
+        InitializeEditorTools();
         UpdatePreviewSettings();
+        if (LibraryLocation.MigrationWarning is { } warning)
+            statusLabel.Text = $"Не удалось полностью перенести старую историю: {warning}";
     }
 
     private string CurrentModeName => detailsMode.IsChecked == true ? "Детали" : backgroundMode.IsChecked == true ? "Фон" : "Сцена";
     private static void SetVisible(UIElement control, bool visible) => control.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-    private void ApplyProfile(bool restoring = false)
+    private void UpdateModeDescription()
     {
-        if (_restoringHistory && !restoring) return;
+        modeDescription.Text = detailsMode.IsChecked == true
+            ? "Пиксель-арт и спрайты: приоритет контуров и прозрачности. При уменьшении часть деталей может исчезнуть."
+            : backgroundMode.IsChecked == true
+                ? "Крупные фоновые изображения: цельные цветовые области и общая композиция, без акцента на мелочах."
+                : "Сцены средней детализации: сохраняем значимые формы, свет и цветовые переходы.";
+        profileState.Text = "Параметры режима применятся при обработке";
+    }
+
+    private void ApplyProfile()
+    {
         _applyingProfile = true;
         try
         {
@@ -108,21 +115,14 @@ public partial class MainWindow : Window
             ditheringInput.IsChecked = false;
             cropHorizontalInput.SelectedIndex = cropVerticalInput.SelectedIndex = 0;
             brightnessInput.Value = contrastInput.Value = saturationInput.Value = edgeInput.Value = 50;
-            modeDescription.Text = details
-                ? "Пиксель-арт и спрайты: приоритет контуров и прозрачности. При уменьшении часть деталей может исчезнуть."
-                : backgroundMode.IsChecked == true
-                    ? "Крупные фоновые изображения: цельные цветовые области и общая композиция, без акцента на мелочах."
-                    : "Сцены средней детализации: сохраняем значимые формы, свет и цветовые переходы.";
             profileState.Text = "Настройки режима";
             UpdateDependentControls();
             MarkResultStale();
             UpdateSizeHint();
-            statusLabel.Text = $"Режим «{CurrentModeName}» выбран. Размер сохранён; нажмите «Обработать».";
+            statusLabel.Text = $"Параметры режима «{CurrentModeName}» применены.";
         }
         finally { _applyingProfile = false; }
     }
-
-    private void ResetProfile(object? sender, EventArgs e) => ApplyProfile();
 
     private void SettingsChanged(object? sender, EventArgs e)
     {
@@ -179,13 +179,13 @@ public partial class MainWindow : Window
         }
         int width = (int)widthInput.Value, height = (int)heightInput.Value;
         if (width > sizeSource.Width || height > sizeSource.Height)
-            sizeHint.Text = $"Основа {sizeSource.Width} × {sizeSource.Height}. Размер результата должен быть не больше исходника.";
+            sizeHint.Text = $"Основа {sizeSource.Width} × {sizeSource.Height}. Увеличение через «Изменить размер» сохраняет цвета и прозрачность без сглаживания. «Обработать» не увеличивает исходник.";
         else if (spriteInput.IsChecked == true && Math.Abs((double)width / height / ((double)sizeSource.Width / sizeSource.Height) - 1) > .02)
             sizeHint.Text = "Пропорции отличаются от исходника: весь кадр будет растянут. Включите сохранение пропорций.";
         else
             sizeHint.Text = spriteInput.IsChecked == true
                 ? "Весь исходник попадёт в сетку. Порог заполнения регулирует края прозрачных объектов."
-                : "Область исходника подгоняется обрезкой под целые блоки. Привязка доступна в расширенных настройках.";
+                : "Область исходника подгоняется обрезкой под целые блоки. Положение области задаётся ниже.";
     }
 
     private void MarkResultStale()
@@ -209,10 +209,9 @@ public partial class MainWindow : Window
 
     private void UpdateSourcePreview()
     {
-        var image = showCropInput.IsChecked == true ? _croppedImage : _sourceImage;
-        sourcePreview.Image = image;
-        sourceCaption.Text = image is null ? "ИСХОДНИК" :
-            $"{(showCropInput.IsChecked == true ? "ОБЛАСТЬ ПОСЛЕДНЕЙ ОБРАБОТКИ" : "ИСХОДНИК")} · {image.Width} × {image.Height}";
+        sourcePreview.Image = _sourceImage;
+        sourceCaption.Text = _sourceImage is null ? "ИСХОДНИК" :
+            $"ИСХОДНИК · {_sourceImage.Width} × {_sourceImage.Height}";
     }
 
     private async void OpenImage(object? sender, EventArgs e)
@@ -225,21 +224,25 @@ public partial class MainWindow : Window
     private async void ProcessImage(object? sender, EventArgs e)
     {
         if (_sourceImage is null || _activeSource is null || _processing) return;
+        ApplyProfile();
         CommitInputs();
         var settings = CaptureSettings();
         DownscaleOptions options = settings.Downscale;
-        if (options.TargetWidth > _sourceImage.Width || options.TargetHeight > _sourceImage.Height)
+        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        var basis = useResult ? _downscaledResult! : _sourceImage;
+        if (options.TargetWidth > basis.Width || options.TargetHeight > basis.Height)
         {
-            statusLabel.Text = "Уменьшите размер результата: он не должен превышать размер исходника.";
+            statusLabel.Text = "Уменьшите размер результата: он не должен превышать размер выбранной основы.";
             return;
         }
         string mode = CurrentModeName;
         var document = _activeSource;
+        Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
+        using var source = (Bitmap)basis.Clone();
         SetProcessingState(true);
         statusLabel.Text = $"Обработка · {mode} · {options.TargetWidth} × {options.TargetHeight}…";
         try
         {
-            using var source = (Bitmap)_sourceImage.Clone();
             var generation = await Task.Run(() =>
             {
                 var result = _downscaler.Process(source, options);
@@ -248,6 +251,7 @@ public partial class MainWindow : Window
                     return _library.SaveGeneration(document, result.Downscaled, result.CroppedSource, new GenerationEntry
                     {
                         Settings = settings,
+                        ParentGenerationId = parentId,
                         PreservesTransparency = options.SpriteMode,
                         Caption = $"РЕЗУЛЬТАТ · {result.Downscaled.Width} × {result.Downscaled.Height} · {mode}",
                         Log = string.Join(Environment.NewLine, result.StageTimingsSeconds.Select(stage => $"{stage.Key}: {stage.Value:F3} с")) +
@@ -272,6 +276,10 @@ public partial class MainWindow : Window
         _processing = processing;
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
+        foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
+        foreach (var button in new[] { fileMenuButton, gridToolButton, sizeToolButton, colorToolButton, profileToolButton })
+            button.IsEnabled = !processing;
+        operationSourceInput.IsEnabled = !processing;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
         openButton.IsEnabled = !processing;
         homeContent.IsEnabled = !processing;
@@ -282,6 +290,7 @@ public partial class MainWindow : Window
         if (_downscaledResult is null && operationSourceInput.SelectedIndex == 1) operationSourceInput.SelectedIndex = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
         saveButton.IsEnabled = !processing && _downscaledResult is not null;
+        saveAllButton.IsEnabled = !processing && _activeSource?.Generations.Count > 0;
         Cursor = processing ? Cursors.Wait : null;
         UpdateBusyIndicator();
     }
@@ -320,7 +329,7 @@ public partial class MainWindow : Window
     private void SaveImage(object? sender, EventArgs e)
     {
         if (_downscaledResult is null) return;
-        string suffix = _resultIsAlignment ? "aligned" : _activeSource?.SelectedGeneration?.IsGridReduction == true ? "pixels" : "pixelized";
+        string suffix = _resultIsAlignment ? "aligned" : _activeSource?.SelectedGeneration?.IsGridReduction == true ? "pixels" : _activeSource?.SelectedGeneration?.Operation == "Увеличение" ? "upscaled" : "pixelized";
         saveDialog.FileName = $"{Path.GetFileNameWithoutExtension(_activeSource?.Label ?? _selectedFilePath) ?? "result"}_{suffix}.png";
         saveDialog.Filter = _resultPreservesTransparency ? "PNG (с прозрачностью)|*.png"
             : "PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp";
@@ -331,6 +340,77 @@ public partial class MainWindow : Window
         {
             MessageBox.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private async void SaveAllImages(object sender, RoutedEventArgs e)
+    {
+        fileMenuPopup.IsOpen = false;
+        if (_processing || _activeSource?.Generations.Count is not > 0) return;
+        var folderDialog = new OpenFolderDialog { Title = "Сохранить все результаты текущего исходника" };
+        if (folderDialog.ShowDialog(this) != true) return;
+
+        SetProcessingState(true);
+        statusLabel.Text = "Сохранение результатов…";
+        try
+        {
+            var (saved, errors) = await Task.Run(() => SaveAllResults(folderDialog.FolderName));
+            statusLabel.Text = errors.Count == 0
+                ? $"Сохранено результатов: {saved} · {folderDialog.FolderName}"
+                : $"Сохранено: {saved}. Ошибок: {errors.Count}.";
+            if (errors.Count > 0)
+                MessageBox.Show(this, string.Join(Environment.NewLine, errors), "Не все результаты сохранены",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        catch (Exception ex)
+        {
+            statusLabel.Text = "Не удалось сохранить результаты.";
+            MessageBox.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally { SetProcessingState(false); }
+    }
+
+    private (int Saved, List<string> Errors) SaveAllResults(string directory)
+    {
+        var source = _activeSource ?? throw new InvalidOperationException("Выберите исходник.");
+        var generations = source.Generations.ToArray();
+        if (generations.Length == 0) throw new InvalidOperationException("У исходника пока нет результатов.");
+        string outputDirectory = Path.GetFullPath(directory);
+        Directory.CreateDirectory(outputDirectory);
+        string sourceName = Path.GetFileNameWithoutExtension(source.Label);
+        if (string.IsNullOrWhiteSpace(sourceName)) sourceName = "image";
+        if (sourceName.Length > 80) sourceName = sourceName[..80];
+
+        int saved = 0;
+        var errors = new List<string>();
+        for (int q = 0; q < generations.Length; q++)
+        {
+            var generation = generations[q];
+            string original = _library.ResultPath(source, generation);
+            string stem = $"{sourceName}_result_{q + 1:D3}_{generation.Id.ToString("N")[..8]}";
+            string temporary = Path.Combine(outputDirectory, $".{stem}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                File.Copy(original, temporary);
+                for (int copy = 1; ; copy++)
+                {
+                    string suffix = copy == 1 ? "" : $"_{copy}";
+                    string destination = Path.Combine(outputDirectory, stem + suffix + ".png");
+                    try
+                    {
+                        File.Move(temporary, destination);
+                        saved++;
+                        break;
+                    }
+                    catch (IOException) when (File.Exists(destination)) { }
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                errors.Add($"{generation.Label}: {ex.Message}");
+            }
+            finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        }
+        return (saved, errors);
     }
 
     private void SaveResult(string path)

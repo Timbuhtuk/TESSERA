@@ -217,13 +217,25 @@ try
         Require(Run(["resize", "--help"]).Code == 0 && Run(["colors", "--help"]).Code == 0, "Independent help missing");
     });
 
+    Check("Resize command enlarges without changing source pixels or alpha", () =>
+    {
+        string enlargedPath = Path.Combine(directory, "independent-upscale.png");
+        var run = Run(["resize", input, "-o", enlargedPath, "--width", "134", "--height", "122"]);
+        Require(run.Code == 0 && run.Error.Length == 0, run.Error);
+        using var source = new Bitmap(input);
+        using var enlarged = new Bitmap(enlargedPath);
+        Require(enlarged.Size == new Size(134, 122), "Resize did not enlarge the image");
+        for (int y = 0; y < enlarged.Height; y++)
+            for (int x = 0; x < enlarged.Width; x++)
+                Require(enlarged.GetPixel(x, y).ToArgb() == source.GetPixel(x / 2, y / 2).ToArgb(),
+                    "Upscale changed a source color or alpha");
+    });
     Check("Independent commands reject unrelated settings and protect transparent outputs", () =>
     {
         string target = Path.Combine(directory, "independent-invalid.png");
         Require(Run(["resize", input, "-o", target, "--palette", "db16"]).Code == 2, "Resize accepted palette");
         Require(Run(["colors", input, "-o", target, "--width", "12"]).Code == 2, "Colors accepted width");
         Require(Run(["colors", input, "-o", target, "--sprite"]).Code == 2, "Colors accepted sprite mode");
-        Require(Run(["resize", input, "-o", target, "--width", "68"]).Code == 2, "Resize accepted upscaling");
         Require(Run(["resize", input, "-o", Path.Combine(directory, "lossy.jpg")]).Code == 2, "Resize accepted JPEG");
         Require(Run(["colors", input, "-o", input, "--overwrite"]).Code == 2, "Colors overwrote source");
         Require(!File.Exists(target), "Invalid independent command wrote output");
@@ -283,6 +295,59 @@ try
         Require(Run(["align", "--help"]).Code == 0, "Alignment help failed");
     });
 
+    Check("Grid reduction copies exact cells, including partial edges and alpha", () =>
+    {
+        string aligned = Path.Combine(directory, "reduction-aligned.png");
+        string target = Path.Combine(directory, "reduction-aligned_pixels.png");
+        using (var source = new Bitmap(9, 7, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < source.Height; y++)
+                for (int x = 0; x < source.Width; x++)
+                    source.SetPixel(x, y, Color.FromArgb((x / 4 + y / 4) % 2 == 0 ? 125 : 255,
+                        x / 4 * 75, y / 4 * 90, (x / 4 + y / 4) * 25));
+            source.Save(aligned, ImageFormat.Png);
+        }
+        var run = Run(["reduce-grid", aligned, "--cell-size", "4", "--json"]);
+        Require(run.Code == 0 && run.Error.Length == 0, run.Error);
+        using (var report = JsonDocument.Parse(run.Output))
+        {
+            Require(report.RootElement.GetProperty("process").GetString() == "grid-reduction", "Wrong reduction report");
+            Require(report.RootElement.GetProperty("cellSize").GetInt32() == 4, "Wrong reduction pitch");
+            Require(report.RootElement.GetProperty("outputSize").GetProperty("width").GetInt32() == 3, "Wrong reduced width");
+        }
+        using (var source = new Bitmap(aligned))
+        using (var expected = PixelArtAlignment.PixelGridReducer.Reduce(source, 4))
+        using (var actual = new Bitmap(target))
+            EqualPixels(expected, actual);
+        Require(Run(["compact-grid", aligned, "--cell-size", "4", "-o", target]).Code == 1, "Existing reduced file accepted");
+        Require(Run(["compact-grid", aligned, "--cell-size", "4", "-o", target, "--overwrite"]).Code == 0,
+            "Reduction overwrite failed");
+
+        string irregular = Path.Combine(directory, "reduction-irregular.png");
+        using (var source = new Bitmap(aligned))
+        {
+            source.SetPixel(1, 1, Color.Magenta);
+            source.Save(irregular, ImageFormat.Png);
+        }
+        var irregularRun = Run(["reduce-grid", irregular, "--cell-size", "4"]);
+        Require(irregularRun.Code == 1, $"Nonuniform grid accepted: {irregularRun.Code} {irregularRun.Error}");
+        Require(!File.Exists(Path.Combine(directory, "reduction-irregular_pixels.png")), "Failed reduction created output");
+    });
+
+    Check("Grid reduction validates arguments and protects the source", () =>
+    {
+        string aligned = Path.Combine(directory, "reduction-aligned.png");
+        Require(Run(["reduce-grid", aligned]).Code == 2, "Missing cell size accepted");
+        Require(Run(["reduce-grid", aligned, "--cell-size", "1"]).Code == 2, "Cell size one accepted");
+        var oversizedRun = Run(["reduce-grid", aligned, "--cell-size", "100"]);
+        Require(oversizedRun.Code == 2, $"Oversized cell accepted: {oversizedRun.Code} {oversizedRun.Error}");
+        Require(Run(["reduce-grid", aligned, "--cell-size", "4", "-o", aligned, "--overwrite"]).Code == 2,
+            "Reduction overwrote source");
+        Require(Run(["reduce-grid", aligned, "--cell-size", "4", "-o", Path.Combine(directory, "lossy.jpg")]).Code == 2,
+            "Lossy reduction output accepted");
+        Require(Run(["reduce-grid", "--help"]).Code == 0 && Run(["compact-grid", "--help"]).Code == 0,
+            "Reduction help missing");
+    });
     Check("Sprite mode keeps odd-sized canvas edges, transparency and preview pixels", () =>
     {
         string sprite = Path.Combine(directory, "sprite.png");

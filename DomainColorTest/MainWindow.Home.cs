@@ -11,7 +11,6 @@ public partial class MainWindow
         nameof(CardWidth), typeof(double), typeof(MainWindow), new PropertyMetadata(340.0));
     public double CardWidth { get => (double)GetValue(CardWidthProperty); set => SetValue(CardWidthProperty, value); }
     private bool _homeReady;
-    private bool _compactLayout;
 
     private void InitializeHome()
     {
@@ -19,6 +18,7 @@ public partial class MainWindow
         _sources.CollectionChanged += (_, _) => RefreshHome();
         SizeChanged += (_, _) => UpdateResponsiveLayout();
         homeScroll.SizeChanged += (_, _) => UpdateCardWidth();
+        workspaceHost.SizeChanged += (_, _) => UpdatePreviewHeight();
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key == Key.O && Keyboard.Modifiers == ModifierKeys.Control)
@@ -27,6 +27,12 @@ public partial class MainWindow
                 else if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
                 else if (backgroundWorkspace.Visibility == Visibility.Visible) _ = backgroundWorkspace.OpenAsync();
                 else OpenImage(this, EventArgs.Empty);
+                e.Handled = true;
+            }
+            if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control &&
+                workspaceHost.Visibility == Visibility.Visible && saveButton.IsEnabled)
+            {
+                SaveImage(this, EventArgs.Empty);
                 e.Handled = true;
             }
         };
@@ -44,7 +50,9 @@ public partial class MainWindow
     private void ShowHome()
     {
         if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
+        CloseEditorTools();
         RefreshHome();
+        SetVisible(processButton, false);
         SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
         SetVisible(backgroundWorkspace, false);
@@ -67,6 +75,7 @@ public partial class MainWindow
         SetVisible(backgroundWorkspace, false);
         SetVisible(workspaceHost, true);
         SetVisible(editorToolbar, true);
+        SetVisible(processButton, true);
         UpdateResponsiveLayout();
     }
     private void HomeOpenImage(object sender, RoutedEventArgs e) => OpenImage(sender, e);
@@ -114,36 +123,62 @@ public partial class MainWindow
         SetVisible(iconBannerArt, ActualWidth >= 1000);
         SetVisible(backgroundBannerArt, ActualWidth >= 1100);
         heroTitle.LineHeight = compact ? 36 : 42;
-        if (_compactLayout != compact || workspaceGrid.RowDefinitions.Count == 0)
-        {
-            _compactLayout = compact;
-            workspaceGrid.ColumnDefinitions.Clear();
-            workspaceGrid.RowDefinitions.Clear();
-            if (compact)
-            {
-                workspaceGrid.ColumnDefinitions.Add(new ColumnDefinition());
-                workspaceGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(270) });
-                workspaceGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(630) });
-                Grid.SetColumn(settingsScroller, 0);
-                Grid.SetColumn(previewArea, 0);
-                Grid.SetRow(previewArea, 1);
-                workspaceGrid.Height = 900;
-                workspaceHost.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
-            }
-            else
-            {
-                workspaceGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(350), MinWidth = 330 });
-                workspaceGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(6) });
-                workspaceGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star), MinWidth = 400 });
-                Grid.SetColumn(settingsScroller, 0);
-                Grid.SetColumn(previewArea, 2);
-                Grid.SetRow(previewArea, 0);
-                workspaceGrid.Height = double.NaN;
-                workspaceHost.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
-            }
-            SetVisible(settingsSplitter, !compact);
-        }
+        previewArea.Margin = compact ? new Thickness(12, 0, 12, 10) : new Thickness(18, 0, 18, 12);
+        workspaceHost.VerticalScrollBarVisibility = compact ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+        UpdatePreviewOrientation();
+        UpdatePreviewHeight();
         UpdateCardWidth();
+    }
+
+    private void UpdatePreviewOrientation()
+    {
+        bool wide = ActualWidth >= 1200;
+        if ((Grid.GetColumn(sourcePane) == 2) == wide) return;
+
+        if (wide)
+        {
+            previewArea.Children.Remove(sourceTray);
+            historyRow.Children.Add(sourceTray);
+            Grid.SetRow(sourceTray, 0);
+            Grid.SetColumn(sourceTray, 2);
+            Grid.SetColumnSpan(resultTray, 1);
+            sourceTray.Margin = new Thickness(0);
+            sourceTray.Padding = new Thickness(0);
+            sourceTray.BorderThickness = new Thickness(0);
+        }
+        else
+        {
+            historyRow.Children.Remove(sourceTray);
+            previewArea.Children.Add(sourceTray);
+            Grid.SetRow(sourceTray, 2);
+            Grid.SetColumn(sourceTray, 0);
+            Grid.SetColumnSpan(resultTray, 3);
+            sourceTray.Margin = new Thickness(0, 8, 0, 0);
+            sourceTray.Padding = new Thickness(0, 5, 0, 0);
+            sourceTray.BorderThickness = new Thickness(0, 1, 0, 0);
+        }
+
+        previewPair.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
+        previewPair.RowDefinitions[1].Height = new GridLength(wide ? 0 : 6);
+        previewPair.RowDefinitions[2].Height = wide ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        previewPair.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
+        previewPair.ColumnDefinitions[1].Width = new GridLength(wide ? 6 : 0);
+        previewPair.ColumnDefinitions[2].Width = wide ? new GridLength(1, GridUnitType.Star) : new GridLength(0);
+        Grid.SetRow(sourcePane, wide ? 0 : 2);
+        Grid.SetColumn(sourcePane, wide ? 2 : 0);
+        Grid.SetRow(previewSplitter, wide ? 0 : 1);
+        Grid.SetColumn(previewSplitter, wide ? 1 : 0);
+        previewSplitter.ResizeDirection = wide ? GridResizeDirection.Columns : GridResizeDirection.Rows;
+        previewSplitter.Width = wide ? 6 : double.NaN;
+        previewSplitter.Height = wide ? double.NaN : 6;
+        previewSplitter.HorizontalAlignment = wide ? HorizontalAlignment.Center : HorizontalAlignment.Stretch;
+        previewSplitter.VerticalAlignment = wide ? VerticalAlignment.Stretch : VerticalAlignment.Center;
+    }
+
+    private void UpdatePreviewHeight()
+    {
+        double minimum = ActualWidth < 940 ? 700 : 0;
+        workspaceGrid.MinHeight = Math.Max(minimum, workspaceHost.ActualHeight);
     }
 
     private void HomeScrolled(object sender, ScrollChangedEventArgs e)

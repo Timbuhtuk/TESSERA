@@ -15,12 +15,14 @@ internal static class CliApplication
         Использование: tessera <изображение> [параметры]
                        tessera --input <изображение> --output <результат.png>
                        tessera align <изображение> --cell-size 8
+                       tessera reduce-grid <выровненное.png> --cell-size 8
                        tessera ico <изображение> -o <иконка.ico>
                        tessera remove-background <изображение> -o <результат.png>
                        tessera resize <изображение> -o <результат.png>
                        tessera colors <изображение> -o <результат.png>
                        tessera aseprite <анимация.aseprite> --output-dir <папка>
         Отдельное выравнивание сетки без даунскейла: tessera align --help.
+        Сжатие выровненной сетки: tessera reduce-grid --help.
         Создание многоразмерной иконки Windows: tessera ico --help.
         Удаление однотонного фона: tessera remove-background --help.
         Отдельные размер и цвета: tessera resize --help; tessera colors --help.
@@ -83,6 +85,8 @@ internal static class CliApplication
     {
         if (args.Length > 0 && args[0] == "align")
             return GridAlignmentCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] is "reduce-grid" or "compact-grid")
+            return GridReductionCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] is "ico" or "icon")
             return IconCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] is "remove-background" or "remove-bg")

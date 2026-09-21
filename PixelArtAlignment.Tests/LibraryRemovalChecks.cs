@@ -47,7 +47,7 @@ internal static class LibraryRemovalChecks
             VerifyScroll(Descendants<ScrollViewer>(sources).First(), Orientation.Horizontal);
             VerifyScroll(Descendants<ScrollViewer>(generations).First(), Orientation.Horizontal);
 
-            Get<CheckBox>("advancedToggle").IsChecked = true;
+            Get<Button>("profileToolButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             var log = Get<TextBox>("processingLog");
             log.Text = string.Join(Environment.NewLine, Enumerable.Range(1, 40).Select(i => $"Строка журнала {i}"));
             Pump(); log.BringIntoView(); Pump();
@@ -58,7 +58,7 @@ internal static class LibraryRemovalChecks
             var popup = (Popup)zoom.Template.FindName("PART_Popup", zoom);
             foreach (var bar in Descendants<ScrollBar>(popup.Child)) VerifyStyle(bar);
             zoom.IsDropDownOpen = false;
-            Get<CheckBox>("advancedToggle").IsChecked = false;
+            Window.GetWindow(log)!.Close();
 
             var selected = original.SelectedGeneration;
             var unselected = original.Generations[0];
@@ -136,7 +136,7 @@ internal static class LibraryRemovalChecks
         void Remove(ListBox strip, object entry) { RemoveButton(strip, entry).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
         void VerifyStyle(ScrollBar bar)
         {
-            Require(ReferenceEquals(bar.Template, window.FindResource(bar.Orientation == Orientation.Horizontal ? "HorizontalScrollBar" : "VerticalScrollBar")), "Native scrollbar escaped the theme");
+            Require(ReferenceEquals(bar.Template, Window.GetWindow(bar)!.FindResource(bar.Orientation == Orientation.Horizontal ? "HorizontalScrollBar" : "VerticalScrollBar")), "Native scrollbar escaped the theme");
         }
         void VerifyScroll(ScrollViewer viewer, Orientation orientation)
         {
@@ -148,6 +148,8 @@ internal static class LibraryRemovalChecks
             var arrow = Descendants<RepeatButton>(bar).Last();
             ((RoutedCommand)arrow.Command).Execute(arrow.CommandParameter, arrow); Pump();
             Require((orientation == Orientation.Vertical ? viewer.VerticalOffset : viewer.HorizontalOffset) > 0, "Styled scrollbar arrow no longer scrolls");
+            if (orientation == Orientation.Vertical) viewer.ScrollToTop(); else viewer.ScrollToLeftEnd();
+            Pump();
             var thumb = Descendants<Thumb>(bar).Single();
             double before = bar.Value;
             thumb.RaiseEvent(new DragStartedEventArgs(0, 0));

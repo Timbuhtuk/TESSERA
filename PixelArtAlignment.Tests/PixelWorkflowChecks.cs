@@ -63,13 +63,14 @@ internal static class PixelWorkflowChecks
             Get<ComboBox>("zoomInput").SelectedIndex = 9; Pump(); // 1600%
             var preview = Get<PixelPreview>("resultPreview");
             var other = Get<PixelPreview>("sourcePreview");
-            var pointer = new Point(preview.ActualWidth / 2, preview.ActualHeight / 2);
+            var viewport = (ScrollViewer)preview.Children[0];
+            var pointer = new Point(viewport.ViewportWidth / 2, viewport.ViewportHeight / 2);
             var before = preview.ImagePointAt(pointer);
             bool handled = (bool)Invoke("ChangePreviewZoom", preview, 120, pointer, ModifierKeys.Control)!;
             Pump();
             Require(handled && preview.Zoom == 32 && other.Zoom == 32, "Ctrl+wheel did not zoom both previews");
             var after = preview.ImagePointAt(pointer);
-            Require(Math.Abs(before.X - after.X) < .004 && Math.Abs(before.Y - after.Y) < .004, "Zoom moved the point under the cursor");
+            Require(Math.Abs(before.X - after.X) < .004 && Math.Abs(before.Y - after.Y) < .004, $"Zoom moved the point under the cursor: {before} → {after}, viewport {preview.ActualWidth}×{preview.ActualHeight}");
             Require(!(bool)Invoke("ChangePreviewZoom", preview, -120, pointer, ModifierKeys.None)! && preview.Zoom == 32, "Ordinary wheel was intercepted");
             Invoke("ChangePreviewZoom", preview, -120, pointer, ModifierKeys.Control); Pump();
             Require(preview.Zoom == 16 && other.Zoom == 16, "Ctrl+wheel down failed");

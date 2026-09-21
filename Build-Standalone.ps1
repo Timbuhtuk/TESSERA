@@ -38,11 +38,12 @@ Tessera prepares pixel art and icons. It began as a way to correct uneven
 pixel grids and inconsistent pixel sizes in AI-generated images.
 Its name refers to an individual piece of a mosaic.
 
-Open images with the Open button, Ctrl+O or drag and drop.
+Open images from File > Open, with Ctrl+O or drag and drop.
 The home screen keeps your source library and result histories.
-The editor can change size and colors separately or together. It also aligns
-pixel grids and reduces aligned cells to one pixel.
-Save exports the selected result to a separate file.
+The editor can change size and colors separately or together, with crisp
+pixel enlargement. It also aligns grids and reduces cells to one pixel.
+The toolbar opens separate Grid, Size, Color and Mode tool windows.
+File > Save exports one result; Save all results exports the current history.
 
 The centred animation banner opens Aseprite conversion. Drop multiple files
 to prepare sprite sheets automatically; save one result or the entire batch
@@ -57,9 +58,10 @@ Hover over From editor to choose any library source or saved result.
 It does not segment objects from complex photographic backgrounds.
 The application interface currently uses Russian labels.
 
-Your library stays at %LOCALAPPDATA%\Pixelizator\Library.
-This historical path preserves your existing images and histories.
-Copy that folder separately when moving your library to another computer.
+Your library is at %LOCALAPPDATA%\Tessera\Library.
+On first launch, existing Pixelizator images and histories are copied there.
+The old library remains as a backup. Copy the Tessera folder separately
+when moving your library to another computer.
 
 Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
 '@

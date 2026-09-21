@@ -82,22 +82,81 @@
                 </DockPanel>
             </Border>
 
-            <DockPanel x:Name="editorToolbar" Margin="18,10">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
-                    <Button x:Name="openButton" Content="Открыть…" Margin="0,0,8,0" ToolTip="Открыть изображения (Ctrl+O)"/>
-                    <Button x:Name="processButton" Content="Размер + цвет" ToolTip="Совместная обработка исходника" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" IsDefault="True" IsEnabled="False"/>
-                    <Button x:Name="saveButton" Content="Сохранить…" IsEnabled="False"/>
+            <WrapPanel x:Name="editorToolbar" Margin="18,8,18,9" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,4">
+                    <Button x:Name="backToLibraryButton" Content="←" Width="34" Height="32" Margin="0,0,10,0" Click="GoToLibrary" ToolTip="К библиотеке" AutomationProperties.Name="К библиотеке"/>
+                    <Button x:Name="fileMenuButton" Content="Файл ▾" Width="70" Height="32" Margin="0,0,14,0" AutomationProperties.Name="Меню Файл"/>
+                    <Popup x:Name="fileMenuPopup" PlacementTarget="{Binding ElementName=fileMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                        <Border Background="#191919" BorderBrush="#555555" BorderThickness="1" Padding="5">
+                            <StackPanel Width="225">
+                                <Button x:Name="openButton" Content="Открыть…" HorizontalContentAlignment="Left" ToolTip="Открыть изображения (Ctrl+O)"/>
+                                <Button x:Name="saveButton" Content="Сохранить…" HorizontalContentAlignment="Left" Margin="0,4,0,0" IsEnabled="False" ToolTip="Сохранить выбранный результат (Ctrl+S)"/>
+                                <Button x:Name="saveAllButton" Content="Сохранить все результаты…" HorizontalContentAlignment="Left" Margin="0,4,0,0" IsEnabled="False" ToolTip="Экспортировать историю текущего исходника в папку"/>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+                    <TextBlock x:Name="fileLabel" Width="210" Text="Откройте изображение" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Foreground="#ABABAB" VerticalAlignment="Center"/>
                 </StackPanel>
-                <Button x:Name="backToLibraryButton" Content="←" Width="34" Height="32" DockPanel.Dock="Left" Margin="0,0,12,0" Click="GoToLibrary" ToolTip="К библиотеке" AutomationProperties.Name="К библиотеке"/>
-                <TextBlock x:Name="fileLabel" Text="Откройте изображение" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,0,12,0" Foreground="#ABABAB"/>
-            </DockPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,4">
+                    <Button x:Name="gridToolButton" Content="Сетка" Margin="0,0,8,0" ToolTip="Выравнивание и уменьшение сетки"/>
+                    <Border Width="1" Background="#3A3A3A" Margin="2,4,10,4"/>
+                    <Button x:Name="sizeToolButton" Content="Размер" Margin="0,0,8,0" ToolTip="Размер, кадр и выбор пикселя"/>
+                    <Button x:Name="colorToolButton" Content="Цвет" Margin="0,0,8,0" ToolTip="Квантование и палитра"/>
+                    <Border Width="1" Background="#3A3A3A" Margin="2,4,10,4"/>
+                    <Button x:Name="profileToolButton" Content="Режим" Margin="0,0,8,0" ToolTip="Профиль и выполнение"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,4">
+                    <TextBlock Text="Основа" Foreground="#ABABAB" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="operationSourceInput" SelectedIndex="0" Width="170" AutomationProperties.Name="Основа для обработки">
+                        <ComboBoxItem Content="Исходник"/>
+                        <ComboBoxItem Content="Выбранный результат"/>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock Text="Масштаб" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="zoomInput" SelectedIndex="0" Width="100" Margin="0,0,16,0" ToolTip="Ctrl + колёсико над изображением"><ComboBoxItem Content="Вписать"/><ComboBoxItem Content="6,25%"/><ComboBoxItem Content="12,5%"/><ComboBoxItem Content="25%"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/><ComboBoxItem Content="6400%"/></ComboBox>
+                    <TextBlock Text="Фон" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="backgroundInput" SelectedIndex="0" Width="116"><ComboBoxItem Content="Шахматка"/><ComboBoxItem Content="Тёмный"/><ComboBoxItem Content="Светлый"/></ComboBox>
+                </StackPanel>
+            </WrapPanel>
         </StackPanel>
-        <ScrollViewer x:Name="workspaceHost" Grid.Row="1" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer x:Name="workspaceHost" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid x:Name="workspaceGrid">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="386" MinWidth="350"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*" MinWidth="470"/></Grid.ColumnDefinitions>
-            <ScrollViewer x:Name="settingsScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                <StackPanel x:Name="settingsPanel" Margin="16,0,12,12">
-                    <GroupBox Header="Выравнивание сетки">
+            <Grid x:Name="previewArea" Margin="18,0,18,12">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="280"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Grid x:Name="historyRow" Grid.Row="0">
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <StackPanel x:Name="resultTray" Grid.ColumnSpan="3">
+                        <TextBlock x:Name="resultCaption" Text="РЕЗУЛЬТАТ" Style="{StaticResource Caption}"/>
+                    <ListBox x:Name="generationStrip" AutomationProperties.Name="История результатов">
+                        <ListBox.Style><Style TargetType="ListBox" BasedOn="{StaticResource Filmstrip}">
+                            <Style.Triggers>
+                                <Trigger Property="HasItems" Value="False"><Setter Property="Visibility" Value="Collapsed"/></Trigger>
+                            </Style.Triggers>
+                        </Style></ListBox.Style>
+                    </ListBox>
+                    </StackPanel>
+                </Grid>
+                <Grid x:Name="previewPair" Grid.Row="1">
+                    <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="6"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="0"/><ColumnDefinition Width="0"/></Grid.ColumnDefinitions>
+                    <local:PixelPreview x:Name="resultPreview" EmptyText="Здесь появится результат&#10;Откройте «Режим» и нажмите «Обработать»" ToolTip="Ctrl + колёсико — масштаб. Перетащите результат в исходники, чтобы обработать его дальше."/>
+                    <GridSplitter x:Name="previewSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="#303030"/>
+                    <DockPanel x:Name="sourcePane" Grid.Row="2" Background="Transparent">
+                        <local:PixelPreview x:Name="sourcePreview" EmptyText="Откройте исходное изображение"/>
+                    </DockPanel>
+                </Grid>
+                <Border x:Name="sourceTray" Grid.Row="2" Background="Transparent" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,5,0,0">
+                    <DockPanel>
+                        <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="ИСХОДНИК" Style="{StaticResource Caption}"/>
+                        <ListBox x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="Добавленные исходники"/>
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        </ScrollViewer>
+                <StackPanel x:Name="settingsPanel" Grid.Row="1" Visibility="Collapsed">
+                    <GroupBox x:Name="gridToolGroup" Header="Выравнивание сетки">
                         <StackPanel>
                             <TextBlock Text="Отдельная операция. Размер холста сохраняется, цвета берутся из исходника." Style="{StaticResource Hint}"/>
                             <DockPanel Margin="0,3"><TextBlock Text="Ячейка, px" Width="132"/><local:IntegerInput x:Name="gridCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="Размер ячейки"/></DockPanel>
@@ -106,7 +165,7 @@
                             <Button x:Name="compactGridButton" Style="{StaticResource PrimaryButton}" Content="Ячейка сетки → 1 пиксель" IsEnabled="False" Margin="0,6,0,0" ToolTip="Сначала выберите выровненный результат"/>
                         </StackPanel>
                     </GroupBox>
-                    <GroupBox Header="Режим обработки">
+                    <GroupBox x:Name="profileToolGroup" Header="Режим обработки">
                         <StackPanel>
                             <UniformGrid Columns="3">
                                 <RadioButton x:Name="backgroundMode" Content="Фон" Style="{StaticResource ModeButton}"/>
@@ -115,25 +174,20 @@
                             </UniformGrid>
                             <TextBlock x:Name="modeDescription" Margin="0,0,0,5"/>
                             <TextBlock x:Name="profileState" FontSize="12" Margin="0,2,0,8"/>
-                            <Button x:Name="resetProfileButton" Content="Вернуть настройки режима"/>
+                            <Button x:Name="processButton" Content="Обработать" Style="{StaticResource PrimaryButton}" IsDefault="True" IsEnabled="False" Visibility="Collapsed" Margin="0,4,0,0" ToolTip="Обработать выбранную основу в выбранном режиме"/>
                         </StackPanel>
                     </GroupBox>
-                    <GroupBox Header="Применить к">
-                        <ComboBox x:Name="operationSourceInput" SelectedIndex="0" AutomationProperties.Name="Основа для обработки">
-                            <ComboBoxItem Content="Исходник"/>
-                            <ComboBoxItem Content="Выбранный результат"/>
-                        </ComboBox>
-                    </GroupBox>
-                    <GroupBox Header="Размер результата">
+
+                    <GroupBox x:Name="sizeToolGroup" Header="Размер результата">
                         <StackPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="Ширина, px" Width="132"/><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="3840" Value="48" AutomationProperties.Name="Ширина результата"/></DockPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="Высота, px" Width="132"/><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2160" Value="48" AutomationProperties.Name="Высота результата"/></DockPanel>
                             <CheckBox x:Name="aspectLock" Content="Сохранять пропорции исходника"/>
                             <TextBlock x:Name="sizeHint" Style="{StaticResource Hint}"/>
-                            <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="Изменить размер" IsEnabled="False" Margin="0,7,0,0" ToolTip="Уменьшить изображение, сохранив исходные цвета"/>
+                            <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="Изменить размер" IsEnabled="False" Margin="0,7,0,0" ToolTip="Увеличить или уменьшить изображение без изменения цветов; увеличение — без сглаживания"/>
                         </StackPanel>
                     </GroupBox>
-                    <GroupBox Header="Цвет">
+                    <GroupBox x:Name="colorToolGroup" Header="Цвет">
                         <StackPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="Квантование" Width="132"/><ComboBox x:Name="quantizationInput" SelectedIndex="1"><ComboBoxItem Content="Median Cut"/><ComboBoxItem Content="K-Means LAB"/><ComboBoxItem Content="K-Means Linear"/></ComboBox></DockPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="Число цветов" Width="132"/><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="Число цветов"/></DockPanel>
@@ -146,9 +200,7 @@
                             <Button x:Name="colorOnlyButton" Style="{StaticResource PrimaryButton}" Content="Применить цвета" IsEnabled="False" Margin="0,7,0,0"/>
                         </StackPanel>
                     </GroupBox>
-                    <CheckBox x:Name="advancedToggle" Content="Расширенные настройки"/>
-                    <StackPanel x:Name="advancedPanel" Visibility="Collapsed">
-                        <GroupBox Header="Кадр и прозрачность">
+                        <GroupBox x:Name="frameToolGroup" Header="Кадр и прозрачность">
                             <StackPanel>
                                 <CheckBox x:Name="spriteInput" Content="Весь кадр и прозрачность"/>
                                 <StackPanel x:Name="alphaControls">
@@ -162,7 +214,7 @@
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
-                        <GroupBox Header="Выбор пикселя">
+                        <GroupBox x:Name="pixelToolGroup" Header="Выбор пикселя">
                             <StackPanel>
                                 <WrapPanel><RadioButton x:Name="automaticInput" Content="Автоматически" IsChecked="True"/><RadioButton x:Name="manualInput" Content="Вручную"/></WrapPanel>
                                 <StackPanel x:Name="manualControls">
@@ -173,50 +225,13 @@
                                 </StackPanel>
                             </StackPanel>
                         </GroupBox>
-                        <GroupBox Header="Выполнение">
+                        <GroupBox x:Name="executionToolGroup" Header="Выполнение">
                             <StackPanel>
                                 <DockPanel Margin="0,3"><TextBlock Text="Потоки" Width="132"/><local:IntegerInput x:Name="threadsInput" Minimum="1" AutomationProperties.Name="Число потоков"/></DockPanel>
                                 <TextBox x:Name="processingLog" Height="125" Margin="0,8,0,0" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Padding="6"/>
                             </StackPanel>
                         </GroupBox>
-                    </StackPanel>
                 </StackPanel>
-            </ScrollViewer>
-            <GridSplitter x:Name="settingsSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" Background="#191919"/>
-            <Grid x:Name="previewArea" Grid.Column="2" Margin="12,0,18,12">
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="140"/><RowDefinition Height="6"/><RowDefinition Height="*" MinHeight="140"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                <WrapPanel Margin="0,0,0,8">
-                    <TextBlock Text="Масштаб" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="zoomInput" SelectedIndex="0" Width="100" Margin="0,0,16,0" ToolTip="Ctrl + колёсико над изображением"><ComboBoxItem Content="Вписать"/><ComboBoxItem Content="6,25%"/><ComboBoxItem Content="12,5%"/><ComboBoxItem Content="25%"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/><ComboBoxItem Content="6400%"/></ComboBox>
-                    <TextBlock Text="Фон" Margin="0,0,8,0"/>
-                    <ComboBox x:Name="backgroundInput" SelectedIndex="0" Width="116"><ComboBoxItem Content="Шахматка"/><ComboBoxItem Content="Тёмный"/><ComboBoxItem Content="Светлый"/></ComboBox>
-                </WrapPanel>
-                <DockPanel Grid.Row="1">
-                    <TextBlock x:Name="resultCaption" DockPanel.Dock="Top" Text="РЕЗУЛЬТАТ" Style="{StaticResource Caption}"/>
-                    <ListBox x:Name="generationStrip" DockPanel.Dock="Top" AutomationProperties.Name="История результатов">
-                        <ListBox.Style><Style TargetType="ListBox" BasedOn="{StaticResource Filmstrip}">
-                            <Style.Triggers>
-                                <Trigger Property="HasItems" Value="False"><Setter Property="Visibility" Value="Collapsed"/></Trigger>
-                            </Style.Triggers>
-                        </Style></ListBox.Style>
-                    </ListBox>
-                    <local:PixelPreview x:Name="resultPreview" EmptyText="Здесь появится результат&#10;Выберите операцию слева или выровняйте сетку" ToolTip="Ctrl + колёсико — масштаб. Перетащите результат в исходники, чтобы обработать его дальше."/>
-                </DockPanel>
-                <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="#191919"/>
-                <DockPanel x:Name="sourcePane" Grid.Row="3" Background="Transparent">
-                    <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="ИСХОДНИК" Style="{StaticResource Caption}"/>
-                    <CheckBox x:Name="showCropInput" DockPanel.Dock="Top" Content="Показать область обработки" IsEnabled="False"/>
-                    <local:PixelPreview x:Name="sourcePreview" EmptyText="Откройте исходное изображение"/>
-                </DockPanel>
-                <Border x:Name="sourceTray" Grid.Row="4" Background="Transparent" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,5,0,0">
-                    <DockPanel>
-                        <TextBlock x:Name="sourcesCaption" Text="Исходники" DockPanel.Dock="Top" FontSize="13" Foreground="#ABABAB" Margin="0,0,0,5"/>
-                        <ListBox x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="Добавленные исходники"/>
-                    </DockPanel>
-                </Border>
-            </Grid>
-        </Grid>
-        </ScrollViewer>
         <ScrollViewer x:Name="homeScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" ScrollChanged="HomeScrolled">
             <StackPanel x:Name="homeContent" Margin="32,8,32,24">
                 <Border BorderBrush="#3A3A3A" BorderThickness="1" ClipToBounds="True">
@@ -317,7 +332,7 @@
         <local:IconWorkspace x:Name="iconWorkspace" Grid.Row="1" Visibility="Collapsed"/>
         <local:BackgroundWorkspace x:Name="backgroundWorkspace" Grid.Row="1" Visibility="Collapsed"/>
         <Border Grid.Row="2" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0" Padding="18,8">
-            <DockPanel>
+            <DockPanel LastChildFill="True">
                 <ProgressBar x:Name="busyIndicator" Width="90" Height="5" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#EEEEEE" Background="#333333" IsIndeterminate="True" Visibility="Collapsed"/>
                 <TextBlock x:Name="statusLabel" Text="Готово к работе" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
             </DockPanel>
