@@ -44,6 +44,7 @@ public sealed class GenerationEntry
     public Guid Id { get; set; } = Guid.NewGuid();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
     public string Caption { get; set; } = "";
+    public string Operation { get; set; } = "";
     public string Log { get; set; } = "";
     public bool IsAlignment { get; set; }
     public bool IsGridReduction { get; set; }
@@ -54,7 +55,8 @@ public sealed class GenerationEntry
     public int Height { get; set; }
     public int CellSize { get; set; }
     public EditorSettings Settings { get; set; } = new();
-    [JsonIgnore] public string Label => IsAlignment ? $"Сетка {CellSize} px · {CreatedAt:HH:mm:ss}" : $"{(IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
+    [JsonIgnore] public string Label => IsAlignment ? $"Сетка {CellSize} px · {CreatedAt:HH:mm:ss}"
+        : $"{(Operation.Length > 0 ? Operation + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
     [JsonIgnore] public string Description => $"{Caption}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{Log}";
     [JsonIgnore] public string RemoveDescription => $"Удалить результат «{Label}» из истории";
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }

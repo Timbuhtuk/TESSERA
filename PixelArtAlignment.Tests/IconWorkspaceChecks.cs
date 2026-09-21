@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,6 +14,9 @@ namespace PixelArtAlignment.Tests;
 
 internal static class IconWorkspaceChecks
 {
+    [StructLayout(LayoutKind.Sequential)] private struct ScreenPoint { public int X; public int Y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out ScreenPoint point);
+    [DllImport("user32.dll")] private static extern bool SetCursorPos(int x, int y);
     public static void Run()
     {
         string folder = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "icons-" + Guid.NewGuid().ToString("N")));
@@ -91,7 +95,58 @@ internal static class IconWorkspaceChecks
             Require(!GetWindow<bool>("_processing"), "Editor processing timed out");
             var result = GetWindow<Bitmap>("_downscaledResult");
             var document = GetWindow<SourceEntry>("_activeSource");
-            Invoke("ShowHome"); ClickWindow("homeIconButton"); Click("iconUseResultButton"); WaitIdle();
+            Invoke("ShowHome"); ClickWindow("homeIconButton"); ClickMaterial("iconEditorChoices", "materialResults"); WaitIdle();
+            var picker = Get<EditorMaterialPicker>("iconEditorChoices");
+            var trigger = (Button)picker.FindName("materialTrigger");
+            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+            Require(picker.IsOpen && picker.SourceCount == 1 && picker.ResultCount == 1,
+                "ICO editor materials did not appear on hover");
+            Pump();
+            var popup = (System.Windows.Controls.Primitives.Popup)picker.FindName("materialPopup");
+            var panel = (FrameworkElement)popup.Child;
+            panel.UpdateLayout();
+            var popupBitmap = new RenderTargetBitmap((int)Math.Ceiling(panel.ActualWidth), (int)Math.Ceiling(panel.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            popupBitmap.Render(panel);
+            var popupEncoder = new PngBitmapEncoder(); popupEncoder.Frames.Add(BitmapFrame.Create(popupBitmap));
+            using (var popupStream = File.Create(Path.Combine("artifacts", "wpf", "verification", "editor-materials.png"))) popupEncoder.Save(popupStream);
+            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+            panel.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+            Thread.Sleep(160); Pump();
+            Require(picker.IsOpen, "Moving from trigger to popup closed the picker");
+            panel.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+            Thread.Sleep(160); Pump();
+            Require(!picker.IsOpen, "Picker remained open after pointer left the popup");
+            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+            Thread.Sleep(160); Pump();
+            Require(!picker.IsOpen, "Picker remained open after pointer left the trigger");
+            Require(GetCursorPos(out var previousCursor), "Could not read cursor position");
+            try
+            {
+                trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+                var overTrigger = trigger.PointToScreen(new Point(trigger.ActualWidth / 2, trigger.ActualHeight / 2));
+                Require(SetCursorPos((int)overTrigger.X, (int)overTrigger.Y), "Could not position cursor on trigger"); Pump();
+                trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+                typeof(EditorMaterialPicker).GetMethod("ScheduleClose", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(picker, null);
+                Thread.Sleep(160); Pump();
+                GetCursorPos(out var triggerCursor);
+                Require(picker.IsOpen, $"Picker closed while real cursor remained on trigger: expected {overTrigger}, actual {triggerCursor.X},{triggerCursor.Y}, visible {trigger.IsVisible}, size {trigger.ActualWidth}x{trigger.ActualHeight}");
+                var overPanel = panel.PointToScreen(new Point(12, 12));
+                Require(SetCursorPos((int)overPanel.X, (int)overPanel.Y), "Could not position cursor on panel"); Pump();
+                typeof(EditorMaterialPicker).GetMethod("ScheduleClose", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(picker, null);
+                Thread.Sleep(160); Pump();
+                Require(picker.IsOpen, "Picker closed while real cursor remained on panel");
+                var outside = new Point(SystemParameters.VirtualScreenLeft + 2, SystemParameters.VirtualScreenTop + 2);
+                Require(SetCursorPos((int)outside.X, (int)outside.Y), "Could not position cursor outside picker"); Pump();
+                for (int attempt = 0; attempt < 4 && picker.IsOpen; attempt++)
+                {
+                    typeof(EditorMaterialPicker).GetMethod("ScheduleClose", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(picker, null);
+                    Thread.Sleep(160); Pump();
+                }
+                GetCursorPos(out var outsideCursor);
+                Require(!picker.IsOpen, $"Picker stayed open after cursor left: expected {outside}, actual {outsideCursor.X},{outsideCursor.Y}");
+            }
+            finally { SetCursorPos(previousCursor.X, previousCursor.Y); Pump(); }
             var firstFrame = Get<ItemsControl>("iconFrames").Items.Cast<IconWorkspace.FramePreview>().First();
             using (var expected = IconExporter.CreateFrame(result, firstFrame.Size, IconResizeMode.NearestNeighbor))
             {
@@ -101,7 +156,7 @@ internal static class IconWorkspaceChecks
                 PixelPreview.ToBitmapSource(expected).CopyPixels(wanted, firstFrame.Size * 4, 0);
                 Require(pixels.SequenceEqual(wanted), "ICO preview did not use the selected editor result");
             }
-            Click("iconUseSourceButton"); WaitIdle();
+            ClickMaterial("iconEditorChoices", "materialSources"); WaitIdle();
             Require(Get<TextBlock>("iconFileLabel").Text == document.Label, "Editor source selection failed");
             Click("iconBackButton");
             var generationData = (DataObject)Invoke("CreateGenerationDragData", document, document.SelectedGeneration!)!;
@@ -181,6 +236,8 @@ internal static class IconWorkspaceChecks
         object? Invoke(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, args);
         void ClickWindow(string name) => ((Button)window.FindName(name)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         void Click(string name) => Get<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        void ClickMaterial(string pickerName, string panelName)
+            => ((Button)((WrapPanel)Get<EditorMaterialPicker>(pickerName).FindName(panelName)).Children[0]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         void Wait(Task task)
         {
             var until = DateTime.UtcNow.AddSeconds(15);

@@ -25,6 +25,7 @@ public partial class MainWindow
             {
                 if (asepriteWorkspace.Visibility == Visibility.Visible) _ = asepriteWorkspace.OpenAsync();
                 else if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
+                else if (backgroundWorkspace.Visibility == Visibility.Visible) _ = backgroundWorkspace.OpenAsync();
                 else OpenImage(this, EventArgs.Empty);
                 e.Handled = true;
             }
@@ -36,16 +37,17 @@ public partial class MainWindow
 
     private void RefreshHome()
     {
-        if (!_homeReady || asepriteWorkspace.IsBusy) return;
+        if (!_homeReady || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(emptyLibrary, _sources.Count == 0);
     }
 
     private void ShowHome()
     {
-        if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) return;
+        if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         RefreshHome();
         SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
+        SetVisible(backgroundWorkspace, false);
         SetVisible(homeScroll, true);
         SetVisible(workspaceHost, false);
         SetVisible(editorToolbar, false);
@@ -58,10 +60,11 @@ public partial class MainWindow
 
     private void ShowEditor()
     {
-        if (!_homeReady || asepriteWorkspace.IsBusy) return;
+        if (!_homeReady || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(homeScroll, false);
         SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
+        SetVisible(backgroundWorkspace, false);
         SetVisible(workspaceHost, true);
         SetVisible(editorToolbar, true);
         UpdateResponsiveLayout();
@@ -96,17 +99,20 @@ public partial class MainWindow
 
     private void UpdateResponsiveLayout()
     {
-        if (!_homeReady || asepriteWorkspace.IsBusy) return;
+        if (!_homeReady || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         bool compact = ActualWidth < 940;
         homeContent.Margin = new Thickness(compact ? 18 : 32, 8, compact ? 18 : 32, 24);
         heroCopy.Margin = new Thickness(compact ? 22 : 32, 28, compact ? 22 : 32, 28);
         heroTitle.FontSize = compact ? 29 : 34;
         iconBannerTitle.FontSize = compact ? 29 : 34;
+        backgroundBannerTitle.FontSize = compact ? 29 : 34;
         asepriteBannerTitle.FontSize = compact ? 29 : 34;
         iconBannerCopy.Margin = heroCopy.Margin;
+        backgroundBannerCopy.Margin = heroCopy.Margin;
         asepriteBannerCopy.Margin = heroCopy.Margin;
         SetVisible(asepriteBannerArt, ActualWidth >= 1100);
         SetVisible(iconBannerArt, ActualWidth >= 1000);
+        SetVisible(backgroundBannerArt, ActualWidth >= 1100);
         heroTitle.LineHeight = compact ? 36 : 42;
         if (_compactLayout != compact || workspaceGrid.RowDefinitions.Count == 0)
         {

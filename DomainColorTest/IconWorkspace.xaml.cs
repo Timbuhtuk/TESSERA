@@ -21,8 +21,8 @@ public partial class IconWorkspace : UserControl, IDisposable
     public bool IsBusy => _busy;
     public bool IsRendering { get; private set; }
     public event EventHandler? BackRequested;
-    public event EventHandler? SourceRequested;
-    public event EventHandler? ResultRequested;
+    public event Action<EditorMaterial>? MaterialRequested;
+
     public event EventHandler? BusyChanged;
     public event Action<string>? StatusChanged;
     public sealed record FramePreview(int Size, BitmapSource Image)
@@ -43,8 +43,8 @@ public partial class IconWorkspace : UserControl, IDisposable
         iconBackButton.Click += (_, _) => BackRequested?.Invoke(this, EventArgs.Empty);
         iconOpenButton.Click += async (_, _) => await OpenAsync();
         iconSaveButton.Click += async (_, _) => await SaveDialogAsync();
-        iconUseSourceButton.Click += (_, _) => SourceRequested?.Invoke(this, EventArgs.Empty);
-        iconUseResultButton.Click += (_, _) => ResultRequested?.Invoke(this, EventArgs.Empty);
+        iconEditorChoices.MaterialSelected += material => MaterialRequested?.Invoke(material);
+
         iconCustomCheck.Checked += (_, _) => { iconCustomSize.IsEnabled = true; SchedulePreview(); };
         iconCustomCheck.Unchecked += (_, _) => { iconCustomSize.IsEnabled = false; SchedulePreview(); };
         iconCustomSize.ValueChanged += (_, _) => SchedulePreview();
@@ -59,12 +59,8 @@ public partial class IconWorkspace : UserControl, IDisposable
         SizeChanged += (_, _) => UpdateLayoutForWidth();
     }
 
-    public void SetEditorAvailability(bool source, bool result)
-    {
-        iconEditorChoices.Visibility = source || result ? Visibility.Visible : Visibility.Collapsed;
-        iconUseSourceButton.IsEnabled = source;
-        iconUseResultButton.IsEnabled = result;
-    }
+    public void SetEditorMaterials(IEnumerable<EditorMaterial> materials)
+        => iconEditorChoices.SetMaterials(materials);
 
     public static bool SupportsFile(string path) => File.Exists(path) && Path.GetExtension(path).ToLowerInvariant() is
         ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".tif" or ".tiff";
@@ -91,7 +87,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         finally { SetBusy(false); }
     }
 
-    private static Bitmap ReadImage(string path)
+    internal static Bitmap ReadImage(string path)
     {
         using var metadata = new Bitmap(path);
         int orientation = metadata.PropertyIdList.Contains(0x112) && metadata.GetPropertyItem(0x112)?.Value is { Length: >= 2 } bytes

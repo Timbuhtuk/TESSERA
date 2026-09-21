@@ -9,7 +9,7 @@ public partial class MainWindow
     {
         asepriteWorkspace.BackRequested += (_, _) => ShowHome();
         asepriteWorkspace.StatusChanged += message => statusLabel.Text = message;
-        asepriteWorkspace.BusyChanged += (_, _) => SetVisible(busyIndicator, _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy);
+        asepriteWorkspace.BusyChanged += (_, _) => UpdateBusyIndicator();
         Closed += (_, _) => asepriteWorkspace.Dispose();
     }
 
@@ -17,9 +17,10 @@ public partial class MainWindow
 
     private void ShowAsepriteWorkspace()
     {
-        if (_processing || iconWorkspace.IsBusy) return;
+        if (_processing || iconWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(homeScroll, false); SetVisible(workspaceHost, false); SetVisible(editorToolbar, false); SetVisible(iconWorkspace, false);
         SetVisible(asepriteWorkspace, true);
+        SetVisible(backgroundWorkspace, false);
     }
 
     private bool IsAsepriteDropTarget(DependencyObject? target, IDataObject data)

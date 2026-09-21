@@ -7,10 +7,9 @@ public partial class MainWindow
     private void InitializeIcons()
     {
         iconWorkspace.BackRequested += (_, _) => ShowHome();
-        iconWorkspace.SourceRequested += (_, _) => UseEditorImageForIcon(false);
-        iconWorkspace.ResultRequested += (_, _) => UseEditorImageForIcon(true);
+        iconWorkspace.MaterialRequested += UseEditorMaterialForIcon;
         iconWorkspace.StatusChanged += message => statusLabel.Text = message;
-        iconWorkspace.BusyChanged += (_, _) => SetVisible(busyIndicator, _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy);
+        iconWorkspace.BusyChanged += (_, _) => UpdateBusyIndicator();
         Closed += (_, _) => iconWorkspace.Dispose();
     }
 
@@ -18,24 +17,26 @@ public partial class MainWindow
 
     private void ShowIconWorkspace()
     {
-        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) return;
+        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(asepriteWorkspace, false);
+        SetVisible(backgroundWorkspace, false);
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
         SetVisible(editorToolbar, false);
         SetVisible(iconWorkspace, true);
-        iconWorkspace.SetEditorAvailability(_sourceImage is not null, _downscaledResult is not null);
+        iconWorkspace.SetEditorMaterials(GetEditorMaterials());
         statusLabel.Text = "Готово";
     }
 
-    private void UseEditorImageForIcon(bool result)
+    private void UseEditorMaterialForIcon(EditorMaterial material)
     {
-        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) return;
-        var image = result ? _downscaledResult : _sourceImage;
-        if (image is null) return;
-        string label = _activeSource?.Label ?? "Изображение";
-        if (result) label = System.IO.Path.GetFileNameWithoutExtension(label) + "_result.png";
-        iconWorkspace.SetImage(image, label, result ? null : _selectedFilePath);
+        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
+        try
+        {
+            using var image = ImageLibrary.ReadBitmap(material.SnapshotPath);
+            iconWorkspace.SetImage(image, material.FileLabel, material.OriginalPath ?? material.SnapshotPath);
+        }
+        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть материал: {ex.Message}"; }
     }
 
     private bool IsIconDropTarget(DependencyObject? target)

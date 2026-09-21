@@ -17,7 +17,7 @@ internal static class UiChecks
         Exception? failure = null;
         var thread = new Thread(() =>
         {
-            try { WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); } catch (Exception e) { failure = e; }
+            try { WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); } catch (Exception e) { failure = e; }
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
@@ -98,6 +98,28 @@ internal static class UiChecks
             Require(!Get<bool>("_resultStale"), "Grid size invalidated downscale");
             Get<CheckBox>("colorWeightsInput").IsChecked = false;
             Require(Get<bool>("_resultStale"), "Color options did not invalidate downscale");
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            Click("scaleOnlyButton"); Wait();
+            var sizeOnly = Get<Bitmap>("_downscaledResult");
+            Require(sizeOnly.Width == 15 && sizeOnly.Height == 7, "Independent scaling used the wrong size");
+            var sourceColors = new HashSet<int>();
+            for (int y = 0; y < source.Height; y++) for (int x = 0; x < source.Width; x++) sourceColors.Add(source.GetPixel(x, y).ToArgb());
+            for (int y = 0; y < sizeOnly.Height; y++) for (int x = 0; x < sizeOnly.Width; x++)
+                Require(sourceColors.Contains(sizeOnly.GetPixel(x, y).ToArgb()), "Independent scaling changed a source color");
+            var sizeGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            Click("colorOnlyButton"); Wait();
+            var colorGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            var colorOnly = Get<Bitmap>("_downscaledResult");
+            Require(colorGeneration.ParentGenerationId == sizeGeneration.Id && colorOnly.Width == 15 && colorOnly.Height == 7,
+                "Color operation did not use the selected result without resizing it");
+            var paletteColors = Palettes.GetPalette(PaletteKind.GameBoy).ToHashSet();
+            for (int y = 0; y < colorOnly.Height; y++) for (int x = 0; x < colorOnly.Width; x++)
+                Require(paletteColors.Contains(colorOnly.GetPixel(x, y).ToArgb() & 0xFFFFFF), "Color operation ignored the palette");
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            Click("colorOnlyButton"); Wait();
+            Require(Get<Bitmap>("_downscaledResult").Size == source.Size && Get<SourceEntry>("_activeSource").SelectedGeneration!.ParentGenerationId is null,
+                "Color operation on the source unexpectedly scaled or chained a result");
             Get<CheckBox>("advancedToggle").IsChecked = true;
             Get<RadioButton>("manualInput").IsChecked = true;
             Get<Slider>("brightnessInput").Value = 73;

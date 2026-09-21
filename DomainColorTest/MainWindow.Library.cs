@@ -50,6 +50,11 @@ public partial class MainWindow
                 e.Effects = CanDropAseprite(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
                 e.Handled = true; return;
             }
+            if (IsBackgroundDropTarget(e.OriginalSource as DependencyObject))
+            {
+                e.Effects = CanDropBackground(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+                e.Handled = true; return;
+            }
             if (IsIconDropTarget(e.OriginalSource as DependencyObject))
             {
                 e.Effects = CanDropIcon(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
@@ -66,6 +71,7 @@ public partial class MainWindow
         {
             e.Handled = true;
             if (IsAsepriteDropTarget(e.OriginalSource as DependencyObject, e.Data)) { await DropAsepriteAsync(e); return; }
+            if (IsBackgroundDropTarget(e.OriginalSource as DependencyObject)) { await DropBackgroundAsync(e); return; }
             if (IsIconDropTarget(e.OriginalSource as DependencyObject)) { await DropIconAsync(e); return; }
             if (_processing) { e.Effects = DragDropEffects.None; return; }
             if (e.Data.GetDataPresent(GenerationDragFormat))

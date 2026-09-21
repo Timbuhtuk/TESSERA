@@ -177,6 +177,87 @@ try
         File.WriteAllText(corrupt, "not an image");
         Require(Run(["remove-background", corrupt, "-o", output]).Code == 1, "Corrupt background input");
     });
+    Check("Independent resize and colors match the editor processors", () =>
+    {
+        string resizePath = Path.Combine(directory, "independent-resize.png");
+        var resize = Run(["resize", input, "-o", resizePath, "--width", "13", "--height", "11",
+            "--block-mode", "manual", "--brightness", "70", "--edge", "20", "--json"]);
+        Require(resize.Code == 0 && resize.Error.Length == 0, resize.Error);
+        using (var report = JsonDocument.Parse(resize.Output))
+            Require(report.RootElement.GetProperty("process").GetString() == "resize-only", "Wrong resize report");
+        using (var source = new Bitmap(input))
+        using (var expected = IndependentImageProcessor.Scale(source, CliArguments.Parse([input,
+            "--width", "13", "--height", "11", "--block-mode", "manual",
+            "--brightness", "70", "--edge", "20"]).Options))
+        using (var actual = new Bitmap(resizePath))
+            EqualPixels(expected, actual);
+
+        string colorsPath = Path.Combine(directory, "independent-colors.png");
+        var colors = Run(["colors", input, "-o", colorsPath, "--palette", "step",
+            "--palette-step", "51", "--quantization-colors", "8", "--color-weights", "--json"]);
+        Require(colors.Code == 0 && colors.Error.Length == 0, colors.Error);
+        using (var report = JsonDocument.Parse(colors.Output))
+            Require(report.RootElement.GetProperty("process").GetString() == "colors-only", "Wrong colors report");
+        using (var source = new Bitmap(input))
+        using (var expected = IndependentImageProcessor.ApplyColors(source, CliArguments.Parse([input,
+            "--palette", "step", "--palette-step", "51", "--quantization-colors", "8", "--color-weights"]).Options))
+        using (var actual = new Bitmap(colorsPath))
+        {
+            EqualPixels(expected, actual);
+            Require(actual.Size == source.Size, "Colors operation changed dimensions");
+            for (int y = 0; y < source.Height; y++)
+                for (int x = 0; x < source.Width; x++)
+                    Require(actual.GetPixel(x, y).A == source.GetPixel(x, y).A, "Colors operation changed alpha");
+        }
+
+        string chained = Path.Combine(directory, "independent-chained.png");
+        ExpectSuccess(["colors", resizePath, "-o", chained, "--palette", "none"]);
+        using var result = new Bitmap(chained);
+        Require(result.Size == new Size(13, 11), "Saved result cannot be used as input");
+        Require(Run(["resize", "--help"]).Code == 0 && Run(["colors", "--help"]).Code == 0, "Independent help missing");
+    });
+
+    Check("Independent commands reject unrelated settings and protect transparent outputs", () =>
+    {
+        string target = Path.Combine(directory, "independent-invalid.png");
+        Require(Run(["resize", input, "-o", target, "--palette", "db16"]).Code == 2, "Resize accepted palette");
+        Require(Run(["colors", input, "-o", target, "--width", "12"]).Code == 2, "Colors accepted width");
+        Require(Run(["colors", input, "-o", target, "--sprite"]).Code == 2, "Colors accepted sprite mode");
+        Require(Run(["resize", input, "-o", target, "--width", "68"]).Code == 2, "Resize accepted upscaling");
+        Require(Run(["resize", input, "-o", Path.Combine(directory, "lossy.jpg")]).Code == 2, "Resize accepted JPEG");
+        Require(Run(["colors", input, "-o", input, "--overwrite"]).Code == 2, "Colors overwrote source");
+        Require(!File.Exists(target), "Invalid independent command wrote output");
+    });
+
+    Check("Aseprite command exports a batch and reports individual failures", () =>
+    {
+        string source = Path.Combine(directory, "sample.aseprite");
+        File.WriteAllBytes(source, MinimalAseprite());
+        string destination = Path.Combine(directory, "aseprite-export");
+        string missing = Path.Combine(directory, "missing.ase");
+        var run = Run(["aseprite", source, missing, "--output-dir", destination, "--layout", "grid",
+            "--columns", "2", "--padding", "1", "--inspection", "--json"]);
+        Require(run.Code == 1 && run.Error.Length == 0, "Batch did not report partial failure through JSON");
+        using (var report = JsonDocument.Parse(run.Output))
+        {
+            Require(report.RootElement.GetProperty("succeeded").GetInt32() == 1, "Batch success count: " + run.Output);
+            Require(report.RootElement.GetProperty("failed").GetInt32() == 1, "Batch failure count");
+        }
+        Require(File.Exists(Path.Combine(destination, "sample.png")) &&
+                File.Exists(Path.Combine(destination, "sample.json")) &&
+                File.Exists(Path.Combine(destination, "sample.inspection.json")), "Aseprite outputs missing");
+        using (var bitmap = new Bitmap(Path.Combine(destination, "sample.png")))
+        using (var metadata = JsonDocument.Parse(File.ReadAllText(Path.Combine(destination, "sample.json"))))
+        {
+            Require(bitmap.Size == new Size(2, 2), "Aseprite sheet size");
+            Require(metadata.RootElement.GetProperty("schema").GetString() == "aseprite-offline/v1", "Aseprite JSON schema");
+            Require(metadata.RootElement.GetProperty("frameCount").GetInt32() == 1, "Aseprite frame count");
+        }
+        Require(Run(["aseprite", source, "--output-dir", destination]).Code == 1, "Existing Aseprite output overwritten");
+        Require(Run(["aseprite", source, "--columns", "2"]).Code == 2, "Columns accepted outside grid");
+        Require(Run(["aseprite", source, "--layout", "wrong"]).Code == 2, "Invalid layout accepted");
+        Require(Run(["aseprite", "--help"]).Code == 0, "Aseprite help missing");
+    });
     Check("Alignment is an independent full-size operation with no 64-color quantization", () =>
     {
         string sourcePath = Path.Combine(directory, "alignment-source.png");
@@ -621,6 +702,36 @@ static int[] ReadIcoSizes(string path)
         Require(reader.ReadBytes(15).Length == 15, "Truncated ICO directory");
     }
     return sizes;
+}
+static byte[] MinimalAseprite()
+{
+    using var stream = new MemoryStream();
+    using var writer = new BinaryWriter(stream);
+    writer.Write(new byte[128]);
+    long frameStart = stream.Position;
+    writer.Write(0); writer.Write((ushort)0xF1FA); writer.Write((ushort)2);
+    writer.Write((ushort)100); writer.Write((ushort)0); writer.Write((uint)0);
+    byte[] name = System.Text.Encoding.UTF8.GetBytes("Layer");
+    writer.Write(6 + 18 + name.Length);
+    writer.Write((ushort)0x2004);
+    writer.Write((ushort)3); writer.Write((ushort)0); writer.Write((ushort)0); writer.Write(0);
+    writer.Write((ushort)0); writer.Write((byte)255); writer.Write(new byte[3]);
+    writer.Write((ushort)name.Length); writer.Write(name);
+    writer.Write(6 + 16 + 4 + 16);
+    writer.Write((ushort)0x2005);
+    writer.Write((ushort)0); writer.Write((short)0); writer.Write((short)0);
+    writer.Write((byte)255); writer.Write((ushort)0); writer.Write((short)0); writer.Write(new byte[5]);
+    writer.Write((ushort)2); writer.Write((ushort)2);
+    writer.Write(new byte[] { 255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 0, 0, 0, 0 });
+    long size = stream.Length;
+    stream.Position = frameStart;
+    writer.Write((int)(size - frameStart));
+    stream.Position = 0;
+    writer.Write((uint)size); writer.Write((ushort)0xA5E0); writer.Write((ushort)1);
+    writer.Write((ushort)2); writer.Write((ushort)2); writer.Write((ushort)32);
+    writer.Write((uint)1); writer.Write((ushort)100);
+    stream.Position = 34; writer.Write((byte)1); writer.Write((byte)1);
+    return stream.ToArray();
 }
 static int DistinctColors(Bitmap bitmap)
 {

@@ -2,7 +2,7 @@
 
 Grid alignment is independent of downscaling and palette selection.
 
-The standalone Windows x64 desktop build is `artifacts/standalone/Tessera.exe`; the CLI is `artifacts/cli/tessera.exe`. Download packaged builds from [GitHub Releases](https://github.com/Timbuhtuk/PIXELIZATOR/releases/latest).
+The standalone Windows x64 desktop build is `artifacts/standalone/Tessera.exe`; the CLI is `artifacts/cli/tessera.exe`. Download packaged builds from [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest).
 
 In the editor, open an image, set a cell size in the grid alignment section and run alignment. Automatic size detection is optional. Save the result as PNG. Downscaling and palette settings do not affect alignment; the Process action still downscales the original source. To compress the aligned grid, select the result and reduce each grid cell to one pixel. Drag a result into the source filmstrip for further processing.
 

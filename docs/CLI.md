@@ -1,6 +1,6 @@
 # Tessera CLI reference
 
-The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/PIXELIZATOR/releases/latest). It downscales images, aligns pixel grids, removes solid backgrounds and exports ICO files. Supported inputs are PNG, JPEG, BMP, GIF and TIFF.
+The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). It downscales images, applies size and color operations independently, aligns pixel grids, removes solid backgrounds, exports ICO files and converts Aseprite animations to PNG sprite sheets with JSON metadata. Raster commands accept PNG, JPEG, BMP, GIF and TIFF; the animation command accepts .ase and .aseprite.
 
 Run these examples from the repository root after building; replace the sample input paths with your own:
 
@@ -10,6 +10,9 @@ Run these examples from the repository root after building; replace the sample i
 .\artifacts\cli\tessera.exe align input.png -o aligned.png --cell-size 4
 .\artifacts\cli\tessera.exe ico input.png -o application.ico --sizes 16,32,48,256 --resize nearest-neighbor
 .\artifacts\cli\tessera.exe remove-background input.png -o transparent.png --mode edges --tolerance 8
+.\artifacts\cli\tessera.exe resize input.png -o smaller.png --width 32 --height 32
+.\artifacts\cli\tessera.exe colors smaller.png -o colored.png --palette db16
+.\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4
 ```
 
 The application interface and CLI messages currently use Russian. This reference describes the commands in English.
@@ -68,6 +71,19 @@ A 25% threshold keeps more of the edge; 75% narrows the silhouette. Sprite mode 
 
 The image decoder is shared with the desktop application. Corrupt or unsupported inputs fail. PNG and BMP preserve output pixels losslessly; JPEG compression can change colors.
 
+## Independent size and color operations
+
+`tessera resize` changes pixel dimensions through the editor's `IndependentImageProcessor.Scale` algorithm. It selects colors already present in each source block; it does not run quantization or a palette. Supply `--width` and `--height` (48 × 48 by default). The target cannot exceed the source. `--sprite` keeps the full frame and enables `--alpha-threshold` (1–100%, default 50); otherwise `--crop-horizontal` and `--crop-vertical` choose which remainder to discard. The block representative can be `automatic` or `manual` with `--brightness`, `--contrast`, `--saturation` and `--edge` (0–100).
+
+`tessera colors` applies quantization and an optional palette to every pixel at the original dimensions. It preserves the input alpha values. It accepts `--palette`, `--palette-step`, `--quantization`, `--quantization-colors`, `--color-weights` and `--dithering`. Size and crop options are rejected.
+
+Both commands take one image file, including a result saved by an earlier CLI or desktop operation. They save PNG to retain transparency. Defaults are `<name>_resized.png` and `<name>_colors.png` next to the input. Existing files require `--overwrite`; `--json` reports paths, dimensions, settings and elapsed time.
+
+```powershell
+.\artifacts\cli\tessera.exe resize sprite.png -o sprite-small.png --width 32 --height 32 --sprite --alpha-threshold 75
+.\artifacts\cli\tessera.exe colors sprite-small.png -o sprite-colored.png --palette db32 --quantization-colors 32
+```
+
 ## Grid alignment
 
 `tessera align` preserves the canvas and chooses colors and alpha from the source. Output must be PNG and defaults to `<name>_aligned.png`.
@@ -104,6 +120,16 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 `--sizes` accepts unique integer sizes from 1 to 256 separated by commas. The default set is 16, 24, 32, 48, 64, 128 and 256. `--resize` accepts `smooth` or `nearest-neighbor`; the latter avoids color blending for pixel art. `--fit contain` preserves aspect ratio with transparent padding, `cover` fills the frame with a centered crop, and `stretch` fills it by stretching.
 
 `--overwrite` and `--json` are supported. Without `--output`, the result is `<name>.ico` beside the input. Full command help is `tessera ico --help`. See the [ICO format and shared API](../PixelArtDownscale/ICO.md) for details, including background removal in the desktop workspace and library API.
+
+## Aseprite sprite sheets
+
+`tessera aseprite` converts one or more `.ase`/`.aseprite` files with the offline decoder used by the desktop workspace. Each input produces `<name>.png` and `<name>.json` in `--output-dir`; `--inspection` adds `<name>.inspection.json`. The default directory is `aseprite-export` beside the first input. Layout choices are `horizontal` (default), `vertical` and `grid`; `--columns` applies only to grid and accepts 1–256 (default 4). `--padding` accepts 0–128 pixels (default 0).
+
+```powershell
+.\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4 --padding 2 --inspection --json
+```
+
+Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder intentionally supports only the documented RGBA32 single-layer subset; see [Aseprite conversion details](../PixelArtAseprite/README.md).
 
 ## More examples
 

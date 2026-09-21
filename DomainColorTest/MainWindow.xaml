@@ -85,7 +85,7 @@
             <DockPanel x:Name="editorToolbar" Margin="18,10">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                     <Button x:Name="openButton" Content="Открыть…" Margin="0,0,8,0" ToolTip="Открыть изображения (Ctrl+O)"/>
-                    <Button x:Name="processButton" Content="Обработать" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" IsDefault="True" IsEnabled="False"/>
+                    <Button x:Name="processButton" Content="Размер + цвет" ToolTip="Совместная обработка исходника" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" IsDefault="True" IsEnabled="False"/>
                     <Button x:Name="saveButton" Content="Сохранить…" IsEnabled="False"/>
                 </StackPanel>
                 <Button x:Name="backToLibraryButton" Content="←" Width="34" Height="32" DockPanel.Dock="Left" Margin="0,0,12,0" Click="GoToLibrary" ToolTip="К библиотеке" AutomationProperties.Name="К библиотеке"/>
@@ -102,8 +102,8 @@
                             <TextBlock Text="Отдельная операция. Размер холста сохраняется, цвета берутся из исходника." Style="{StaticResource Hint}"/>
                             <DockPanel Margin="0,3"><TextBlock Text="Ячейка, px" Width="132"/><local:IntegerInput x:Name="gridCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="Размер ячейки"/></DockPanel>
                             <CheckBox x:Name="detectGridInput" Content="Определить размер автоматически"/>
-                            <Button x:Name="alignButton" Content="Выровнять сетку" IsEnabled="False" Margin="0,4,0,0"/>
-                            <Button x:Name="compactGridButton" Content="Ячейка сетки → 1 пиксель" IsEnabled="False" Margin="0,6,0,0" ToolTip="Сначала выберите выровненный результат"/>
+                            <Button x:Name="alignButton" Style="{StaticResource PrimaryButton}" Content="Выровнять сетку" IsEnabled="False" Margin="0,4,0,0"/>
+                            <Button x:Name="compactGridButton" Style="{StaticResource PrimaryButton}" Content="Ячейка сетки → 1 пиксель" IsEnabled="False" Margin="0,6,0,0" ToolTip="Сначала выберите выровненный результат"/>
                         </StackPanel>
                     </GroupBox>
                     <GroupBox Header="Режим обработки">
@@ -118,12 +118,32 @@
                             <Button x:Name="resetProfileButton" Content="Вернуть настройки режима"/>
                         </StackPanel>
                     </GroupBox>
+                    <GroupBox Header="Применить к">
+                        <ComboBox x:Name="operationSourceInput" SelectedIndex="0" AutomationProperties.Name="Основа для обработки">
+                            <ComboBoxItem Content="Исходник"/>
+                            <ComboBoxItem Content="Выбранный результат"/>
+                        </ComboBox>
+                    </GroupBox>
                     <GroupBox Header="Размер результата">
                         <StackPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="Ширина, px" Width="132"/><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="3840" Value="48" AutomationProperties.Name="Ширина результата"/></DockPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="Высота, px" Width="132"/><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2160" Value="48" AutomationProperties.Name="Высота результата"/></DockPanel>
                             <CheckBox x:Name="aspectLock" Content="Сохранять пропорции исходника"/>
                             <TextBlock x:Name="sizeHint" Style="{StaticResource Hint}"/>
+                            <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="Изменить размер" IsEnabled="False" Margin="0,7,0,0" ToolTip="Уменьшить изображение, сохранив исходные цвета"/>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox Header="Цвет">
+                        <StackPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="Квантование" Width="132"/><ComboBox x:Name="quantizationInput" SelectedIndex="1"><ComboBoxItem Content="Median Cut"/><ComboBoxItem Content="K-Means LAB"/><ComboBoxItem Content="K-Means Linear"/></ComboBox></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="Число цветов" Width="132"/><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="Число цветов"/></DockPanel>
+                            <CheckBox x:Name="colorWeightsInput" Content="Учитывать частоту цветов"/>
+                            <TextBlock Style="{StaticResource Hint}" Text="Число цветов: 1–4096, по умолчанию 64. Учёт частоты даёт больший вес распространённым цветам."/>
+                            <DockPanel Margin="0,3"><TextBlock Text="Палитра" Width="132"/><ComboBox x:Name="paletteInput" SelectedIndex="5"><ComboBoxItem Content="Без палитры"/><ComboBoxItem Content="DB16"/><ComboBoxItem Content="DB32"/><ComboBoxItem Content="NES"/><ComboBoxItem Content="GameBoy"/><ComboBoxItem Content="Шаг RGB"/></ComboBox></DockPanel>
+                            <DockPanel x:Name="stepControls" Margin="0,3"><TextBlock Text="Шаг RGB" Width="132"/><local:IntegerInput x:Name="paletteStepInput" Minimum="1" Maximum="255" Value="16" AutomationProperties.Name="Шаг RGB"/></DockPanel>
+                            <CheckBox x:Name="ditheringInput"><TextBlock Text="Дизеринг для фиксированной палитры"/></CheckBox>
+                            <TextBlock Style="{StaticResource Hint}" Text="Размер изображения не меняется."/>
+                            <Button x:Name="colorOnlyButton" Style="{StaticResource PrimaryButton}" Content="Применить цвета" IsEnabled="False" Margin="0,7,0,0"/>
                         </StackPanel>
                     </GroupBox>
                     <CheckBox x:Name="advancedToggle" Content="Расширенные настройки"/>
@@ -140,18 +160,6 @@
                                     <DockPanel Margin="0,3"><TextBlock Text="По вертикали" Width="132"/><ComboBox x:Name="cropVerticalInput" SelectedIndex="0"><ComboBoxItem Content="Центр"/><ComboBoxItem Content="Сверху"/><ComboBoxItem Content="Снизу"/></ComboBox></DockPanel>
                                     <TextBlock Style="{StaticResource Hint}" Text="Привязка области обрезки к целой сетке."/>
                                 </StackPanel>
-                            </StackPanel>
-                        </GroupBox>
-                        <GroupBox Header="Цвет">
-                            <StackPanel>
-                                <DockPanel Margin="0,3"><TextBlock Text="Квантование" Width="132"/><ComboBox x:Name="quantizationInput" SelectedIndex="1"><ComboBoxItem Content="Median Cut"/><ComboBoxItem Content="K-Means LAB"/><ComboBoxItem Content="K-Means Linear"/></ComboBox></DockPanel>
-                                <DockPanel Margin="0,3"><TextBlock Text="Число цветов" Width="132"/><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="Число цветов"/></DockPanel>
-                                <CheckBox x:Name="colorWeightsInput" Content="Учитывать частоту цветов"/>
-                                <TextBlock Style="{StaticResource Hint}" Text="Число цветов: 1–4096, по умолчанию 64. Учёт частоты даёт больший вес распространённым цветам."/>
-                                <DockPanel Margin="0,3"><TextBlock Text="Палитра" Width="132"/><ComboBox x:Name="paletteInput" SelectedIndex="5"><ComboBoxItem Content="Без палитры"/><ComboBoxItem Content="DB16"/><ComboBoxItem Content="DB32"/><ComboBoxItem Content="NES"/><ComboBoxItem Content="GameBoy"/><ComboBoxItem Content="Шаг RGB"/></ComboBox></DockPanel>
-                                <DockPanel x:Name="stepControls" Margin="0,3"><TextBlock Text="Шаг RGB" Width="132"/><local:IntegerInput x:Name="paletteStepInput" Minimum="1" Maximum="255" Value="16" AutomationProperties.Name="Шаг RGB"/></DockPanel>
-                                <CheckBox x:Name="ditheringInput"><TextBlock Text="Дизеринг для фиксированной палитры"/></CheckBox>
-                                <TextBlock Style="{StaticResource Hint}" Text="Дополнительная палитра применяется после квантования и может ещё сократить число цветов."/>
                             </StackPanel>
                         </GroupBox>
                         <GroupBox Header="Выбор пикселя">
@@ -192,7 +200,7 @@
                             </Style.Triggers>
                         </Style></ListBox.Style>
                     </ListBox>
-                    <local:PixelPreview x:Name="resultPreview" EmptyText="Здесь появится результат&#10;Нажмите «Обработать» или «Выровнять сетку»" ToolTip="Ctrl + колёсико — масштаб. Перетащите результат в исходники, чтобы обработать его дальше."/>
+                    <local:PixelPreview x:Name="resultPreview" EmptyText="Здесь появится результат&#10;Выберите операцию слева или выровняйте сетку" ToolTip="Ctrl + колёсико — масштаб. Перетащите результат в исходники, чтобы обработать его дальше."/>
                 </DockPanel>
                 <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch" Background="#191919"/>
                 <DockPanel x:Name="sourcePane" Grid.Row="3" Background="Transparent">
@@ -239,6 +247,30 @@
                     </Grid>
                 </Border>
 
+                <Border x:Name="backgroundBanner" BorderBrush="#343434" BorderThickness="1" ClipToBounds="True" Margin="0,16,0,0" Background="#151515">
+                    <Grid Height="220">
+                        <StackPanel x:Name="backgroundBannerArt" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,46,0" IsHitTestVisible="False">
+                            <Border Width="126" Height="126" BorderBrush="#646464" BorderThickness="1" Background="#C9C9C9">
+                                <TextBlock Text="T" FontFamily="Consolas" FontWeight="Black" FontSize="100" Foreground="#151515" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <TextBlock Text="→" FontSize="34" Foreground="#9E9E9E" VerticalAlignment="Center" Margin="22,0"/>
+                            <Border Width="126" Height="126" BorderBrush="#646464" BorderThickness="1">
+                                <Border.Background><DrawingBrush TileMode="Tile" Viewport="0,0,20,20" ViewportUnits="Absolute">
+                                    <DrawingBrush.Drawing><DrawingGroup>
+                                        <GeometryDrawing Brush="#191919" Geometry="M0,0 H20 V20 H0 Z"/>
+                                        <GeometryDrawing Brush="#303030" Geometry="M0,0 H10 V10 H0 Z M10,10 H20 V20 H10 Z"/>
+                                    </DrawingGroup></DrawingBrush.Drawing>
+                                </DrawingBrush></Border.Background>
+                                <TextBlock Text="T" FontFamily="Consolas" FontWeight="Black" FontSize="100" Foreground="#EEEEEE" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
+                        <StackPanel x:Name="backgroundBannerCopy" Margin="32,28" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="500">
+                            <TextBlock x:Name="backgroundBannerTitle" Text="Удаление фона" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                            <TextBlock Text="Прозрачный PNG из изображения с однотонным фоном." Foreground="#C9C9C9" FontSize="15" TextWrapping="Wrap"/>
+                            <Button x:Name="homeBackgroundButton" Content="Удалить фон…" Click="OpenBackgroundWorkspace" HorizontalAlignment="Left" Margin="0,22,0,0" Padding="17,12"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
                 <Border x:Name="iconBanner" BorderBrush="#343434" BorderThickness="1" ClipToBounds="True" Margin="0,16,0,0" Background="#151515">
                     <Grid Height="220">
                         <StackPanel x:Name="iconBannerArt" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,46,0" IsHitTestVisible="False" Opacity="0.7">
@@ -283,6 +315,7 @@
 
         <local:AsepriteWorkspace x:Name="asepriteWorkspace" Grid.Row="1" Visibility="Collapsed"/>
         <local:IconWorkspace x:Name="iconWorkspace" Grid.Row="1" Visibility="Collapsed"/>
+        <local:BackgroundWorkspace x:Name="backgroundWorkspace" Grid.Row="1" Visibility="Collapsed"/>
         <Border Grid.Row="2" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0" Padding="18,8">
             <DockPanel>
                 <ProgressBar x:Name="busyIndicator" Width="90" Height="5" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#EEEEEE" Background="#333333" IsIndeterminate="True" Visibility="Collapsed"/>

@@ -17,9 +17,14 @@ internal static class CliApplication
                        tessera align <изображение> --cell-size 8
                        tessera ico <изображение> -o <иконка.ico>
                        tessera remove-background <изображение> -o <результат.png>
+                       tessera resize <изображение> -o <результат.png>
+                       tessera colors <изображение> -o <результат.png>
+                       tessera aseprite <анимация.aseprite> --output-dir <папка>
         Отдельное выравнивание сетки без даунскейла: tessera align --help.
         Создание многоразмерной иконки Windows: tessera ico --help.
         Удаление однотонного фона: tessera remove-background --help.
+        Отдельные размер и цвета: tessera resize --help; tessera colors --help.
+        Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
         Файлы:
           -i, --input PATH           Исходное изображение.
@@ -82,6 +87,12 @@ internal static class CliApplication
             return IconCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] is "remove-background" or "remove-bg")
             return BackgroundCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "resize")
+            return IndependentCommand.Run(args[1..], true, output, error);
+        if (args.Length > 0 && args[0] == "colors")
+            return IndependentCommand.Run(args[1..], false, output, error);
+        if (args.Length > 0 && args[0] == "aseprite")
+            return AsepriteCommand.Run(args[1..], output, error);
         if (args.Length == 0 || args is ["--help"] or ["-h"])
         {
             output.WriteLine(Help);

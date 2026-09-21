@@ -63,10 +63,13 @@ public partial class MainWindow : Window
         gridCellInput.ValueChanged += (_, _) => AlignmentSettingsChanged();
         openButton.Click += OpenImage;
         processButton.Click += ProcessImage;
+        scaleOnlyButton.Click += ScaleOnlyImage;
+        colorOnlyButton.Click += ApplyColorsOnly;
+        operationSourceInput.SelectionChanged += (_, _) => { UpdateSizeHint(); SetProcessingState(_processing); };
         saveButton.Click += SaveImage;
         alignButton.Click += AlignImage;
         resetProfileButton.Click += ResetProfile;
-        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } };
+        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } };
         Closed += (_, _) =>
         {
             _restoringHistory = true;
@@ -81,6 +84,7 @@ public partial class MainWindow : Window
         InitializeHome();
         InitializeIcons();
         InitializeAseprite();
+        InitializeBackground();
         UpdatePreviewSettings();
     }
 
@@ -150,12 +154,13 @@ public partial class MainWindow : Window
         _updatingSize = true;
         try
         {
-            if (aspectLock.IsChecked == true && _sourceImage is not null)
+            var sizeSource = operationSourceInput.SelectedIndex == 1 ? _downscaledResult : _sourceImage;
+            if (aspectLock.IsChecked == true && sizeSource is not null)
             {
                 var input = widthChanged ? heightInput : widthInput;
                 double value = widthChanged
-                    ? Math.Round((double)widthInput.Value * _sourceImage.Height / _sourceImage.Width)
-                    : Math.Round((double)heightInput.Value * _sourceImage.Width / _sourceImage.Height);
+                    ? Math.Round((double)widthInput.Value * sizeSource.Height / sizeSource.Width)
+                    : Math.Round((double)heightInput.Value * sizeSource.Width / sizeSource.Height);
                 input.Value = (int)Math.Clamp(value, input.Minimum, input.Maximum);
             }
         }
@@ -166,15 +171,16 @@ public partial class MainWindow : Window
 
     private void UpdateSizeHint()
     {
-        if (_sourceImage is null)
+        var sizeSource = operationSourceInput.SelectedIndex == 1 ? _downscaledResult : _sourceImage;
+        if (sizeSource is null)
         {
             sizeHint.Text = "Размер задаёт итоговую сетку. Чем она крупнее, тем больше деталей может сохраниться.";
             return;
         }
         int width = (int)widthInput.Value, height = (int)heightInput.Value;
-        if (width > _sourceImage.Width || height > _sourceImage.Height)
-            sizeHint.Text = $"Исходник {_sourceImage.Width} × {_sourceImage.Height}. Размер результата должен быть не больше исходника.";
-        else if (spriteInput.IsChecked == true && Math.Abs((double)width / height / ((double)_sourceImage.Width / _sourceImage.Height) - 1) > .02)
+        if (width > sizeSource.Width || height > sizeSource.Height)
+            sizeHint.Text = $"Основа {sizeSource.Width} × {sizeSource.Height}. Размер результата должен быть не больше исходника.";
+        else if (spriteInput.IsChecked == true && Math.Abs((double)width / height / ((double)sizeSource.Width / sizeSource.Height) - 1) > .02)
             sizeHint.Text = "Пропорции отличаются от исходника: весь кадр будет растянут. Включите сохранение пропорций.";
         else
             sizeHint.Text = spriteInput.IsChecked == true
@@ -188,7 +194,7 @@ public partial class MainWindow : Window
         if (_downscaledResult is null) return;
         _resultStale = true;
         resultCaption.Text = $"РЕЗУЛЬТАТ · {_downscaledResult.Width} × {_downscaledResult.Height} · предыдущие настройки";
-        statusLabel.Text = "Настройки изменены. Нажмите «Обработать», чтобы обновить результат.";
+        statusLabel.Text = "Настройки изменены. Выберите нужную операцию, чтобы создать новый результат.";
     }
 
     private void UpdatePreviewSettings()
@@ -271,10 +277,13 @@ public partial class MainWindow : Window
         homeContent.IsEnabled = !processing;
         backToLibraryButton.IsEnabled = !processing;
         processButton.IsEnabled = !processing && _sourceImage is not null;
+        scaleOnlyButton.IsEnabled = colorOnlyButton.IsEnabled = !processing && _sourceImage is not null;
+        ((ComboBoxItem)operationSourceInput.Items[1]).IsEnabled = !processing && _downscaledResult is not null;
+        if (_downscaledResult is null && operationSourceInput.SelectedIndex == 1) operationSourceInput.SelectedIndex = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
         saveButton.IsEnabled = !processing && _downscaledResult is not null;
         Cursor = processing ? Cursors.Wait : null;
-        SetVisible(busyIndicator, processing);
+        UpdateBusyIndicator();
     }
 
     private void CommitInputs()

@@ -10,7 +10,15 @@ Run from the repository root:
 .\Build-Standalone.ps1
 ```
 
-Close any running Tessera executable in the output directory before publishing again. The script builds the solution, runs algorithm, WPF and CLI checks, publishes self-contained Windows x64 executables and creates the archives. Use `-Version 1.0.3` to set a build version. Use `-SkipChecks` only when the checks have already passed for the same code.
+The script builds the solution, runs algorithm, WPF and CLI checks, publishes self-contained Windows x64 executables and creates the archives. Use `-Version 1.0.6` to set a build version. Use `-SkipChecks` only when the checks have already passed for the same code.
+
+If Tessera is running from the usual output folder, publish to a separate directory without closing the application:
+
+```powershell
+.\Build-Standalone.ps1 -OutputDirectory artifacts/release-check -Version 1.0.6
+```
+
+Relative output paths are resolved from the repository root. Executables, archives and checksums all go under the selected directory. The default remains `artifacts` for local and GitHub builds. Tests still use their own temporary directories and ignored verification output.
 
 Individual commands:
 
@@ -43,7 +51,7 @@ The editable Tessera mark and its generation script are documented in the [asset
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository URL, solution and namespace names remain unchanged. The library stays at `%LOCALAPPDATA%\Pixelizator\Library` so existing source images and result histories remain available. Do not rename or delete this directory as part of a branding change.
+Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library stays at `%LOCALAPPDATA%\Pixelizator\Library` so existing source images and result histories remain available. Do not rename or delete this directory as part of a branding change.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 

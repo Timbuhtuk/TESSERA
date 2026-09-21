@@ -37,10 +37,7 @@
                             <Button x:Name="iconOpenButton" Content="Открыть изображение…" Padding="18,11" Margin="0,0,12,8"/>
                             <Button x:Name="iconSaveButton" Content="Сохранить ICO…" Style="{StaticResource PrimaryButton}" Padding="18,11" Margin="0,0,0,8" IsEnabled="False"/>
                         </WrapPanel>
-                        <WrapPanel x:Name="iconEditorChoices" Visibility="Collapsed" Margin="0,0,0,12">
-                            <Button x:Name="iconUseSourceButton" Content="Исходник из редактора" Margin="0,0,10,8"/>
-                            <Button x:Name="iconUseResultButton" Content="Результат из редактора" Margin="0,0,0,8"/>
-                        </WrapPanel>
+                        <local:EditorMaterialPicker x:Name="iconEditorChoices" Visibility="Collapsed" Margin="0,0,0,12"/>
                         <WrapPanel x:Name="iconSizes" Margin="0,0,0,4"/>
                         <WrapPanel Margin="0,0,0,18">
                             <CheckBox x:Name="iconCustomCheck" Content="Свой размер, px" VerticalAlignment="Center" Margin="0,0,14,0"/>
