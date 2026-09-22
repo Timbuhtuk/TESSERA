@@ -23,6 +23,13 @@ public enum QuantizationMethod
     KMeansLinear
 }
 
+public enum IndependentColorMode
+{
+    Combined,
+    Quantization,
+    Palette
+}
+
 public enum CropHorizontalAlignment
 {
     Center,
@@ -53,6 +60,7 @@ public sealed class ManualBlockCriteria
 public sealed class DownscaleOptions
 {
     public const int MaxQuantizationColors = 4096;
+    public const int MaxLocalColorPasses = 100;
 
     public bool SpriteMode { get; init; }
     public int AlphaThreshold { get; init; } = 50;
@@ -64,6 +72,9 @@ public sealed class DownscaleOptions
     public int PaletteStep { get; init; } = 32;
     public bool EnableDithering { get; init; }
     public int QuantizationColors { get; init; } = 64;
+    public IndependentColorMode IndependentColorMode { get; init; } = IndependentColorMode.Combined;
+    public int LocalColorPasses { get; init; } = 1;
+    public ManualBlockCriteria? LocalColorCriteria { get; init; }
     public bool UseColorWeights { get; init; }
     public QuantizationMethod Quantization { get; init; } = QuantizationMethod.KMeansLab;
     public int ThreadCount { get; init; } = Environment.ProcessorCount;

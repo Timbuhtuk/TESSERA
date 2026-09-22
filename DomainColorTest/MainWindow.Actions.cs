@@ -64,7 +64,7 @@ public partial class MainWindow
         if ((modifiers & ModifierKeys.Control) == 0 || preview.Image is null || delta == 0) return false;
         var image = preview.Image;
         var anchor = preview.ImagePointAt(pointer);
-        double factor = preview.EffectiveZoom;
+        double factor = zoomInput.SelectedIndex > 0 ? ZoomFactors[zoomInput.SelectedIndex] : preview.EffectiveZoom;
         int steps = Math.Max(1, Math.Abs(delta / 120));
         for (int step = 0; step < steps; step++)
             factor = delta > 0

@@ -1,0 +1,153 @@
+<Window x:Class="DomainColorTest.ColorReplaceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="Замена цвета · TESSERA" Icon="Assets/app.ico"
+        Width="460" Height="740" MinWidth="390" MinHeight="540"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False" Background="#101010" Foreground="#EEEEEE"
+        FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="0"
+                            GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Theme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ColorChoiceItem" TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="2"/>
+                <Setter Property="Margin" Value="0,0,5,5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="SelectionBorder" BorderBrush="#555555" BorderThickness="1"
+                                    Padding="{TemplateBinding Padding}" Background="#171717">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="White"/>
+                                    <Setter TargetName="SelectionBorder" Property="Background" Value="#3A3A3A"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="#DDDDDD"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid Height="38" Background="#151515">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="Замена цвета" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
+                    Style="{StaticResource CloseCaptionButton}" ToolTip="Закрыть"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
+        </Grid>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="16,16,16,20">
+                <TextBlock Text="Цвет в изображении" FontWeight="SemiBold" Margin="0,0,0,7"/>
+                <DockPanel>
+                    <Border x:Name="oldPreview" Width="30" Height="30" BorderBrush="#777777"
+                            BorderThickness="1" Margin="0,0,8,0"/>
+                    <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="Заменяемый цвет HEX"/>
+                </DockPanel>
+                <TextBlock Text="Новый цвет" FontWeight="SemiBold" Margin="0,18,0,10"/>
+                <Grid x:Name="colorField" Width="320" Height="290" HorizontalAlignment="Center"
+                      ClipToBounds="True" Cursor="Cross"
+                      MouseLeftButtonDown="ColorFieldMouseDown" MouseMove="ColorFieldMouseMove"
+                      MouseLeftButtonUp="ColorFieldMouseUp" LostMouseCapture="PickerLostCapture"
+                      AutomationProperties.Name="Поле выбора насыщенности и яркости">
+                    <Border x:Name="hueSurface"/>
+                    <Rectangle IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="White" Offset="0"/>
+                                <GradientStop Color="#00FFFFFF" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <Rectangle IsHitTestVisible="False">
+                        <Rectangle.Fill>
+                            <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                <GradientStop Color="#00000000" Offset="0"/>
+                                <GradientStop Color="Black" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
+                    <Canvas IsHitTestVisible="False">
+                        <Ellipse x:Name="fieldMarker" Width="18" Height="18" Stroke="White"
+                                 StrokeThickness="2" Fill="Transparent">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="0" Opacity="1"/>
+                            </Ellipse.Effect>
+                        </Ellipse>
+                    </Canvas>
+                </Grid>
+                <Grid x:Name="hueStrip" Width="320" Height="18" Margin="0,14,0,0" HorizontalAlignment="Center"
+                      ClipToBounds="False" Cursor="Hand"
+                      MouseLeftButtonDown="HueStripMouseDown" MouseMove="HueStripMouseMove"
+                      MouseLeftButtonUp="HueStripMouseUp" LostMouseCapture="PickerLostCapture"
+                      AutomationProperties.Name="Выбор цветового тона">
+                    <Border>
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                <GradientStop Color="Red" Offset="0"/>
+                                <GradientStop Color="Yellow" Offset="0.166667"/>
+                                <GradientStop Color="Lime" Offset="0.333333"/>
+                                <GradientStop Color="Cyan" Offset="0.5"/>
+                                <GradientStop Color="Blue" Offset="0.666667"/>
+                                <GradientStop Color="Magenta" Offset="0.833333"/>
+                                <GradientStop Color="Red" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Canvas IsHitTestVisible="False">
+                        <Border x:Name="hueMarker" Width="10" Height="24" BorderBrush="White"
+                                BorderThickness="2" CornerRadius="5" Background="Transparent">
+                            <Border.Effect>
+                                <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="0" Opacity="1"/>
+                            </Border.Effect>
+                        </Border>
+                    </Canvas>
+                </Grid>
+                <DockPanel Margin="0,15,0,0">
+                    <Border x:Name="newPreview" Width="30" Height="30" BorderBrush="#777777"
+                            BorderThickness="1" Margin="0,0,8,0"/>
+                    <TextBox x:Name="newHexInput" MaxLength="7" AutomationProperties.Name="Новый цвет HEX"/>
+                </DockPanel>
+                <StackPanel x:Name="paletteSection" Margin="0,18,0,0">
+                    <TextBlock Text="Палитра изображения" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <ListBox x:Name="paletteList" Height="205" Background="#151515" BorderBrush="#3A3A3A"
+                             BorderThickness="1" Padding="8" ItemContainerStyle="{StaticResource ColorChoiceItem}"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             AutomationProperties.Name="Палитра выбора цвета">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border Width="24" Height="24" Background="{Binding Brush}"
+                                        ToolTip="{Binding Hex}"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+                <TextBlock x:Name="validationText" Foreground="#BBBBBB" TextWrapping="Wrap"
+                           Margin="0,12,0,0"/>
+                <DockPanel Margin="0,14,0,0">
+                    <Button Content="Отмена" Width="95" DockPanel.Dock="Right" Margin="8,0,0,0"
+                            IsCancel="True" Click="CloseWindow"/>
+                    <Button x:Name="replaceButton" Content="Заменить цвет" IsEnabled="False"
+                            IsDefault="True" Style="{StaticResource PrimaryButton}" Click="ApplyColor"/>
+                </DockPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>

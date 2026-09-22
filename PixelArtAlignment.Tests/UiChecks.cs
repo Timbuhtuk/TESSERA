@@ -17,7 +17,7 @@ internal static class UiChecks
         Exception? failure = null;
         var thread = new Thread(() =>
         {
-            try { LibraryLocationChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); } catch (Exception e) { failure = e; }
+            try { LibraryLocationChecks.Run(); EditorRegressionChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); } catch (Exception e) { failure = e; }
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
@@ -93,7 +93,16 @@ internal static class UiChecks
                 ReferenceEquals(Window.GetWindow(Get<CheckBox>("spriteInput")), sizeTool), "Size, frame and pixel tools were not grouped");
             Click("colorToolButton"); Pump();
             var colorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
-            Require(colorTool is not null && colorTool != sizeTool, "Color tool did not open a separate window");
+            Require(colorTool is not null && colorTool != sizeTool &&
+                !ReferenceEquals(Window.GetWindow(Get<Slider>("localBrightnessInput")), colorTool) &&
+                colorTool.Title.StartsWith("Палитра"),
+                "Palette tool did not open independently");
+            Click("smoothingToolButton"); Pump();
+            var smoothingTool = Window.GetWindow(Get<Slider>("localBrightnessInput"));
+            Require(smoothingTool is not null && smoothingTool != colorTool &&
+                smoothingTool.Title.StartsWith("Сглаживание") &&
+                ReferenceEquals(Window.GetWindow(Get<Button>("neighborColorsButton")), smoothingTool),
+                "Smoothing did not open as an independent action");
             Click("profileToolButton"); Pump();
             var profileTool = Window.GetWindow(Get<TextBox>("processingLog"));
             Require(profileTool is not null && profileTool != colorTool &&
@@ -101,12 +110,13 @@ internal static class UiChecks
                 ReferenceEquals(Window.GetWindow(action), profileTool), "Profile and processing tools were not grouped");
             CaptureTool(sizeTool!, "size-tool.png");
             CaptureTool(colorTool!, "color-tool.png");
+            CaptureTool(smoothingTool!, "smoothing-tool.png");
             CaptureTool(profileTool!, "mode-tool.png");
-            foreach (var tool in new[] { gridTool, sizeTool, colorTool, profileTool }) tool!.Close();
+            foreach (var tool in new[] { gridTool, sizeTool, colorTool, smoothingTool, profileTool }) tool!.Close();
             Require(ReferenceEquals(Window.GetWindow(Get<IntegerInput>("widthInput")), window), "Tool settings were lost after closing their window");
             Get<IntegerInput>("widthInput").Value = 13;
             Get<IntegerInput>("heightInput").Value = 7;
-            Get<ComboBox>("paletteInput").SelectedIndex = 4;
+            Get<ComboBox>("paletteInput").SelectedIndex = 3;
             Get<IntegerInput>("quantizationColorsInput").Value = 7;
             Get<CheckBox>("colorWeightsInput").IsChecked = true;
             Get<IntegerInput>("gridCellInput").Value = 4;
@@ -151,6 +161,21 @@ internal static class UiChecks
             window.Width = window.MinWidth;
             window.Height = window.MinHeight;
             Capture("minimum.png");
+            Require(Get<StackPanel>("compactToolNavigation").Visibility == Visibility.Visible &&
+                Get<StackPanel>("toolNavigation").Visibility == Visibility.Collapsed,
+                "Narrow editor did not collapse tools into the processing menu");
+            Click("toolsMenuButton");
+            Require(Get<System.Windows.Controls.Primitives.Popup>("toolsMenuPopup").IsOpen,
+                "Processing menu did not open on a narrow window");
+            Click("compactSmoothingToolButton"); Pump();
+            Require(Window.GetWindow(Get<Slider>("localBrightnessInput")) is { IsVisible: true },
+                "Narrow processing menu did not open smoothing");
+            Window.GetWindow(Get<Slider>("localBrightnessInput"))!.Close();
+            Click("toolsMenuButton");
+            Click("compactInfoToolButton"); Pump();
+            Require(Window.GetWindow(Get<TextBlock>("infoSourceSummary")) is { IsVisible: true },
+                "Narrow processing menu did not open Info");
+            Window.GetWindow(Get<TextBlock>("infoSourceSummary"))!.Close();
             var sourceSelector = Get<ComboBox>("operationSourceInput");
             Require(sourceSelector.TranslatePoint(new System.Windows.Point(sourceSelector.ActualWidth, 0), window).X <
                 window.ActualWidth - 8, "Narrow toolbar clips the input selector");
@@ -181,7 +206,24 @@ internal static class UiChecks
             Require(!Get<bool>("_resultStale"), "Grid size invalidated downscale");
             Get<CheckBox>("colorWeightsInput").IsChecked = true;
             Require(Get<bool>("_resultStale"), "Color options did not invalidate downscale");
-            Get<ComboBox>("paletteInput").SelectedIndex = 4;
+            Require(Get<ComboBox>("paletteInput").Items.Count == 5 &&
+                ((ComboBoxItem)Get<ComboBox>("paletteInput").Items[0]).Content?.ToString() == "DB16" &&
+                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).Palette != PaletteKind.None,
+                "Palette tool still offers a no-palette choice");
+            Require(Get<RadioButton>("quantizationColorModeInput").IsChecked == true &&
+                Get<StackPanel>("quantizationColorControls").IsEnabled &&
+                !Get<StackPanel>("paletteColorControls").IsEnabled,
+                "Color reduction did not default to quantization");
+            Get<ComboBox>("paletteInput").SelectedIndex = 3;
+            Get<RadioButton>("paletteColorModeInput").IsChecked = true;
+            Require(!Get<StackPanel>("quantizationColorControls").IsEnabled &&
+                Get<StackPanel>("paletteColorControls").IsEnabled &&
+                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == IndependentColorMode.Palette,
+                "Palette mode did not disable quantization controls");
+            Click("colorToolButton"); Pump();
+            var activeColorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
+            CaptureTool(activeColorTool!, "color-tool-palette.png");
+            activeColorTool!.Close();
             Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
             Click("scaleOnlyButton"); Wait();
             var sizeOnly = Get<Bitmap>("_downscaledResult");
@@ -192,10 +234,15 @@ internal static class UiChecks
                 Require(sourceColors.Contains(sizeOnly.GetPixel(x, y).ToArgb()), "Independent scaling changed a source color");
             var sizeGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            Require(((ComboBoxItem)Get<ComboBox>("operationSourceInput").Items[1]).Content?.ToString()?.StartsWith("Результат №") == true,
+                "Selected result was not named in the processing basis");
             Click("colorOnlyButton"); Wait();
             var colorGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             var colorOnly = Get<Bitmap>("_downscaledResult");
-            Require(colorGeneration.ParentGenerationId == sizeGeneration.Id && colorOnly.Width == 15 && colorOnly.Height == 7,
+            Require(colorGeneration.ParentGenerationId == sizeGeneration.Id &&
+                colorGeneration.Settings.Downscale.IndependentColorMode == IndependentColorMode.Palette &&
+                colorGeneration.Operation == "Палитра" &&
+                colorOnly.Width == 15 && colorOnly.Height == 7,
                 "Color operation did not use the selected result without resizing it");
             var paletteColors = Palettes.GetPalette(PaletteKind.GameBoy).ToHashSet();
             for (int y = 0; y < colorOnly.Height; y++) for (int x = 0; x < colorOnly.Width; x++)
@@ -204,10 +251,71 @@ internal static class UiChecks
             Click("colorOnlyButton"); Wait();
             Require(Get<Bitmap>("_downscaledResult").Size == source.Size && Get<SourceEntry>("_activeSource").SelectedGeneration!.ParentGenerationId is null,
                 "Color operation on the source unexpectedly scaled or chained a result");
+            var paletteSourceGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            Get<RadioButton>("quantizationColorModeInput").IsChecked = true;
+            Require(Get<StackPanel>("quantizationColorControls").IsEnabled &&
+                !Get<StackPanel>("paletteColorControls").IsEnabled &&
+                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == IndependentColorMode.Quantization,
+                "Quantization mode did not disable palette controls");
+            Get<IntegerInput>("quantizationColorsInput").Value = 1;
+            Click("colorOnlyButton"); Wait();
+            Require(Get<SourceEntry>("_activeSource").SelectedGeneration is { Operation: "Квантование" } quantizedGeneration &&
+                quantizedGeneration.Settings.Downscale.IndependentColorMode == IndependentColorMode.Quantization,
+                "Quantization choice was not saved with the result");
+            Invoke("SelectGeneration", paletteSourceGeneration);
+            Require(Get<RadioButton>("paletteColorModeInput").IsChecked == true &&
+                Get<StackPanel>("paletteColorControls").IsEnabled,
+                "History did not restore the selected color mode");
             Click("sizeToolButton"); Pump();
             Get<RadioButton>("manualInput").IsChecked = true;
             Get<Slider>("brightnessInput").Value = 73;
             Require(((DownscaleOptions)Invoke("BuildOptionsFromUi")!).ManualCriteria?.TargetBrightness == .73, "Manual criteria mapping failed");
+            Get<IntegerInput>("localColorPassesInput").Value = 3;
+            Get<Slider>("localBrightnessInput").Value = 20;
+            Get<Slider>("localContrastInput").Value = 30;
+            Get<Slider>("localSaturationInput").Value = 40;
+            Get<Slider>("localEdgeInput").Value = 60;
+            options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
+            Require(options.LocalColorPasses == 3 && options.ManualCriteria?.TargetBrightness == .73 &&
+                options.LocalColorCriteria?.TargetBrightness == .2 &&
+                options.LocalColorCriteria?.TargetContrast == .3 &&
+                options.LocalColorCriteria?.TargetSaturation == .4 &&
+                options.LocalColorCriteria?.TargetEdge == .6,
+                "Local color sliders were not independent from size-tool criteria");
+            Get<Slider>("brightnessInput").Value = 81;
+            Require(Get<Slider>("localBrightnessInput").Value == 20,
+                "Size-tool brightness changed the local 3×3 slider");
+            Get<Slider>("brightnessInput").Value = 73;
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            Click("neighborColorsButton"); Wait();
+            var neighborSourceGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            var neighborSourceResult = Get<Bitmap>("_downscaledResult");
+            Require(neighborSourceGeneration.ParentGenerationId is null &&
+                neighborSourceGeneration.Settings.Downscale.LocalColorPasses == 3 &&
+                neighborSourceGeneration.Settings.Downscale.ManualCriteria?.TargetBrightness == .73 &&
+                neighborSourceGeneration.Settings.Downscale.LocalColorCriteria?.TargetBrightness == .2 &&
+                neighborSourceResult.Size == source.Size,
+                "Local colors on the source lost the basis, dimensions or manual settings");
+            for (int y = 0; y < neighborSourceResult.Height; y++) for (int x = 0; x < neighborSourceResult.Width; x++)
+                Require(sourceColors.Contains(neighborSourceResult.GetPixel(x, y).ToArgb()),
+                    "Local colors introduced a color absent from the source");
+            Get<IntegerInput>("localColorPassesInput").Value = 5;
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            Click("neighborColorsButton"); Wait();
+            var neighborResultGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            Require(neighborResultGeneration.ParentGenerationId == neighborSourceGeneration.Id &&
+                neighborResultGeneration.Settings.Downscale.LocalColorPasses == 5,
+                "Local colors did not chain from the selected result");
+            Get<Slider>("localBrightnessInput").Value = 68;
+            Require(Get<Slider>("brightnessInput").Value == 73,
+                "Local 3×3 brightness changed the size-tool slider");
+            Invoke("SelectGeneration", neighborSourceGeneration);
+            Require(Get<IntegerInput>("localColorPassesInput").Value == 3 &&
+                Get<Slider>("localBrightnessInput").Value == 20 &&
+                Get<Slider>("localContrastInput").Value == 30 &&
+                Get<Slider>("localSaturationInput").Value == 40 &&
+                Get<Slider>("localEdgeInput").Value == 60,
+                "History did not restore the independent local color settings");
             Capture("editor-tools.png");
             Window.GetWindow(Get<IntegerInput>("widthInput"))!.Close();
             var selectedParent = Get<SourceEntry>("_activeSource").SelectedGeneration!;
@@ -223,12 +331,14 @@ internal static class UiChecks
             Click("profileToolButton"); Pump();
             Click("processButton"); Wait();
             Window.GetWindow(action)!.Close();
-            options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
+            options = Get<SourceEntry>("_activeSource").SelectedGeneration!.Settings.Downscale;
             Require(options.SpriteMode && options.Quantization == QuantizationMethod.MedianCut &&
                 options.Palette == PaletteKind.None && options.AlphaThreshold == 75 &&
                 options.QuantizationColors == 64 && !options.UseColorWeights &&
                 options.TargetWidth == 15 && options.TargetHeight == 7,
                 "Processing did not apply the details profile");
+            Require(((DownscaleOptions)Invoke("BuildOptionsFromUi")!).Palette == PaletteKind.DB16,
+                "Restoring Details exposed an unavailable no-palette option");
             Require(Get<SourceEntry>("_activeSource").SelectedGeneration?.ParentGenerationId == selectedParent.Id,
                 "Mode processing ignored the selected result");
             Require(!Get<CheckBox>("ditheringInput").IsEnabled, "Sprite mode permits dithering");
@@ -247,6 +357,101 @@ internal static class UiChecks
             Require(!Get<Button>("saveButton").IsEnabled && Get<PixelPreview>("resultPreview").Image is null, "Loading retained the former output");
             Reject("LoadImage", Path.Combine(directory, "missing.png"));
             Require(Get<Bitmap>("_sourceImage").Width == source.Width, "Failed load damaged source");
+            Click("infoToolButton"); Pump();
+            var infoTool = Window.GetWindow(Get<TextBlock>("infoSourceSummary"));
+            Require(infoTool is { IsVisible: true }, "Info did not open a separate window");
+            var infoUntil = DateTime.UtcNow.AddSeconds(15);
+            while (Get<TextBlock>("infoPaletteStatus").Text.Contains("Подсчёт") && DateTime.UtcNow < infoUntil)
+            {
+                Pump(); Thread.Sleep(5);
+            }
+            Require(Get<TextBlock>("infoSourceSummary").Text.Contains($"{source.Width} × {source.Height}") &&
+                Get<TextBlock>("infoSourceSummary").Text.Contains($"{ImageColorTools.CountColors(source):N0}") &&
+                Get<ItemsControl>("infoPaletteList").Items.Count == ImageColorTools.CountColors(source),
+                "Info did not count and list visible source colors");
+            Require(Get<TextBlock>("infoResultSummary").Text == "Пока нет результата",
+                "Info retained an old result after switching source");
+            Color oldColor = source.GetPixel(0, 0);
+            var colorEntry = Get<ItemsControl>("infoPaletteList").Items.Cast<PaletteColorEntry>()
+                .Single(color => color.Color.ToArgb() == Color.FromArgb(oldColor.R, oldColor.G, oldColor.B).ToArgb());
+            Invoke("InfoColorClick", new Button { DataContext = colorEntry }, new RoutedEventArgs(Button.ClickEvent));
+            var replaceTool = infoTool!.OwnedWindows.OfType<ColorReplaceWindow>().Single(tool => tool.IsVisible);
+            var selectedColor = (PaletteColorEntry)((ListBox)replaceTool.FindName("paletteList")).SelectedItem;
+            Require(selectedColor.Hex == colorEntry.Hex &&
+                ((TextBox)replaceTool.FindName("newHexInput")).Text == colorEntry.Hex &&
+                ((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly,
+                "Replacement palette did not preselect the clicked color");
+            double initialHue = (double)typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(replaceTool)!;
+            Require(Math.Abs(initialHue - oldColor.GetHue()) < 0.1 &&
+                replaceTool.FindName("colorField") is FrameworkElement &&
+                replaceTool.FindName("hueStrip") is FrameworkElement,
+                "Color picker did not start at the selected image color");
+            typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(replaceTool, 240.0);
+            typeof(ColorReplaceWindow).GetField("_saturation", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(replaceTool, 1.0);
+            typeof(ColorReplaceWindow).GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(replaceTool, 1.0);
+            typeof(ColorReplaceWindow).GetMethod("UpdateFromPicker", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(replaceTool, null);
+            Require(((TextBox)replaceTool.FindName("newHexInput")).Text == "#0000FF",
+                "Color picker did not update the replacement HEX value");
+            ((TextBox)replaceTool.FindName("newHexInput")).Text = "#01FE03";
+            double enteredHue = (double)typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(replaceTool)!;
+            Require(Math.Abs(enteredHue - Color.FromArgb(1, 254, 3).GetHue()) < 0.1,
+                "Entering HEX did not update the color picker");
+            Require(((Button)replaceTool.FindName("replaceButton")).IsEnabled,
+                "Valid color replacement remained disabled");
+            CaptureTool(infoTool, "info-tool.png");
+            CaptureTool(replaceTool, "color-replace.png");
+            ((Button)replaceTool.FindName("replaceButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Wait();
+            var replaced = Get<Bitmap>("_downscaledResult");
+            Require(Get<SourceEntry>("_activeSource").SelectedGeneration?.Operation == "Замена цвета" &&
+                replaced.GetPixel(0, 0).ToArgb() == Color.FromArgb(oldColor.A, 1, 254, 3).ToArgb() &&
+                Get<Bitmap>("_sourceImage").GetPixel(0, 0).ToArgb() == oldColor.ToArgb(),
+                "Info color replacement damaged source or missed result history");
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            infoUntil = DateTime.UtcNow.AddSeconds(15);
+            while (Get<TextBlock>("infoPaletteStatus").Text.Contains("Подсчёт") && DateTime.UtcNow < infoUntil)
+            {
+                Pump(); Thread.Sleep(5);
+            }
+            Require(Get<TextBlock>("infoBasisLabel").Text.Contains("результата") &&
+                Get<TextBlock>("infoResultSummary").Text.Contains($"{replaced.Width} × {replaced.Height}"),
+                "Info did not follow the selected result");
+            infoTool!.Close();
+            using (var manyColors = new Bitmap(33, 32))
+            {
+                for (int q = 0; q < 1056; q++)
+                    manyColors.SetPixel(q % 33, q / 33, Color.FromArgb((q >> 16) & 255, (q >> 8) & 255, q & 255));
+                string manyPath = Path.Combine(directory, "many-colors.png");
+                manyColors.Save(manyPath);
+                Invoke("LoadImage", manyPath);
+            }
+            Click("infoToolButton"); Pump();
+            infoTool = Window.GetWindow(Get<TextBlock>("infoSourceSummary"));
+            infoUntil = DateTime.UtcNow.AddSeconds(15);
+            while (Get<TextBlock>("infoPaletteStatus").Text.Contains("Подсчёт") && DateTime.UtcNow < infoUntil)
+            {
+                Pump(); Thread.Sleep(5);
+            }
+            Require(Get<TextBlock>("infoPaletteStatus").Text.Contains("Список доступен до 1024") &&
+                Get<ItemsControl>("infoPaletteList").Items.Count == 0,
+                "Info attempted to display a palette above its 1024-color limit");
+            Require(Get<Button>("infoManualReplaceButton").Visibility == Visibility.Visible,
+                "Info did not offer HEX replacement for a large palette");
+            Click("infoManualReplaceButton"); Pump();
+            replaceTool = infoTool!.OwnedWindows.OfType<ColorReplaceWindow>().Single(tool => tool.IsVisible);
+            Require(!((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly &&
+                ((FrameworkElement)replaceTool.FindName("paletteSection")).Visibility == Visibility.Collapsed,
+                "Large-palette replacement did not open in manual HEX mode");
+            ((TextBox)replaceTool.FindName("oldHexInput")).Text = "#000000";
+            ((TextBox)replaceTool.FindName("newHexInput")).Text = "#FFFFFF";
+            Require(((Button)replaceTool.FindName("replaceButton")).IsEnabled,
+                "Info disabled HEX replacement for a large palette");
+            ((Button)replaceTool.FindName("replaceButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Wait();
+            Require(Get<Bitmap>("_downscaledResult").GetPixel(0, 0).ToArgb() == Color.White.ToArgb() &&
+                Get<Bitmap>("_sourceImage").GetPixel(0, 0).ToArgb() == Color.Black.ToArgb(),
+                "HEX replacement failed when the full palette was unavailable");
+            infoTool!.Close();
             // These checks use the generated fixtures and require no external image collection.
             window.Width = 1220; window.Height = 880;
             Click("backToLibraryButton"); Pump();

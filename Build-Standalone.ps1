@@ -42,7 +42,13 @@ Open images from File > Open, with Ctrl+O or drag and drop.
 The home screen keeps your source library and result histories.
 The editor can change size and colors separately or together, with crisp
 pixel enlargement. It also aligns grids and reduces cells to one pixel.
-The toolbar opens separate Grid, Size, Color and Mode tool windows.
+The toolbar opens Presets, Size, Palette, Smoothing, Grid and Info.
+On narrow windows, find them in the Processing menu. Select Source or a
+saved result as the input. Info shows dimensions, color counts and palette
+colors as a clickable list. Replacement opens with that color selected.
+Choose any new color with the hue strip and color field, an image swatch,
+or HEX. The original stays intact.
+Zoom and preview background affect viewing only.
 File > Save exports one result; Save all results exports the current history.
 
 The centred animation banner opens Aseprite conversion. Drop multiple files

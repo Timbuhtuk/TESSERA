@@ -10,6 +10,13 @@ internal static class IndependentImageProcessorChecks
         check("Size-only operation keeps source colors despite palette settings", ScaleKeepsColors);
         check("Size-only enlargement repeats exact source pixels and alpha", UpscaleRepeatsPixels);
         check("Color-only operation keeps dimensions and alpha", ColorsKeepCanvasAndAlpha);
+        check("Color reduction modes apply quantization or palette exclusively", ColorModesAreExclusive);
+        check("Neighbor colors merge local shades without palette or scaling", NeighborColorsKeepSourcePaletteAndAlpha);
+        check("Neighbor color passes extend a local change", NeighborColorPasses);
+        check("Neighbor color brightness setting changes transition direction", NeighborColorBrightness);
+        check("Neighbor colors use their own criteria independently of size settings", NeighborColorsUseOwnCriteria);
+        check("Neighbor colors do not exchange equal-support pixels", NeighborColorsDoNotSwap);
+        check("Neighbor color passes reject values outside range", NeighborColorPassRange);
     }
 
     private static void ScaleKeepsColors()
@@ -89,5 +96,140 @@ internal static class IndependentImageProcessorChecks
                 if (after.A > 0 && !palette.Contains(after.ToArgb() & 0xFFFFFF))
                     throw new Exception("Color processing produced a color outside the selected palette.");
             }
+    }
+
+    private static void ColorModesAreExclusive()
+    {
+        using var source = new Bitmap(3, 1, PixelFormat.Format32bppArgb);
+        source.SetPixel(0, 0, Color.FromArgb(96, 20, 20, 20));
+        source.SetPixel(1, 0, Color.FromArgb(160, 100, 100, 100));
+        source.SetPixel(2, 0, Color.FromArgb(255, 220, 220, 220));
+        using var quantized = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
+        {
+            IndependentColorMode = IndependentColorMode.Quantization,
+            Quantization = QuantizationMethod.MedianCut, QuantizationColors = 1,
+            Palette = PaletteKind.Step, PaletteStep = 64
+        });
+        using var mapped = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
+        {
+            IndependentColorMode = IndependentColorMode.Palette,
+            QuantizationColors = 0, Palette = PaletteKind.Step, PaletteStep = 64
+        });
+        if (Enumerable.Range(0, 3).Select(x => quantized.GetPixel(x, 0).R).Distinct().Count() != 1 ||
+            Enumerable.Range(0, 3).Select(x => mapped.GetPixel(x, 0).R).Distinct().Count() != 3)
+            throw new Exception("Inactive color controls affected the selected operation.");
+        for (int x = 0; x < 3; x++)
+            if (quantized.GetPixel(x, 0).A != source.GetPixel(x, 0).A ||
+                mapped.GetPixel(x, 0).A != source.GetPixel(x, 0).A)
+                throw new Exception("Color mode changed alpha.");
+    }
+
+    private static void NeighborColorsKeepSourcePaletteAndAlpha()
+    {
+        using var source = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
+        Color baseColor = Color.FromArgb(255, 100, 100, 100);
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 3; x++) source.SetPixel(x, y, baseColor);
+        source.SetPixel(1, 1, Color.FromArgb(128, 110, 110, 110));
+        source.SetPixel(0, 0, Color.Transparent);
+
+        using var result = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
+        {
+            LocalColorPasses = 1, Palette = PaletteKind.GameBoy, QuantizationColors = 1
+        });
+        if (result.Size != source.Size) throw new Exception("Neighbor processing changed canvas dimensions.");
+        if (result.GetPixel(1, 1).ToArgb() != Color.FromArgb(128, 100, 100, 100).ToArgb())
+            throw new Exception("The isolated shade did not join its neighbors or alpha changed.");
+        if (result.GetPixel(0, 0).A != 0) throw new Exception("A transparent pixel became visible.");
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 3; x++)
+                if (result.GetPixel(x, y).A != source.GetPixel(x, y).A)
+                    throw new Exception("Neighbor processing changed alpha.");
+    }
+
+    private static void NeighborColorPasses()
+    {
+        using var source = new Bitmap(5, 5, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < 5; y++)
+            for (int x = 0; x < 5; x++)
+            {
+                int shade = x is >= 1 and <= 3 && y is >= 1 and <= 3 ? 105 : 100;
+                source.SetPixel(x, y, Color.FromArgb(shade, shade, shade));
+            }
+        source.SetPixel(2, 2, Color.FromArgb(110, 110, 110));
+        using var once = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions { LocalColorPasses = 1 });
+        using var three = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions { LocalColorPasses = 3 });
+        if (once.GetPixel(2, 2).R != 105 || three.GetPixel(2, 2).R != 100)
+            throw new Exception($"Three passes should carry the surrounding color to the center: {once.GetPixel(2, 2).R}, {three.GetPixel(2, 2).R}.");
+    }
+
+    private static void NeighborColorBrightness()
+    {
+        using var source = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 3; x++) source.SetPixel(x, y, Color.FromArgb(180, 180, 180));
+        source.SetPixel(1, 1, Color.FromArgb(200, 200, 200));
+
+        using var automatic = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions());
+        using var bright = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
+        {
+            LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 1, BrightnessImportance = 1 }
+        });
+        if (automatic.GetPixel(1, 1).R != 180 || bright.GetPixel(1, 1).R != 200)
+            throw new Exception("High brightness preference did not resist a darker transition.");
+    }
+
+    private static void NeighborColorsUseOwnCriteria()
+    {
+        using var source = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < 3; y++)
+            for (int x = 0; x < 3; x++) source.SetPixel(x, y, Color.FromArgb(180, 180, 180));
+        source.SetPixel(1, 1, Color.FromArgb(200, 200, 200));
+
+        using var sizeOnly = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
+        {
+            BlockMode = BlockSelectionMode.Manual,
+            ManualCriteria = new ManualBlockCriteria { TargetBrightness = 1 }
+        });
+        using var localBright = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
+        {
+            LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 1 }
+        });
+        using var localDark = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
+        {
+            BlockMode = BlockSelectionMode.Manual,
+            ManualCriteria = new ManualBlockCriteria { TargetBrightness = 1 },
+            LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 0 }
+        });
+        if (sizeOnly.GetPixel(1, 1).R != 180 ||
+            localBright.GetPixel(1, 1).R != 200 || localDark.GetPixel(1, 1).R != 180)
+            throw new Exception("Local 3×3 criteria were ignored or inherited size-tool preferences.");
+    }
+
+    private static void NeighborColorPassRange()
+    {
+        using var source = new Bitmap(1, 1);
+        foreach (int passes in new[] { 0, DownscaleOptions.MaxLocalColorPasses + 1 })
+        {
+            try
+            {
+                using var result = IndependentImageProcessor.ApplyNeighborColors(source,
+                    new DownscaleOptions { LocalColorPasses = passes });
+                throw new Exception("Invalid pass count was accepted.");
+            }
+            catch (ArgumentOutOfRangeException) { }
+        }
+    }
+
+    private static void NeighborColorsDoNotSwap()
+    {
+        using var source = new Bitmap(2, 1, PixelFormat.Format32bppArgb);
+        source.SetPixel(0, 0, Color.FromArgb(100, 100, 100));
+        source.SetPixel(1, 0, Color.FromArgb(101, 101, 101));
+        using var result = IndependentImageProcessor.ApplyNeighborColors(source,
+            new DownscaleOptions { LocalColorPasses = 10 });
+        if (result.GetPixel(0, 0).ToArgb() != source.GetPixel(0, 0).ToArgb() ||
+            result.GetPixel(1, 0).ToArgb() != source.GetPixel(1, 0).ToArgb())
+            throw new Exception("Equally supported neighboring colors exchanged places.");
     }
 }

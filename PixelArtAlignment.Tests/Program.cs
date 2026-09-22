@@ -79,6 +79,7 @@ Check("Local drift and unequal widths fail the 90 gate before repair", () =>
 if (args.Contains("--invariants")) Check("Canvas, source colors, alpha, idempotence, errors and detection", Invariants.Run);
 if (args.Contains("--invariants")) IconExportChecks.Run(Check);
 if (args.Contains("--invariants")) IndependentImageProcessorChecks.Run(Check);
+if (args.Contains("--invariants")) ImageColorToolsChecks.Run(Check);
 if (args.Contains("--invariants")) BackgroundRemovalChecks.Run(Check);
 if (args.Contains("--ui")) Check("Independent GUI alignment and downscale, normal and minimum layouts", UiChecks.Run);
 if (args.Contains("--benchmark"))

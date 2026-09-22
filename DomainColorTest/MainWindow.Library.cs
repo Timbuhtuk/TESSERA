@@ -290,6 +290,13 @@ public partial class MainWindow
         statusLabel.Text = "Результат удалён из истории.";
     }
 
+    private EditorSettings CaptureReadyModeSettings()
+    {
+        _capturingReadyMode = true;
+        try { return CaptureSettings(); }
+        finally { _capturingReadyMode = false; }
+    }
+
     private EditorSettings CaptureSettings() => new()
     {
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
@@ -309,10 +316,18 @@ public partial class MainWindow
             spriteInput.IsChecked = options.SpriteMode; alphaInput.Value = options.AlphaThreshold;
             cropHorizontalInput.SelectedIndex = Math.Clamp((int)options.CropHorizontal, 0, 2);
             cropVerticalInput.SelectedIndex = Math.Clamp((int)options.CropVertical, 0, 2);
-            paletteInput.SelectedIndex = Math.Clamp((int)options.Palette, 0, 5);
+            paletteInput.SelectedIndex = Math.Clamp((int)options.Palette - 1, 0, 4);
             paletteStepInput.Value = options.PaletteStep;
             quantizationInput.SelectedIndex = Math.Clamp((int)options.Quantization, 0, 2);
             quantizationColorsInput.Value = options.QuantizationColors;
+            paletteColorModeInput.IsChecked = options.IndependentColorMode == IndependentColorMode.Palette ||
+                options.IndependentColorMode == IndependentColorMode.Combined && options.Palette != PaletteKind.None;
+            quantizationColorModeInput.IsChecked = paletteColorModeInput.IsChecked != true;
+            localColorPassesInput.Value = options.LocalColorPasses;
+            localBrightnessInput.Value = (options.LocalColorCriteria?.TargetBrightness ?? .5) * 100;
+            localContrastInput.Value = (options.LocalColorCriteria?.TargetContrast ?? .5) * 100;
+            localSaturationInput.Value = (options.LocalColorCriteria?.TargetSaturation ?? .5) * 100;
+            localEdgeInput.Value = (options.LocalColorCriteria?.TargetEdge ?? .5) * 100;
             colorWeightsInput.IsChecked = options.UseColorWeights;
             threadsInput.Value = options.ThreadCount;
             automaticInput.IsChecked = options.BlockMode != BlockSelectionMode.Manual;

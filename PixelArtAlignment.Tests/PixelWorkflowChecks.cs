@@ -50,7 +50,7 @@ internal static class PixelWorkflowChecks
             Get<IntegerInput>("widthInput").Value = 2;
             Get<IntegerInput>("heightInput").Value = 3;
             Get<IntegerInput>("quantizationColorsInput").Value = 1;
-            Get<ComboBox>("paletteInput").SelectedIndex = 4;
+            Get<ComboBox>("paletteInput").SelectedIndex = 3;
             Click("compactGridButton"); Wait();
             var reduced = parent.SelectedGeneration!;
             Require(reduced.IsGridReduction && reduced.CellSize == 4 && reduced.ParentGenerationId == aligned.Id && parent.Generations.Count == 2, "Reduction metadata/history missing");
@@ -74,6 +74,11 @@ internal static class PixelWorkflowChecks
             Require(!(bool)Invoke("ChangePreviewZoom", preview, -120, pointer, ModifierKeys.None)! && preview.Zoom == 32, "Ordinary wheel was intercepted");
             Invoke("ChangePreviewZoom", preview, -120, pointer, ModifierKeys.Control); Pump();
             Require(preview.Zoom == 16 && other.Zoom == 16, "Ctrl+wheel down failed");
+            Get<ComboBox>("zoomInput").SelectedIndex = 3; Pump();
+            Invoke("ChangePreviewZoom", preview, 120, pointer, ModifierKeys.Control); Pump();
+            Require(preview.Zoom == .5 && other.Zoom == .5, "Wheel could not increase 25% zoom on odd image dimensions");
+            Invoke("ChangePreviewZoom", preview, 120, pointer, ModifierKeys.Control); Pump();
+            Require(preview.Zoom == 1 && other.Zoom == 1, "Wheel could not increase 50% zoom on odd image dimensions");
             Get<ComboBox>("zoomInput").SelectedIndex = 0; Pump();
             double fit = other.EffectiveZoom;
             Invoke("ChangePreviewZoom", other, 120, new Point(100, 80), ModifierKeys.Control); Pump();

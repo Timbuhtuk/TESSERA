@@ -49,6 +49,7 @@ internal static class LibraryRemovalChecks
 
             Get<Button>("profileToolButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             var log = Get<TextBox>("processingLog");
+            Descendants<Expander>(Window.GetWindow(log)!).First().IsExpanded = true; Pump();
             log.Text = string.Join(Environment.NewLine, Enumerable.Range(1, 40).Select(i => $"Строка журнала {i}"));
             Pump(); log.BringIntoView(); Pump();
             foreach (var bar in Descendants<ScrollBar>(log)) VerifyStyle(bar);

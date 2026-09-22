@@ -109,17 +109,25 @@ internal static class IconWorkspaceChecks
             popupBitmap.Render(panel);
             var popupEncoder = new PngBitmapEncoder(); popupEncoder.Frames.Add(BitmapFrame.Create(popupBitmap));
             using (var popupStream = File.Create(Path.Combine("artifacts", "wpf", "verification", "editor-materials.png"))) popupEncoder.Save(popupStream);
-            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
-            panel.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
-            Thread.Sleep(160); Pump();
-            Require(picker.IsOpen, "Moving from trigger to popup closed the picker");
-            panel.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
-            Thread.Sleep(160); Pump();
-            Require(!picker.IsOpen, "Picker remained open after pointer left the popup");
-            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
-            trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
-            Thread.Sleep(160); Pump();
-            Require(!picker.IsOpen, "Picker remained open after pointer left the trigger");
+            Require(GetCursorPos(out var syntheticCursor), "Could not read cursor position");
+            try
+            {
+                Require(SetCursorPos((int)SystemParameters.VirtualScreenLeft + 2,
+                    (int)SystemParameters.VirtualScreenTop + 2), "Could not position cursor outside picker");
+                Pump();
+                trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+                panel.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+                Thread.Sleep(160); Pump();
+                Require(picker.IsOpen, "Moving from trigger to popup closed the picker");
+                panel.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+                Thread.Sleep(160); Pump();
+                Require(!picker.IsOpen, "Picker remained open after pointer left the popup");
+                trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+                trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+                Thread.Sleep(160); Pump();
+                Require(!picker.IsOpen, "Picker remained open after pointer left the trigger");
+            }
+            finally { SetCursorPos(syntheticCursor.X, syntheticCursor.Y); Pump(); }
             Require(GetCursorPos(out var previousCursor), "Could not read cursor position");
             try
             {

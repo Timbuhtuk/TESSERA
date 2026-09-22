@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private bool _resultPreservesTransparency;
     private bool _resultIsAlignment;
     private bool _applyingProfile;
+    private bool _capturingReadyMode;
     private bool _updatingSize;
     private bool _processing;
     private bool _resultStale;
@@ -39,14 +40,16 @@ public partial class MainWindow : Window
             mode.Checked += (_, _) => UpdateModeDescription();
         foreach (var box in new[] { paletteInput, quantizationInput, cropHorizontalInput, cropVerticalInput })
             box.SelectionChanged += SettingsChanged;
-        foreach (var input in new[] { paletteStepInput, alphaInput, quantizationColorsInput })
+        foreach (var input in new[] { paletteStepInput, alphaInput, quantizationColorsInput, localColorPassesInput })
             input.ValueChanged += SettingsChanged;
-        foreach (var check in new ToggleButton[] { spriteInput, ditheringInput, colorWeightsInput, automaticInput, manualInput })
+        foreach (var check in new ToggleButton[] { spriteInput, ditheringInput, colorWeightsInput, automaticInput, manualInput,
+            quantizationColorModeInput, paletteColorModeInput })
         {
             check.Checked += SettingsChanged;
             check.Unchecked += SettingsChanged;
         }
-        foreach (var slider in new[] { brightnessInput, contrastInput, saturationInput, edgeInput })
+        foreach (var slider in new[] { brightnessInput, contrastInput, saturationInput, edgeInput,
+            localBrightnessInput, localContrastInput, localSaturationInput, localEdgeInput })
             slider.ValueChanged += (_, _) => SettingsChanged(null, EventArgs.Empty);
         widthInput.ValueChanged += (_, _) => SizeChangedByUser(widthChanged: true);
         heightInput.ValueChanged += (_, _) => SizeChangedByUser(widthChanged: false);
@@ -60,7 +63,13 @@ public partial class MainWindow : Window
         processButton.Click += ProcessImage;
         scaleOnlyButton.Click += ScaleOnlyImage;
         colorOnlyButton.Click += ApplyColorsOnly;
-        operationSourceInput.SelectionChanged += (_, _) => { UpdateSizeHint(); SetProcessingState(_processing); };
+        neighborColorsButton.Click += ApplyNeighborColorsOnly;
+        operationSourceInput.SelectionChanged += (_, _) =>
+        {
+            if (aspectLock.IsChecked == true) SizeChangedByUser(widthChanged: true);
+            else UpdateSizeHint();
+            SetProcessingState(_processing);
+        };
         saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
         saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
@@ -81,7 +90,9 @@ public partial class MainWindow : Window
         InitializeAseprite();
         InitializeBackground();
         InitializeEditorTools();
+        InitializeInfo();
         UpdatePreviewSettings();
+        UpdateDependentControls();
         if (LibraryLocation.MigrationWarning is { } warning)
             statusLabel.Text = $"Не удалось полностью перенести старую историю: {warning}";
     }
@@ -107,7 +118,7 @@ public partial class MainWindow : Window
             quantizationInput.SelectedIndex = details ? 0 : 1;
             quantizationColorsInput.Value = 64;
             colorWeightsInput.IsChecked = false;
-            paletteInput.SelectedIndex = details ? 0 : 5;
+            paletteInput.SelectedIndex = details ? 0 : 4;
             paletteStepInput.Value = 16;
             spriteInput.IsChecked = details;
             alphaInput.Value = details ? 75 : 50;
@@ -135,17 +146,25 @@ public partial class MainWindow : Window
 
     private void UpdateDependentControls()
     {
-        SetVisible(stepControls, paletteInput.SelectedIndex == 5);
+        quantizationColorControls.IsEnabled = quantizationColorModeInput.IsChecked == true;
+        paletteColorControls.IsEnabled = paletteColorModeInput.IsChecked == true;
+        quantizationColorControls.Opacity = quantizationColorControls.IsEnabled ? 1 : .55;
+        paletteColorControls.Opacity = paletteColorControls.IsEnabled ? 1 : .55;
+        SetVisible(stepControls, paletteInput.SelectedIndex == 4);
         SetVisible(cropControls, spriteInput.IsChecked != true);
         SetVisible(alphaControls, spriteInput.IsChecked == true);
-        bool ditheringAllowed = spriteInput.IsChecked != true && paletteInput.SelectedIndex is >= 1 and <= 4;
-        ditheringInput.IsEnabled = ditheringAllowed;
+        bool ditheringAllowed = spriteInput.IsChecked != true && paletteInput.SelectedIndex is >= 0 and <= 3;
+        ditheringInput.IsEnabled = paletteColorControls.IsEnabled && ditheringAllowed;
         if (!ditheringAllowed) ditheringInput.IsChecked = false;
         SetVisible(manualControls, manualInput.IsChecked == true);
         brightnessLabel.Text = $"Яркость · {brightnessInput.Value}";
         contrastLabel.Text = $"Контраст · {contrastInput.Value}";
         saturationLabel.Text = $"Насыщенность · {saturationInput.Value}";
         edgeLabel.Text = $"Контур · {edgeInput.Value}";
+        localBrightnessLabel.Text = $"Яркость · {localBrightnessInput.Value}";
+        localContrastLabel.Text = $"Контраст · {localContrastInput.Value}";
+        localSaturationLabel.Text = $"Насыщенность · {localSaturationInput.Value}";
+        localEdgeLabel.Text = $"Контур · {localEdgeInput.Value}";
     }
 
     private void SizeChangedByUser(bool widthChanged)
@@ -174,7 +193,9 @@ public partial class MainWindow : Window
         var sizeSource = operationSourceInput.SelectedIndex == 1 ? _downscaledResult : _sourceImage;
         if (sizeSource is null)
         {
-            sizeHint.Text = "Размер задаёт итоговую сетку. Чем она крупнее, тем больше деталей может сохраниться.";
+            sizeHint.Text = "Укажите ширину и высоту результата.";
+            sizeToolGroup.ToolTip = sizeHint.Text;
+            frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = true;
             return;
         }
         int width = (int)widthInput.Value, height = (int)heightInput.Value;
@@ -186,6 +207,9 @@ public partial class MainWindow : Window
             sizeHint.Text = spriteInput.IsChecked == true
                 ? "Весь исходник попадёт в сетку. Порог заполнения регулирует края прозрачных объектов."
                 : "Область исходника подгоняется обрезкой под целые блоки. Положение области задаётся ниже.";
+        sizeToolGroup.ToolTip = sizeHint.Text;
+        bool reducing = width <= sizeSource.Width && height <= sizeSource.Height;
+        frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = reducing;
     }
 
     private void MarkResultStale()
@@ -226,7 +250,7 @@ public partial class MainWindow : Window
         if (_sourceImage is null || _activeSource is null || _processing) return;
         ApplyProfile();
         CommitInputs();
-        var settings = CaptureSettings();
+        var settings = CaptureReadyModeSettings();
         DownscaleOptions options = settings.Downscale;
         bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
@@ -277,7 +301,10 @@ public partial class MainWindow : Window
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
-        foreach (var button in new[] { fileMenuButton, gridToolButton, sizeToolButton, colorToolButton, profileToolButton })
+        foreach (var button in new[] { fileMenuButton, toolsMenuButton, gridToolButton, sizeToolButton,
+            colorToolButton, smoothingToolButton, profileToolButton, infoToolButton, compactProfileToolButton,
+            compactSizeToolButton, compactColorToolButton, compactSmoothingToolButton, compactGridToolButton,
+            compactInfoToolButton })
             button.IsEnabled = !processing;
         operationSourceInput.IsEnabled = !processing;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
@@ -285,7 +312,12 @@ public partial class MainWindow : Window
         homeContent.IsEnabled = !processing;
         backToLibraryButton.IsEnabled = !processing;
         processButton.IsEnabled = !processing && _sourceImage is not null;
-        scaleOnlyButton.IsEnabled = colorOnlyButton.IsEnabled = !processing && _sourceImage is not null;
+        scaleOnlyButton.IsEnabled = colorOnlyButton.IsEnabled = neighborColorsButton.IsEnabled =
+            !processing && _sourceImage is not null;
+        var selectedGeneration = _activeSource?.SelectedGeneration;
+        int generationNumber = selectedGeneration is null ? -1 : _activeSource!.Generations.IndexOf(selectedGeneration) + 1;
+        ((ComboBoxItem)operationSourceInput.Items[1]).Content = generationNumber > 0
+            ? $"Результат №{generationNumber}" : "Выбранный результат";
         ((ComboBoxItem)operationSourceInput.Items[1]).IsEnabled = !processing && _downscaledResult is not null;
         if (_downscaledResult is null && operationSourceInput.SelectedIndex == 1) operationSourceInput.SelectedIndex = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
@@ -293,11 +325,12 @@ public partial class MainWindow : Window
         saveAllButton.IsEnabled = !processing && _activeSource?.Generations.Count > 0;
         Cursor = processing ? Cursors.Wait : null;
         UpdateBusyIndicator();
+        if (!processing) RefreshInfo();
     }
 
     private void CommitInputs()
     {
-        foreach (var input in new[] { widthInput, heightInput, gridCellInput, paletteStepInput, alphaInput, quantizationColorsInput, threadsInput })
+        foreach (var input in new[] { widthInput, heightInput, gridCellInput, paletteStepInput, alphaInput, quantizationColorsInput, localColorPassesInput, threadsInput })
             input.Commit();
     }
 
@@ -309,13 +342,24 @@ public partial class MainWindow : Window
         AlphaThreshold = (int)alphaInput.Value,
         CropHorizontal = (CropHorizontalAlignment)cropHorizontalInput.SelectedIndex,
         CropVertical = (CropVerticalAlignment)cropVerticalInput.SelectedIndex,
-        Palette = (PaletteKind)paletteInput.SelectedIndex,
+        Palette = _capturingReadyMode && detailsMode.IsChecked == true
+            ? PaletteKind.None : (PaletteKind)(paletteInput.SelectedIndex + 1),
         PaletteStep = (int)paletteStepInput.Value,
         Quantization = (QuantizationMethod)quantizationInput.SelectedIndex,
         QuantizationColors = (int)quantizationColorsInput.Value,
+        IndependentColorMode = paletteColorModeInput.IsChecked == true
+            ? IndependentColorMode.Palette : IndependentColorMode.Quantization,
+        LocalColorPasses = (int)localColorPassesInput.Value,
+        LocalColorCriteria = new ManualBlockCriteria
+        {
+            TargetBrightness = localBrightnessInput.Value / 100.0,
+            TargetContrast = localContrastInput.Value / 100.0,
+            TargetSaturation = localSaturationInput.Value / 100.0,
+            TargetEdge = localEdgeInput.Value / 100.0
+        },
         UseColorWeights = colorWeightsInput.IsChecked == true,
         ThreadCount = (int)threadsInput.Value,
-        EnableDithering = spriteInput.IsChecked != true && paletteInput.SelectedIndex is >= 1 and <= 4 && ditheringInput.IsChecked == true,
+        EnableDithering = spriteInput.IsChecked != true && paletteInput.SelectedIndex is >= 0 and <= 3 && ditheringInput.IsChecked == true,
         BlockMode = manualInput.IsChecked == true ? BlockSelectionMode.Manual : BlockSelectionMode.Automatic,
         ManualCriteria = manualInput.IsChecked == true ? new ManualBlockCriteria
         {
@@ -458,18 +502,22 @@ public partial class MainWindow : Window
         CommitInputs();
         var settings = CaptureSettings();
         var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize };
+        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        var basis = useResult ? _downscaledResult! : _sourceImage;
         var document = _activeSource;
+        Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
+        using var source = (Bitmap)basis.Clone();
         SetProcessingState(true);
         statusLabel.Text = "Выравнивание пиксельной сетки…";
         try
         {
-            using var source = (Bitmap)_sourceImage.Clone();
             var generation = await Task.Run(() =>
             {
                 using var result = new PixelGridAligner().Align(source, options);
                 return _library.SaveGeneration(document, result.Aligned, null, new GenerationEntry
                 {
                     Settings = settings, IsAlignment = true, PreservesTransparency = true, CellSize = result.CellSize,
+                    ParentGenerationId = parentId,
                     Caption = $"ВЫРОВНЕННАЯ СЕТКА · {result.Aligned.Width} × {result.Aligned.Height} · ячейка {result.CellSize} px",
                     Log = $"Выравнивание: {result.ElapsedSeconds:F3} с. Ячейка: {result.CellSize} px."
                 });

@@ -44,7 +44,7 @@ internal static class LibraryChecks
             Click("alignButton"); Wait();
             Get<IntegerInput>("widthInput").Value = 160;
             Get<IntegerInput>("heightInput").Value = 120;
-            Get<ComboBox>("paletteInput").SelectedIndex = 1;
+            Get<ComboBox>("paletteInput").SelectedIndex = 0;
             Get<CheckBox>("ditheringInput").IsChecked = true;
             Get<IntegerInput>("quantizationColorsInput").Value = 8;
             Click("processButton"); Wait();

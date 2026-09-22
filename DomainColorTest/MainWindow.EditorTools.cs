@@ -12,11 +12,34 @@ public partial class MainWindow
 
     private void InitializeEditorTools()
     {
-        gridToolButton.Click += (_, _) => OpenEditorTool("grid", "Сетка", 300, gridToolGroup);
-        sizeToolButton.Click += (_, _) => OpenEditorTool("size", "Размер", 660, sizeToolGroup, frameToolGroup, pixelToolGroup);
-        colorToolButton.Click += (_, _) => OpenEditorTool("color", "Цвет", 500, colorToolGroup);
-        profileToolButton.Click += (_, _) => OpenEditorTool("profile", "Режим", 440, profileToolGroup, executionToolGroup);
+        profileToolButton.Click += (_, _) => OpenEditorTool("profile", "Готовые режимы", 320, profileToolGroup, executionToolGroup);
+        sizeToolButton.Click += (_, _) => OpenEditorTool("size", "Размер", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
+        colorToolButton.Click += (_, _) => OpenEditorTool("color", "Палитра", 440, colorToolGroup);
+        smoothingToolButton.Click += (_, _) => OpenEditorTool("smoothing", "Сглаживание", 470, smoothingToolGroup);
+        gridToolButton.Click += (_, _) => OpenEditorTool("grid", "Сетка", 280, gridToolGroup);
+        infoToolButton.Click += (_, _) => { OpenEditorTool("info", "Инфо", 560, infoToolGroup); RefreshInfo(); };
         fileMenuButton.Click += (_, _) => fileMenuPopup.IsOpen = !fileMenuPopup.IsOpen;
+        toolsMenuButton.Click += (_, _) => toolsMenuPopup.IsOpen = !toolsMenuPopup.IsOpen;
+        foreach (var pair in new[]
+        {
+            (compactProfileToolButton, profileToolButton),
+            (compactSizeToolButton, sizeToolButton),
+            (compactColorToolButton, colorToolButton),
+            (compactSmoothingToolButton, smoothingToolButton),
+            (compactGridToolButton, gridToolButton),
+            (compactInfoToolButton, infoToolButton)
+        })
+            pair.Item1.Click += (_, _) => { toolsMenuPopup.IsOpen = false; pair.Item2.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); };
+        SizeChanged += (_, _) => UpdateToolNavigation();
+        UpdateToolNavigation();
+    }
+
+    private void UpdateToolNavigation()
+    {
+        bool compact = (ActualWidth > 0 ? ActualWidth : Width) < 1500;
+        SetVisible(toolNavigation, !compact);
+        SetVisible(compactToolNavigation, compact);
+        if (!compact) toolsMenuPopup.IsOpen = false;
     }
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
@@ -29,20 +52,34 @@ public partial class MainWindow
         }
 
         var content = new StackPanel { Margin = new Thickness(16, 16, 16, 4), IsEnabled = !_processing };
-        foreach (var group in groups)
+        StackPanel? advancedContent = groups.Length > 1 ? new StackPanel() : null;
+        for (int index = 0; index < groups.Length; index++)
         {
+            var group = groups[index];
             if (group.Parent is not Panel parent) throw new InvalidOperationException("Панель инструмента уже используется.");
+            // Сохраняем стили при переносе: иначе Slider временно получает Maximum = 10 и меняет Value.
+            if (!group.Resources.MergedDictionaries.Contains(Resources)) group.Resources.MergedDictionaries.Add(Resources);
             parent.Children.Remove(group);
-            content.Children.Add(group);
+            if (index == 0) content.Children.Add(group);
+            else advancedContent!.Children.Add(group);
         }
+        if (advancedContent is not null)
+            content.Children.Add(new Expander
+            {
+                Header = "Дополнительные настройки",
+                Content = advancedContent,
+                Style = (Style)FindResource("ToolExpander"),
+                Margin = new Thickness(0, 2, 0, 8)
+            });
 
         var tool = new EditorToolWindow(this, title, content, height);
         tool.Closed += (_, _) =>
         {
             _toolWindows.Remove(key);
+            if (key == "info") ResetInfoSnapshot();
             foreach (var group in groups)
             {
-                content.Children.Remove(group);
+                if (group.Parent is Panel parent) parent.Children.Remove(group);
                 settingsPanel.Children.Add(group);
             }
         };
@@ -54,6 +91,7 @@ public partial class MainWindow
     {
         foreach (var tool in _toolWindows.Values.ToArray()) tool.Close();
         fileMenuPopup.IsOpen = false;
+        toolsMenuPopup.IsOpen = false;
     }
 
     private sealed class EditorToolWindow : Window
@@ -79,10 +117,7 @@ public partial class MainWindow
             FontSize = 13;
             UseLayoutRounding = true;
             SnapsToDevicePixels = true;
-            Resources.MergedDictionaries.Add(new ResourceDictionary
-            {
-                Source = new Uri("/DomainColorTest;component/Theme.xaml", UriKind.Relative)
-            });
+            Resources.MergedDictionaries.Add(owner.Resources);
             WindowChrome.SetWindowChrome(this, new WindowChrome
             {
                 CaptionHeight = 38,
