@@ -28,7 +28,7 @@ public partial class MainWindow : Window
     private readonly OpenFileDialog openDialog = new() { Filter = "Изображения|*.jpg;*.jpeg;*.png;*.bmp;*.gif", Title = "Добавить изображения", Multiselect = true };
     private readonly SaveFileDialog saveDialog = new() { DefaultExt = ".png", AddExtension = true, OverwritePrompt = true, Title = "Сохранить результат" };
 
-    public MainWindow() : this(LibraryLocation.PrepareDefault()) { }
+    public MainWindow() : this(LibraryLocation.PrepareDefault()) { _autoCheckUpdates = true; }
 
     public MainWindow(string libraryDirectory)
     {
@@ -91,6 +91,7 @@ public partial class MainWindow : Window
         InitializeBackground();
         InitializeEditorTools();
         InitializeInfo();
+        InitializeUpdates();
         UpdatePreviewSettings();
         UpdateDependentControls();
         if (LibraryLocation.MigrationWarning is { } warning)

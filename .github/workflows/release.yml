@@ -98,11 +98,11 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Open Presets, Size, Palette, Smoothing, Grid and Info from the editor toolbar, or from Processing on narrow windows.
-          - Smooth local color noise with a separate 3x3 operation and 1-100 passes. It selects neighboring colors while preserving dimensions and alpha; its controls are independent of resizing and palette reduction.
-          - Inspect image dimensions and visible color counts in Info. Click a palette color to replace it using a hue strip, color field, existing image swatch or HEX value. Replacement creates a saved result and keeps the original and transparency intact.
-          - Reduce colors either by color count or by palette. Inactive settings do not affect the selected operation.
-          - Keep editor settings when opening and closing tools, preserve the chosen input's aspect ratio, and apply grid operations to the selected source or result.
+          - Check for newer GitHub releases automatically at startup, or manually from the bottom bar and File menu.
+          - Confirm an update to download the desktop executable, verify its SHA-256 checksum, replace the installed file and restart. The image library stays in place.
+          - Continue working offline when update checks are unavailable. Automatic installation requires the published Tessera.exe in a writable folder; development builds open the release page instead.
+
+          Updating from v1.0.10 or earlier: download this release manually once to enable future in-app updates.
 
           The CLI includes resize, colors, aseprite, align, reduce-grid, ico and remove-background commands for scripted workflows. Use reduce-grid (also available as compact-grid) to turn uniform aligned cells into individual pixels.
 

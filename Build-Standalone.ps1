@@ -69,6 +69,8 @@ On first launch, existing Pixelizator images and histories are copied there.
 The old library remains as a backup. Copy the Tessera folder separately
 when moving your library to another computer.
 
+Tessera checks GitHub Releases for updates at startup. Use the bottom-bar button
+to check manually and install a newer version. Your library remains in place.
 Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
 '@
     [IO.File]::WriteAllText((Join-Path $output 'README.txt'), $guide, [Text.UTF8Encoding]::new($true))

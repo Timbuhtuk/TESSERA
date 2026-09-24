@@ -92,6 +92,7 @@
                                 <Button x:Name="openButton" Content="Открыть…" HorizontalContentAlignment="Left" ToolTip="Открыть изображения (Ctrl+O)"/>
                                 <Button x:Name="saveButton" Content="Сохранить…" HorizontalContentAlignment="Left" Margin="0,4,0,0" IsEnabled="False" ToolTip="Сохранить выбранный результат (Ctrl+S)"/>
                                 <Button x:Name="saveAllButton" Content="Сохранить все результаты…" HorizontalContentAlignment="Left" Margin="0,4,0,0" IsEnabled="False" ToolTip="Экспортировать историю текущего исходника в папку"/>
+                                <Button x:Name="checkUpdatesMenuButton" Content="Проверить обновления" HorizontalContentAlignment="Left" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
                     </Popup>
@@ -400,6 +401,7 @@
         <Border Grid.Row="2" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0" Padding="18,8">
             <DockPanel LastChildFill="True">
                 <ProgressBar x:Name="busyIndicator" Width="90" Height="5" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="#EEEEEE" Background="#333333" IsIndeterminate="True" Visibility="Collapsed"/>
+                <Button x:Name="updateButton" DockPanel.Dock="Right" Content="Проверить обновления" Margin="12,0,0,0" Padding="9,2" VerticalAlignment="Center"/>
                 <TextBlock x:Name="statusLabel" Text="Готово к работе" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
             </DockPanel>
         </Border>

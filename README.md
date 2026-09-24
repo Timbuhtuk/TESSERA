@@ -22,4 +22,6 @@ Today, Tessera brings the rest of that workflow together:
 
 Everything runs locally, without an internet connection. Download, unpack and launch.
 
+When online, Tessera can check GitHub for newer releases and install an update after confirmation. Your image library stays in place.
+
 [**Download Tessera for Windows x64**](https://github.com/Timbuhtuk/TESSERA/releases/latest)

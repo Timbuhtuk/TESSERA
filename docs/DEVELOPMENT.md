@@ -72,6 +72,6 @@ The release stays a draft until all assets are uploaded. Rerunning a completed p
 
 Manual publication is available through **Actions → Build and release → Run workflow**, selecting `main`. The workflow uses the built-in `GITHUB_TOKEN`; no additional secret is required. The latest-release link follows the most recent published release.
 
-This automation publishes GitHub releases. Users update their local application by downloading the new executable; their existing library is preserved.
+The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; the library remains in `%LOCALAPPDATA%\Tessera\Library`.
 
 See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).

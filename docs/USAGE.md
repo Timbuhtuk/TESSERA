@@ -44,7 +44,7 @@ The current converter supports RGBA files with one visible ordinary layer and no
 
 The library is saved automatically in `%LOCALAPPDATA%\Tessera\Library`. On the first launch after updating, Tessera copies existing images and result histories from `%LOCALAPPDATA%\Pixelizator\Library` into the new library. The old directory remains as a backup and is not read again after a successful migration. To move the library to another computer, copy the Tessera library directory separately.
 
-Download the new executable to update the application. GitHub releases are generated automatically, but the installed application does not replace itself.
+Tessera checks the latest GitHub release in the background at startup. Use **Check for updates** in the bottom bar or File menu to check manually. When a newer version is available, select **Update to v…** and confirm. Tessera downloads the standalone executable, verifies its SHA-256 digest, closes, replaces the executable and restarts. Your image library stays in `%LOCALAPPDATA%\Tessera\Library`. The automatic install is available when running the published `Tessera.exe` from a writable folder; development builds open the release page instead. If a check fails or you are offline, the current app keeps working.
 
 For more detail, see [grid alignment](../PixelArtAlignment/README.md), [ICO export](../PixelArtDownscale/ICO.md) and the [CLI reference](CLI.md).
 
