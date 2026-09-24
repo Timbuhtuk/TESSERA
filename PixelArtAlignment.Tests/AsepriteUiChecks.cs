@@ -76,6 +76,8 @@ internal static class AsepriteUiChecks
             Get<ComboBox>("sheetLayout").SelectedIndex = 0; Wait(screen.RebuildAsync());
             Capture("aseprite-workspace.png");
             window.Width = 560; window.Height = 700; Pump();
+            Require(Get<Border>("sheetSettingsPanel").ActualHeight >= 100,
+                "Narrow layout hides animation settings");
             Require(Get<PixelPreview>("sheetPreview").ActualHeight >= 120 && Get<PixelPreview>("sheetPreview").ActualWidth >= 490, "Narrow layout collapsed the preview");
             Capture("aseprite-narrow.png");
 

@@ -115,7 +115,7 @@ public partial class MainWindow
             ShowInTaskbar = false;
             Background = new SolidColorBrush(Color.FromRgb(16, 16, 16));
             Foreground = new SolidColorBrush(Color.FromRgb(238, 238, 238));
-            FontFamily = new FontFamily("Segoe UI");
+            FontFamily = (FontFamily)owner.FindResource("UiFont");
             FontSize = 13;
             UseLayoutRounding = true;
             SnapsToDevicePixels = true;
@@ -153,6 +153,7 @@ public partial class MainWindow
             titleBar.Children.Add(new TextBlock
             {
                 Text = title,
+                FontFamily = (FontFamily)owner.FindResource("DisplayFont"),
                 Margin = new Thickness(16, 0, 0, 0),
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center

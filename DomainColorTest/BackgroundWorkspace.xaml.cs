@@ -188,14 +188,29 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
 
     private void UpdateLayoutForWidth()
     {
-        bool compact = ActualWidth < 800;
-        backgroundContent.Margin = new Thickness(compact ? 18 : 32, 16, compact ? 18 : 32, 32);
+        bool compact = ActualWidth < 900;
+        bool stackPreviews = ActualWidth < 700;
+
+        backgroundContent.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 260, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        backgroundContent.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
+        backgroundContent.RowDefinitions[0].Height = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        backgroundContent.RowDefinitions[0].MaxHeight = compact ? 220 : double.PositiveInfinity;
+        backgroundSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        backgroundSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        backgroundContent.RowDefinitions[1].Height = new GridLength(compact ? 1 : 0, compact ? GridUnitType.Star : GridUnitType.Pixel);
+
+        Grid.SetColumn(backgroundSettingsPanel, 0);
+        Grid.SetRow(backgroundSettingsPanel, 0);
+        Grid.SetColumn(backgroundPreviewScroll, compact ? 0 : 1);
+        Grid.SetRow(backgroundPreviewScroll, compact ? 1 : 0);
+        backgroundSettingsPanel.BorderThickness = compact ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 0);
+
         backgroundPreviewGrid.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-        backgroundPreviewGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 16);
-        backgroundPreviewGrid.ColumnDefinitions[2].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
-        Grid.SetColumn(backgroundResultPanel, compact ? 0 : 2);
-        Grid.SetRow(backgroundResultPanel, compact ? 1 : 0);
-        backgroundResultPanel.Margin = compact ? new Thickness(0, 22, 0, 0) : new Thickness();
+        backgroundPreviewGrid.ColumnDefinitions[1].Width = new GridLength(stackPreviews ? 0 : 12);
+        backgroundPreviewGrid.ColumnDefinitions[2].Width = new GridLength(stackPreviews ? 0 : 1, stackPreviews ? GridUnitType.Pixel : GridUnitType.Star);
+        Grid.SetColumn(backgroundResultPanel, stackPreviews ? 0 : 2);
+        Grid.SetRow(backgroundResultPanel, stackPreviews ? 1 : 0);
+        backgroundResultPanel.Margin = stackPreviews ? new Thickness(0, 12, 0, 0) : new Thickness();
     }
 
     public void Dispose()

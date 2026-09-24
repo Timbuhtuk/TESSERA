@@ -29,6 +29,13 @@ internal static class UpscaleUiChecks
         {
             Invoke("LoadImage", sourcePath);
             Require(Get<Button>("scaleOnlyButton").IsEnabled, "Size action did not enable after loading");
+            Require(Get<IntegerInput>("widthInput").Maximum == int.MaxValue &&
+                Get<IntegerInput>("heightInput").Maximum == int.MaxValue,
+                "Size tool still has a 4K dimension cap");
+            Get<IntegerInput>("widthInput").Value = 7680;
+            Get<IntegerInput>("heightInput").Value = 4320;
+            Require(Get<IntegerInput>("widthInput").Value == 7680 && Get<IntegerInput>("heightInput").Value == 4320,
+                "Size tool rejected dimensions above 4K");
             Get<CheckBox>("aspectLock").IsChecked = false;
             Get<IntegerInput>("widthInput").Value = 8;
             Get<IntegerInput>("heightInput").Value = 6;

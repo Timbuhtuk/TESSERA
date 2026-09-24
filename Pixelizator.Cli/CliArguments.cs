@@ -103,8 +103,8 @@ internal sealed record CliArguments(
         {
             SpriteMode = sprite,
             AlphaThreshold = Integer("--alpha-threshold", defaults.AlphaThreshold, 1, 100),
-            TargetWidth = Integer("--width", defaults.TargetWidth, 1, 3840),
-            TargetHeight = Integer("--height", defaults.TargetHeight, 1, 2160),
+            TargetWidth = Integer("--width", defaults.TargetWidth, 1, int.MaxValue),
+            TargetHeight = Integer("--height", defaults.TargetHeight, 1, int.MaxValue),
             CropHorizontal = Choice("--crop-horizontal", defaults.CropHorizontal,
                 ("center", CropHorizontalAlignment.Center), ("left", CropHorizontalAlignment.Left),
                 ("right", CropHorizontalAlignment.Right)),

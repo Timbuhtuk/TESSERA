@@ -98,12 +98,11 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Open Filters from the editor toolbar or the compact Processing menu, and apply them to the source or selected result.
-          - Convert images to monochrome while preserving dimensions and transparency. The result is saved in the image history.
-          - Create ASCII art as UTF-8 text or a black-and-white image. Choose Standard, Detailed, Minimal or Blocks character sets, or enter your own.
-          - Keep the input image size or map each pixel to one character for a larger render. Invert input brightness and rendered foreground/background independently.
+          - Refresh the desktop interface with bundled Cascadia Code and Science Gothic fonts, shared control styles and updated headings.
+          - Use redesigned icon, background-removal and Aseprite workspaces with settings beside the preview on wide windows and scrollable settings above it on narrow windows.
+          - Enter image dimensions above 4K in the desktop editor and CLI. Available memory and image codec support determine the practical maximum.
 
-          Users of v1.0.11 can install this release through the app's update button. Rendered ASCII images have an opaque background; the original image remains intact.
+          Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 
           Updating from v1.0.10 or earlier: download this release manually once to enable future in-app updates.
 

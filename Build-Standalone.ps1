@@ -42,6 +42,8 @@ Open images from File > Open, with Ctrl+O or drag and drop.
 The home screen keeps your source library and result histories.
 The editor can change size and colors separately or together, with crisp
 pixel enlargement. It also aligns grids and reduces cells to one pixel.
+The interface includes bundled Cascadia Code and Science Gothic fonts.
+Size fields accept dimensions above 4K, subject to available memory and codec limits.
 The toolbar opens Presets, Size, Palette, Smoothing, Grid, Filters and Info.
 On narrow windows, find them in the Processing menu. Select Source or a
 saved result as the input. Info shows dimensions, color counts and palette
@@ -80,7 +82,7 @@ Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
 '@
     [IO.File]::WriteAllText((Join-Path $output 'README.txt'), $guide, [Text.UTF8Encoding]::new($true))
     $archive = Join-Path $artifactsRoot 'Tessera-win-x64.zip'
-    Compress-Archive -LiteralPath (Join-Path $output 'Tessera.exe'),(Join-Path $output 'README.txt') -DestinationPath $archive -Force
+    Compress-Archive -LiteralPath (Join-Path $output 'Tessera.exe'),(Join-Path $output 'README.txt'),(Join-Path $output 'Assets/Fonts/Cascadia-Code-OFL.txt'),(Join-Path $output 'Assets/Fonts/Science-Gothic-OFL.txt') -DestinationPath $archive -Force
     $cliArchive = Join-Path $artifactsRoot 'Tessera-cli-win-x64.zip'
     Compress-Archive -LiteralPath (Join-Path $cliOutput 'tessera.exe') -DestinationPath $cliArchive -Force
     $hash = Get-FileHash -LiteralPath (Join-Path $output 'Tessera.exe') -Algorithm SHA256

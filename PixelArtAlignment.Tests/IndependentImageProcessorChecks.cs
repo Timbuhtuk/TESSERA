@@ -48,7 +48,7 @@ internal static class IndependentImageProcessorChecks
         ];
         for (int q = 0; q < colors.Length; q++) source.SetPixel(q % 3, q / 3, colors[q]);
 
-        foreach (var size in new[] { new Size(6, 4), new Size(7, 5), new Size(6, 1) })
+        foreach (var size in new[] { new Size(6, 4), new Size(7, 5), new Size(6, 1), new Size(4097, 1), new Size(1, 2161) })
         {
             using var result = IndependentImageProcessor.Scale(source, new DownscaleOptions
             {

@@ -414,6 +414,9 @@ try
     {
         var options = CliArguments.Parse([input]).Options;
         Require(options.TargetWidth == 48 && options.TargetHeight == 48, "Default size");
+        var largeSize = CliArguments.Parse([input, "--width", "7680", "--height", "4320"]).Options;
+        Require(largeSize.TargetWidth == 7680 && largeSize.TargetHeight == 4320,
+            "CLI resize retained the 4K dimension cap");
         Require(options.Palette == PaletteKind.DB16 && options.PaletteStep == 32, "Default palette");
         Require(options.Quantization == QuantizationMethod.KMeansLab && options.QuantizationColors == 64, "Default quantization");
         Require(!options.UseColorWeights, "Color weights must be opt-in");
@@ -620,7 +623,7 @@ try
         string output = Path.Combine(directory, "must-not-exist.png");
         string[][] invalid =
         [
-            ["--width", "0"], ["--width", "3841"], ["--height", "2161"], ["--height", "-1"],
+            ["--width", "0"], ["--height", "-1"],
             ["--threads", "0"], ["--threads", (Environment.ProcessorCount + 1).ToString()],
             ["--width", "no"], ["--width", "999999999999"], ["--width", "10.5"],
             ["--palette", "unknown"], ["--palette", "1"], ["--quantization", "unknown"],

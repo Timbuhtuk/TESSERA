@@ -24,5 +24,11 @@
     <Resource Include="Assets\app-icon.png" />
     <Resource Include="Assets\landscape.png" />
     <Resource Include="Assets\animation-banner.png" />
+    <Resource Include="Assets\Fonts\CascadiaCode.ttf" />
+    <Resource Include="Assets\Fonts\ScienceGothic.ttf" />
+    <Resource Include="Assets\Fonts\Cascadia-Code-OFL.txt" />
+    <Resource Include="Assets\Fonts\Science-Gothic-OFL.txt" />
+    <None Include="Assets\Fonts\Cascadia-Code-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\Fonts\Science-Gothic-OFL.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

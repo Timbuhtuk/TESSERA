@@ -240,7 +240,7 @@ public partial class IconWorkspace : UserControl, IDisposable
     private void SetBusy(bool busy)
     {
         _busy = busy;
-        iconControls.IsEnabled = iconBackButton.IsEnabled = !busy;
+        iconControls.IsEnabled = iconOpenButton.IsEnabled = iconBackButton.IsEnabled = !busy;
         UpdateSaveState();
         BusyChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -249,15 +249,23 @@ public partial class IconWorkspace : UserControl, IDisposable
 
     private void UpdateLayoutForWidth()
     {
-        bool compact = ActualWidth < 800;
-        iconContent.Margin = new Thickness(compact ? 18 : 32, 16, compact ? 18 : 32, 32);
-        iconSetupGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 180, compact ? GridUnitType.Star : GridUnitType.Pixel);
-        iconSetupGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, GridUnitType.Star);
-        Grid.SetColumn(iconControls, compact ? 0 : 1);
-        Grid.SetRow(iconControls, compact ? 1 : 0);
-        iconImagePanel.Width = compact ? 156 : double.NaN;
-        iconImagePanel.HorizontalAlignment = compact ? HorizontalAlignment.Left : HorizontalAlignment.Stretch;
-        iconImagePanel.Margin = compact ? new Thickness(0, 0, 0, 22) : new Thickness(0, 0, 28, 0);
+        bool compact = ActualWidth < 900;
+        iconContent.Margin = new Thickness();
+        iconSetupGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 260, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        iconSetupGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
+        iconSetupGrid.RowDefinitions[0].Height = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        iconSetupGrid.RowDefinitions[0].MaxHeight = compact ? 220 : double.PositiveInfinity;
+        iconSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        iconSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        iconSetupGrid.RowDefinitions[1].Height = new GridLength(compact ? 1 : 0, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        Grid.SetColumn(iconSettingsPanel, 0);
+        Grid.SetRow(iconSettingsPanel, 0);
+        Grid.SetColumn(iconScroll, compact ? 0 : 1);
+        Grid.SetRow(iconScroll, compact ? 1 : 0);
+        iconSettingsPanel.BorderThickness = compact ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 0);
+        iconImagePanel.Width = double.NaN;
+        iconImagePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        iconImagePanel.Margin = new Thickness();
     }
 
     public void Dispose()

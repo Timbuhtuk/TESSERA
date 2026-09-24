@@ -26,8 +26,8 @@ Without `--output`, the result is placed next to the source with the suffix `_do
 | --- | --- |
 | `<image>`, `-i`, `--input` | One input file; quote paths containing spaces |
 | `-o`, `--output` | PNG, JPG/JPEG or BMP |
-| `--width` | 1–3840; **48** |
-| `--height` | 1–2160; **48** |
+| `--width` | Positive integer; **48**; practical size depends on available memory and the image codec |
+| `--height` | Positive integer; **48**; practical size depends on available memory and the image codec |
 | `--sprite` | Full image without cropping, transparent background, output alpha 0/255; PNG output only |
 | `--alpha-threshold` | 1–100%; **50**; requires `--sprite` |
 | `--crop-horizontal` | **center**, left, right |
@@ -74,7 +74,7 @@ The image decoder is shared with the desktop application. Corrupt or unsupported
 
 ## Independent size and color operations
 
-`tessera resize` changes pixel dimensions through the editor's `IndependentImageProcessor.Scale` algorithm. It selects colors already present in each source block; it does not run quantization or a palette. Supply `--width` and `--height` (48 × 48 by default). A larger target repeats exact source pixels with nearest-neighbor sampling, preserving colors and alpha without smoothing. If either dimension grows, nearest-neighbor sampling is used on both axes. For reduction, `--sprite` keeps the full frame and enables `--alpha-threshold` (1–100%, default 50); otherwise `--crop-horizontal` and `--crop-vertical` choose which remainder to discard. The block representative can be `automatic` or `manual` with `--brightness`, `--contrast`, `--saturation` and `--edge` (0–100).
+`tessera resize` changes pixel dimensions through the editor's `IndependentImageProcessor.Scale` algorithm. It selects colors already present in each source block; it does not run quantization or a palette. Supply positive `--width` and `--height` values (48 × 48 by default); Tessera does not impose a 4K cap, while available memory and the image codec determine the practical maximum. A larger target repeats exact source pixels with nearest-neighbor sampling, preserving colors and alpha without smoothing. If either dimension grows, nearest-neighbor sampling is used on both axes. For reduction, `--sprite` keeps the full frame and enables `--alpha-threshold` (1–100%, default 50); otherwise `--crop-horizontal` and `--crop-vertical` choose which remainder to discard. The block representative can be `automatic` or `manual` with `--brightness`, `--contrast`, `--saturation` and `--edge` (0–100).
 
 `tessera colors` applies quantization and an optional palette to every pixel at the original dimensions. It preserves the input alpha values. It accepts `--palette`, `--palette-step`, `--quantization`, `--quantization-colors`, `--color-weights` and `--dithering`. Size and crop options are rejected.
 

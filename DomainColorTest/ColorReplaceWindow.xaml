@@ -6,7 +6,7 @@
         Width="460" Height="740" MinWidth="390" MinHeight="540"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False" Background="#101010" Foreground="#EEEEEE"
-        FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
+        FontFamily="{DynamicResource UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="0"
                             GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
@@ -45,7 +45,7 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Grid Height="38" Background="#151515">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="Замена цвета" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <TextBlock Text="Замена цвета" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
             <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
                     Style="{StaticResource CloseCaptionButton}" ToolTip="Закрыть"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>

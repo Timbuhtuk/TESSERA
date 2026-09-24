@@ -43,7 +43,7 @@ public sealed class IntegerInput : UserControl
             if (e.Key is Key.Up or Key.Down)
             {
                 Commit();
-                SetCurrentValue(ValueProperty, Math.Clamp(Value + (e.Key == Key.Up ? 1 : -1), Minimum, Maximum));
+                SetCurrentValue(ValueProperty, (int)Math.Clamp((long)Value + (e.Key == Key.Up ? 1 : -1), Minimum, Maximum));
                 e.Handled = true;
             }
             else if (e.Key == Key.Enter) Commit();
@@ -55,7 +55,7 @@ public sealed class IntegerInput : UserControl
         foreach (int direction in new[] { 1, -1 })
         {
             var button = new System.Windows.Controls.Primitives.RepeatButton { Content = direction > 0 ? "▴" : "▾", Padding = new Thickness(0), Focusable = false, FontSize = 10 };
-            button.Click += (_, _) => { Commit(); SetCurrentValue(ValueProperty, Math.Clamp(Value + direction, Minimum, Maximum)); };
+            button.Click += (_, _) => { Commit(); SetCurrentValue(ValueProperty, (int)Math.Clamp((long)Value + direction, Minimum, Maximum)); };
             Grid.SetRow(button, direction > 0 ? 0 : 1);
             buttons.Children.Add(button);
         }

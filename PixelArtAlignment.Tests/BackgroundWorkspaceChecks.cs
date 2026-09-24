@@ -66,6 +66,8 @@ internal static class BackgroundWorkspaceChecks
             Wait(workspace.LoadFileAsync(invalid)); WaitIdle();
             Require(workspace.HasResult && Get<TextBlock>("backgroundFileLabel").Text == "shape.png", "Failed load discarded previous image");
             window.Width = 560; Pump();
+            Require(Get<Border>("backgroundSettingsPanel").ActualHeight >= 100,
+                "Narrow layout hides background settings");
             Require(Grid.GetRow(Get<StackPanel>("backgroundResultPanel")) == 1, "Narrow layout did not stack previews");
             Click("backgroundBackButton"); Pump();
             Drop(data, GetWindow<Border>("backgroundBanner")); WaitIdle();

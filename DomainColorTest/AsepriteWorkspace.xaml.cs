@@ -62,8 +62,25 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         sheetZoom.SelectionChanged += (_, _) => sheetPreview.Zoom = new[] { 0, .5, 1, 2, 4, 8 }[Math.Clamp(sheetZoom.SelectedIndex, 0, 5)];
         sheetBackground.SelectionChanged += (_, _) => sheetPreview.PreviewBackground = sheetBackground.SelectedIndex;
         _settingsTimer.Tick += async (_, _) => { _settingsTimer.Stop(); await RebuildAsync(); };
+        SizeChanged += (_, _) => UpdateLayoutForWidth();
     }
 
+    private void UpdateLayoutForWidth()
+    {
+        bool compact = ActualWidth < 900;
+        sheetWorkspaceGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 260, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        sheetWorkspaceGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
+        sheetWorkspaceGrid.RowDefinitions[0].Height = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        sheetWorkspaceGrid.RowDefinitions[0].MaxHeight = compact ? 220 : double.PositiveInfinity;
+        sheetSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        sheetSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        sheetWorkspaceGrid.RowDefinitions[1].Height = new GridLength(compact ? 1 : 0, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        Grid.SetColumn(sheetSettingsPanel, 0);
+        Grid.SetRow(sheetSettingsPanel, 0);
+        Grid.SetColumn(sheetContentPanel, compact ? 0 : 1);
+        Grid.SetRow(sheetContentPanel, compact ? 1 : 0);
+        sheetSettingsPanel.BorderThickness = compact ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 0);
+    }
     public static bool SupportsFile(string path) => Path.GetExtension(path).ToLowerInvariant() is ".ase" or ".aseprite";
 
     public async Task OpenAsync()

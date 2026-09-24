@@ -4,6 +4,10 @@ Download `Tessera.exe` or `Tessera-win-x64.zip` from [GitHub Releases](https://g
 
 The application interface currently uses Russian labels. This guide describes the actions in English.
 
+The interface includes Cascadia Code and Science Gothic fonts. Icon, background-removal and Aseprite workspaces place settings beside the preview on wide windows; narrow windows place scrollable settings above the preview.
+
+Image size fields accept dimensions above 4K. Available memory and image codec support determine the practical maximum, in both the desktop editor and CLI.
+
 ## Library and editor
 
 Open images from **File → Open**, with Ctrl+O or by drag and drop. The home screen shows your library, image dimensions and result counts. Open a card to edit its source. The back arrow returns to the library; the layout adapts to narrower windows.

@@ -5,7 +5,7 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="TESSERA" Icon="Assets/app.ico" Width="1220" Height="880" MinWidth="560" MinHeight="700"
         WindowStyle="SingleBorderWindow" ResizeMode="CanResize" WindowStartupLocation="CenterScreen" Background="#101010" Foreground="#EEEEEE"
-        FontFamily="Segoe UI" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True" AllowDrop="True">
+        FontFamily="{DynamicResource UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True" AllowDrop="True">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
@@ -186,7 +186,7 @@
                             <TextBlock Text="Яркость участков заменяется символами. TXT сохраняет текст, рендер создаёт чёрно-белое изображение." Foreground="#BBBBBB" Margin="0,4,0,7"/>
                             <DockPanel Margin="0,7,0,3"><TextBlock Text="Рамп-палитра" Width="150"/><ComboBox x:Name="asciiRampPresetInput" SelectedIndex="0" AutomationProperties.Name="Рамп-палитра ASCII"><ComboBoxItem Content="Standard"/><ComboBoxItem Content="Detailed"/><ComboBoxItem Content="Minimal"/><ComboBoxItem Content="Blocks"/><ComboBoxItem Content="Своя"/></ComboBox></DockPanel>
                             <TextBlock Text="Символы от тёмного к светлому" Margin="0,5,0,4"/>
-                            <TextBox x:Name="asciiCharactersInput" Text="@#S08Xx+=-;:, ." FontFamily="Consolas" Padding="7,5" AutomationProperties.Name="Символы ASCII"/>
+                            <TextBox x:Name="asciiCharactersInput" Text="@#S08Xx+=-;:, ." FontFamily="{StaticResource UiFont}" Padding="7,5" AutomationProperties.Name="Символы ASCII"/>
                             <CheckBox x:Name="asciiKeepSourceSizeInput" Content="Сохранить размер исходника" IsChecked="True"
                                       ToolTip="Если выключить, каждый пиксель станет отдельным символом и итоговое изображение увеличится"/>
                             <CheckBox x:Name="asciiInvertSourceInput" Content="Инвертировать цвета исходника"
@@ -217,7 +217,7 @@
                                                 <Grid>
                                                     <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                                     <Border Width="24" Height="24" Background="{Binding Brush}" BorderBrush="#777777" BorderThickness="1" HorizontalAlignment="Left"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding Hex}" FontFamily="Consolas" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Hex}" FontFamily="{StaticResource UiFont}" VerticalAlignment="Center"/>
                                                     <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="#AAAAAA" VerticalAlignment="Center"/>
                                                 </Grid>
                                             </Button>
@@ -252,8 +252,8 @@
 
                     <GroupBox x:Name="sizeToolGroup" Header="Размер результата">
                         <StackPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Ширина, px" Width="132"/><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="3840" Value="48" AutomationProperties.Name="Ширина результата"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Высота, px" Width="132"/><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2160" Value="48" AutomationProperties.Name="Высота результата"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="Ширина, px" Width="132"/><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="Ширина результата"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="Высота, px" Width="132"/><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="Высота результата"/></DockPanel>
                             <CheckBox x:Name="aspectLock" Content="Сохранять пропорции исходника"/>
                             <TextBlock x:Name="sizeHint" Visibility="Collapsed"/>
                             <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="Изменить размер" IsEnabled="False" Margin="0,7,0,0" ToolTip="Увеличить или уменьшить изображение без изменения цветов; увеличение — без сглаживания"/>
@@ -334,7 +334,7 @@
                         </Image>
                         <Rectangle IsHitTestVisible="False"><Rectangle.Fill><LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5"><GradientStop Color="#F0101010" Offset="0"/><GradientStop Color="#B0101010" Offset="0.40"/><GradientStop Color="#00101010" Offset="0.9"/></LinearGradientBrush></Rectangle.Fill></Rectangle>
                         <StackPanel x:Name="heroCopy" Margin="32,28" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="520">
-                            <TextBlock x:Name="heroTitle" Text="Пиксельная обработка" FontSize="34" FontWeight="SemiBold" LineHeight="42" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="heroTitle" Text="Пиксельная обработка" Style="{StaticResource DisplayTitle}" Margin="0,0,0,10"/>
                             <TextBlock Text="Уменьшение изображений и выравнивание сетки." Foreground="#C9C9C9" FontSize="15" LineHeight="23"/>
                             <Button x:Name="homeOpenButton" Content="Открыть изображение…" Style="{StaticResource PrimaryButton}" Click="HomeOpenImage" HorizontalAlignment="Left" Margin="0,22,0,0" Padding="17,12" ToolTip="Открыть изображения (Ctrl+O)"/>
                         </StackPanel>
@@ -348,7 +348,7 @@
                             </Border.Background>
                         </Border>
                         <StackPanel x:Name="asepriteBannerCopy" Margin="32,28" MaxWidth="500" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <TextBlock x:Name="asepriteBannerTitle" Text="Экспорт анимаций" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="asepriteBannerTitle" Text="Экспорт анимаций" Style="{StaticResource DisplayTitle}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                             <TextBlock Text="Aseprite → PNG + JSON. По одному или целой партией." Foreground="#C9C9C9" FontSize="15" TextWrapping="Wrap"/>
                             <Button x:Name="homeAsepriteButton" Content="Открыть конвертер…" Click="OpenAsepriteWorkspace" HorizontalAlignment="Left" Margin="0,22,0,0" Padding="17,12"/>
                         </StackPanel>
@@ -359,7 +359,7 @@
                     <Grid Height="220">
                         <StackPanel x:Name="backgroundBannerArt" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,46,0" IsHitTestVisible="False">
                             <Border Width="126" Height="126" BorderBrush="#646464" BorderThickness="1" Background="#C9C9C9">
-                                <TextBlock Text="T" FontFamily="Consolas" FontWeight="Black" FontSize="100" Foreground="#151515" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Text="T" FontFamily="{StaticResource UiFont}" FontWeight="Black" FontSize="100" Foreground="#151515" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                             <TextBlock Text="→" FontSize="34" Foreground="#9E9E9E" VerticalAlignment="Center" Margin="22,0"/>
                             <Border Width="126" Height="126" BorderBrush="#646464" BorderThickness="1">
@@ -369,11 +369,11 @@
                                         <GeometryDrawing Brush="#303030" Geometry="M0,0 H10 V10 H0 Z M10,10 H20 V20 H10 Z"/>
                                     </DrawingGroup></DrawingBrush.Drawing>
                                 </DrawingBrush></Border.Background>
-                                <TextBlock Text="T" FontFamily="Consolas" FontWeight="Black" FontSize="100" Foreground="#EEEEEE" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Text="T" FontFamily="{StaticResource UiFont}" FontWeight="Black" FontSize="100" Foreground="#EEEEEE" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                             </Border>
                         </StackPanel>
                         <StackPanel x:Name="backgroundBannerCopy" Margin="32,28" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="500">
-                            <TextBlock x:Name="backgroundBannerTitle" Text="Удаление фона" FontSize="34" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="backgroundBannerTitle" Text="Удаление фона" Style="{StaticResource DisplayTitle}" TextWrapping="Wrap" Margin="0,0,0,10"/>
                             <TextBlock Text="Прозрачный PNG из изображения с однотонным фоном." Foreground="#C9C9C9" FontSize="15" TextWrapping="Wrap"/>
                             <Button x:Name="homeBackgroundButton" Content="Удалить фон…" Click="OpenBackgroundWorkspace" HorizontalAlignment="Left" Margin="0,22,0,0" Padding="17,12"/>
                         </StackPanel>
@@ -387,7 +387,7 @@
                             <Border BorderBrush="#555555" BorderThickness="1" Padding="10"><Image Source="Assets/app-icon.png" Width="128" Height="128" RenderOptions.BitmapScalingMode="NearestNeighbor"/></Border>
                         </StackPanel>
                         <StackPanel x:Name="iconBannerCopy" Margin="32,28" VerticalAlignment="Center" HorizontalAlignment="Left">
-                            <TextBlock x:Name="iconBannerTitle" Text="Создание иконок" FontSize="34" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="iconBannerTitle" Text="Создание иконок" Style="{StaticResource DisplayTitle}" Margin="0,0,0,10"/>
                             <TextBlock Text="ICO из исходника или готового результата." Foreground="#C9C9C9" FontSize="15" TextWrapping="Wrap"/>
                             <Button x:Name="homeIconButton" Content="Создать иконку…" Click="OpenIconWorkspace" HorizontalAlignment="Left" Margin="0,22,0,0" Padding="17,12"/>
                         </StackPanel>
@@ -395,7 +395,7 @@
                 </Border>
 
                 <Grid x:Name="libraryHeading" Margin="0,26,0,18">
-                    <TextBlock Text="Библиотека изображений" FontSize="25" FontWeight="SemiBold"/>
+                    <TextBlock Text="Библиотека изображений" Style="{StaticResource SectionTitle}"/>
                 </Grid>
                 <Border x:Name="emptyLibrary" BorderBrush="#3A3A3A" BorderThickness="1" Padding="28" Background="#151515">
                     <StackPanel>
@@ -411,7 +411,7 @@
                                 <Grid.RowDefinitions><RowDefinition Height="156"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                                 <Border Background="#0D0D0D" ClipToBounds="True"><Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="12" RenderOptions.BitmapScalingMode="NearestNeighbor"/></Border>
                                 <StackPanel Grid.Row="1" Margin="17">
-                                    <TextBlock Text="{Binding Label}" FontSize="16" FontWeight="SemiBold" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Label}" Style="{StaticResource CardTitle}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Foreground="#AFAFAF" FontSize="13" Margin="0,9,0,0"><Run Text="{Binding Width, Mode=OneWay}"/><Run Text=" × "/><Run Text="{Binding Height, Mode=OneWay}"/><Run Text=" px · Результаты: "/><Run Text="{Binding Generations.Count, Mode=OneWay}"/></TextBlock>
                                 </StackPanel>
                             </Grid>

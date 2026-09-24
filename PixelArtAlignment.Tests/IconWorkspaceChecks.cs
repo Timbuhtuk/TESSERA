@@ -230,6 +230,11 @@ internal static class IconWorkspaceChecks
             Wait(icons.LoadFileAsync(Path.GetFullPath(Path.Combine("DomainColorTest", "Assets", "app-icon.png")))); WaitIdle();
             Capture("icons-workspace.png");
             window.Width = 560; window.Height = 700; Pump();
+            Require(Get<Border>("iconSettingsPanel").ActualHeight >= 100,
+                "Narrow layout hides icon settings");
+            var settingsScroll = (ScrollViewer)Get<Border>("iconSettingsPanel").Child;
+            Require(settingsScroll.ViewportHeight <= 220 && settingsScroll.ScrollableHeight > 0,
+                "Narrow icon settings are clipped instead of scrollable");
             Require(Get<ScrollViewer>("iconScroll").ScrollableWidth == 0 && Get<StackPanel>("iconControls").ActualWidth > 400,
                 "ICO screen overflows the minimum width");
             Capture("icons-narrow.png");
