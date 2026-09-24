@@ -103,6 +103,25 @@ internal static class UiChecks
                 smoothingTool.Title.StartsWith("Сглаживание") &&
                 ReferenceEquals(Window.GetWindow(Get<Button>("neighborColorsButton")), smoothingTool),
                 "Smoothing did not open as an independent action");
+            Click("filtersToolButton"); Pump();
+            var filtersTool = Window.GetWindow(Get<TextBox>("asciiCharactersInput"));
+            Require(filtersTool is not null && filtersTool != smoothingTool &&
+                filtersTool.Title.StartsWith("Фильтры") &&
+                ReferenceEquals(Window.GetWindow(Get<Button>("monochromeButton")), filtersTool) &&
+                ReferenceEquals(Window.GetWindow(Get<Button>("asciiSaveTextButton")), filtersTool) &&
+                ReferenceEquals(Window.GetWindow(Get<Button>("asciiRenderButton")), filtersTool) &&
+                Get<CheckBox>("asciiKeepSourceSizeInput").IsChecked == true &&
+                Get<CheckBox>("asciiInvertSourceInput").IsChecked == false &&
+                Get<CheckBox>("asciiInvertRenderInput").IsChecked == false &&
+                Get<ComboBox>("asciiRampPresetInput").Items.Count == 5 &&
+                Get<TextBox>("asciiCharactersInput").Text == ImageFilters.AsciiRampPresets[0].Characters,
+                "Filters did not open with monochrome and ASCII actions");
+            Get<ComboBox>("asciiRampPresetInput").SelectedIndex = 3; Pump();
+            Require(Get<TextBox>("asciiCharactersInput").Text == ImageFilters.AsciiRampPresets[3].Characters,
+                "ASCII ramp preset did not update its character list");
+            Get<TextBox>("asciiCharactersInput").Text = "01"; Pump();
+            Require(Get<ComboBox>("asciiRampPresetInput").SelectedIndex == 4,
+                "Manual ASCII ramp did not switch to Custom");
             Click("profileToolButton"); Pump();
             var profileTool = Window.GetWindow(Get<TextBox>("processingLog"));
             Require(profileTool is not null && profileTool != colorTool &&
@@ -111,8 +130,9 @@ internal static class UiChecks
             CaptureTool(sizeTool!, "size-tool.png");
             CaptureTool(colorTool!, "color-tool.png");
             CaptureTool(smoothingTool!, "smoothing-tool.png");
+            CaptureTool(filtersTool!, "filters-tool.png");
             CaptureTool(profileTool!, "mode-tool.png");
-            foreach (var tool in new[] { gridTool, sizeTool, colorTool, smoothingTool, profileTool }) tool!.Close();
+            foreach (var tool in new[] { gridTool, sizeTool, colorTool, smoothingTool, filtersTool, profileTool }) tool!.Close();
             Require(ReferenceEquals(Window.GetWindow(Get<IntegerInput>("widthInput")), window), "Tool settings were lost after closing their window");
             Get<IntegerInput>("widthInput").Value = 13;
             Get<IntegerInput>("heightInput").Value = 7;

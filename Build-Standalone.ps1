@@ -42,7 +42,7 @@ Open images from File > Open, with Ctrl+O or drag and drop.
 The home screen keeps your source library and result histories.
 The editor can change size and colors separately or together, with crisp
 pixel enlargement. It also aligns grids and reduces cells to one pixel.
-The toolbar opens Presets, Size, Palette, Smoothing, Grid and Info.
+The toolbar opens Presets, Size, Palette, Smoothing, Grid, Filters and Info.
 On narrow windows, find them in the Processing menu. Select Source or a
 saved result as the input. Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
@@ -50,6 +50,11 @@ Choose any new color with the hue strip and color field, an image swatch,
 or HEX. The original stays intact.
 Zoom and preview background affect viewing only.
 File > Save exports one result; Save all results exports the current history.
+
+Filters offers monochrome conversion and ASCII art. Save ASCII as UTF-8 TXT
+or render an opaque black-and-white image into the history. Choose a preset
+character set or enter your own. Keep the input size or use one character
+per pixel for a larger image. Input and render inversion are independent.
 
 The centred animation banner opens Aseprite conversion. Drop multiple files
 to prepare sprite sheets automatically; save one result or the entire batch

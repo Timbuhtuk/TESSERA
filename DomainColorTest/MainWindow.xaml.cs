@@ -91,6 +91,7 @@ public partial class MainWindow : Window
         InitializeBackground();
         InitializeEditorTools();
         InitializeInfo();
+        InitializeFilters();
         InitializeUpdates();
         UpdatePreviewSettings();
         UpdateDependentControls();
@@ -303,9 +304,9 @@ public partial class MainWindow : Window
         settingsPanel.IsEnabled = !processing;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
         foreach (var button in new[] { fileMenuButton, toolsMenuButton, gridToolButton, sizeToolButton,
-            colorToolButton, smoothingToolButton, profileToolButton, infoToolButton, compactProfileToolButton,
+            colorToolButton, smoothingToolButton, profileToolButton, filtersToolButton, infoToolButton, compactProfileToolButton,
             compactSizeToolButton, compactColorToolButton, compactSmoothingToolButton, compactGridToolButton,
-            compactInfoToolButton })
+            compactFiltersToolButton, compactInfoToolButton })
             button.IsEnabled = !processing;
         operationSourceInput.IsEnabled = !processing;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
@@ -327,6 +328,7 @@ public partial class MainWindow : Window
         Cursor = processing ? Cursors.Wait : null;
         UpdateBusyIndicator();
         if (!processing) RefreshInfo();
+        RefreshFilterState();
     }
 
     private void CommitInputs()

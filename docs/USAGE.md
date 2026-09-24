@@ -8,7 +8,7 @@ The application interface currently uses Russian labels. This guide describes th
 
 Open images from **File → Open**, with Ctrl+O or by drag and drop. The home screen shows your library, image dimensions and result counts. Open a card to edit its source. The back arrow returns to the library; the layout adapts to narrower windows.
 
-The editor keeps the image previews in the main window. Choose **Process: Source** or **Process: Result №…** as the input, then open **Presets**, **Size**, **Palette**, **Smoothing**, **Grid**, or **Info**. On narrow windows the tools appear under **Processing**. Zoom and preview background are separate viewing controls; they do not change exported images. **File → Save** exports the selected result, while **File → Save all results** exports every result for the current source to a chosen folder. The editor has three ready processing profiles:
+The editor keeps the image previews in the main window. Choose **Process: Source** or **Process: Result №…** as the input, then open **Presets**, **Size**, **Palette**, **Smoothing**, **Grid**, **Filters**, or **Info**. On narrow windows the tools appear under **Processing**. Zoom and preview background are separate viewing controls; they do not change exported images. **File → Save** exports the selected result, while **File → Save all results** exports every result for the current source to a chosen folder. The editor has three ready processing profiles:
 
 | Profile | Intended use | Initial settings |
 | --- | --- | --- |
@@ -25,6 +25,14 @@ Selecting a ready mode leaves the current controls unchanged. **Process** applie
 Previews preserve aspect ratio and enlarge pixels without smoothing. Ctrl+mouse wheel changes zoom; source and result scrolling stay synchronized. Choose a checkerboard, dark or light preview background.
 
 On wide windows, the result and source filmstrips sit above their previews; on narrow windows, the source filmstrip moves below them. Drag a result to the source filmstrip to process it independently. Removing a library item leaves external originals and exported files intact. Use PNG when saving transparency.
+
+## Filters
+
+**Filters** uses the source or result selected on the editor toolbar. **Monochrome** converts visible colors to grayscale, preserves dimensions and alpha, and saves a new result in the history.
+
+For ASCII art, select **Standard**, **Detailed**, **Minimal** or **Blocks**, or edit the character sequence from dark to light. Editing switches the preset to **Custom**. **Save TXT** exports UTF-8 text; **Render image** adds an opaque black-and-white image to the history, which can then be exported through **File → Save**.
+
+**Keep source size** is enabled by default: the character grid is calculated from the input dimensions and the rendered image keeps those dimensions. Disable it to map each pixel to one character, producing a larger render. **Invert source colors** reverses brightness before selecting characters; **Invert render colors** switches to black characters on a white background and does not affect TXT export. The original image remains intact.
 
 ## Icons
 

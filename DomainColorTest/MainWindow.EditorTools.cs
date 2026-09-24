@@ -17,6 +17,7 @@ public partial class MainWindow
         colorToolButton.Click += (_, _) => OpenEditorTool("color", "Палитра", 440, colorToolGroup);
         smoothingToolButton.Click += (_, _) => OpenEditorTool("smoothing", "Сглаживание", 470, smoothingToolGroup);
         gridToolButton.Click += (_, _) => OpenEditorTool("grid", "Сетка", 280, gridToolGroup);
+        filtersToolButton.Click += (_, _) => OpenEditorTool("filters", "Фильтры", 410, filtersToolGroup);
         infoToolButton.Click += (_, _) => { OpenEditorTool("info", "Инфо", 560, infoToolGroup); RefreshInfo(); };
         fileMenuButton.Click += (_, _) => fileMenuPopup.IsOpen = !fileMenuPopup.IsOpen;
         toolsMenuButton.Click += (_, _) => toolsMenuPopup.IsOpen = !toolsMenuPopup.IsOpen;
@@ -27,6 +28,7 @@ public partial class MainWindow
             (compactColorToolButton, colorToolButton),
             (compactSmoothingToolButton, smoothingToolButton),
             (compactGridToolButton, gridToolButton),
+            (compactFiltersToolButton, filtersToolButton),
             (compactInfoToolButton, infoToolButton)
         })
             pair.Item1.Click += (_, _) => { toolsMenuPopup.IsOpen = false; pair.Item2.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); };

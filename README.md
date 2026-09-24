@@ -13,6 +13,7 @@ Today, Tessera brings the rest of that workflow together:
 - Align a pixel grid and reduce each cell to a single pixel.
 - Enlarge pixels without blur, reduce image size and adjust colors independently, or combine size and palette processing.
 - Smooth local color noise using neighboring pixels, inspect image palettes and replace individual colors while keeping transparency.
+- Convert images to monochrome or ASCII art, with text export and black-and-white image rendering.
 - Keep source images and a history of results in a local library.
 - Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
 - Create Windows ICO files containing several icon sizes.

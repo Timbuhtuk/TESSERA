@@ -111,6 +111,7 @@
                     <Button x:Name="colorToolButton" Content="Палитра" Margin="0,0,6,0" ToolTip="Усечение палитры"/>
                     <Button x:Name="smoothingToolButton" Content="Сглаживание" Margin="0,0,6,0" ToolTip="Цвета соседей в области 3×3"/>
                     <Button x:Name="gridToolButton" Content="Сетка" Margin="0,0,6,0" ToolTip="Выравнивание и уменьшение сетки"/>
+                    <Button x:Name="filtersToolButton" Content="Фильтры" Margin="0,0,6,0" ToolTip="Монохром и ASCII-арт"/>
                     <Button x:Name="infoToolButton" Content="Инфо" ToolTip="Размеры, цвета и замена цвета"/>
                 </StackPanel>
                 <StackPanel x:Name="compactToolNavigation" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,4" Visibility="Collapsed">
@@ -123,6 +124,7 @@
                                 <Button x:Name="compactColorToolButton" Content="Палитра" HorizontalContentAlignment="Left"/>
                                 <Button x:Name="compactSmoothingToolButton" Content="Сглаживание" HorizontalContentAlignment="Left"/>
                                 <Button x:Name="compactGridToolButton" Content="Сетка" HorizontalContentAlignment="Left"/>
+                                <Button x:Name="compactFiltersToolButton" Content="Фильтры" HorizontalContentAlignment="Left"/>
                                 <Button x:Name="compactInfoToolButton" Content="Инфо" HorizontalContentAlignment="Left"/>
                             </StackPanel>
                         </Border>
@@ -173,6 +175,30 @@
         </Grid>
         </ScrollViewer>
                 <StackPanel x:Name="settingsPanel" Grid.Row="1" Visibility="Collapsed">
+                    <GroupBox x:Name="filtersToolGroup" Header="Фильтры">
+                        <StackPanel>
+                            <TextBlock Text="Монохром" FontWeight="SemiBold"/>
+                            <TextBlock Text="Переводит изображение в оттенки серого, сохраняя размер и прозрачность." Foreground="#BBBBBB" Margin="0,4,0,7"/>
+                            <Button x:Name="monochromeButton" Style="{StaticResource PrimaryButton}" Content="Применить монохром" IsEnabled="False"/>
+
+                            <Border BorderBrush="#343434" BorderThickness="0,1,0,0" Margin="0,14,0,12"/>
+                            <TextBlock Text="ASCII-арт" FontWeight="SemiBold"/>
+                            <TextBlock Text="Яркость участков заменяется символами. TXT сохраняет текст, рендер создаёт чёрно-белое изображение." Foreground="#BBBBBB" Margin="0,4,0,7"/>
+                            <DockPanel Margin="0,7,0,3"><TextBlock Text="Рамп-палитра" Width="150"/><ComboBox x:Name="asciiRampPresetInput" SelectedIndex="0" AutomationProperties.Name="Рамп-палитра ASCII"><ComboBoxItem Content="Standard"/><ComboBoxItem Content="Detailed"/><ComboBoxItem Content="Minimal"/><ComboBoxItem Content="Blocks"/><ComboBoxItem Content="Своя"/></ComboBox></DockPanel>
+                            <TextBlock Text="Символы от тёмного к светлому" Margin="0,5,0,4"/>
+                            <TextBox x:Name="asciiCharactersInput" Text="@#S08Xx+=-;:, ." FontFamily="Consolas" Padding="7,5" AutomationProperties.Name="Символы ASCII"/>
+                            <CheckBox x:Name="asciiKeepSourceSizeInput" Content="Сохранить размер исходника" IsChecked="True"
+                                      ToolTip="Если выключить, каждый пиксель станет отдельным символом и итоговое изображение увеличится"/>
+                            <CheckBox x:Name="asciiInvertSourceInput" Content="Инвертировать цвета исходника"
+                                      ToolTip="Инвертировать яркость до выбора ASCII-символов"/>
+                            <CheckBox x:Name="asciiInvertRenderInput" Content="Инвертировать цвета рендера"
+                                      ToolTip="Рисовать чёрными символами на белом фоне"/>
+                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                <Button x:Name="asciiSaveTextButton" Content="Сохранить TXT…" IsEnabled="False" Margin="0,0,4,0"/>
+                                <Button x:Name="asciiRenderButton" Style="{StaticResource PrimaryButton}" Content="Рендер изображения" IsEnabled="False" Margin="4,0,0,0"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </GroupBox>
                     <GroupBox x:Name="infoToolGroup" Header="Изображения">
                         <StackPanel>
                             <TextBlock Text="Исходник" FontWeight="SemiBold"/>

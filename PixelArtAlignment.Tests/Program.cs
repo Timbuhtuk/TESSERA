@@ -80,6 +80,7 @@ if (args.Contains("--invariants")) Check("Canvas, source colors, alpha, idempote
 if (args.Contains("--invariants")) IconExportChecks.Run(Check);
 if (args.Contains("--invariants")) IndependentImageProcessorChecks.Run(Check);
 if (args.Contains("--invariants")) ImageColorToolsChecks.Run(Check);
+if (args.Contains("--invariants")) ImageFilterChecks.Run(Check);
 if (args.Contains("--invariants")) BackgroundRemovalChecks.Run(Check);
 if (args.Contains("--invariants")) GitHubUpdaterChecks.Run(Check);
 if (args.Contains("--ui")) Check("Independent GUI alignment and downscale, normal and minimum layouts", UiChecks.Run);
