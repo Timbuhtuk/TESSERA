@@ -13,5 +13,9 @@
     <Using Include="System.IO" />
     <ProjectReference Include="..\PixelArtAlignment\PixelArtAlignment.csproj" />
     <ProjectReference Include="..\DomainColorTest\DomainColorTest.csproj" />
+    <Reference Include="Tessera.WpfStyles">
+      <HintPath>..\DomainColorTest\Lib\Tessera.WpfStyles.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>

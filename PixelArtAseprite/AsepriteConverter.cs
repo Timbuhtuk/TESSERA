@@ -36,11 +36,12 @@ public static class AsepriteConverter
                 JsonSerializer.Serialize(stream, new
                 {
                     schema = "aseprite-inspection/v1", document.Source, document.SourceSha256,
-                    document.Width, document.Height, depth = 32, layer = document.LayerName,
+                    document.Width, document.Height, depth = 32, layer = document.LayerName, document.Layers,
                     profile = document.IsSrgb ? "srgb" : "unspecified", frameCount = document.Frames.Count,
                     document.TotalDurationMs, document.Tags, document.Warnings,
                     frames = document.Frames.Select(f => new { f.Index, f.DurationMs,
-                        cel = f.Cel is { } cel ? new { cel.Type, cel.X, cel.Y, cel.LinkedFrame, cel.Image!.Width, cel.Image.Height } : null })
+                        cel = f.Cel is { } first ? new { first.Type, first.X, first.Y, first.LinkedFrame, first.Image!.Width, first.Image.Height } : null,
+                        cels = f.Cels.Select(cel => new { cel!.LayerIndex, cel.Type, cel.X, cel.Y, cel.LinkedFrame, cel.Image!.Width, cel.Image.Height }) })
                 }, JsonOptions);
             }
             for (int q = 0; q < targets.Length; q++)

@@ -539,6 +539,12 @@ internal static class UiChecks
         using var pixels = new Bitmap(2, 1);
         pixels.SetPixel(0, 0, Color.Red); pixels.SetPixel(1, 0, Color.Blue);
         var preview = new PixelPreview { Image = pixels, Zoom = 8, PreviewBackground = 1 };
+        var previewScroll = (ScrollViewer)preview.Children[0];
+        Require(previewScroll.Background is SolidColorBrush { Color.A: 0 }, "Pixel preview scroll layer hides the selected background");
+        preview.PreviewBackground = 0; Require(preview.Background is DrawingBrush, "Checker preview background is missing");
+        preview.PreviewBackground = 1; Require(preview.Background is SolidColorBrush dark && dark.Color == System.Windows.Media.Color.FromRgb(17, 17, 17), "Dark preview background is missing");
+        preview.PreviewBackground = 2; Require(preview.Background is SolidColorBrush light && light.Color == System.Windows.Media.Color.FromRgb(224, 224, 224), "Light preview background is missing");
+        preview.PreviewBackground = 1;
         preview.Measure(new System.Windows.Size(80, 40)); preview.Arrange(new Rect(0, 0, 80, 40)); preview.UpdateLayout();
         var rendered = new RenderTargetBitmap(80, 40, 96, 96, PixelFormats.Pbgra32); rendered.Render(preview);
         byte[] raster = new byte[80 * 40 * 4]; rendered.CopyPixels(raster, 80 * 4, 0);

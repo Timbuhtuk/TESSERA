@@ -128,13 +128,58 @@ Check("Malformed sizes/signatures/counts, raw lengths and linked cycles are reje
         [new(1, Layer(), Link(20))], [new(1, Layer(), Link(1)), new(1)] })
         Expect<InvalidDataException>(() => Read(1, 1, frames));
 });
+Check("Visible layers composite in order; hidden layers and groups stay hidden", () =>
+{
+    byte[] red = [255, 0, 0, 255], blue = [0, 0, 255, 128], green = [0, 255, 0, 255];
+    var document = Read(1, 1, [
+        new(20, Layer(), Layer(flags: 2), Layer(flags: 3, type: 1), Layer(flags: 3, level: 1),
+            Layer(flags: 2, type: 1), Layer(flags: 3, level: 1),
+            Cel(1, 1, red), Cel(1, 1, green, layer: 1), Cel(1, 1, blue, layer: 3), Cel(1, 1, green, layer: 5)),
+        new(30, Link(0), Link(0, layer: 3))]);
+    Require(document.Layers.Count == 6 && document.Layers[3].Visible && !document.Layers[5].Visible,
+        "Layer hierarchy visibility was lost");
+    byte[] expected = [127, 0, 128, 255];
+    Require(document.RenderFrame(0).Rgba.Span.SequenceEqual(expected) &&
+        document.RenderFrame(1).Rgba.Span.SequenceEqual(expected), "Visible layers or linked cels composited incorrectly");
+    Require(SpriteSheet.Create(document).Image.Rgba.Span.SequenceEqual(expected.Concat(expected).ToArray()),
+        "Sheet does not match frame rendering");
+    var onlyHidden = Read(1, 1, [new(1, Layer(flags: 2, blend: 1, opacity: 180),
+        Cel(1, 1, green, opacity: 90, z: 2))]);
+    Require(onlyHidden.RenderFrame(0).Rgba.ToArray().All(b => b == 0), "Hidden layer became visible");
+    var translucent = Read(1, 1, [new(1, Layer(), Layer(), Cel(1, 1, [255, 0, 0, 128]),
+        Cel(1, 1, [0, 0, 255, 128], layer: 1))]);
+    Require(translucent.RenderFrame(0).Rgba.Span.SequenceEqual(new byte[] { 85, 0, 170, 192 }),
+        "Partial alpha was not composited as straight RGBA");
+});
+Check("Layer compositing preserves white for every pair of nonzero alpha values", () =>
+{
+    var bottom = new byte[255 * 255 * 4];
+    var top = new byte[bottom.Length];
+    for (int y = 0; y < 255; y++)
+        for (int x = 0; x < 255; x++)
+        {
+            int offset = (y * 255 + x) * 4;
+            for (int channel = 0; channel < 3; channel++) bottom[offset + channel] = top[offset + channel] = 255;
+            bottom[offset + 3] = (byte)(y + 1);
+            top[offset + 3] = (byte)(x + 1);
+        }
+    var document = Read(255, 255, [new(1, Layer(), Layer(), Cel(255, 255, bottom), Cel(255, 255, top, layer: 1))]);
+    var pixels = document.RenderFrame(0).Rgba.Span;
+    for (int q = 0; q < pixels.Length; q += 4)
+    {
+        int expectedAlpha = (top[q + 3] * 255 + bottom[q + 3] * (255 - top[q + 3]) + 127) / 255;
+        Require(pixels[q] == 255 && pixels[q + 1] == 255 && pixels[q + 2] == 255 && pixels[q + 3] == expectedAlpha,
+            $"White changed during compositing: bottom alpha {bottom[q + 3]}, top alpha {top[q + 3]}");
+    }
+});
 Check("Unsupported layers, modes, profiles, chunks and frame timings fail explicitly", () =>
 {
-    foreach (byte[] layer in new[] { Layer(flags: 0), Layer(flags: 9), Layer(flags: 65), Layer(flags: 129), Layer(type: 1),
-        Layer(type: 2), Layer(level: 1), Layer(blend: 1), Layer(opacity: 180) })
+    foreach (byte[] layer in new[] { Layer(flags: 65), Layer(flags: 129), Layer(type: 2),
+        Layer(level: 1), Layer(blend: 1), Layer(opacity: 180) })
         Expect<InvalidDataException>(() => Read(1, 1, [new(1, layer)]));
     Require(AsepriteReader.Read(Fixtures.File(1, 1, [new(1, Layer(opacity: 0))], flags: 0)).Frames.Count == 1, "Reserved opacity interpreted as transparency");
-    Expect<InvalidDataException>(() => Read(1, 1, [new(1, Layer(), Layer())]));
+    Require(Read(1, 1, [new(1, Layer(), Layer())]).Layers.Count == 2, "Second layer rejected");
+    Expect<InvalidDataException>(() => Read(1, 1, [new(1, Layer(), Cel(1, 1, [1, 2, 3, 255]), Cel(1, 1, [4, 5, 6, 255]))]));
     Expect<InvalidDataException>(() => Read(1, 1, [new(1)]));
     Expect<InvalidDataException>(() => Read(1, 1, [new(1, Layer()), new(1, Layer())]));
     foreach (int depth in new[] { 8, 16 }) Expect<InvalidDataException>(() => AsepriteReader.Read(Fixtures.File(1, 1, [new(1, Layer())], depth: depth)));

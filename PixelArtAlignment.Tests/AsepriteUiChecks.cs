@@ -129,8 +129,11 @@ internal static class AsepriteUiChecks
                 data[q] = (byte)(y < 13 ? 235 : 90); data[q + 1] = (byte)(y < 13 ? 225 : 125); data[q + 2] = (byte)(y < 13 ? 210 : 145);
                 data[q + 3] = (byte)(x == 7 ? 128 : 255);
             }
-            var inputFrames = new List<Ase.Frame> { new(100, Ase.Layer(), Ase.Cel(32, 32, data)) };
-            for (int q = 1; q < frames; q++) inputFrames.Add(new Ase.Frame(100 + q * 10, Ase.Link(0, (short)(q % 3 - 1), (short)(q % 2))));
+            var hidden = Enumerable.Repeat((byte)255, 32 * 32 * 4).ToArray();
+            var inputFrames = new List<Ase.Frame> { new(100, Ase.Layer(), Ase.Layer(flags: 2),
+                Ase.Cel(32, 32, data), Ase.Cel(32, 32, hidden, layer: 1)) };
+            for (int q = 1; q < frames; q++) inputFrames.Add(new Ase.Frame(100 + q * 10,
+                Ase.Link(0, (short)(q % 3 - 1), (short)(q % 2)), Ase.Link(0, layer: 1)));
             string path = Path.Combine(folder, name); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllBytes(path, Ase.File(32, 32, inputFrames.ToArray())); return path;
         }

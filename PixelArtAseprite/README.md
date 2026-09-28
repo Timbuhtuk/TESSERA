@@ -4,7 +4,7 @@
 
 ## Supported subset
 
-- `.ase` / `.aseprite`, RGBA32, exactly one visible ordinary layer declared in the first frame; Normal blending, effective layer and cel opacity 255, z-index 0.
+- `.ase` / `.aseprite`, RGBA32, multiple ordinary image layers declared in the first frame. Visible layers are composited from back to front; hidden layers and children of hidden groups are excluded. Normal blending, effective layer/group and cel opacity 255, z-index 0.
 - Raw, zlib-compressed and linked cels, including forward references and long linked chains. Each linked cel retains its own position.
 - Every pixel alpha value, including partial transparency and hidden RGB at alpha zero; no premultiplication, quantization or resizing.
 - Negative offsets, partial/complete off-canvas cels and empty frames. Clipping is against each original canvas, so pixels cannot spill into adjacent sheet cells.
@@ -13,7 +13,7 @@
 - UTF-8 layer/tag names; inclusive tag frame ranges, forward/reverse/pingpong/pingpong_reverse directions and the unmodified repeat count. Tags do not reorder the sheet or add repetitions.
 - Horizontal, vertical or grid layouts, configurable grid columns and transparent gaps. Canvas margins stay intact, no trimming or outside border. Unused cells remain transparent.
 
-Multiple/hidden/group/background/reference/tilemap layers, Indexed/Grayscale, partial layer/cel opacity, nonzero z-index, non-square pixels, ICC/special gamma, Cel Extra, slices, external files, tilesets and unknown chunks are explicitly rejected. Known RGBA palette and User Data chunks are skipped and recorded in `Warnings`. This is an intentionally restricted decoder, not a general Aseprite renderer.
+Groups are supported for visibility and hierarchy. Visible layers and groups require Normal blending and full opacity; hidden layers may use other blend modes, opacity and cel z-index because they do not contribute pixels. Background image layers are accepted. Reference/tilemap layers, Indexed/Grayscale, partial opacity or other blend modes on visible layers, nonzero visible cel z-index, non-square pixels, ICC/special gamma, Cel Extra, slices, external files, tilesets and unknown chunks are explicitly rejected. Known RGBA palette and User Data chunks are skipped and recorded in `Warnings`. This is an intentionally restricted decoder, not a general Aseprite renderer.
 
 ## File export and batching
 
@@ -55,7 +55,7 @@ using var png = File.Create("preview.png");
 PngWriter.Write(png, sheet.Image, document.IsSrgb);
 ```
 
-The library exposes `Width`, `Height`, `Frames`, `Tags`, `LayerName`, `IsSrgb`, `SourceSha256`, `Warnings` and `TotalDurationMs` on the document. `RenderFrame` returns a new full-canvas image. `SpriteSheet.Metadata.Frames` contains sheet coordinates and timings; cel offsets and sheet coordinates are separate.
+The library exposes `Width`, `Height`, `Frames`, `Layers`, `Tags`, `LayerName`, `IsSrgb`, `SourceSha256`, `Warnings` and `TotalDurationMs` on the document. `LayerName` is the first layer's name for compatibility; `Layers` lists every layer with its effective visibility, group flag and level. `RenderFrame` returns a new full-canvas image of the visible composite. `SpriteSheet.Metadata.Frames` contains sheet coordinates and timings; cel offsets and sheet coordinates are separate.
 
 For WPF, run conversion on a worker task and convert **a copy for display** from RGBA to the format required by the UI. Export always uses the original straight RGBA buffer, never the rendered preview. Managed result buffers need no `Dispose`; each caller-owned stream remains the caller's responsibility. Public operations take a `CancellationToken`; cancellation is checked while reading, decoding, traversing links, copying rows, writing PNG and before publishing each file.
 

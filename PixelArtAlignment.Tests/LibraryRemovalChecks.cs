@@ -137,13 +137,14 @@ internal static class LibraryRemovalChecks
         void Remove(ListBox strip, object entry) { RemoveButton(strip, entry).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
         void VerifyStyle(ScrollBar bar)
         {
-            Require(ReferenceEquals(bar.Template, Window.GetWindow(bar)!.FindResource(bar.Orientation == Orientation.Horizontal ? "HorizontalScrollBar" : "VerticalScrollBar")), "Native scrollbar escaped the theme");
+            Require(ReferenceEquals(bar.Style, Window.GetWindow(bar)!.FindResource(typeof(ScrollBar))), "Scrollbar escaped the Tessera.WpfStyles theme");
         }
         void VerifyScroll(ScrollViewer viewer, Orientation orientation)
         {
             Pump();
             var bar = Descendants<ScrollBar>(viewer).First(b => b.Orientation == orientation);
             Require(bar.IsVisible && bar.Maximum > 0, "Expected scrollbar is missing");
+            if (orientation == Orientation.Horizontal) Require(bar.ActualWidth > Math.Max(50, bar.ActualHeight * 2), "Horizontal scrollbar collapsed to a vertical-sized strip");
             if (orientation == Orientation.Vertical) viewer.ScrollToTop(); else viewer.ScrollToLeftEnd();
             Pump();
             var arrow = Descendants<RepeatButton>(bar).Last();

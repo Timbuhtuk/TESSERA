@@ -45,6 +45,7 @@ public sealed class RgbaImage
 
 public sealed class AsepriteCel
 {
+    public int LayerIndex { get; internal init; }
     public short X { get; internal init; }
     public short Y { get; internal init; }
     public int? LinkedFrame { get; internal init; }
@@ -52,7 +53,11 @@ public sealed class AsepriteCel
     internal RgbaImage? Image { get; set; }
 }
 
-public sealed record AsepriteFrame(int Index, int DurationMs, AsepriteCel? Cel);
+public sealed record AsepriteFrame(int Index, int DurationMs, AsepriteCel? Cel)
+{
+    public IReadOnlyList<AsepriteCel?> Cels { get; internal init; } = Array.Empty<AsepriteCel?>();
+}
+public sealed record AsepriteLayer(string Name, bool Visible, bool IsGroup, int Level);
 public sealed record AsepriteTag(string Name, int From, int To, string Direction, int Repeat);
 public sealed record ImageSize(int W, int H);
 public sealed record SheetFrame(int Index, int X, int Y, int W, int H, int DurationMs);
@@ -64,6 +69,7 @@ public sealed class AsepriteDocument
     public string Source { get; internal init; } = "";
     public string SourceSha256 { get; internal init; } = "";
     public string LayerName { get; internal set; } = "";
+    public IReadOnlyList<AsepriteLayer> Layers { get; internal set; } = Array.Empty<AsepriteLayer>();
     public bool IsSrgb { get; internal set; }
     public IReadOnlyList<AsepriteFrame> Frames { get; internal set; } = Array.Empty<AsepriteFrame>();
     public IReadOnlyList<AsepriteTag> Tags { get; internal set; } = Array.Empty<AsepriteTag>();
@@ -80,7 +86,7 @@ public sealed class AsepriteDocument
         int bytes = checked(Width * Height * 4);
         Limits.CheckMemory(WorkingBytes + bytes);
         var image = new RgbaImage(Width, Height, new byte[bytes]);
-        SpriteSheet.CopyCel(Frames[index].Cel, image.Pixels, Width, Height, 0, 0, Width, cancellationToken);
+        SpriteSheet.CopyFrame(this, Frames[index], image.Pixels, 0, 0, Width, cancellationToken);
         return image;
     }
 }

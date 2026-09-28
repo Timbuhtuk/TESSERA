@@ -61,6 +61,8 @@ per pixel for a larger image. Input and render inversion are independent.
 The centred animation banner opens Aseprite conversion. Drop multiple files
 to prepare sprite sheets automatically; save one result or the entire batch
 as PNG + JSON. Existing output files receive distinct names.
+Visible RGBA image layers are composited in order; hidden layers and groups
+are excluded. Visible layers require Normal blending and full layer/cel opacity.
 
 The icon banner opens ICO creation: choose an image and several sizes,
 inspect the previews, then save them together in one icon file.

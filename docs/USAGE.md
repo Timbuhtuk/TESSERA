@@ -50,7 +50,7 @@ Ctrl+O opens an image for the currently active workspace.
 
 The animation banner opens a separate workspace. Open or drop several `.ase` or `.aseprite` files to convert them automatically into PNG sprite sheets with JSON frame timings. Choose horizontal, vertical or grid layout and adjust columns and transparent gaps. Save one ready result or the whole batch; conflicting output names receive numeric suffixes. A failed file does not stop other files in the batch.
 
-The current converter supports RGBA files with one visible ordinary layer and normal blending. Unsupported features produce an error rather than an incomplete export; see the [supported subset](../PixelArtAseprite/README.md). Animation imports are temporary session data, so save results before closing the app.
+The converter combines all visible RGBA image layers in Aseprite order. Hidden layers and layers inside hidden groups do not appear in the preview or exported PNG. Unsupported features produce an error rather than an incomplete export; see the [supported subset](../PixelArtAseprite/README.md). Animation imports are temporary session data, so save results before closing the app.
 
 ## Storage and updates
 

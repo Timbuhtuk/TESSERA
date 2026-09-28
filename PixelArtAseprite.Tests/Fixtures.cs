@@ -44,8 +44,8 @@ internal static class Fixtures
             w.Write((ushort)width); w.Write((ushort)height);
             w.Write(type == 0 ? pixels : compressed ?? Zlib(pixels, level));
         }));
-    public static byte[] Link(int frame, short x = 0, short y = 0)
-        => Chunk(0x2005, Bytes(w => { CelHeader(w, x, y, 1, 255, 0, 0); w.Write((ushort)frame); }));
+    public static byte[] Link(int frame, short x = 0, short y = 0, int layer = 0)
+        => Chunk(0x2005, Bytes(w => { CelHeader(w, x, y, 1, 255, 0, layer); w.Write((ushort)frame); }));
     public static byte[] Profile(int type = 1, int flags = 0)
         => Chunk(0x2007, Bytes(w => { w.Write((ushort)type); w.Write((ushort)flags); w.Write(new byte[12]); }));
     public static byte[] Tags(int from, int to, int direction = 0, int repeat = 0)

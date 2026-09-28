@@ -66,7 +66,9 @@ public static class AsepriteReader
         var frames = new List<AsepriteFrame>(count);
         var tags = new List<AsepriteTag>();
         var warnings = new HashSet<string>();
-        bool layerSeen = false, profileSeen = false, tagsSeen = false;
+        bool profileSeen = false, tagsSeen = false;
+        var layers = new List<AsepriteLayer>();
+        var visibleGroups = new List<bool>();
         long celBytes = 0;
         for (int q = 0; q < count; q++)
         {
@@ -82,7 +84,7 @@ public static class AsepriteReader
             if (chunkCount > frame.Remaining / 6) throw new InvalidDataException($"Кадр {q + 1}: неверное число чанков.");
             if (duration == 0) duration = speed;
             if (duration == 0) throw new InvalidDataException($"Кадр {q + 1}: длительность не задана.");
-            AsepriteCel? cel = null;
+            var cels = new List<AsepriteCel?>();
             for (int e = 0; e < chunkCount; e++)
             {
                 token.ThrowIfCancellationRequested();
@@ -95,15 +97,18 @@ public static class AsepriteReader
                     switch (type)
                     {
                         case 0x2004:
-                            if (q != 0 || layerSeen) throw new InvalidDataException("Поддерживается ровно один слой в первом кадре.");
+                            if (q != 0) throw new InvalidDataException("Слои должны быть объявлены в первом кадре.");
                             limits.CheckMemory(document.WorkingBytes + chunk.Remaining * 2L + 128);
-                            document.LayerName = ReadLayer(ref chunk, flags);
-                            document.WorkingBytes += document.LayerName.Length * 2L + 128;
-                            layerSeen = true;
+                            var layer = ReadLayer(ref chunk, flags, visibleGroups);
+                            layers.Add(layer);
+                            document.WorkingBytes += layer.Name.Length * 2L + 128;
+                            if (layers.Count == 1) document.LayerName = layer.Name;
                             break;
                         case 0x2005:
-                            if (cel is not null) throw new InvalidDataException("Несколько cel в одном кадре не поддерживаются.");
-                            cel = ReadCel(ref chunk, document, ref celBytes, token);
+                            var cel = ReadCel(ref chunk, document, layers, ref celBytes, token);
+                            if (cels.Any(item => item?.LayerIndex == cel.LayerIndex))
+                                throw new InvalidDataException($"Повторный cel слоя {cel.LayerIndex} в одном кадре.");
+                            cels.Add(cel);
                             break;
                         case 0x2007:
                             if (profileSeen || q != 0) throw new InvalidDataException("Повторный или меняющийся цветовой профиль не поддерживается.");
@@ -135,42 +140,51 @@ public static class AsepriteReader
                 catch (InvalidDataException ex) { throw new InvalidDataException($"Кадр {q + 1}, чанк 0x{type:X4}: {ex.Message}", ex); }
             }
             frame.RequireEnd();
-            if (!layerSeen) throw new InvalidDataException("Первый кадр не содержит обычного видимого слоя.");
-            frames.Add(new AsepriteFrame(q, duration, cel));
+            if (layers.Count == 0) throw new InvalidDataException("Первый кадр не содержит слоёв.");
+            frames.Add(new AsepriteFrame(q, duration, cels.FirstOrDefault(c => layers[c!.LayerIndex].Visible)) { Cels = cels.AsReadOnly() });
         }
         reader.RequireEnd();
         document.Frames = frames.AsReadOnly();
+        document.Layers = layers.AsReadOnly();
         document.Tags = tags.AsReadOnly();
         document.Warnings = Array.AsReadOnly(warnings.Order().ToArray());
         ResolveLinks(document, token);
         return document;
     }
 
-    private static string ReadLayer(ref LeReader reader, uint headerFlags)
+    private static AsepriteLayer ReadLayer(ref LeReader reader, uint headerFlags, List<bool> visibleGroups)
     {
         int flags = reader.U16(), type = reader.U16(), level = reader.U16();
         reader.Skip(4);
         int blend = reader.U16(), opacity = reader.U8();
         reader.Skip(3);
         string name = reader.ReadString();
-        if ((flags & ~127) != 0 || (flags & 1) == 0 || (flags & (8 | 64)) != 0 || type != 0 || level != 0)
-            throw new InvalidDataException("Нужен видимый обычный слой без вложенности, background/reference/tilemap.");
-        if (blend != 0 || ((headerFlags & 1) != 0 && opacity != 255))
+        if ((flags & ~127) != 0 || (flags & 64) != 0 || type is not (0 or 1) || level > visibleGroups.Count)
+            throw new InvalidDataException("Некорректный или неподдерживаемый слой (reference/tilemap/иерархия).");
+        if (type == 1 && (flags & 8) != 0) throw new InvalidDataException("Группа не может быть background-слоем.");
+        visibleGroups.RemoveRange(level, visibleGroups.Count - level);
+        bool visible = (flags & 1) != 0 && (level == 0 || visibleGroups[level - 1]);
+        if (visible && (((type == 0 || (headerFlags & 2) != 0) && blend != 0) ||
+            ((headerFlags & (type == 1 ? 2u : 1u)) != 0 && opacity != 255)))
             throw new InvalidDataException($"Режим смешивания {blend} / opacity слоя {opacity} не поддерживается.");
+        if (type == 1) visibleGroups.Add(visible);
         if ((headerFlags & 4) != 0) reader.Skip(16);
-        return name;
+        return new AsepriteLayer(name, visible, type == 1, level);
     }
 
-    private static AsepriteCel ReadCel(ref LeReader reader, AsepriteDocument document, ref long celBytes, CancellationToken token)
+    private static AsepriteCel ReadCel(ref LeReader reader, AsepriteDocument document, IReadOnlyList<AsepriteLayer> layers, ref long celBytes, CancellationToken token)
     {
         int layer = reader.U16();
         short x = reader.I16(), y = reader.I16();
         int opacity = reader.U8(), type = reader.U16();
         short z = reader.I16();
         reader.Skip(5);
-        if (layer != 0 || opacity != 255 || z != 0)
-            throw new InvalidDataException($"Cel слоя {layer}: opacity {opacity}, z-index {z}; требуется слой 0, opacity 255, z-index 0.");
-        if (type == 1) return new AsepriteCel { X = x, Y = y, Type = type, LinkedFrame = reader.U16() };
+        if (layer >= layers.Count || layers[layer].IsGroup ||
+            (layers[layer].Visible && (opacity != 255 || z != 0)))
+            throw new InvalidDataException($"Cel слоя {layer}: неверный слой, opacity {opacity} или z-index {z}.");
+        document.Limits.CheckMemory(document.WorkingBytes + 96);
+        document.WorkingBytes += 96;
+        if (type == 1) return new AsepriteCel { LayerIndex = layer, X = x, Y = y, Type = type, LinkedFrame = reader.U16() };
         if (type is not (0 or 2)) throw new InvalidDataException($"Cel типа {type} не поддерживается (включая tilemap).");
         int width = reader.U16(), height = reader.U16();
         long bytes = checked((long)width * height * 4);
@@ -180,7 +194,7 @@ public static class AsepriteReader
         byte[] pixels = type == 0 ? reader.Take((int)bytes).ToArray() : StrictZlib.Inflate(reader.Take(reader.Remaining), (int)bytes, token);
         celBytes += bytes;
         document.WorkingBytes += bytes;
-        return new AsepriteCel { X = x, Y = y, Type = type, Image = new RgbaImage(width, height, pixels) };
+        return new AsepriteCel { LayerIndex = layer, X = x, Y = y, Type = type, Image = new RgbaImage(width, height, pixels) };
     }
 
     private static void ReadTags(ref LeReader reader, List<AsepriteTag> tags, int frameCount, AsepriteDocument document)
@@ -208,27 +222,31 @@ public static class AsepriteReader
         var path = new List<int>();
         for (int q = 0; q < document.Frames.Count; q++)
         {
-            token.ThrowIfCancellationRequested();
-            if (document.Frames[q].Cel is not { Image: null }) continue;
-            path.Clear();
-            int current = q;
-            RgbaImage? image;
-            while (true)
+            foreach (var linked in document.Frames[q].Cels)
             {
                 token.ThrowIfCancellationRequested();
-                if (current < 0 || current >= document.Frames.Count || document.Frames[current].Cel is not { } cel)
-                    throw new InvalidDataException($"Кадр {q + 1}: ссылка на отсутствующий cel кадра {current + 1}.");
-                image = cel.Image;
-                if (image is not null) break;
-                if (visiting[current]) throw new InvalidDataException($"Кадр {q + 1}: цикл linked cels.");
-                visiting[current] = true;
-                path.Add(current);
-                current = cel.LinkedFrame ?? throw new InvalidDataException("Cel не содержит изображения или ссылки.");
-            }
-            foreach (int index in path)
-            {
-                document.Frames[index].Cel!.Image = image;
-                visiting[index] = false;
+                if (linked is not { Image: null }) continue;
+                path.Clear();
+                int current = q;
+                RgbaImage? image;
+                while (true)
+                {
+                    token.ThrowIfCancellationRequested();
+                    if (current < 0 || current >= document.Frames.Count ||
+                        document.Frames[current].Cels.FirstOrDefault(c => c?.LayerIndex == linked.LayerIndex) is not { } cel)
+                        throw new InvalidDataException($"Кадр {q + 1}, слой {linked.LayerIndex}: ссылка на отсутствующий cel кадра {current + 1}.");
+                    image = cel.Image;
+                    if (image is not null) break;
+                    if (visiting[current]) throw new InvalidDataException($"Кадр {q + 1}, слой {linked.LayerIndex}: цикл linked cels.");
+                    visiting[current] = true;
+                    path.Add(current);
+                    current = cel.LinkedFrame ?? throw new InvalidDataException("Cel не содержит изображения или ссылки.");
+                }
+                foreach (int index in path)
+                {
+                    document.Frames[index].Cels.First(c => c?.LayerIndex == linked.LayerIndex)!.Image = image;
+                    visiting[index] = false;
+                }
             }
         }
     }

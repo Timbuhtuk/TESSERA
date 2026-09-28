@@ -38,7 +38,7 @@ public sealed class SpriteSheet
             cancellationToken.ThrowIfCancellationRequested();
             int x = checked((int)((q % columns) * (document.Width + (long)options.Padding)));
             int y = checked((int)((q / columns) * (document.Height + (long)options.Padding)));
-            CopyCel(document.Frames[q].Cel, image.Pixels, document.Width, document.Height, x, y, image.Width, cancellationToken);
+            CopyFrame(document, document.Frames[q], image.Pixels, x, y, image.Width, cancellationToken);
             frames.Add(new SheetFrame(q, x, y, document.Width, document.Height, document.Frames[q].DurationMs));
         }
         return new SpriteSheet(image, new SpriteSheetMetadata
@@ -50,8 +50,23 @@ public sealed class SpriteSheet
         });
     }
 
-    internal static void CopyCel(AsepriteCel? cel, byte[] destination, int canvasWidth, int canvasHeight,
+    internal static void CopyFrame(AsepriteDocument document, AsepriteFrame frame, byte[] destination,
         int frameX, int frameY, int strideWidth, CancellationToken token)
+    {
+        bool blended = false;
+        for (int q = 0; q < document.Layers.Count; q++)
+        {
+            token.ThrowIfCancellationRequested();
+            if (!document.Layers[q].Visible || document.Layers[q].IsGroup) continue;
+            var cel = frame.Cels.FirstOrDefault(item => item?.LayerIndex == q);
+            if (cel is null) continue;
+            CopyCel(cel, destination, document.Width, document.Height, frameX, frameY, strideWidth, token, blended);
+            blended = true;
+        }
+    }
+
+    internal static void CopyCel(AsepriteCel? cel, byte[] destination, int canvasWidth, int canvasHeight,
+        int frameX, int frameY, int strideWidth, CancellationToken token, bool blend)
     {
         if (cel?.Image is not { } image) return;
         int x0 = Math.Max(0, (int)cel.X), y0 = Math.Max(0, (int)cel.Y);
@@ -63,7 +78,36 @@ public sealed class SpriteSheet
             token.ThrowIfCancellationRequested();
             int source = checked(((y - cel.Y) * image.Width + x0 - cel.X) * 4);
             int target = checked(((frameY + y) * strideWidth + frameX + x0) * 4);
-            image.Pixels.AsSpan(source, rowBytes).CopyTo(destination.AsSpan(target, rowBytes));
+            if (!blend)
+            {
+                image.Pixels.AsSpan(source, rowBytes).CopyTo(destination.AsSpan(target, rowBytes));
+                continue;
+            }
+            for (int x = 0; x < rowBytes; x += 4)
+            {
+                int from = source + x, to = target + x;
+                int sourceAlpha = image.Pixels[from + 3], targetAlpha = destination[to + 3];
+                if (sourceAlpha == 0)
+                {
+                    if (targetAlpha == 0) image.Pixels.AsSpan(from, 4).CopyTo(destination.AsSpan(to, 4));
+                    continue;
+                }
+                if (sourceAlpha == 255 || targetAlpha == 0)
+                {
+                    image.Pixels.AsSpan(from, 4).CopyTo(destination.AsSpan(to, 4));
+                    continue;
+                }
+                int inverse = 255 - sourceAlpha;
+                int alphaNumerator = sourceAlpha * 255 + targetAlpha * inverse;
+                int alpha = (alphaNumerator + 127) / 255;
+                for (int channel = 0; channel < 3; channel++)
+                {
+                    int value = image.Pixels[from + channel] * sourceAlpha * 255 +
+                        destination[to + channel] * targetAlpha * inverse;
+                    destination[to + channel] = (byte)((value + alphaNumerator / 2) / alphaNumerator);
+                }
+                destination[to + 3] = (byte)alpha;
+            }
         }
     }
 }

@@ -38,6 +38,7 @@ Checks generate their own images and temporary libraries. They do not use the us
 Historical project and namespace names are retained:
 
 - `DomainColorTest`: WPF desktop application, including its embedded assets.
+- `DomainColorTest/Lib/Tessera.WpfStyles.dll`: checked-in shared WPF theme and fonts. Desktop and UI checks reference this assembly; keep it in the repository so clean CI builds can resolve it. Font license texts remain under `DomainColorTest/Assets/Fonts` and ship in the desktop archive.
 - `PixelArtDownscale`: downscaling, quantization, palettes, sprites and [ICO export](../PixelArtDownscale/ICO.md).
 - `PixelArtAlignment`: [grid alignment and cell reduction](../PixelArtAlignment/README.md).
 - `PixelArtAseprite`: offline [Aseprite decoding and sprite sheet export](../PixelArtAseprite/README.md).

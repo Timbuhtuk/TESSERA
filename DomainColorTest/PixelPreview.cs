@@ -42,7 +42,7 @@ public sealed class PixelPreview : Grid
     public PixelPreview()
     {
         ClipToBounds = true;
-        _scroll = new ScrollViewer { Content = _surface, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false };
+        _scroll = new ScrollViewer { Content = _surface, Background = Brushes.Transparent, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false };
         Children.Add(_scroll);
         _empty = new TextBlock { TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16), IsHitTestVisible = false };
         Children.Add(_empty);

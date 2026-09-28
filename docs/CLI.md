@@ -142,7 +142,7 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 .\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4 --padding 2 --inspection --json
 ```
 
-Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder intentionally supports only the documented RGBA32 single-layer subset; see [Aseprite conversion details](../PixelArtAseprite/README.md).
+Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder composites visible RGBA32 image layers and excludes hidden layers; see [Aseprite conversion details](../PixelArtAseprite/README.md) for the remaining format limits.
 
 ## More examples
 

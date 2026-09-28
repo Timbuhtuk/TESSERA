@@ -98,9 +98,10 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Refresh the desktop interface with bundled Cascadia Code and Science Gothic fonts, shared control styles and updated headings.
-          - Use redesigned icon, background-removal and Aseprite workspaces with settings beside the preview on wide windows and scrollable settings above it on narrow windows.
-          - Enter image dimensions above 4K in the desktop editor and CLI. Available memory and image codec support determine the practical maximum.
+          - Convert multilayer RGBA Aseprite animations: visible image layers are composited in order, hidden layers and groups stay hidden, and linked cels resolve within their own layer.
+          - Preserve color when compositing translucent pixels. Visible layers require Normal blending, full layer/cel opacity and zero cel z-index; unsupported modes still report an error.
+          - Use the shared Tessera.WpfStyles theme and bundled fonts throughout the desktop interface.
+          - Restore checkerboard, dark and light preview backgrounds behind transparent images.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 
