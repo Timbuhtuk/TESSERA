@@ -293,7 +293,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             statusLabel.Text = "Обработка или сохранение истории не завершены. Предыдущий результат доступен.";
-            MessageBox.Show(this, ex.Message, "Ошибка обработки", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, ex.Message, "Ошибка обработки", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { SetProcessingState(false); }
     }
@@ -385,7 +385,7 @@ public partial class MainWindow : Window
         try { SaveResult(saveDialog.FileName); }
         catch (Exception ex)
         {
-            MessageBox.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -405,13 +405,13 @@ public partial class MainWindow : Window
                 ? $"Сохранено результатов: {saved} · {folderDialog.FolderName}"
                 : $"Сохранено: {saved}. Ошибок: {errors.Count}.";
             if (errors.Count > 0)
-                MessageBox.Show(this, string.Join(Environment.NewLine, errors), "Не все результаты сохранены",
+                TesseraDialog.Show(this, string.Join(Environment.NewLine, errors), "Не все результаты сохранены",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             statusLabel.Text = "Не удалось сохранить результаты.";
-            MessageBox.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { SetProcessingState(false); }
     }
@@ -532,7 +532,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             statusLabel.Text = "Выравнивание или сохранение истории не завершены.";
-            MessageBox.Show(this, ex.Message, "Выравнивание сетки", MessageBoxButton.OK, MessageBoxImage.Information);
+            TesseraDialog.Show(this, ex.Message, "Выравнивание сетки", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         finally { SetProcessingState(false); }
     }

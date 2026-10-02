@@ -74,7 +74,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             statusLabel.Text = "Обработка или сохранение истории не завершены. Предыдущий результат доступен.";
-            MessageBox.Show(this, ex.Message, "Ошибка обработки", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, ex.Message, "Ошибка обработки", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { SetProcessingState(false); }
     }

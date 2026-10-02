@@ -21,7 +21,7 @@ public partial class App : Application
     private async Task ApplyUpdateAsync(string target, int processId, string digest)
     {
         try { await Task.Run(() => GitHubUpdater.ApplyUpdate(target, processId, digest)); }
-        catch (Exception ex) { MessageBox.Show($"Не удалось установить обновление: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { TesseraDialog.Show($"Не удалось установить обновление: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally { Shutdown(); }
     }
 }

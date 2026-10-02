@@ -36,6 +36,25 @@ internal static class UiChecks
         {
             window.Show();
             Pump();
+            var storyDialog = new TesseraDialog("Проверка текста диалога.", "Проверка", MessageBoxButton.YesNo, MessageBoxImage.Question)
+            {
+                Owner = window,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+                Left = -10000,
+                Top = -10000,
+                ShowActivated = false
+            };
+            storyDialog.Show(); Pump();
+            var storyFrame = (Border)storyDialog.FindName("dialogFrame");
+            var storyButtons = (StackPanel)storyDialog.FindName("dialogButtons");
+            Require(ReferenceEquals(storyFrame.Style, storyDialog.FindResource("Ts.DialogBorder")) &&
+                storyButtons.Children.OfType<Button>().Count() == 2,
+                "StoryBook dialog frame or actions were not applied");
+            CaptureTool(storyDialog, "story-dialog.png");
+            var noButton = storyButtons.Children.OfType<Button>().Single(button => Equals(button.Tag, MessageBoxResult.No));
+            noButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            Require(storyDialog.Result == MessageBoxResult.No && !storyDialog.IsVisible,
+                "StoryBook dialog did not return the selected action");
             Require(!Get<Button>("processButton").IsEnabled && !Get<Button>("saveButton").IsEnabled &&
                 !Get<Button>("saveAllButton").IsEnabled, "Empty state permits processing/saving");
             Require(Get<ScrollViewer>("homeScroll").Visibility == Visibility.Visible && Get<Border>("emptyLibrary").Visibility == Visibility.Visible, "Startup home or empty library missing");
@@ -396,6 +415,9 @@ internal static class UiChecks
                 .Single(color => color.Color.ToArgb() == Color.FromArgb(oldColor.R, oldColor.G, oldColor.B).ToArgb());
             Invoke("InfoColorClick", new Button { DataContext = colorEntry }, new RoutedEventArgs(Button.ClickEvent));
             var replaceTool = infoTool!.OwnedWindows.OfType<ColorReplaceWindow>().Single(tool => tool.IsVisible);
+            var replaceFrame = (Border)replaceTool.FindName("dialogFrame");
+            Require(ReferenceEquals(replaceFrame.Style, replaceTool.FindResource("Ts.DialogBorder")),
+                "Color replacement did not use the StoryBook dialog frame");
             var selectedColor = (PaletteColorEntry)((ListBox)replaceTool.FindName("paletteList")).SelectedItem;
             Require(selectedColor.Hex == colorEntry.Hex &&
                 ((TextBox)replaceTool.FindName("newHexInput")).Text == colorEntry.Hex &&

@@ -35,12 +35,12 @@ public partial class MainWindow
             _availableRelease = await GitHubUpdater.CheckAsync();
             updateButton.Content = UpdateButtonText();
             if (showResult && _availableRelease is null)
-                MessageBox.Show(this, $"Установлена актуальная версия ({GitHubUpdater.CurrentVersion.ToString(3)}).", "Tessera");
+                TesseraDialog.Show(this, $"Установлена актуальная версия ({GitHubUpdater.CurrentVersion.ToString(3)}).", "Tessera");
         }
         catch (Exception ex)
         {
             updateButton.Content = UpdateButtonText();
-            if (showResult) MessageBox.Show(this, $"Не удалось проверить обновления: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (showResult) TesseraDialog.Show(this, $"Не удалось проверить обновления: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
         {
@@ -59,10 +59,10 @@ public partial class MainWindow
         }
         if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy)
         {
-            MessageBox.Show(this, "Дождитесь завершения обработки перед обновлением.", "Tessera");
+            TesseraDialog.Show(this, "Дождитесь завершения обработки перед обновлением.", "Tessera");
             return;
         }
-        var choice = MessageBox.Show(this,
+        var choice = TesseraDialog.Show(this,
             $"Скачать Tessera {release.Tag} и перезапустить приложение? История изображений сохранится.",
             "Обновление Tessera", MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (choice != MessageBoxResult.Yes) return;
@@ -79,7 +79,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"Не удалось обновить Tessera: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, $"Не удалось обновить Tessera: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
