@@ -47,9 +47,12 @@ internal static class UiChecks
             storyDialog.Show(); Pump();
             var storyFrame = (Border)storyDialog.FindName("dialogFrame");
             var storyButtons = (StackPanel)storyDialog.FindName("dialogButtons");
+            var storyShadow = (System.Windows.Media.Effects.DropShadowEffect)storyFrame.Effect;
             Require(ReferenceEquals(storyFrame.Style, storyDialog.FindResource("Ts.DialogBorder")) &&
-                storyButtons.Children.OfType<Button>().Count() == 2,
-                "StoryBook dialog frame or actions were not applied");
+                storyButtons.Children.OfType<Button>().Count() == 2 &&
+                ((Grid)storyDialog.FindName("dialogBackdrop")).Background == System.Windows.Media.Brushes.Transparent &&
+                Math.Abs(storyShadow.ShadowDepth - 14.142) < 0.01 && storyShadow.BlurRadius == 0,
+                "StoryBook dialog frame, actions or hard shadow were not applied");
             CaptureTool(storyDialog, "story-dialog.png");
             var noButton = storyButtons.Children.OfType<Button>().Single(button => Equals(button.Tag, MessageBoxResult.No));
             noButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
@@ -110,6 +113,19 @@ internal static class UiChecks
             Require(sizeTool is not null && sizeTool != window && sizeTool != gridTool &&
                 ReferenceEquals(Window.GetWindow(Get<Slider>("brightnessInput")), sizeTool) &&
                 ReferenceEquals(Window.GetWindow(Get<CheckBox>("spriteInput")), sizeTool), "Size, frame and pixel tools were not grouped");
+            var storyCheck = Get<CheckBox>("spriteInput");
+            storyCheck.ApplyTemplate();
+            var storySlider = Get<Slider>("brightnessInput");
+            storySlider.ApplyTemplate();
+            var sliderThumb = FindVisual<System.Windows.Controls.Primitives.Thumb>(storySlider)
+                ?? throw new Exception("StoryBook slider thumb was not created");
+            sliderThumb.ApplyTemplate();
+            Require(storyCheck.Template.FindName("Fill", storyCheck) is System.Windows.Shapes.Rectangle,
+                "Checkbox did not use the StoryBook diagonal-fill style");
+            Require(FindVisual<System.Windows.Shapes.Ellipse>(sliderThumb) is not null,
+                "Slider did not use the StoryBook circular thumb style");
+            Require(sliderThumb.Width == 16 && sliderThumb.Height == 16,
+                $"StoryBook slider thumb has an unexpected size: {sliderThumb.Width} × {sliderThumb.Height}");
             Click("colorToolButton"); Pump();
             var colorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
             Require(colorTool is not null && colorTool != sizeTool &&
@@ -592,5 +608,18 @@ internal static class UiChecks
             for (int x = 0; x < actual.Width; x++)
                 Require(actual.GetPixel(x, y).ToArgb() == expected.GetPixel(x, y).ToArgb(), context + $": pixel {x},{y}");
     }
+    private static T? FindVisual<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (var q = 0; q < VisualTreeHelper.GetChildrenCount(parent); q++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, q);
+            if (child is T result) return result;
+            var nested = FindVisual<T>(child);
+            if (nested is not null) return nested;
+        }
+
+        return null;
+    }
+
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

@@ -98,8 +98,9 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Show processing and saving messages, update status and update confirmations in dialogs styled to match Tessera.
-          - Give the color replacement window the shared Tessera dialog frame while retaining the color field, hue strip, palette and HEX controls.
+          - Refresh shared control styling with diagonal-fill checkboxes and circular slider thumbs.
+          - Give dialogs a crisp offset shadow and remove the dark rectangular backdrop around them.
+          - Correct the Aseprite CLI help to describe visible RGBA32 layer compositing and hidden-layer exclusion.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 

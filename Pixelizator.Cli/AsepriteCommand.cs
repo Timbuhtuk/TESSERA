@@ -21,7 +21,7 @@ internal static class AsepriteCommand
 
         Каждый вход даёт <имя>.png и <имя>.json. Результаты не перезаписываются.
         Ошибка одного файла не останавливает остальные; итоговый код тогда 1.
-        Поддерживается ограниченный набор RGBA32 Aseprite с одним видимым слоем.
+        Видимые RGBA32-слои объединяются по порядку Aseprite; скрытые слои пропускаются.
         """;
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
