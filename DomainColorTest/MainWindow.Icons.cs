@@ -20,6 +20,7 @@ public partial class MainWindow
         if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(asepriteWorkspace, false);
         SetVisible(backgroundWorkspace, false);
+        SetVisible(moodboardWorkspace, false);
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
         SetVisible(editorToolbar, false);

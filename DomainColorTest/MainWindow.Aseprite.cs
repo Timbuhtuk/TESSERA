@@ -21,6 +21,7 @@ public partial class MainWindow
         SetVisible(homeScroll, false); SetVisible(workspaceHost, false); SetVisible(editorToolbar, false); SetVisible(iconWorkspace, false);
         SetVisible(asepriteWorkspace, true);
         SetVisible(backgroundWorkspace, false);
+        SetVisible(moodboardWorkspace, false);
     }
 
     private bool IsAsepriteDropTarget(DependencyObject? target, IDataObject data)

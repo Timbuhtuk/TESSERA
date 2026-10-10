@@ -57,7 +57,7 @@ public partial class MainWindow
             Process.Start(new ProcessStartInfo(release.Page.AbsoluteUri) { UseShellExecute = true });
             return;
         }
-        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy)
+        if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy)
         {
             TesseraDialog.Show(this, "Дождитесь завершения обработки перед обновлением.", "Tessera");
             return;
@@ -72,7 +72,7 @@ public partial class MainWindow
         try
         {
             string downloaded = await GitHubUpdater.DownloadAsync(release);
-            if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy)
+            if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy)
                 throw new InvalidOperationException("Дождитесь завершения обработки и нажмите обновление снова.");
             GitHubUpdater.StartInstall(downloaded, release.Sha256);
             Close();

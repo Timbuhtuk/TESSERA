@@ -52,6 +52,12 @@ The animation banner opens a separate workspace. Open or drop several `.ase` or 
 
 The converter combines all visible RGBA image layers in Aseprite order. Hidden layers and layers inside hidden groups do not appear in the preview or exported PNG. Unsupported features produce an error rather than an incomplete export; see the [supported subset](../PixelArtAseprite/README.md). Animation imports are temporary session data, so save results before closing the app.
 
+## Image boards
+
+Open **Image board** from the home screen and choose a canvas size from 128 to 16384 pixels per dimension. Add or drop images to create separate layers. Choose a solid background color, move layers on the canvas, rotate or scale them, and change their stacking order. Use Ctrl or Shift to select several layers and transform them together. Zoom with Ctrl+mouse wheel or the zoom selector; use **Fit** to see the whole board.
+
+**Save board** writes a `.tboard` project containing the images, background color, layer order and transforms. Open it later to continue editing without needing the original image files. Boards are saved explicitly, separately from the image library. **Export PNG** produces a flattened image with the selected opaque background; export does not replace saving the editable project. Large imports, project saves and PNG exports run in the background, and editor previews use reduced-size copies while export uses the original image data.
+
 ## Storage and updates
 
 The library is saved automatically in `%LOCALAPPDATA%\Tessera\Library`. On the first launch after updating, Tessera copies existing images and result histories from `%LOCALAPPDATA%\Pixelizator\Library` into the new library. The old directory remains as a backup and is not read again after a successful migration. To move the library to another computer, copy the Tessera library directory separately.

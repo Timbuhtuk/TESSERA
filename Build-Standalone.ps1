@@ -73,6 +73,11 @@ Hover over From editor to choose any library source or saved result.
 It does not segment objects from complex photographic backgrounds.
 The application interface currently uses Russian labels.
 
+Image board lets you arrange images on a canvas with a solid background.
+Move, rotate, scale and reorder layers individually or as a selection.
+Save an editable .tboard project with embedded images, or export a PNG.
+Boards are saved separately from the image library. Save before closing.
+
 Your library is at %LOCALAPPDATA%\Tessera\Library.
 On first launch, existing Pixelizator images and histories are copied there.
 The old library remains as a backup. Copy the Tessera folder separately

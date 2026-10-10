@@ -45,6 +45,11 @@ public partial class MainWindow
             };
         PreviewDragOver += (sender, e) =>
         {
+            if (IsMoodboardDropTarget(e.OriginalSource as DependencyObject))
+            {
+                e.Effects = CanDropMoodboard(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+                e.Handled = true; return;
+            }
             if (IsAsepriteDropTarget(e.OriginalSource as DependencyObject, e.Data))
             {
                 e.Effects = CanDropAseprite(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
@@ -70,6 +75,7 @@ public partial class MainWindow
         PreviewDrop += async (_, e) =>
         {
             e.Handled = true;
+            if (IsMoodboardDropTarget(e.OriginalSource as DependencyObject)) { await DropMoodboardAsync(e); return; }
             if (IsAsepriteDropTarget(e.OriginalSource as DependencyObject, e.Data)) { await DropAsepriteAsync(e); return; }
             if (IsBackgroundDropTarget(e.OriginalSource as DependencyObject)) { await DropBackgroundAsync(e); return; }
             if (IsIconDropTarget(e.OriginalSource as DependencyObject)) { await DropIconAsync(e); return; }

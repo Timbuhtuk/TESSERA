@@ -45,7 +45,7 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Grid Height="38" Background="#151515">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="Замена цвета" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <TextBlock x:Name="dialogTitle" Text="Замена цвета" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
             <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
                     Style="{StaticResource CloseCaptionButton}" ToolTip="Закрыть"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
@@ -56,13 +56,13 @@
                 <Border x:Name="dialogFrame" Style="{StaticResource Ts.DialogBorder}"
                         Margin="14" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <StackPanel>
-                        <TextBlock Text="Цвет в изображении" FontWeight="SemiBold" Margin="0,0,0,7"/>
-                        <DockPanel>
+                        <TextBlock x:Name="oldColorLabel" Text="Цвет в изображении" FontWeight="SemiBold" Margin="0,0,0,7"/>
+                        <DockPanel x:Name="oldColorPanel">
                             <Border x:Name="oldPreview" Width="30" Height="30" BorderBrush="#777777"
                                     BorderThickness="1" Margin="0,0,8,0"/>
                             <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="Заменяемый цвет HEX"/>
                         </DockPanel>
-                        <TextBlock Text="Новый цвет" FontWeight="SemiBold" Margin="0,18,0,10"/>
+                        <TextBlock x:Name="newColorLabel" Text="Новый цвет" FontWeight="SemiBold" Margin="0,18,0,10"/>
                         <Grid x:Name="colorField" Width="320" Height="290" HorizontalAlignment="Center"
                               ClipToBounds="True" Cursor="Cross"
                               MouseLeftButtonDown="ColorFieldMouseDown" MouseMove="ColorFieldMouseMove"

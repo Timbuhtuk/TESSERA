@@ -73,7 +73,7 @@ public partial class MainWindow : Window
         saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
         saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
-        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } };
+        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
         Closed += (_, _) =>
         {
             CloseEditorTools();
@@ -89,6 +89,7 @@ public partial class MainWindow : Window
         InitializeIcons();
         InitializeAseprite();
         InitializeBackground();
+        InitializeMoodboard();
         InitializeEditorTools();
         InitializeInfo();
         InitializeFilters();

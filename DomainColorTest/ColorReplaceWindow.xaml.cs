@@ -32,11 +32,26 @@ public partial class ColorReplaceWindow : Window
     private bool _settingPickerText;
     private bool _draggingField;
     private bool _draggingHue;
+    private bool _choosingColor;
     private double _hue;
     private double _saturation;
     private double _value;
 
     public event Action<DrawingColor, DrawingColor>? ReplaceRequested;
+    public DrawingColor? SelectedColor { get; private set; }
+
+    public ColorReplaceWindow(DrawingColor initialColor) : this(initialColor, [], false)
+    {
+        _choosingColor = true;
+        Title = "Цвет фона · TESSERA";
+        dialogTitle.Text = "Цвет фона";
+        oldColorLabel.Visibility = oldColorPanel.Visibility = Visibility.Collapsed;
+        newColorLabel.Text = "Выберите цвет";
+        newColorLabel.Margin = new Thickness(0, 0, 0, 10);
+        replaceButton.Content = "Выбрать цвет";
+        Height = Math.Min(SystemParameters.WorkArea.Height - 50, 620);
+        UpdateColorState(true);
+    }
 
     public ColorReplaceWindow(DrawingColor oldColor, IReadOnlyList<PaletteColorEntry> colors, bool allowOldColorEdit)
     {
@@ -94,9 +109,9 @@ public partial class ColorReplaceWindow : Window
             : System.Windows.Media.Brushes.Transparent;
         if (newValid && syncPicker) SetPickerFromColor(newColor);
         RenderPicker();
-        bool different = oldValid && newValid && oldColor.ToArgb() != newColor.ToArgb();
+        bool different = _choosingColor ? newValid : oldValid && newValid && oldColor.ToArgb() != newColor.ToArgb();
         replaceButton.IsEnabled = different;
-        validationText.Text = !oldValid || !newValid ? "Введите цвет в формате #RRGGBB."
+        validationText.Text = (!oldValid && !_choosingColor) || !newValid ? "Введите цвет в формате #RRGGBB."
             : !different ? "Выберите новый цвет или введите HEX." : "";
 
         if (_settingPalette) return;
@@ -232,6 +247,13 @@ public partial class ColorReplaceWindow : Window
 
     private void ApplyColor(object sender, RoutedEventArgs e)
     {
+        if (_choosingColor)
+        {
+            if (!TryReadColor(newHexInput.Text, out DrawingColor selected)) return;
+            SelectedColor = selected;
+            Close();
+            return;
+        }
         if (!TryReadColor(oldHexInput.Text, out DrawingColor oldColor) ||
             !TryReadColor(newHexInput.Text, out DrawingColor newColor) ||
             oldColor.ToArgb() == newColor.ToArgb()) return;

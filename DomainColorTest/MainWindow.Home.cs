@@ -26,6 +26,7 @@ public partial class MainWindow
                 if (asepriteWorkspace.Visibility == Visibility.Visible) _ = asepriteWorkspace.OpenAsync();
                 else if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
                 else if (backgroundWorkspace.Visibility == Visibility.Visible) _ = backgroundWorkspace.OpenAsync();
+                else if (moodboardWorkspace.Visibility == Visibility.Visible) _ = moodboardWorkspace.AddFilesFromDialogAsync();
                 else OpenImage(this, EventArgs.Empty);
                 e.Handled = true;
             }
@@ -49,13 +50,14 @@ public partial class MainWindow
 
     private void ShowHome()
     {
-        if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
+        if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) return;
         CloseEditorTools();
         RefreshHome();
         SetVisible(processButton, false);
         SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
         SetVisible(backgroundWorkspace, false);
+        SetVisible(moodboardWorkspace, false);
         SetVisible(homeScroll, true);
         SetVisible(workspaceHost, false);
         SetVisible(editorToolbar, false);
@@ -73,6 +75,7 @@ public partial class MainWindow
         SetVisible(asepriteWorkspace, false);
         SetVisible(iconWorkspace, false);
         SetVisible(backgroundWorkspace, false);
+        SetVisible(moodboardWorkspace, false);
         SetVisible(workspaceHost, true);
         SetVisible(editorToolbar, true);
         SetVisible(processButton, true);
@@ -116,12 +119,15 @@ public partial class MainWindow
         iconBannerTitle.FontSize = compact ? 29 : 34;
         backgroundBannerTitle.FontSize = compact ? 29 : 34;
         asepriteBannerTitle.FontSize = compact ? 29 : 34;
+        moodboardBannerTitle.FontSize = compact ? 29 : 34;
         iconBannerCopy.Margin = heroCopy.Margin;
         backgroundBannerCopy.Margin = heroCopy.Margin;
         asepriteBannerCopy.Margin = heroCopy.Margin;
+        moodboardBannerCopy.Margin = heroCopy.Margin;
         SetVisible(asepriteBannerArt, ActualWidth >= 1100);
         SetVisible(iconBannerArt, ActualWidth >= 1000);
         SetVisible(backgroundBannerArt, ActualWidth >= 1100);
+        SetVisible(moodboardBannerArt, ActualWidth >= 1050);
         heroTitle.LineHeight = compact ? 36 : 42;
         previewArea.Margin = compact ? new Thickness(12, 0, 12, 10) : new Thickness(18, 0, 18, 12);
         workspaceHost.VerticalScrollBarVisibility = compact ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
