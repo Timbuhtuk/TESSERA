@@ -84,6 +84,12 @@ and smooth the active tile or its borders. Save embedded images and edits
 as a .ttiles collection, or export an edited asset as PNG. Open directly
 with Tessera.exe --tiles [image-or-collection].
 
+Import a tileset atlas by tile dimensions or a columns/rows grid. Preview
+grid suggestions, set margins and gaps, and optionally skip transparent
+cells. Each slice becomes an editable asset with its original pixels and
+alpha. Save slices in a .ttiles collection. Atlas imports are snapshots;
+later changes to the source atlas do not reload imported tiles.
+
 Your library is at %LOCALAPPDATA%\Tessera\Library.
 On first launch, existing Pixelizator images and histories are copied there.
 The old library remains as a backup. Copy the Tessera folder separately

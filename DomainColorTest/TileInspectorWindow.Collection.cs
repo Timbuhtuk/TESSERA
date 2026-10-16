@@ -143,7 +143,8 @@ public partial class TileInspectorWindow
         if (ActiveAsset is not { } asset) throw new InvalidOperationException("Выберите тайл.");
         FinishStroke();
         path = Path.GetFullPath(path);
-        if (_assets.Any(item => string.Equals(item.SourcePath, path, StringComparison.OrdinalIgnoreCase)) ||
+        if (_assets.Any(item => string.Equals(item.SourcePath, path, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.AtlasSourcePath, path, StringComparison.OrdinalIgnoreCase)) ||
             string.Equals(_projectPath, path, StringComparison.OrdinalIgnoreCase))
             throw new IOException("Выберите новый PNG: исходники и проект не перезаписываются.");
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";

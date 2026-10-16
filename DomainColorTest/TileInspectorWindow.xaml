@@ -42,6 +42,7 @@
                             <Button Content="Убрать" Click="RemoveAssetClicked" Margin="0,0,4,0"/>
                             <Button x:Name="exportButton" Content="PNG…" Click="ExportClicked" IsEnabled="False" Margin="4,0,0,0"/>
                         </UniformGrid>
+                        <Button x:Name="importTilesetButton" Content="Импорт тайлсета…" Click="OpenTileSetClicked" Margin="0,8,0,0" ToolTip="Нарезать атлас на отдельные тайлы с ручным или автоматическим подбором сетки"/>
                         <TextBlock Text="Сосед B · тот же размер" Margin="0,12,0,5"/>
                         <ComboBox x:Name="companionInput" DisplayMemberPath="Label" SelectionChanged="CompanionSelected" AutomationProperties.Name="Соседний тайл B"/>
                         <TextBlock x:Name="pairLabel" Text="Сам с собой" Style="{StaticResource Hint}"/>

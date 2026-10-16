@@ -167,7 +167,7 @@ public partial class TileInspectorWindow : Window
         var reverse = companion is null ? analysis : TileAsset.Compare(companion, active);
         preview.SetPair(active.Image, companion?.Image, analysis, reverse);
         onboarding.Visibility = Visibility.Collapsed;
-        fileLabel.Text = $"A: {active.Label}"; fileLabel.ToolTip = active.SourcePath;
+        fileLabel.Text = $"A: {active.Label}"; fileLabel.ToolTip = active.SourcePath ?? active.AtlasSourcePath;
         pairLabel.Text = companion is null ? "Сам с собой" : $"A: {active.Name}\nB: {companion.Name}\nЧередование A/B; Δ среднее/макс.";
         reloadButton.IsEnabled = active.SourcePath is not null && !_busy;
         exportButton.IsEnabled = !_busy;
