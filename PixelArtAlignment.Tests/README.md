@@ -50,6 +50,7 @@ dotnet run --project PixelArtAlignment.Tests -c Release
 dotnet run --project PixelArtAlignment.Tests -c Release -- --benchmark --holdout
 dotnet run --project PixelArtAlignment.Tests -c Release -- --benchmark --fresh
 dotnet run --project PixelArtAlignment.Tests -c Release -- --invariants --ui
+dotnet run --project PixelArtAlignment.Tests -c Release -- --tiles
 dotnet run --project Pixelizator.Cli.Tests -c Release
 ```
 

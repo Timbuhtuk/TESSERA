@@ -50,6 +50,18 @@ Historical project and namespace names are retained:
 
 The editable Tessera mark and its generation script are documented in the [asset README](../DomainColorTest/Assets/README.md).
 
+## Tile seam inspector
+
+`DomainColorTest/TileInspectorWindow.xaml(.cs)` owns the independent inspector window, collection selection, file loading and debounced directory watchers. Its `Collection` partial handles projects, export and unsaved changes; its `Painting` partial handles strokes, histories and smoothing. `MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
+
+`PixelArtDownscale/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
+
+`TileAsset.cs` keeps BGRA pixels, a WPF bitmap, edit state and bounded per-asset undo/redo snapshots (up to 20 entries / 64 MiB, retaining at least one). `TileAsset.Compare(A, B)` compares A.right/B.left and A.bottom/B.top; reverse joins are computed independently. The checkerboard arrangement alternates A/B. Pair candidates require equal dimensions; incompatible assets remain available in the collection. `TileAssetProcessing.Smooth` delegates to `IndependentImageProcessor.ApplyNeighborColors`, preserving its color selection and alpha behavior, then optionally restores pixels outside the selected edge strip. It does not synthesize colors across asset boundaries.
+
+`TileCollectionFile.cs` stores version-1 `.ttiles` ZIP projects containing `collection.json` and embedded PNGs. It reads and validates all images before replacing session state. Project and PNG writes use adjacent temporary files and atomic replacement; exports reject imported source paths. Embedded local-edit protection survives reopening. Original source paths serve only for optional watching/reloading; portable project images remain usable without originals.
+
+Build the tests, then run `dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --tiles`. This checks known distances, alpha, axis mapping, the home entry, repetition modes, rendered heatmap toggling/opacity/direction, fit and fixed zoom, the minimum layout, failed loads, file writes, atomic replacement and disabling the watcher. Collection checks cover pair selection, pencil/eraser/eyedropper, stroke isolation, undo/redo, local-edit protection, portable project round trips, failed project loads, export protection and smoothing parity with the shared algorithm. Rendered captures are written under `artifacts/wpf/verification/tiles-*`. These checks also run with `--ui`.
+
 ## Compatibility
 
 Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library now lives at `%LOCALAPPDATA%\Tessera\Library`. On first launch, `LibraryLocation` copies entries from `%LOCALAPPDATA%\Pixelizator\Library` without deleting the old directory. A marker in the Tessera data directory prevents removed entries from being imported again on later launches.
