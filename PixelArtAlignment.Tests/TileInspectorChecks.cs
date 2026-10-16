@@ -388,7 +388,8 @@ internal static class TileInspectorChecks
         }
         var anchor = SourcePoint();
         Wheel(120, pointer); Pump();
-        Require(preview.PixelScale == 32 && (SourcePoint() - anchor).Length < .01, "Zoom-in moved the pixel under the cursor");
+        Require(preview.PixelScale == 32 && (SourcePoint() - anchor).Length < .01,
+            $"Zoom-in moved the pixel under the cursor: {anchor} -> {SourcePoint()}, pointer {pointer}, viewport {scroll.ViewportWidth}x{scroll.ViewportHeight}, offset {scroll.HorizontalOffset},{scroll.VerticalOffset}");
         Wheel(-120, pointer); Pump();
         Require(preview.PixelScale == 16 && (SourcePoint() - anchor).Length < .01, "Zoom-out moved the pixel under the cursor");
         Wheel(240, pointer); Pump();
