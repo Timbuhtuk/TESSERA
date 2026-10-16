@@ -118,8 +118,9 @@ internal static class TileInspectorChecks
             Click(window, "repeatYInput", false);
             Require(preview.Columns == 1 && preview.Rows == 1, "Single tile mode incorrect");
             Click(window, "repeatXInput", true); Click(window, "repeatYInput", true);
+            VerifyWheelZoom(window, preview, folder);
             Get<ComboBox>(window, "copiesInput").SelectedIndex = 2;
-            Get<ComboBox>(window, "zoomInput").SelectedIndex = 6; Pump();
+            Get<ComboBox>(window, "zoomInput").SelectedIndex = 10; Pump();
             Require(preview.Columns == 7 && preview.Rows == 7 && preview.PixelScale == 32 &&
                 Get<ScrollViewer>(window, "previewScroll").ScrollableWidth > 0 && Get<ScrollViewer>(window, "previewScroll").ScrollableHeight > 0,
                 "Fixed pixel zoom or two-axis scrolling failed");
@@ -364,6 +365,64 @@ internal static class TileInspectorChecks
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(Render(element)));
         using var stream = File.Create(path); encoder.Save(stream);
     }
+    private static void VerifyWheelZoom(TileInspectorWindow window, TilePreview preview, string folder)
+    {
+        var changeZoom = typeof(TileInspectorWindow).GetMethod("ChangePreviewZoom", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var scroll = Get<ScrollViewer>(window, "previewScroll");
+        var zoom = Get<ComboBox>(window, "zoomInput");
+        bool Wheel(int delta, Point pointer, ModifierKeys modifiers = ModifierKeys.Control) =>
+            (bool)changeZoom.Invoke(window, [delta, pointer, modifiers])!;
+        var pointer = new Point(scroll.ViewportWidth * .37, scroll.ViewportHeight * .44);
+        Require(!Wheel(120, pointer, ModifierKeys.None) && !Wheel(0, pointer), "Unmodified or zero wheel was consumed for zoom");
+        double fitScale = preview.PixelScale;
+        Require(Wheel(120, pointer), "Ctrl+wheel was ignored in Fit mode"); Pump();
+        Require(preview.PixelScale > fitScale && zoom.SelectedIndex > 0, "Wheel did not leave Fit for the next fixed scale");
+        Get<ComboBox>(window, "copiesInput").SelectedIndex = 2;
+        zoom.SelectedIndex = 9; Pump(); // 1600%, with both axes scrollable.
+        scroll.ScrollToHorizontalOffset(200); scroll.ScrollToVerticalOffset(150); Pump();
+        pointer = new Point(scroll.ViewportWidth * .37, scroll.ViewportHeight * .44);
+        Point SourcePoint()
+        {
+            var point = scroll.TranslatePoint(pointer, preview);
+            return new Point(point.X / preview.PixelScale, point.Y / preview.PixelScale);
+        }
+        var anchor = SourcePoint();
+        Wheel(120, pointer); Pump();
+        Require(preview.PixelScale == 32 && (SourcePoint() - anchor).Length < .01, "Zoom-in moved the pixel under the cursor");
+        Wheel(-120, pointer); Pump();
+        Require(preview.PixelScale == 16 && (SourcePoint() - anchor).Length < .01, "Zoom-out moved the pixel under the cursor");
+        Wheel(240, pointer); Pump();
+        Require(preview.PixelScale == 64, "Multi-notch wheel did not advance two zoom levels");
+        Wheel(30, pointer); Pump();
+        Require(preview.PixelScale == 64, "Zoom exceeded 6400%");
+        Wheel(-int.MaxValue, pointer); Pump();
+        Require(preview.PixelScale == .0625, "Zoom did not stop at 6.25%");
+        Wheel(-30, pointer); Pump();
+        Require(preview.PixelScale == .0625, "Zoom went below 6.25%");
+        Wheel(30, pointer); Pump();
+        Require(preview.PixelScale == .125, "High-resolution wheel delta was ignored");
+        foreach (int index in new[] { 1, 4, 11, 0 })
+        {
+            zoom.SelectedIndex = index; Pump();
+            double scale = index == 0 ? 0 : preview.PixelScale;
+            string path = Path.Combine(folder, "wheel-zoom.ttiles");
+            window.SaveCollectionToFile(path);
+            Require(TileCollectionFile.Load(path).Settings.ZoomScale == scale, "Saved fixed zoom factor is wrong");
+            window.LoadCollectionFromFile(path); Pump();
+            Require(zoom.SelectedIndex == index, "Zoom factor did not survive project reload");
+        }
+        for (int legacy = 0; legacy <= 6; legacy++)
+        {
+            string path = Path.Combine(folder, "legacy-zoom.ttiles");
+            TileCollectionFile.Save(path, window.Assets, new TileCollectionSettings { Zoom = legacy });
+            window.LoadCollectionFromFile(path); Pump();
+            Require(zoom.SelectedIndex == (legacy == 0 ? 0 : legacy + 4), "A legacy project's zoom changed");
+        }
+        Get<ComboBox>(window, "copiesInput").SelectedIndex = 0;
+        zoom.SelectedIndex = 0; Pump();
+        Capture(window, Path.Combine(folder, "wheel-fit.png"));
+    }
+
     private static void VerifyTemporaryHeatmap(TileInspectorWindow window, TilePreview preview, BitmapSource heatOn, BitmapSource heatOff, string folder)
     {
         var toggle = Get<CheckBox>(window, "heatInput");

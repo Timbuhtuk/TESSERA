@@ -43,6 +43,10 @@ public partial class TileInspectorWindow : Window
         preview.PixelHovered += text => pixelLabel.Text = text.Length == 0
             ? "Наведите курсор на тайл, чтобы увидеть Δ для строки и столбца." : text;
         InitializePainting();
+        previewScroll.PreviewMouseWheel += (_, e) =>
+        {
+            if (ChangePreviewZoom(e.Delta, e.GetPosition(previewScroll), Keyboard.Modifiers)) e.Handled = true;
+        };
         _reloadTimer.Tick += async (_, _) => { _reloadTimer.Stop(); await ReloadChangedFilesAsync(); };
         Closing += ConfirmWindowClosing;
         Loaded += (_, _) => { if (Owner is not null) Owner.Closing += ConfirmWindowClosing; UpdateCompactLayout(); };
@@ -179,12 +183,13 @@ public partial class TileInspectorWindow : Window
     private void RefreshPreview()
     {
         if (!_ready || preview.Source is null || Analysis is null) return;
+        _zoomRequestRevision++;
         bool repeatX = repeatXInput.IsChecked == true, repeatY = repeatYInput.IsChecked == true;
         int copies = copiesInput.SelectedIndex == 1 ? 5 : copiesInput.SelectedIndex == 2 ? 7 : 3;
         double scale = zoomInput.SelectedIndex <= 0 ? Math.Min(
             Math.Max(1, previewScroll.ActualWidth - 20) / (preview.Source.PixelWidth * (repeatX ? copies : 1)),
             Math.Max(1, previewScroll.ActualHeight - 20) / (preview.Source.PixelHeight * (repeatY ? copies : 1)))
-            : Math.Pow(2, zoomInput.SelectedIndex - 1);
+            : TileZoomFactors[zoomInput.SelectedIndex];
         if (zoomInput.SelectedIndex == 0 && scale >= 1) scale = Math.Max(1, Math.Floor(scale));
         double threshold = thresholdInput.Value;
         thresholdLabel.Text = $"Порог различия Δ: {threshold:F1}";
