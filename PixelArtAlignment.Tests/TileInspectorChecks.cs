@@ -2,12 +2,14 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DomainColorTest;
 using PixelArtDownscale;
 using Color = System.Drawing.Color;
+using Point = System.Windows.Point;
 
 namespace PixelArtAlignment.Tests;
 
@@ -100,6 +102,7 @@ internal static class TileInspectorChecks
             var heatOff = Render(preview);
             Require(!Pixels(heatOn).SequenceEqual(Pixels(heatOff)), "Heatmap toggle did not change rendering");
             Capture(window, Path.Combine(folder, "both-axes-clean.png"));
+            VerifyTemporaryHeatmap(window, preview, heatOn, heatOff, folder);
             Click(window, "heatInput", true);
             Get<Slider>(window, "opacityInput").Value = 0; Pump();
             Require(Pixels(Render(preview)).SequenceEqual(Pixels(heatOff)), "Zero opacity did not restore source rendering");
@@ -126,7 +129,9 @@ internal static class TileInspectorChecks
             Require(preview.IsVisible && preview.ActualWidth <= Get<ScrollViewer>(window, "previewScroll").ViewportWidth + 1,
                 "Fit mode clipped in minimum layout");
             Capture(window, Path.Combine(folder, "minimum-layout.png"));
+            VerifyPanelOrder(window);
             window.Width = 1180; window.Height = 800; Pump();
+            VerifyPanelOrder(window);
 
             var previous = window.Analysis;
             Await(window.LoadFileAsync(Path.Combine(folder, "missing.png")));
@@ -359,5 +364,55 @@ internal static class TileInspectorChecks
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(Render(element)));
         using var stream = File.Create(path); encoder.Save(stream);
     }
+    private static void VerifyTemporaryHeatmap(TileInspectorWindow window, TilePreview preview, BitmapSource heatOn, BitmapSource heatOff, string folder)
+    {
+        var toggle = Get<CheckBox>(window, "heatInput");
+        Require(toggle.ToolTip?.ToString()?.Contains("Alt") == true, "Heatmap tooltip does not explain Alt");
+        string project = Path.Combine(folder, "alt-preview.ttiles");
+        window.SaveCollectionToFile(project);
+        string title = window.Title;
+        KeyInput(window, Key.LeftAlt, true);
+        Require(preview.HeatmapVisible && Pixels(Render(preview)).SequenceEqual(Pixels(heatOn)) && toggle.IsChecked == false,
+            "Holding Alt must show the overlay without changing the checkbox");
+        Capture(window, Path.Combine(folder, "alt-held.png"));
+        KeyInput(window, Key.LeftAlt, true); // Repeated keydown must not latch the overlay.
+        KeyInput(window, Key.LeftAlt, false);
+        Require(!preview.HeatmapVisible && Pixels(Render(preview)).SequenceEqual(Pixels(heatOff)), "Alt release did not restore the clean view");
+        KeyInput(window, Key.LeftAlt, true); KeyInput(window, Key.RightAlt, true);
+        KeyInput(window, Key.LeftAlt, false);
+        Require(preview.HeatmapVisible, "Releasing one Alt hid the overlay while the other was held");
+        KeyInput(window, Key.RightAlt, false);
+        Require(!preview.HeatmapVisible, "Right Alt release did not restore the view");
+        KeyInput(window, Key.RightAlt, true);
+        typeof(Window).GetMethod("OnDeactivated", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [EventArgs.Empty]);
+        Require(!preview.HeatmapVisible && window.Title == title, "Focus loss left Alt latched or marked the project dirty");
+        window.SaveCollectionToFile(project);
+        Require(!TileCollectionFile.Load(project).Settings.Heat, "Temporary overlay leaked into saved settings");
+        Click(window, "heatInput", true);
+        KeyInput(window, Key.LeftAlt, true); KeyInput(window, Key.LeftAlt, false);
+        Require(preview.HeatmapVisible && toggle.IsChecked == true, "Alt release disabled the persistent heatmap");
+        Click(window, "heatInput", false);
+    }
+
+    private static void KeyInput(Window window, Key key, bool down)
+    {
+        var input = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), Environment.TickCount, key)
+        { RoutedEvent = down ? Keyboard.PreviewKeyDownEvent : Keyboard.PreviewKeyUpEvent };
+        window.RaiseEvent(input); Pump();
+        Require(input.Handled, "Alt was left to menu navigation");
+    }
+
+    private static void VerifyPanelOrder(Window window)
+    {
+        var preview = Get<Border>(window, "previewPanel");
+        var summary = Get<Border>(window, "summaryPanel");
+        var edit = Get<Expander>(window, "editTools");
+        double previewTop = preview.TranslatePoint(new Point(), window).Y;
+        double summaryTop = summary.TranslatePoint(new Point(), window).Y;
+        Require(edit.TranslatePoint(new Point(), window).Y < previewTop && summaryTop >= previewTop + preview.ActualHeight,
+            "Drawing must stay above the preview and seam statistics below it");
+        Require(summaryTop + summary.ActualHeight <= window.ActualHeight, "Statistics clipped outside the window");
+    }
+
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

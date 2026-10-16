@@ -6,7 +6,8 @@
         Width="1180" Height="800" MinWidth="720" MinHeight="560" WindowStartupLocation="CenterScreen"
         Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
         FontFamily="{DynamicResource Ts.UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True"
-        AllowDrop="True" PreviewDragOver="FileDragOver" Drop="FileDropped" PreviewKeyDown="WindowKeyDown">
+        AllowDrop="True" PreviewDragOver="FileDragOver" Drop="FileDropped" PreviewKeyDown="WindowKeyDown"
+        PreviewKeyUp="WindowKeyUp" Deactivated="WindowDeactivated">
     <Window.Resources><ResourceDictionary>
         <ResourceDictionary.MergedDictionaries><local:TileInspectorResources/></ResourceDictionary.MergedDictionaries>
     </ResourceDictionary></Window.Resources>
@@ -65,7 +66,9 @@
                         </ComboBox>
                         <CheckBox x:Name="guidesInput" Content="Границы тайлов" Click="OptionsChanged" Margin="0,12,0,0"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,16,0,14"/>
-                        <CheckBox x:Name="heatInput" Content="Тепловая карта краёв" IsChecked="True" Click="OptionsChanged"/>
+                        <CheckBox x:Name="heatInput" Content="Тепловая карта краёв" IsChecked="True" Click="OptionsChanged"
+                                  ToolTip="Удерживайте Alt, чтобы временно показать тепловую карту. Отпустите Alt, чтобы вернуть выбранный режим."/>
+                        <TextBlock Text="Удерживайте Alt для временного показа" Style="{StaticResource Hint}"/>
                         <TextBlock x:Name="thresholdLabel" Text="Порог различия Δ: 5,0" Margin="0,12,0,0"/>
                         <Slider x:Name="thresholdInput" Minimum="0" Maximum="30" Value="5" TickFrequency="0.5" ValueChanged="ValueChanged" AutomationProperties.Name="Порог цветового различия"/>
                         <TextBlock x:Name="opacityLabel" Text="Непрозрачность: 70%"/>
@@ -83,14 +86,14 @@
                 </ScrollViewer>
             </Border>
             <Grid Grid.Column="2">
-                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="12" Margin="0,0,0,12" Background="{DynamicResource Ts.Raised}">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <Border x:Name="summaryPanel" Grid.Row="2" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="12" Margin="0,10,0,0" Background="{DynamicResource Ts.Raised}">
                     <ScrollViewer x:Name="summaryScroll" MaxHeight="125" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel>
                         <TextBlock x:Name="xSummary" Text="X · нет изображения" TextWrapping="Wrap"/>
                         <TextBlock x:Name="ySummary" Text="Y · нет изображения" TextWrapping="Wrap" Margin="0,6,0,0"/>
                     </StackPanel></ScrollViewer>
                 </Border>
-                <Border Grid.Row="1" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="8" Margin="0,0,0,10" Background="{DynamicResource Ts.Panel}">
+                <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="8" Margin="0,0,0,10" Background="{DynamicResource Ts.Panel}">
                     <Expander x:Name="editTools" Header="Рисование и сглаживание" IsExpanded="True">
                     <ScrollViewer x:Name="editScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,8,0,0">
                         <WrapPanel>
@@ -115,7 +118,7 @@
                     </StackPanel></ScrollViewer>
                     </Expander>
                 </Border>
-                <Border Grid.Row="2" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Thumbnail}" ClipToBounds="True">
+                <Border x:Name="previewPanel" Grid.Row="1" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Thumbnail}" ClipToBounds="True">
                     <Grid>
                         <ScrollViewer x:Name="previewScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" SizeChanged="PreviewSizeChanged">
                             <local:TilePreview x:Name="preview" HorizontalAlignment="Center" VerticalAlignment="Center"/>
