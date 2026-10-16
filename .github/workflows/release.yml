@@ -98,10 +98,9 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Import a tileset atlas as separate editable assets, preserving source pixels and transparency.
-          - Slice by tile dimensions or column/row counts, with margins, gaps and optional transparent-cell filtering.
-          - Preview suggested grids and choose an alternative before importing; a 96-by-192 atlas can be split into eighteen 32-by-32 tiles in a 3-by-6 grid.
-          - Retain atlas provenance in .ttiles collections and protect the original atlas against overwrite. Imported tiles are snapshots and do not reload automatically from the atlas.
+          - Hold either Alt key to temporarily show the tile seam heatmap; releasing Alt restores the switch setting.
+          - Clear the temporary overlay when the inspector loses focus, without changing saved project settings or rerunning seam analysis.
+          - Show seam statistics below the preview, with drawing and smoothing tools above it, including at the minimum window size.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 

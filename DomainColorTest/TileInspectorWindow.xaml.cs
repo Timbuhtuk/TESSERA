@@ -19,6 +19,8 @@ public partial class TileInspectorWindow : Window
     private readonly ObservableCollection<TileAsset> _assets = [];
     private readonly List<FileSystemWatcher> _watchers = [];
     private readonly HashSet<string> _changedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<Key> _heatmapKeys = [];
+    private bool HeatmapEnabled => heatInput.IsChecked == true || _heatmapKeys.Count > 0;
     private readonly DispatcherTimer _reloadTimer = new() { Interval = TimeSpan.FromMilliseconds(450) };
     private sealed record CompanionChoice(TileAsset? Asset)
     {
@@ -187,7 +189,7 @@ public partial class TileInspectorWindow : Window
         double threshold = thresholdInput.Value;
         thresholdLabel.Text = $"Порог различия Δ: {threshold:F1}";
         opacityLabel.Text = $"Непрозрачность: {opacityInput.Value:F0}%";
-        preview.Configure(repeatX, repeatY, copies, scale, heatInput.IsChecked == true, guidesInput.IsChecked == true,
+        preview.Configure(repeatX, repeatY, copies, scale, HeatmapEnabled, guidesInput.IsChecked == true,
             threshold, opacityInput.Value / 100, stripeInput.Value, backgroundInput.SelectedIndex);
         if (CompanionAsset is null)
         {
@@ -312,6 +314,14 @@ public partial class TileInspectorWindow : Window
     }
     private void WindowKeyDown(object sender, KeyEventArgs e)
     {
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is Key.LeftAlt or Key.RightAlt)
+        {
+            _heatmapKeys.Add(key);
+            preview.HeatmapVisible = HeatmapEnabled;
+            e.Handled = true;
+            return;
+        }
         if (Keyboard.Modifiers != ModifierKeys.Control) return;
         if (e.Key == Key.O) OpenClicked(sender, e);
         else if (e.Key == Key.S) SaveCollectionClicked(sender, e);
@@ -322,6 +332,19 @@ public partial class TileInspectorWindow : Window
         }
         else return;
         e.Handled = true;
+    }
+    private void WindowKeyUp(object sender, KeyEventArgs e)
+    {
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key is not (Key.LeftAlt or Key.RightAlt)) return;
+        _heatmapKeys.Remove(key);
+        preview.HeatmapVisible = HeatmapEnabled;
+        e.Handled = true;
+    }
+    private void WindowDeactivated(object? sender, EventArgs e)
+    {
+        _heatmapKeys.Clear();
+        preview.HeatmapVisible = HeatmapEnabled;
     }
     private void AssetSelected(object sender, SelectionChangedEventArgs e)
     {

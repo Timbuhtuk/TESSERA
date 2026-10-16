@@ -83,6 +83,8 @@ two equal-size assets in both directions, paint pixels, undo/redo edits,
 and smooth the active tile or its borders. Save embedded images and edits
 as a .ttiles collection, or export an edited asset as PNG. Open directly
 with Tessera.exe --tiles [image-or-collection].
+Hold Alt to temporarily show the heatmap while its switch is off; release
+Alt to restore the selected view. Seam statistics sit below the preview.
 
 Import a tileset atlas by tile dimensions or a columns/rows grid. Preview
 grid suggestions, set margins and gaps, and optionally skip transparent

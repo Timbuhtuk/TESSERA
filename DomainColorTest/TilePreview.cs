@@ -25,6 +25,11 @@ public sealed class TilePreview : FrameworkElement
     private BitmapSource? _reverseHorizontalHeat, _reverseVerticalHeat;
     private bool _drawing;
     private bool _repeatX = true, _repeatY = true, _heat = true, _guides;
+    public bool HeatmapVisible
+    {
+        get => _heat;
+        set { if (_heat == value) return; _heat = value; InvalidateVisual(); }
+    }
     private double _opacity = .7, _stripe = 1;
     private Brush _background = Brushes.Transparent;
     private static readonly Brush Checker = MakeChecker();
