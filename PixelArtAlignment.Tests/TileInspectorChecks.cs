@@ -412,6 +412,17 @@ internal static class TileInspectorChecks
 
     private static void VerifyWheelZoom(TileInspectorWindow window, TilePreview preview, string folder)
     {
+        double width = window.Width, height = window.Height;
+        foreach (var size in new[] { new System.Windows.Size(1180, 800), new System.Windows.Size(720, 560) })
+        {
+            window.Width = size.Width; window.Height = size.Height; Pump();
+            VerifyWheelZoomAtCurrentSize(window, preview, folder);
+        }
+        window.Width = width; window.Height = height; Pump();
+    }
+
+    private static void VerifyWheelZoomAtCurrentSize(TileInspectorWindow window, TilePreview preview, string folder)
+    {
         var changeZoom = typeof(TileInspectorWindow).GetMethod("ChangePreviewZoom", BindingFlags.Instance | BindingFlags.NonPublic)!;
         var scroll = Get<ScrollViewer>(window, "previewScroll");
         var zoom = Get<ComboBox>(window, "zoomInput");
@@ -432,10 +443,22 @@ internal static class TileInspectorChecks
             return new Point(point.X / preview.PixelScale, point.Y / preview.PixelScale);
         }
         var anchor = SourcePoint();
+        void RequireAnchor(double scale, string operation)
+        {
+            var difference = SourcePoint() - anchor;
+            var dpi = VisualTreeHelper.GetDpi(preview);
+            // WPF rounds layout positions to device pixels. Measure the visible displacement,
+            // rather than requiring an arbitrary fraction of a source pixel at every zoom.
+            double error = Math.Max(Math.Abs(difference.X * preview.PixelScale * dpi.DpiScaleX),
+                Math.Abs(difference.Y * preview.PixelScale * dpi.DpiScaleY));
+            Require(preview.PixelScale == scale && error <= 1.000001,
+                $"{operation} moved the anchor by {error:F3} device pixels: {anchor} -> {SourcePoint()}, " +
+                $"viewport {scroll.ViewportWidth}x{scroll.ViewportHeight}, offset {scroll.HorizontalOffset},{scroll.VerticalOffset}");
+        }
         Wheel(120, pointer); Pump();
-        Require(preview.PixelScale == 32 && (SourcePoint() - anchor).Length < .01, "Zoom-in moved the pixel under the cursor");
+        RequireAnchor(32, "Zoom-in");
         Wheel(-120, pointer); Pump();
-        Require(preview.PixelScale == 16 && (SourcePoint() - anchor).Length < .01, "Zoom-out moved the pixel under the cursor");
+        RequireAnchor(16, "Zoom-out");
         Wheel(240, pointer); Pump();
         Require(preview.PixelScale == 64, "Multi-notch wheel did not advance two zoom levels");
         Wheel(30, pointer); Pump();
