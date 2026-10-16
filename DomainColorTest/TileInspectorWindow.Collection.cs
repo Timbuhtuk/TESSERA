@@ -24,7 +24,8 @@ public partial class TileInspectorWindow
         {
             Selected = ActiveAsset?.Id, Companion = CompanionAsset?.Id,
             RepeatX = repeatXInput.IsChecked == true, RepeatY = repeatYInput.IsChecked == true,
-            Copies = copiesInput.SelectedIndex, Zoom = zoomInput.SelectedIndex, Background = backgroundInput.SelectedIndex,
+            Copies = copiesInput.SelectedIndex, Zoom = Math.Clamp(zoomInput.SelectedIndex - 4, 0, 6),
+            ZoomScale = TileZoomFactors[Math.Max(0, zoomInput.SelectedIndex)], Background = backgroundInput.SelectedIndex,
             Heat = heatInput.IsChecked == true, Guides = guidesInput.IsChecked == true,
             Threshold = thresholdInput.Value, Opacity = opacityInput.Value, Stripe = stripeInput.Value,
             Color = paintColorInput.Text, BrushSize = brushSizeInput.SelectedIndex,
@@ -52,7 +53,9 @@ public partial class TileInspectorWindow
             assetList.SelectedItem = _assets.FirstOrDefault(asset => asset.Id == s.Selected) ?? _assets.FirstOrDefault();
             repeatXInput.IsChecked = s.RepeatX; repeatYInput.IsChecked = s.RepeatY;
             copiesInput.SelectedIndex = Math.Clamp(s.Copies, 0, 2);
-            zoomInput.SelectedIndex = Math.Clamp(s.Zoom, 0, 6);
+            int zoomIndex = s.ZoomScale is { } scale ? Array.IndexOf(TileZoomFactors, scale) : -1;
+            // Version-1 projects originally stored indexes for Fit and 100–3200% only.
+            zoomInput.SelectedIndex = zoomIndex >= 0 ? zoomIndex : s.Zoom > 0 ? Math.Clamp(s.Zoom, 1, 6) + 4 : 0;
             backgroundInput.SelectedIndex = Math.Clamp(s.Background, 0, 2);
             heatInput.IsChecked = s.Heat; guidesInput.IsChecked = s.Guides;
             thresholdInput.Value = Finite(s.Threshold, 0, 30, 5);

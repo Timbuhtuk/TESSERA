@@ -56,10 +56,12 @@
                             <ComboBoxItem Content="3"/><ComboBoxItem Content="5"/><ComboBoxItem Content="7"/>
                         </ComboBox>
                         <TextBlock Text="Масштаб · без сглаживания" Margin="0,12,0,5"/>
-                        <ComboBox x:Name="zoomInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="Масштаб тайла">
-                            <ComboBoxItem Content="Вписать"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/>
-                            <ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/>
+                        <ComboBox x:Name="zoomInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="Масштаб тайла" ToolTip="Ctrl + колёсико над предпросмотром — масштаб к точке под курсором">
+                            <ComboBoxItem Content="Вписать"/><ComboBoxItem Content="6,25%"/><ComboBoxItem Content="12,5%"/><ComboBoxItem Content="25%"/><ComboBoxItem Content="50%"/>
+                            <ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/>
+                            <ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/><ComboBoxItem Content="6400%"/>
                         </ComboBox>
+                        <TextBlock Text="Ctrl + колёсико · к точке под курсором" Style="{StaticResource Hint}"/>
                         <TextBlock Text="Фон прозрачности" Margin="0,12,0,5"/>
                         <ComboBox x:Name="backgroundInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="Фон предпросмотра">
                             <ComboBoxItem Content="Шахматка"/><ComboBoxItem Content="Белый"/><ComboBoxItem Content="Тёмный"/>
