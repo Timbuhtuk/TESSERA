@@ -98,10 +98,10 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Inspect tile repetition on X/Y with an alpha-aware OKLab seam heatmap, and compare A-to-B and B-to-A edges independently.
-          - Keep embedded assets and edits in portable .ttiles collections, with protection against overwriting local edits when source files change.
-          - Edit pixels with pencil, eraser and eyedropper, adjust brush size, undo/redo changes and export PNG.
-          - Smooth the active tile or its border strips with the existing neighboring-color algorithm, using 1 to 100 passes.
+          - Import a tileset atlas as separate editable assets, preserving source pixels and transparency.
+          - Slice by tile dimensions or column/row counts, with margins, gaps and optional transparent-cell filtering.
+          - Preview suggested grids and choose an alternative before importing; a 96-by-192 atlas can be split into eighteen 32-by-32 tiles in a 3-by-6 grid.
+          - Retain atlas provenance in .ttiles collections and protect the original atlas against overwrite. Imported tiles are snapshots and do not reload automatically from the atlas.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 
