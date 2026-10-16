@@ -78,6 +78,12 @@ Move, rotate, scale and reorder layers individually or as a selection.
 Save an editable .tboard project with embedded images, or export a PNG.
 Boards are saved separately from the image library. Save before closing.
 
+Tile inspector repeats an image on X/Y and shows a seam heatmap. Compare
+two equal-size assets in both directions, paint pixels, undo/redo edits,
+and smooth the active tile or its borders. Save embedded images and edits
+as a .ttiles collection, or export an edited asset as PNG. Open directly
+with Tessera.exe --tiles [image-or-collection].
+
 Your library is at %LOCALAPPDATA%\Tessera\Library.
 On first launch, existing Pixelizator images and histories are copied there.
 The old library remains as a backup. Copy the Tessera folder separately
