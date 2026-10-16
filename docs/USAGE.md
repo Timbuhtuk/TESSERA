@@ -52,6 +52,16 @@ Use **Карандаш**, **Ластик**, or **Пипетка** above the prev
 
 The desktop executable also accepts `--tiles [image-or-collection-path]` to open this tool directly.
 
+### Tileset import
+
+Use **Импорт тайлсета…** below the asset collection to open an atlas. Load a file or drop one into the import window. **Размер тайла, px** specifies cell width/height; **Столбцы и строки** specifies the grid and calculates the cell dimensions. For example, a 96×192 image with 32×32 tiles yields 3 columns × 6 rows, or 18 assets. The **Сетка 3 × 6** shortcut performs the reverse calculation.
+
+Loading an atlas proposes a grid automatically. **Автоподбор сетки** ranks common square tile sizes and selected rectangular sizes using image dimensions and color/alpha changes at candidate boundaries. It offers alternatives rather than claiming that image dimensions uniquely determine the correct grid. Confirm the outlines in the preview before importing. The usual 96×192 atlas is proposed as 32×32 cells in a 3×6 grid, including flat/ambiguous images.
+
+**Отступы и промежутки** supports symmetric horizontal/vertical outer margins and separate gaps between columns and rows. Dimensions must produce whole cells and cover the atlas exactly after accounting for these fields; invalid settings disable import. Up to 4096 cells can be imported at once. **Пропускать пустые тайлы** optionally excludes fully transparent cells; by default all positions are kept.
+
+**Добавить тайлы в коллекцию** creates independent editable assets in row-major order, named with their original row/column coordinates. Pixel colors and alpha are copied without resizing. The collection embeds these images and retains the original atlas path for source protection. Import is a snapshot: use the import window again to reslice an externally edited atlas. Export and project saving cannot overwrite that source atlas.
+
 ## Filters
 
 **Filters** uses the source or result selected on the editor toolbar. **Monochrome** converts visible colors to grayscale, preserves dimensions and alpha, and saves a new result in the history.

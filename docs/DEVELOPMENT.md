@@ -62,6 +62,14 @@ The editable Tessera mark and its generation script are documented in the [asset
 
 Build the tests, then run `dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --tiles`. This checks known distances, alpha, axis mapping, the home entry, repetition modes, rendered heatmap toggling/opacity/direction, fit and fixed zoom, the minimum layout, failed loads, file writes, atomic replacement and disabling the watcher. Collection checks cover pair selection, pencil/eraser/eyedropper, stroke isolation, undo/redo, local-edit protection, portable project round trips, failed project loads, export protection and smoothing parity with the shared algorithm. Rendered captures are written under `artifacts/wpf/verification/tiles-*`. These checks also run with `--ui`.
 
+### Tileset slicing
+
+`PixelArtDownscale/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
+
+`TileSetImportWindow.xaml(.cs)` provides manual/automatic layout controls and an outlined pixel preview in `TileSetPreview.cs`. The `TileInspectorWindow.TileSet.cs` partial adds the confirmed batch to the collection. Each slice keeps an optional `AtlasSourcePath` instead of an ordinary single-image watcher path. Version-1 `.ttiles` manifests accept this optional field, retain embedded pixels, and protect the original atlas from PNG/project overwrite. Existing projects without the field remain supported.
+
+`TileSetChecks.cs` runs with `--tiles` and `--ui`: 96×192 → 3×6 × 32×32, rectangular cells, margins/gutters, malformed grids, ambiguous automatic suggestions, byte-exact crops including alpha, optional empty-cell filtering, minimum dialog layout, collection integration, project round trips and source protection.
+
 ## Compatibility
 
 Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library now lives at `%LOCALAPPDATA%\Tessera\Library`. On first launch, `LibraryLocation` copies entries from `%LOCALAPPDATA%\Pixelizator\Library` without deleting the old directory. A marker in the Tessera data directory prevents removed entries from being imported again on later launches.

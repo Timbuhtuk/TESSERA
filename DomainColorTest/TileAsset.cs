@@ -14,6 +14,7 @@ public sealed class TileAsset : INotifyPropertyChanged
     public Guid Id { get; init; } = Guid.NewGuid();
     public string Name { get; init; } = "Тайл";
     public string? SourcePath { get; init; }
+    public string? AtlasSourcePath { get; init; }
     public int Width { get; }
     public int Height { get; }
     public byte[] Pixels { get; private set; }

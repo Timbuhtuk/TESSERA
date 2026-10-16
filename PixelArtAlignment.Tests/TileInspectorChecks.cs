@@ -57,6 +57,7 @@ internal static class TileInspectorChecks
             Require(rejected, "Invalid threshold accepted");
         });
         check("Tile inspector WPF: entry, tiling axes, heatmap, zoom, reload and file watching", RunUi);
+        TileSetChecks.Run(check);
     }
 
     private static void RunUi()

@@ -26,13 +26,14 @@ public sealed class TileCollectionSettings
 
 public static class TileCollectionFile
 {
-    private sealed record AssetEntry(Guid Id, string Name, string? SourcePath, bool Edited, string Image);
+    private sealed record AssetEntry(Guid Id, string Name, string? SourcePath, bool Edited, string Image, string? AtlasSourcePath = null);
     private sealed record Manifest(int Version, TileCollectionSettings Settings, AssetEntry[] Assets);
 
     public static void Save(string path, IReadOnlyList<TileAsset> assets, TileCollectionSettings settings)
     {
         path = Path.GetFullPath(path);
-        if (assets.Any(asset => string.Equals(asset.SourcePath, path, StringComparison.OrdinalIgnoreCase)))
+        if (assets.Any(asset => string.Equals(asset.SourcePath, path, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(asset.AtlasSourcePath, path, StringComparison.OrdinalIgnoreCase)))
             throw new IOException("Проект не может заменить исходное изображение.");
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -45,7 +46,7 @@ public static class TileCollectionFile
                     var asset = assets[q];
                     string image = $"images/{q:D5}.png";
                     using (var stream = archive.CreateEntry(image, CompressionLevel.NoCompression).Open()) asset.WritePng(stream);
-                    entries.Add(new(asset.Id, asset.Name, asset.SourcePath, asset.HasLocalEdits, image));
+                    entries.Add(new(asset.Id, asset.Name, asset.SourcePath, asset.HasLocalEdits, image, asset.AtlasSourcePath));
                 }
                 using var manifest = archive.CreateEntry("collection.json").Open();
                 JsonSerializer.Serialize(manifest, new Manifest(1, settings, entries.ToArray()));
@@ -71,8 +72,9 @@ public static class TileCollectionFile
             // Decode from memory: ZIP entry streams do not necessarily support seeking.
             using var imageStream = new MemoryStream(); stream.CopyTo(imageStream); imageStream.Position = 0;
             string? source = entry.SourcePath is null ? null : Path.GetFullPath(entry.SourcePath);
+            string? atlas = entry.AtlasSourcePath is null ? null : Path.GetFullPath(entry.AtlasSourcePath);
             assets.Add(new TileAsset(TileAsset.Decode(imageStream), entry.Edited)
-                { Id = entry.Id, Name = entry.Name ?? "Тайл", SourcePath = source });
+                { Id = entry.Id, Name = entry.Name ?? "Тайл", SourcePath = source, AtlasSourcePath = atlas });
         }
         return (assets, manifest.Settings);
     }
