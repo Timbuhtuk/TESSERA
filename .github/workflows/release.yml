@@ -98,10 +98,10 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Assemble images on a moodboard with a custom canvas size and background color.
-          - Move, rotate, scale and reorder individual layers or selections, with zoom and scrolling for large boards.
-          - Save editable .tboard projects with embedded images and export the composition as PNG.
-          - Import, save and export in the background, with reduced-size editor previews and banded PNG rendering for large canvases.
+          - Inspect tile repetition on X/Y with an alpha-aware OKLab seam heatmap, and compare A-to-B and B-to-A edges independently.
+          - Keep embedded assets and edits in portable .ttiles collections, with protection against overwriting local edits when source files change.
+          - Edit pixels with pencil, eraser and eyedropper, adjust brush size, undo/redo changes and export PNG.
+          - Smooth the active tile or its border strips with the existing neighboring-color algorithm, using 1 to 100 passes.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 

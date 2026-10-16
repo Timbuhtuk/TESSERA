@@ -414,6 +414,14 @@
                     </Grid>
                 </Border>
 
+                <Border x:Name="tilesBanner" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Margin="0,16,0,0" Background="{DynamicResource Ts.Raised}">
+                    <StackPanel Margin="32,28">
+                        <TextBlock Text="Проверка тайлинга" Style="{StaticResource DisplayTitle}" TextWrapping="Wrap"/>
+                        <TextBlock Text="Повторение по X и Y, цветовые различия на стыках и тепловая карта краёв в реальном времени." Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                        <Button x:Name="homeTilesButton" Content="Проверить тайл…" Click="OpenTileInspector" HorizontalAlignment="Left" Margin="0,22,0,0" Padding="17,12"/>
+                    </StackPanel>
+                </Border>
+
                 <Grid x:Name="libraryHeading" Margin="0,26,0,18">
                     <TextBlock Text="Библиотека изображений" Style="{StaticResource SectionTitle}"/>
                 </Grid>

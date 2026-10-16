@@ -18,6 +18,7 @@ Today, Tessera brings the rest of that workflow together:
 - Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
 - Create Windows ICO files containing several icon sizes.
 - Arrange images on a layered moodboard, save an editable project and export the composition as PNG.
+- Inspect repeating tiles and directional seams, edit pixels and save portable asset collections.
 - Remove a solid background in its own workspace and save a transparent PNG, or apply it while creating an ICO. Adjust tolerance and remove matching colors globally or only from edge-connected regions.
 - Preserve transparency and export one result or all results for an image.
 - Drop several Aseprite animations to create PNG sprite sheets with JSON frame timings, then save individual results or the whole batch.

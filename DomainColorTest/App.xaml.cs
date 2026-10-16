@@ -14,6 +14,15 @@ public partial class App : Application
             return;
         }
 
+        if (e.Args.Length >= 1 && e.Args[0] == "--tiles")
+        {
+            var inspector = new TileInspectorWindow();
+            MainWindow = inspector;
+            inspector.Show();
+            if (e.Args.Length >= 2) _ = inspector.LoadFileAsync(e.Args[1]);
+            return;
+        }
+
         MainWindow = new MainWindow();
         MainWindow.Show();
     }

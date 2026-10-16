@@ -30,6 +30,28 @@ Previews preserve aspect ratio and enlarge pixels without smoothing. Ctrl+mouse 
 
 On wide windows, the result and source filmstrips sit above their previews; on narrow windows, the source filmstrip moves below them. Drag a result to the source filmstrip to process it independently. Removing a library item leaves external originals and exported files intact. Use PNG when saving transparency.
 
+## Tile seam inspector
+
+On the home screen, select **Проверить тайл…** under **Проверка тайлинга**. This opens an independent window. Drop several images into it or use **Добавить тайлы…** / Ctrl+O. PNG, BMP, GIF, JPEG and TIFF are supported; animated and multipage files use the first frame. The tool never modifies imported source files.
+
+The collection on the left keeps separate assets and thumbnails. Select the active **A**, then choose **B** under **Сосед B** to compare different images. The neighbor list includes assets with exactly the same dimensions; images are never stretched to make them fit. **Сам с собой** restores the original single-asset mode. With B selected, copies alternate A/B along each enabled axis. Both **A→B** and **B→A** are measured, because matching one direction does not establish the other. Pair summaries show Δ as mean/maximum and the number/percentage above the threshold.
+
+Enable **X** for horizontal repetition, **Y** for vertical repetition, or both. Each enabled axis repeats 3, 5 or 7 times. **Вписать** fits the preview, while 100–3200% zoom preserves hard pixel edges and enables scrolling. Checkerboard, white and dark backgrounds make transparency visible.
+
+**Тепловая карта краёв** overlays the opposite edges of every copy. The algorithm compares left/right pixels at each row and top/bottom pixels at each column using Euclidean OKLab distance multiplied by 100. Transparent pixels are composited in linear sRGB over both black and white; the larger distance is retained. Invisible RGB does not create false errors. The metric follows [Björn Ottosson's OKLab conversion](https://bottosson.github.io/posts/oklab/).
+
+The summary for each active axis shows the mean, maximum and number/percentage of pixel pairs above the threshold. Green marks values at or below the threshold; yellow/red indicate increasing differences. Red begins at four times the threshold (at threshold zero, red begins at Δ=1). Opacity and stripe width affect the overlay only. Disable it to judge the original repeated image. Hover over a tile to inspect the edge difference for its row and column.
+
+Use **Карандаш**, **Ластик**, or **Пипетка** above the preview for local edits. A stroke changes the A or B copy where it begins, updates all copies and recalculates the heatmap. Moving across a seam during a stroke does not paint another asset. Choose a 1, 2 or 4 pixel square brush and a HEX color (`#RRGGBB` or `#AARRGGBB`); **Цвет…** opens the existing color picker. The eyedropper reads the original pixel, excluding the heatmap. **↶ / ↷** and Ctrl+Z / Ctrl+Y undo or redo a complete stroke or smoothing operation. The hint names the asset targeted by undo; selecting an asset selects its edit history. Text fields retain their normal editing shortcuts.
+
+**Сгладить цвета A** runs the existing local 3×3 color algorithm on active A, with 1–100 passes. **Только края** retains the result only in the border strip whose width is set by the heatmap stripe control. The algorithm preserves dimensions and alpha; it operates inside the selected asset and does not blend it with B or guarantee matching seams. Undo restores the previous pixels in one step.
+
+**Сохранить проект…** stores the entire collection, embedded edited images, selected pair and viewing settings in a portable `.ttiles` file. **Коллекция…** reopens it even if the original files have moved. Ctrl+S saves the current project (or opens the save dialog for a new one). The title's `*` indicates unsaved project changes; an asset's `*` indicates local changes relative to its imported source. **PNG…** exports active A to a separate PNG. **Убрать** removes an asset from the collection and leaves its original file intact. Unsaved work is checked before closing or replacing a collection.
+
+**Следить за файлом** watches imported files, including B and inactive collection assets, after an external editor saves or replaces them. Changes are debounced and transient read failures retried. Assets with local edits are protected from automatic replacement, including after saving/reopening a project. **Перечитать файл** reloads active A manually and asks before replacing local edits. A failed load keeps the previous preview. Equal edge colors do not guarantee a seamless pattern: inspect the repeated texture for rhythm, gradients and shapes as well.
+
+The desktop executable also accepts `--tiles [image-or-collection-path]` to open this tool directly.
+
 ## Filters
 
 **Filters** uses the source or result selected on the editor toolbar. **Monochrome** converts visible colors to grayscale, preserves dimensions and alpha, and saves a new result in the history.
