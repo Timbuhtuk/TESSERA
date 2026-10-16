@@ -10,6 +10,7 @@ using DomainColorTest;
 using PixelArtDownscale;
 using Color = System.Drawing.Color;
 using Point = System.Windows.Point;
+using Image = System.Windows.Controls.Image;
 
 namespace PixelArtAlignment.Tests;
 
@@ -208,6 +209,7 @@ internal static class TileInspectorChecks
         var assetA = window.Assets.Single(asset => asset.SourcePath == aPath);
         var assetB = window.Assets.Single(asset => asset.SourcePath == bPath);
         window.SelectAsset(assetA.Id); window.SelectCompanion(assetB.Id); Pump();
+        var companionThumbnail = VerifyCompanionPreviews(window, assetA, assetB, folder);
         Require(window.Analysis!.Horizontal[2] == 0 && window.Analysis.Vertical[2] == 0 &&
             window.ReverseAnalysis!.Horizontal[2] > 99 && window.ReverseAnalysis.Vertical[2] > 99,
             "A->B and B->A seam orientations were confused");
@@ -237,8 +239,10 @@ internal static class TileInspectorChecks
         Get<Button>(window, "redoButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Require(assetA.GetPixel(7, 3) == System.Windows.Media.Colors.Black, "Redo lost the stroke");
         Get<ComboBox>(window, "paintToolInput").SelectedIndex = 2;
+        byte[] thumbnailBefore = Pixels(Render(companionThumbnail));
         Paint(new TilePointer(true, 0, 2, 1, 0), true); Finish();
         Require(assetB.GetPixel(0, 2).A == 0, "Eraser did not clear alpha in B");
+        Require(!Pixels(Render(companionThumbnail)).SequenceEqual(thumbnailBefore), "Neighbor thumbnail did not reflect the edit live");
         Get<Button>(window, "undoButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Require(assetB.GetPixel(0, 2) == System.Windows.Media.Colors.White, "Undo did not target the last painted asset B");
         Get<ComboBox>(window, "paintToolInput").SelectedIndex = 3;
@@ -365,6 +369,47 @@ internal static class TileInspectorChecks
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(Render(element)));
         using var stream = File.Create(path); encoder.Save(stream);
     }
+    private static Image VerifyCompanionPreviews(TileInspectorWindow window, TileAsset a, TileAsset b, string folder)
+    {
+        var combo = Get<ComboBox>(window, "companionInput");
+        Require(combo.Items.Count == 2 && combo.DisplayMemberPath.Length == 0, "Neighbor choices lost dimension filtering or still use names");
+        var selected = FindVisual<Image>(combo)!;
+        Require(selected?.Source == b.Image && RenderOptions.GetBitmapScalingMode(selected) == BitmapScalingMode.NearestNeighbor,
+            "The selected neighbor is not shown as a pixel thumbnail");
+        var row = (StackPanel)VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(selected));
+        Require(row.ToolTip?.ToString()?.Contains(b.Name) == true && FindVisual<TextBlock>(row)?.Text.Contains(b.Name) == false,
+            "The asset name must be in the tooltip instead of the visible row");
+        window.SelectCompanion(null); Pump();
+        Require(FindVisual<Image>(combo)?.Source == a.Image, "Self mode does not preview the active tile");
+        window.SelectCompanion(b.Id); Pump();
+        combo.IsDropDownOpen = true; Pump();
+        try
+        {
+            for (int q = 0; q < 2; q++)
+            {
+                var item = (ComboBoxItem)combo.ItemContainerGenerator.ContainerFromIndex(q);
+                Require(FindVisual<Image>(item)?.Source == (q == 0 ? a.Image : b.Image), "A dropdown item has the wrong thumbnail");
+            }
+            DependencyObject root = (ComboBoxItem)combo.ItemContainerGenerator.ContainerFromIndex(0);
+            while (VisualTreeHelper.GetParent(root) is { } parent) root = parent;
+            Capture((FrameworkElement)root, Path.Combine(folder, "neighbor-dropdown.png"));
+        }
+        finally { combo.IsDropDownOpen = false; Pump(); }
+        Capture(window, Path.Combine(folder, "neighbor-selected.png"));
+        return FindVisual<Image>(combo)!;
+    }
+
+    private static T? FindVisual<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int q = 0; q < VisualTreeHelper.GetChildrenCount(parent); q++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, q);
+            if (child is T found) return found;
+            if (FindVisual<T>(child) is { } nested) return nested;
+        }
+        return null;
+    }
+
     private static void VerifyWheelZoom(TileInspectorWindow window, TilePreview preview, string folder)
     {
         double width = window.Width, height = window.Height;

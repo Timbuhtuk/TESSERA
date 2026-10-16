@@ -85,6 +85,8 @@ as a .ttiles collection, or export an edited asset as PNG. Open directly
 with Tessera.exe --tiles [image-or-collection].
 Hold Alt to temporarily show the heatmap while its switch is off; release
 Alt to restore the selected view. Seam statistics sit below the preview.
+Choose a neighboring tile from its thumbnail. Hover for its name; the
+self-comparison thumbnail shows the active tile and a loop marker.
 Ctrl + mouse wheel zooms toward the cursor, like the main editor.
 The zoom selector offers Fit and fixed scales from 6.25% to 6400%.
 

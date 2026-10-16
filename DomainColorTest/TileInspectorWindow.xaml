@@ -10,6 +10,12 @@
         PreviewKeyUp="WindowKeyUp" Deactivated="WindowDeactivated">
     <Window.Resources><ResourceDictionary>
         <ResourceDictionary.MergedDictionaries><local:TileInspectorResources/></ResourceDictionary.MergedDictionaries>
+        <DrawingBrush x:Key="NeighborChecker" TileMode="Tile" ViewportUnits="Absolute" Viewport="0,0,16,16">
+            <DrawingBrush.Drawing><DrawingGroup>
+                <GeometryDrawing Brush="#3E3E3E" Geometry="M0,0 H16 V16 H0 Z"/>
+                <GeometryDrawing Brush="#2E2E2E" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z"/>
+            </DrawingGroup></DrawingBrush.Drawing>
+        </DrawingBrush>
     </ResourceDictionary></Window.Resources>
     <Grid Margin="18">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -45,7 +51,16 @@
                         </UniformGrid>
                         <Button x:Name="importTilesetButton" Content="Импорт тайлсета…" Click="OpenTileSetClicked" Margin="0,8,0,0" ToolTip="Нарезать атлас на отдельные тайлы с ручным или автоматическим подбором сетки"/>
                         <TextBlock Text="Сосед B · тот же размер" Margin="0,12,0,5"/>
-                        <ComboBox x:Name="companionInput" DisplayMemberPath="Label" SelectionChanged="CompanionSelected" AutomationProperties.Name="Соседний тайл B"/>
+                        <ComboBox x:Name="companionInput" MaxDropDownHeight="340" SelectionChanged="CompanionSelected" AutomationProperties.Name="Соседний тайл B">
+                            <ComboBox.ItemTemplate><DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,3" ToolTip="{Binding Label}" AutomationProperties.Name="{Binding Label}">
+                                    <Border Width="66" Height="66" BorderThickness="1" BorderBrush="{DynamicResource Ts.Border}" Background="{StaticResource NeighborChecker}">
+                                        <Image Source="{Binding DisplayAsset.Image}" Width="64" Height="64" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding Caption}" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextSecondary}"/>
+                                </StackPanel>
+                            </DataTemplate></ComboBox.ItemTemplate>
+                        </ComboBox>
                         <TextBlock x:Name="pairLabel" Text="Сам с собой" Style="{StaticResource Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,14"/>
                         <TextBlock Text="Повторение" FontWeight="SemiBold" Margin="0,0,0,8"/>

@@ -22,9 +22,11 @@ public partial class TileInspectorWindow : Window
     private readonly HashSet<Key> _heatmapKeys = [];
     private bool HeatmapEnabled => heatInput.IsChecked == true || _heatmapKeys.Count > 0;
     private readonly DispatcherTimer _reloadTimer = new() { Interval = TimeSpan.FromMilliseconds(450) };
-    private sealed record CompanionChoice(TileAsset? Asset)
+    private sealed record CompanionChoice(TileAsset? Asset, TileAsset? SelfAsset = null)
     {
         public string Label => Asset?.Label ?? "Сам с собой";
+        public TileAsset? DisplayAsset => Asset ?? SelfAsset;
+        public string Caption => Asset is null ? "↻ A" : $"{Asset.Width}×{Asset.Height}";
         public override string ToString() => Label;
     }
     private bool? _compactLayout;
@@ -147,7 +149,7 @@ public partial class TileInspectorWindow : Window
         if (!_ready || _settingCollection) return;
         Guid? neighbor = CompanionAsset?.Id;
         _settingCollection = true;
-        var choices = new List<CompanionChoice> { new(null) };
+        var choices = new List<CompanionChoice> { new(null, ActiveAsset) };
         if (ActiveAsset is { } active)
             choices.AddRange(_assets.Where(asset => asset != active && asset.Width == active.Width && asset.Height == active.Height)
                 .Select(asset => new CompanionChoice(asset)));

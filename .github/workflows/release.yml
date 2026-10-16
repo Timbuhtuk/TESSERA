@@ -101,6 +101,8 @@ jobs:
           - Zoom the tile inspector with Ctrl plus the mouse wheel, keeping the point under the cursor where scroll bounds allow. Plain wheel input continues to scroll.
           - Choose zoom steps from 6.25% to 6400%; the first wheel step from Fit uses the current displayed scale.
           - Save the new zoom levels in collections while preserving the meaning of zoom settings in existing projects.
+          - Choose neighboring tiles by 64-pixel thumbnails on a checkerboard; names remain available as tooltips and accessibility labels.
+          - Show the active tile for the self-comparison option and update thumbnails as pixels are edited, while keeping the equal-size filter.
           - Keep the Alt heatmap shortcut and seam statistics below the preview from the previous release.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
