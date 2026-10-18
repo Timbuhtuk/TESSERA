@@ -98,7 +98,29 @@ public partial class WorkspaceBrowser : UserControl
         }
         _building = false;
     }
-    private TreeViewItem MakeNode(string name, object tag, bool selected) => new() { Header = name, Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 5, 2, 5) };
+    private TreeViewItem MakeNode(string name, object tag, bool selected)
+    {
+        var node = new TreeViewItem { Header = name, Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 5, 2, 5) };
+        Guid project = tag is WorkspaceProject p ? p.Id : ((WorkspaceFolder)tag).ProjectId;
+        Guid? folder = (tag as WorkspaceFolder)?.Id;
+        var menu = new ContextMenu();
+        var create = new MenuItem { Header = "Создать папку…" };
+        create.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => CreateFolder(project, folder))));
+        var rename = new MenuItem { Header = "Переименовать…" };
+        rename.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => RenameSection(tag))));
+        var delete = new MenuItem { Header = folder is null ? "Удалить проект…" : "Удалить папку…" };
+        delete.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => DeleteSection(project, folder))));
+        menu.Items.Add(create); menu.Items.Add(rename); menu.Items.Add(new Separator()); menu.Items.Add(delete);
+        menu.Opened += (_, _) => node.IsSelected = true;
+        node.ContextMenu = menu;
+        node.PreviewMouseRightButtonDown += (_, e) =>
+        {
+            // A nested folder also routes through its ancestors. Select only the actual target.
+            if (FindTreeItem(e.OriginalSource as DependencyObject) != node) return;
+            node.IsSelected = true; node.Focus();
+        };
+        return node;
+    }
     private void AddFolders(TreeViewItem parent, Guid project, Guid? parentId, HashSet<Guid> visited)
     {
         foreach (var folder in _catalog!.State.Folders.Where(f => f.ProjectId == project && f.ParentId == parentId))
@@ -134,32 +156,28 @@ public partial class WorkspaceBrowser : UserControl
         string? name = Prompt("Создать проект", "Название проекта"); if (name is null) return;
         var project = _catalog!.CreateProject(name); Navigate("project", project.Id); RebuildTree();
     });
-    private void NewFolderClicked(object sender, RoutedEventArgs e) => Safe(() =>
+    private void CreateFolder(Guid project, Guid? parent)
     {
-        if (_catalog!.State.ProjectId is not { } id) { Tell("Сначала выберите проект."); return; }
         string? name = Prompt("Создать папку", "Название папки"); if (name is null) return;
-        var folder = _catalog.CreateFolder(id, _catalog.State.FolderId, name); Navigate("project", id, folder.Id); RebuildTree();
-    });
-    private void SectionMenuClicked(object sender, RoutedEventArgs e)
+        var folder = _catalog!.CreateFolder(project, parent, name); Navigate("project", project, folder.Id); RebuildTree();
+    }
+    private void RenameSection(object section)
     {
-        var menu = new ContextMenu();
-        var rename = new MenuItem { Header = "Переименовать…" };
-        rename.Click += (_, _) => Safe(() =>
+        Guid id = section is WorkspaceProject project ? project.Id : ((WorkspaceFolder)section).Id;
+        string currentName = section is WorkspaceProject p ? p.Name : ((WorkspaceFolder)section).Name;
+        string? name = Prompt("Переименовать", "Название", currentName); if (name is null) return;
+        _catalog!.Rename(id, name); RebuildTree(); Refresh();
+    }
+    private void DeleteSection(Guid project, Guid? folder)
+    {
+        if (TesseraDialog.Show(Window.GetWindow(this), "Удалить выбранный раздел? Ассеты останутся в библиотеке. Содержимое папки перейдёт в родительскую.", "Структура проекта", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        if (folder is { } id)
         {
-            var state = _catalog!.State; Guid? id = state.FolderId ?? state.ProjectId; if (id is null) return;
-            string? name = Prompt("Переименовать", "Название", viewTitle.Text); if (name is null) return;
-            _catalog.Rename(id.Value, name); RebuildTree(); Refresh();
-        });
-        var delete = new MenuItem { Header = "Удалить папку / проект…" };
-        delete.Click += (_, _) => Safe(() =>
-        {
-            var state = _catalog!.State; if (state.ProjectId is null) return;
-            if (TesseraDialog.Show(Window.GetWindow(this), "Удалить выбранный раздел? Ассеты останутся в библиотеке. Содержимое папки перейдёт в родительскую.", "Структура проекта", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
-            if (state.FolderId is { } folder) { var parent = state.Folders.Single(f => f.Id == folder).ParentId; _catalog.RemoveFolder(folder); state.FolderId = parent; }
-            else { _catalog.RemoveProject(state.ProjectId.Value); state.ProjectId = null; state.View = "all"; }
-            RebuildTree(); Refresh();
-        });
-        menu.Items.Add(rename); menu.Items.Add(delete); menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
+            var parent = _catalog!.State.Folders.Single(f => f.Id == id).ParentId;
+            _catalog.RemoveFolder(id); Navigate("project", project, parent);
+        }
+        else { _catalog!.RemoveProject(project); Navigate("all"); }
+        RebuildTree();
     }
 
     private void ImportClicked(object sender, RoutedEventArgs e)

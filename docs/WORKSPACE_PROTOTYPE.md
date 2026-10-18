@@ -11,7 +11,7 @@ The default library is `WorkspaceData/Library` beside the executable. On first l
 ## Organize materials
 
 - **Все ассеты** lists the whole library; **Без проекта** lists assets with no project memberships; **Недавние** lists previously opened materials.
-- Create projects using **+** beside **Проекты**. Select a project or folder and use **+ Папка** to create nested folders. **⋯** renames or removes the selected section.
+- Create projects using **+** beside **Проекты**. Right-click a project or folder to create a folder inside it, rename it or remove it. The same menu opens with Shift+F10 on the focused tree item.
 - Open or drop images, Aseprite files, `.tboard` boards and `.ttiles` collections. Imports made while a project is selected are linked into its selected folder. Other imports remain standalone.
 - Use Ctrl/Shift for multiple selection. Drag assets onto project/folder nodes, or use **Добавить в проект…** / **Переместить в папку…**. Folders can be dragged within their own project.
 - A project holds references. The same asset, edits, results and tags are shared by every project using it. Each project has its own folder placement.

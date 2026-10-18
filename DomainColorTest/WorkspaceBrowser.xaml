@@ -32,7 +32,6 @@
      <Button Content="Без проекта" Style="{StaticResource NavButton}" Click="UnassignedClicked"/>
      <Button Content="Недавние" Style="{StaticResource NavButton}" Click="RecentClicked"/>
      <DockPanel Margin="0,24,0,8"><Button Content="+" DockPanel.Dock="Right" Click="NewProjectClicked" ToolTip="Создать проект" AutomationProperties.Name="Создать проект"/><TextBlock Text="ПРОЕКТЫ" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11"/></DockPanel>
-     <WrapPanel><Button Content="+ Папка" Click="NewFolderClicked" Padding="6,4"/><Button Content="⋯" Click="SectionMenuClicked" Padding="8,4" Margin="5,0,0,0" AutomationProperties.Name="Действия с проектом или папкой"/></WrapPanel>
     </StackPanel>
     <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="Проекты и папки"/>
    </DockPanel>
