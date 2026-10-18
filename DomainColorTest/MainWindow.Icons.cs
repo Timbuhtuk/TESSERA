@@ -26,6 +26,7 @@ public partial class MainWindow
         SetVisible(editorToolbar, false);
         SetVisible(iconWorkspace, true);
         iconWorkspace.SetEditorMaterials(GetEditorMaterials());
+        HideWorkspaceBrowser();
         statusLabel.Text = "Готово";
     }
 

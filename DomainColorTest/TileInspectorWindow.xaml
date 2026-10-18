@@ -19,7 +19,7 @@
                 <TextBlock x:Name="inspectorTitle" Text="Проверка тайлинга" Style="{StaticResource SectionTitle}" TextWrapping="Wrap"/>
                 <TextBlock x:Name="fileLabel" Text="Повторение текстуры и проверка противоположных краёв" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,6,12,0" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
-            <WrapPanel Grid.Column="1" VerticalAlignment="Center" MaxWidth="420" HorizontalAlignment="Right">
+            <WrapPanel x:Name="workspaceTileToolbar" Grid.Column="1" VerticalAlignment="Center" MaxWidth="420" HorizontalAlignment="Right">
                 <Button Content="Коллекция…" Click="OpenCollectionClicked" Margin="0,0,6,6" ToolTip="Открыть сохранённый проект"/>
                 <Button Content="Сохранить проект…" Click="SaveCollectionClicked" Margin="0,0,6,6" ToolTip="Сохранить все ассеты и правки (Ctrl+S)"/>
                 <Button Content="Добавить тайлы…" Click="OpenClicked" Margin="0,0,0,6" ToolTip="Добавить изображения (Ctrl+O)"/>

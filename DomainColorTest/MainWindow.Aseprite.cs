@@ -22,6 +22,7 @@ public partial class MainWindow
         SetVisible(asepriteWorkspace, true);
         SetVisible(backgroundWorkspace, false);
         SetVisible(moodboardWorkspace, false);
+        HideWorkspaceBrowser();
     }
 
     private bool IsAsepriteDropTarget(DependencyObject? target, IDataObject data)

@@ -23,6 +23,7 @@ public partial class MainWindow
         {
             if (e.Key == Key.O && Keyboard.Modifiers == ModifierKeys.Control)
             {
+                if (_workspaceReady && _workspaceBrowser?.Visibility == Visibility.Visible) { e.Handled = true; _ = PromptWorkspaceFilesAsync(); return; }
                 if (asepriteWorkspace.Visibility == Visibility.Visible) _ = asepriteWorkspace.OpenAsync();
                 else if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
                 else if (backgroundWorkspace.Visibility == Visibility.Visible) _ = backgroundWorkspace.OpenAsync();
@@ -51,6 +52,7 @@ public partial class MainWindow
     private void ShowHome()
     {
         if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) return;
+        PersistWorkspaceState();
         CloseEditorTools();
         RefreshHome();
         SetVisible(processButton, false);
@@ -66,6 +68,7 @@ public partial class MainWindow
         if (SystemParameters.ClientAreaAnimation)
             homeContent.BeginAnimation(OpacityProperty, new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(180)));
         UpdateCardWidth();
+        if (_workspaceReady) { homeScroll.Visibility = Visibility.Collapsed; ShowWorkspaceBrowser(); }
     }
 
     private void ShowEditor()
@@ -79,6 +82,7 @@ public partial class MainWindow
         SetVisible(workspaceHost, true);
         SetVisible(editorToolbar, true);
         SetVisible(processButton, true);
+        HideWorkspaceBrowser();
         UpdateResponsiveLayout();
     }
     private void HomeOpenImage(object sender, RoutedEventArgs e) => OpenImage(sender, e);
@@ -87,7 +91,7 @@ public partial class MainWindow
     {
         ShowHome();
         homeScroll.UpdateLayout();
-        libraryHeading.BringIntoView();
+        if (!_workspaceReady) libraryHeading.BringIntoView();
     }
 
     private void OpenLibraryCard(object sender, RoutedEventArgs e)

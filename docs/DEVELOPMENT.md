@@ -99,3 +99,6 @@ Manual publication is available through **Actions → Build and release → Run 
 The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; the library remains in `%LOCALAPPDATA%\Tessera\Library`.
 
 See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
+# Workspace experiment
+
+The `codex/tessera-workspace-prototype` branch uses `WorkspaceCatalog` and `WorkspaceBrowser` around the existing image history and processors. App startup enables the prototype with a separate library beside the executable; `MainWindow(libraryDirectory)` remains available for legacy UI regression tests. `--workspace-library <path>` selects an explicit test library. Build the portable review app with `Build-WorkspacePrototype.ps1` and run the focused suite with `--workspace`. See [WORKSPACE_PROTOTYPE.md](WORKSPACE_PROTOTYPE.md).

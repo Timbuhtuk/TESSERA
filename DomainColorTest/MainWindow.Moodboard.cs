@@ -23,6 +23,7 @@ public partial class MainWindow
         SetVisible(asepriteWorkspace, false);
         SetVisible(backgroundWorkspace, false);
         SetVisible(moodboardWorkspace, true);
+        HideWorkspaceBrowser();
         statusLabel.Text = moodboardWorkspace.HasBoard ? "Доска готова к работе" : "Создайте полотно для доски";
     }
 

@@ -1,5 +1,7 @@
 # Using Tessera
 
+> This experimental branch starts in the new library/project interface. Read [Workspace prototype](WORKSPACE_PROTOTYPE.md) for navigation, shared assets and prototype storage. The processing descriptions below also document the existing tools reused by that interface.
+
 Download `Tessera.exe` or `Tessera-win-x64.zip` from [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). These Windows x64 builds run offline without installing .NET. Earlier releases used the Pixelizator name.
 
 The application interface currently uses Russian labels. This guide describes the actions in English.

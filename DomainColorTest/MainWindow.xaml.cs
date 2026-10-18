@@ -76,7 +76,7 @@ public partial class MainWindow : Window
         saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
         saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
-        Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
+        Closing += (_, e) => { if (_workspaceImporting || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
         Closed += (_, _) =>
         {
             CloseEditorTools();
@@ -246,6 +246,7 @@ public partial class MainWindow : Window
 
     private async void OpenImage(object? sender, EventArgs e)
     {
+        if (_workspaceReady && _workspaceBrowser?.Visibility == Visibility.Visible) { await PromptWorkspaceFilesAsync(); return; }
         if (_processing || openDialog.ShowDialog(this) != true) return;
         await AddImagesAsync(openDialog.FileNames);
         if (_sourceImage is not null) ShowEditor();
@@ -306,6 +307,8 @@ public partial class MainWindow : Window
         _processing = processing;
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
+        if (_workspaceToolContent is not null) _workspaceToolContent.IsEnabled = !processing;
+        if (_workspaceActions is not null) _workspaceActions.IsEnabled = !processing;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
         foreach (var button in new[] { fileMenuButton, toolsMenuButton, gridToolButton, sizeToolButton,
             colorToolButton, smoothingToolButton, profileToolButton, filtersToolButton, infoToolButton, compactProfileToolButton,
@@ -333,6 +336,7 @@ public partial class MainWindow : Window
         UpdateBusyIndicator();
         if (!processing) RefreshInfo();
         RefreshFilterState();
+        if (!processing) SynchronizeWorkspace();
     }
 
     private void CommitInputs()

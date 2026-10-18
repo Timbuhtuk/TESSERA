@@ -23,7 +23,10 @@ public partial class App : Application
             return;
         }
 
-        MainWindow = new MainWindow();
+        string prototypeLibrary = e.Args is ["--workspace-library", var requestedLibrary] ? System.IO.Path.GetFullPath(requestedLibrary) : WorkspacePrototypeLocation.Prepare();
+        var prototype = new MainWindow(prototypeLibrary);
+        prototype.EnableWorkspacePrototype();
+        MainWindow = prototype;
         MainWindow.Show();
     }
 

@@ -184,7 +184,11 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         BusyChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void UpdateSaveState() => backgroundSaveButton.IsEnabled = !_busy && !IsRendering && _result is not null;
+    private void UpdateSaveState()
+    {
+        backgroundSaveButton.IsEnabled = !_busy && !IsRendering && _result is not null;
+        if (_workspaceApplyButton is not null) _workspaceApplyButton.IsEnabled = backgroundSaveButton.IsEnabled;
+    }
 
     private void UpdateLayoutForWidth()
     {

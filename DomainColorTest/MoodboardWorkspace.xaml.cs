@@ -744,6 +744,7 @@ public partial class MoodboardWorkspace : UserControl
     private async Task SaveProjectAsync()
     {
         if (IsBusy) return;
+        if (WorkspaceSavePath is { } workspacePath) { await SaveToFileAsync(workspacePath); return; }
         var dialog = new SaveFileDialog { Title = "Сохранить доску", Filter = "Доска Tessera|*.tboard", DefaultExt = ".tboard", AddExtension = true,
             FileName = _projectPath is null ? "Доска.tboard" : Path.GetFileName(_projectPath) };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
@@ -812,6 +813,7 @@ public partial class MoodboardWorkspace : UserControl
 
     private void MarkSaved(string path)
     {
+        ProjectSaved?.Invoke(path);
         _projectPath = path;
         _dirty = false;
         StatusChanged?.Invoke($"Доска сохранена: {path}");

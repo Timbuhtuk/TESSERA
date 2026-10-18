@@ -168,6 +168,33 @@ public sealed class ImageLibrary(string directory)
 
     public void RemoveSource(SourceEntry source) => RemoveEntryDirectory(SourceDirectory(source));
 
+    public SourceEntry Clone(SourceEntry source, Guid id, string name)
+    {
+        var copy = JsonSerializer.Deserialize<SourceEntry>(JsonSerializer.Serialize(source))!;
+        copy.Id = id;
+        copy.DisplayName = name;
+        copy.OriginSourceId = source.Id;
+        Directory.CreateDirectory(SourceDirectory(copy));
+        File.Copy(SourcePath(source), SourcePath(copy));
+        var ids = source.Generations.ToDictionary(g => g.Id, _ => Guid.NewGuid());
+        foreach (var generation in source.Generations)
+        {
+            var item = JsonSerializer.Deserialize<GenerationEntry>(JsonSerializer.Serialize(generation))!;
+            item.Id = ids[generation.Id];
+            item.ParentGenerationId = generation.ParentGenerationId is { } parent && ids.TryGetValue(parent, out Guid newParent) ? newParent : null;
+            Directory.CreateDirectory(GenerationDirectory(copy, item));
+            File.Copy(ResultPath(source, generation), ResultPath(copy, item));
+            if (generation.HasCrop) File.Copy(CropPath(source, generation), CropPath(copy, item));
+            WriteRecord(Path.Combine(GenerationDirectory(copy, item), "generation.json"), item);
+            item.Thumbnail = ReadThumbnail(ResultPath(copy, item));
+            copy.Generations.Add(item);
+        }
+        copy.SelectedGeneration = copy.Generations.FirstOrDefault(g => source.SelectedGeneration is { } selected && g.Id == ids[selected.Id]);
+        copy.Thumbnail = ReadThumbnail(SourcePath(copy));
+        WriteRecord(Path.Combine(SourceDirectory(copy), "source.json"), copy);
+        return copy;
+    }
+
     public void RemoveGeneration(SourceEntry source, GenerationEntry generation)
     {
         if (!source.Generations.Contains(generation)) throw new ArgumentException("Результат не принадлежит исходнику.");
@@ -232,10 +259,14 @@ public sealed class ImageLibrary(string directory)
     private static BitmapSource ReadThumbnail(string path)
     {
         using var stream = File.OpenRead(path);
+        var frame = BitmapFrame.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+        if (frame.PixelWidth <= 112 && frame.PixelHeight <= 112) { frame.Freeze(); return frame; }
+        stream.Position = 0;
         var image = new BitmapImage();
         image.BeginInit();
         image.CacheOption = BitmapCacheOption.OnLoad;
-        image.DecodePixelWidth = 112;
+        if (frame.PixelWidth >= frame.PixelHeight) image.DecodePixelWidth = 112;
+        else image.DecodePixelHeight = 112;
         image.StreamSource = stream;
         image.EndInit();
         image.Freeze();

@@ -45,6 +45,7 @@ public partial class MainWindow
             };
         PreviewDragOver += (sender, e) =>
         {
+            if (_workspaceBrowser?.Visibility == Visibility.Visible) return;
             if (IsMoodboardDropTarget(e.OriginalSource as DependencyObject))
             {
                 e.Effects = CanDropMoodboard(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
@@ -74,7 +75,14 @@ public partial class MainWindow
         };
         PreviewDrop += async (_, e) =>
         {
+            if (_workspaceBrowser?.Visibility == Visibility.Visible) return;
             e.Handled = true;
+            if (_workspaceReady && !IsMoodboardDropTarget(e.OriginalSource as DependencyObject) && e.Data.GetData(DataFormats.FileDrop) is string[] workspacePaths)
+            {
+                await ImportWorkspaceFilesAsync(workspacePaths);
+                if (_workspaceCatalog?.State.SelectedAsset is { } selectedId && _workspaceCatalog.State.Assets.FirstOrDefault(a => a.Id == selectedId) is { } selectedAsset) await OpenWorkspaceAssetAsync(selectedAsset);
+                return;
+            }
             if (IsMoodboardDropTarget(e.OriginalSource as DependencyObject)) { await DropMoodboardAsync(e); return; }
             if (IsAsepriteDropTarget(e.OriginalSource as DependencyObject, e.Data)) { await DropAsepriteAsync(e); return; }
             if (IsBackgroundDropTarget(e.OriginalSource as DependencyObject)) { await DropBackgroundAsync(e); return; }
@@ -145,6 +153,7 @@ public partial class MainWindow
 
     private void SelectSource(SourceEntry source)
     {
+        AdoptWorkspaceSource(source);
         if (ReferenceEquals(_activeSource, source)) { ShowEditor(); return; }
         var bitmap = ImageLibrary.ReadBitmap(_library.SourcePath(source));
         ShowEditor();
@@ -177,6 +186,7 @@ public partial class MainWindow
         sourcePreview.ScrollToRelativePosition(0, 0);
         resultPreview.ScrollToRelativePosition(0, 0);
         SetProcessingState(_processing);
+        RestoreWorkspaceImageView(source);
     }
 
     private void ClearDisplayedResult()

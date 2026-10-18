@@ -34,6 +34,7 @@ public partial class TileInspectorWindow
         TileCollectionFile.Save(path, _assets, settings);
         _projectPath = Path.GetFullPath(path); _projectDirty = false;
         UpdateProjectTitle(); statusLabel.Text = "Коллекция и правки сохранены · " + Path.GetFileName(path);
+        WorkspaceSaved?.Invoke();
     }
 
     public void LoadCollectionFromFile(string path)
@@ -109,6 +110,7 @@ public partial class TileInspectorWindow
     private void SaveCollectionClicked(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
+        if (WorkspaceSavePath is { } workspacePath) { try { SaveCollectionToFile(workspacePath); } catch (Exception ex) { statusLabel.Text = ex.Message; } return; }
         if (_projectPath is null || sender is System.Windows.Controls.Button) SaveCollectionWithDialog();
         else
         {

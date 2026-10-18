@@ -14,7 +14,7 @@ public partial class MainWindow
     }
 
     private void UpdateBusyIndicator() => SetVisible(busyIndicator,
-        _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy);
+        _processing || _workspaceImporting || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy);
 
     private void OpenBackgroundWorkspace(object sender, RoutedEventArgs e) => ShowBackgroundWorkspace();
 
@@ -29,6 +29,7 @@ public partial class MainWindow
         SetVisible(backgroundWorkspace, true);
         SetVisible(moodboardWorkspace, false);
         backgroundWorkspace.SetEditorMaterials(GetEditorMaterials());
+        HideWorkspaceBrowser();
         statusLabel.Text = "Готово";
     }
 

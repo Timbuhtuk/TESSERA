@@ -46,6 +46,7 @@ public partial class MainWindow
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
     {
+        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => "Готовые сценарии", "color" => "Уменьшить число цветов", "smoothing" => "Очистить цвета", "info" => "Цвета и сведения", _ => title }, groups); if (key == "info") RefreshInfo(); return; }
         if (_toolWindows.TryGetValue(key, out var existing))
         {
             if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
@@ -91,6 +92,7 @@ public partial class MainWindow
 
     private void CloseEditorTools()
     {
+        CloseDockedWorkspaceTool();
         foreach (var tool in _toolWindows.Values.ToArray()) tool.Close();
         fileMenuPopup.IsOpen = false;
         toolsMenuPopup.IsOpen = false;

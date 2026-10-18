@@ -87,7 +87,11 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     {
         if (!CanAcceptFiles) return;
         var dialog = new OpenFileDialog { Filter = "Aseprite|*.aseprite;*.ase", Title = "Открыть анимации", Multiselect = true };
-        if (dialog.ShowDialog(Window.GetWindow(this)) == true) await AddFilesAsync(dialog.FileNames);
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true)
+        {
+            if (WorkspaceImport is not null) await WorkspaceImport(dialog.FileNames);
+            else await AddFilesAsync(dialog.FileNames);
+        }
     }
 
     public Task AddFilesAsync(IEnumerable<string> paths)
