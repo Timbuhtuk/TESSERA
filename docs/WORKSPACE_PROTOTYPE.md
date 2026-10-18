@@ -14,6 +14,7 @@ The gear icon in the title bar opens **Settings**: theme and interface language 
 
 - **Все ассеты** lists the whole library; **Без проекта** lists assets with no project memberships; **Недавние** lists previously opened materials.
 - Create projects using **+** beside **Проекты**. Right-click a project or folder to create a folder inside it, rename it or remove it. The same menu opens with Shift+F10 on the focused tree item.
+- Context menus use compact rows without an icon gutter. Mouse and keyboard highlighting invert the current theme's text and background colors.
 - Open or drop images, Aseprite files, `.tboard` boards and `.ttiles` collections. Imports made while a project is selected are linked into its selected folder. Other imports remain standalone.
 - Use Ctrl/Shift for multiple selection. Drag assets onto project/folder nodes, or use **Добавить в проект…** / **Переместить в папку…**. Folders can be dragged within their own project.
 - A project holds references. The same asset, edits, results and tags are shared by every project using it. Each project has its own folder placement.
