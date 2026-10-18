@@ -1,6 +1,7 @@
 <Window x:Class="DomainColorTest.TesseraDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DomainColorTest"
         Title="Tessera" Width="460" MinWidth="420" SizeToContent="Height"
         WindowStartupLocation="CenterOwner" WindowStyle="None" ResizeMode="NoResize"
         ShowInTaskbar="False" AllowsTransparency="True" Background="Transparent"
@@ -9,7 +10,7 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Theme.xaml" />
+                <local:AppearanceResources/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>

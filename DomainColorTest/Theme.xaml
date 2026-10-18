@@ -7,17 +7,17 @@
     <!-- Compatibility names for application-specific XAML. Values come from Tessera.WpfStyles. -->
     <FontFamily x:Key="UiFont">pack://application:,,,/Tessera.WpfStyles;component/Fonts/#Cascadia Code</FontFamily>
     <FontFamily x:Key="DisplayFont">pack://application:,,,/Tessera.WpfStyles;component/Fonts/#Science Gothic</FontFamily>
-    <SolidColorBrush x:Key="CanvasBrush" Color="{StaticResource Ts.CanvasColor}" />
-    <SolidColorBrush x:Key="RaisedBrush" Color="{StaticResource Ts.RaisedColor}" />
-    <SolidColorBrush x:Key="PanelBrush" Color="{StaticResource Ts.PanelColor}" />
-    <SolidColorBrush x:Key="ThumbnailBrush" Color="{StaticResource Ts.ThumbnailColor}" />
-    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource Ts.BorderColor}" />
-    <SolidColorBrush x:Key="BorderStrongBrush" Color="{StaticResource Ts.BorderStrongColor}" />
-    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource Ts.TextColor}" />
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource Ts.TextSecondaryColor}" />
-    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource Ts.TextMutedColor}" />
-    <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource Ts.HoverColor}" />
-    <SolidColorBrush x:Key="PressedBrush" Color="{StaticResource Ts.PressedColor}" />
+    <SolidColorBrush x:Key="CanvasBrush" Color="{DynamicResource Ts.CanvasColor}" />
+    <SolidColorBrush x:Key="RaisedBrush" Color="{DynamicResource Ts.RaisedColor}" />
+    <SolidColorBrush x:Key="PanelBrush" Color="{DynamicResource Ts.PanelColor}" />
+    <SolidColorBrush x:Key="ThumbnailBrush" Color="{DynamicResource Ts.ThumbnailColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{DynamicResource Ts.BorderColor}" />
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="{DynamicResource Ts.BorderStrongColor}" />
+    <SolidColorBrush x:Key="TextBrush" Color="{DynamicResource Ts.TextColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{DynamicResource Ts.TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{DynamicResource Ts.TextMutedColor}" />
+    <SolidColorBrush x:Key="HoverBrush" Color="{DynamicResource Ts.HoverColor}" />
+    <SolidColorBrush x:Key="PressedBrush" Color="{DynamicResource Ts.PressedColor}" />
 
     <Style TargetType="{x:Type UserControl}">
         <Setter Property="Background" Value="{DynamicResource Ts.Canvas}" />
@@ -31,6 +31,7 @@
     <Style x:Key="CardTitle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Ts.CardTitleText}" />
     <Style x:Key="TechnicalText" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Ts.MutedText}" />
     <Style x:Key="Hint" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Ts.MutedText}">
+        <Setter Property="TextWrapping" Value="Wrap" />
         <Setter Property="Margin" Value="0,5,0,8" />
     </Style>
     <Style x:Key="Caption" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource Ts.MutedText}">
@@ -58,15 +59,15 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border x:Name="Chrome" Background="#E6101010" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1">
+                    <Border x:Name="Chrome" Background="{DynamicResource Ts.Canvas}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1">
                         <Path Data="M 0,0 L 7,7 M 7,0 L 0,7" Width="8" Height="8" Stretch="Fill"
                               Stroke="{DynamicResource Ts.Text}" StrokeThickness="1.4"
                               HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" />
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Ts.Pressed}" /><Setter TargetName="Chrome" Property="BorderBrush" Value="White" /></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Ts.Pressed}" /><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Ts.Focus}" /></Trigger>
                         <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Ts.Focus}" /></Trigger>
-                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="#333333" /></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Ts.Pressed}" /></Trigger>
                         <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Chrome" Property="Opacity" Value="0.4" /></Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -104,7 +105,7 @@
         <Setter Property="Width" Value="46" />
         <Setter Property="Height" Value="39" />
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="Foreground" Value="#DADADA" />
+        <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
@@ -113,7 +114,7 @@
             </Setter.Value>
         </Setter>
         <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Ts.Hover}" /><Setter Property="Foreground" Value="White" /></Trigger>
+            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Ts.Hover}" /><Setter Property="Foreground" Value="{DynamicResource Ts.Text}" /></Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True"><Setter Property="Background" Value="{DynamicResource Ts.Hover}" /></Trigger>
             <Trigger Property="IsPressed" Value="True"><Setter Property="Background" Value="{DynamicResource Ts.Pressed}" /></Trigger>
         </Style.Triggers>

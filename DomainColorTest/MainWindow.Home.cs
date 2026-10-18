@@ -128,6 +128,7 @@ public partial class MainWindow
         SetVisible(iconBannerArt, ActualWidth >= 1000);
         SetVisible(backgroundBannerArt, ActualWidth >= 1100);
         SetVisible(moodboardBannerArt, ActualWidth >= 1050);
+        SetVisible(heroCompactScrim, compact);
         heroTitle.LineHeight = compact ? 36 : 42;
         previewArea.Margin = compact ? new Thickness(12, 0, 12, 10) : new Thickness(18, 0, 18, 12);
         workspaceHost.VerticalScrollBarVisibility = compact ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;

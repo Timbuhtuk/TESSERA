@@ -113,8 +113,8 @@ public partial class MainWindow
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.CanResize;
             ShowInTaskbar = false;
-            Background = new SolidColorBrush(Color.FromRgb(16, 16, 16));
-            Foreground = new SolidColorBrush(Color.FromRgb(238, 238, 238));
+            SetResourceReference(BackgroundProperty, "Ts.Canvas");
+            SetResourceReference(ForegroundProperty, "Ts.Text");
             FontFamily = (FontFamily)owner.FindResource("UiFont");
             FontSize = 13;
             UseLayoutRounding = true;
@@ -145,9 +145,9 @@ public partial class MainWindow
 
             var titleBar = new Grid
             {
-                Height = 38,
-                Background = new SolidColorBrush(Color.FromRgb(21, 21, 21))
+                Height = 38
             };
+            titleBar.SetResourceReference(Panel.BackgroundProperty, "Ts.Raised");
             titleBar.ColumnDefinitions.Add(new ColumnDefinition());
             titleBar.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             titleBar.Children.Add(new TextBlock

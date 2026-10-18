@@ -46,9 +46,32 @@ Historical project and namespace names are retained:
 - `Pixelizator.Cli`: [command-line interface](CLI.md) to the image algorithms.
 - `PixelArtAlignment.Tests`: algorithms, editor, library and navigation checks.
 - `Pixelizator.Cli.Tests`: CLI integration and image-processing checks.
+- `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md) for all Tessera CLI commands and options; `.agents/plugins/marketplace.json` registers the repository marketplace.
 - `artifacts`: local builds, test output and archives; ignored by Git.
 
 The editable Tessera mark and its generation script are documented in the [asset README](../DomainColorTest/Assets/README.md).
+
+## Tile seam inspector
+
+Holding either Alt key temporarily enables the heatmap without changing the saved checkbox state or marking the project dirty. Preview key-up and window deactivation restore the selected mode; only the preview is invalidated, so holding Alt does not rerun edge analysis. Seam statistics are below the preview, while drawing/smoothing stays above it. The WPF checks exercise rendered press/release behavior, repeated keydown, both Alt keys, focus loss, persistent visibility, project settings and panel order at normal/minimum sizes.
+
+`DomainColorTest/TileInspectorWindow.xaml(.cs)` owns the independent inspector window, collection selection, file loading and debounced directory watchers. Its `Collection` partial handles projects, export and unsaved changes; its `Painting` partial handles strokes, histories and smoothing. `MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
+
+`PixelArtDownscale/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
+
+`TileAsset.cs` keeps BGRA pixels, a WPF bitmap, edit state and bounded per-asset undo/redo snapshots (up to 20 entries / 64 MiB, retaining at least one). `TileAsset.Compare(A, B)` compares A.right/B.left and A.bottom/B.top; reverse joins are computed independently. The checkerboard arrangement alternates A/B. Pair candidates require equal dimensions; incompatible assets remain available in the collection. `TileAssetProcessing.Smooth` delegates to `IndependentImageProcessor.ApplyNeighborColors`, preserving its color selection and alpha behavior, then optionally restores pixels outside the selected edge strip. It does not synthesize colors across asset boundaries.
+
+`TileCollectionFile.cs` stores version-1 `.ttiles` ZIP projects containing `collection.json` and embedded PNGs. It reads and validates all images before replacing session state. Project and PNG writes use adjacent temporary files and atomic replacement; exports reject imported source paths. Embedded local-edit protection survives reopening. Original source paths serve only for optional watching/reloading; portable project images remain usable without originals.
+
+Build the tests, then run `dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --tiles`. This checks known distances, alpha, axis mapping, the home entry, repetition modes, rendered heatmap toggling/opacity/direction, fit and fixed zoom, the minimum layout, failed loads, file writes, atomic replacement and disabling the watcher. Collection checks cover pair selection, pencil/eraser/eyedropper, stroke isolation, undo/redo, local-edit protection, portable project round trips, failed project loads, export protection and smoothing parity with the shared algorithm. Rendered captures are written under `artifacts/wpf/verification/tiles-*`. These checks also run with `--ui`.
+
+### Tileset slicing
+
+`PixelArtDownscale/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
+
+`TileSetImportWindow.xaml(.cs)` provides manual/automatic layout controls and an outlined pixel preview in `TileSetPreview.cs`. The `TileInspectorWindow.TileSet.cs` partial adds the confirmed batch to the collection. Each slice keeps an optional `AtlasSourcePath` instead of an ordinary single-image watcher path. Version-1 `.ttiles` manifests accept this optional field, retain embedded pixels, and protect the original atlas from PNG/project overwrite. Existing projects without the field remain supported.
+
+`TileSetChecks.cs` runs with `--tiles` and `--ui`: 96×192 → 3×6 × 32×32, rectangular cells, margins/gutters, malformed grids, ambiguous automatic suggestions, byte-exact crops including alpha, optional empty-cell filtering, minimum dialog layout, collection integration, project round trips and source protection.
 
 ## Compatibility
 

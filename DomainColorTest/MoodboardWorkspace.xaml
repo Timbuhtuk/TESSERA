@@ -2,26 +2,26 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:DomainColorTest"
-    Background="{DynamicResource CanvasBrush}" Foreground="{DynamicResource TextBrush}">
+    Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}">
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Theme.xaml"/></ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10">
+        <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
             <DockPanel>
                 <Button x:Name="backButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="На главную" AutomationProperties.Name="На главную"/>
                 <TextBlock Text="Доска изображений" Style="{StaticResource SectionTitle}" VerticalAlignment="Center"/>
             </DockPanel>
         </Border>
         <Grid x:Name="startPanel" Grid.Row="1">
-            <Border Width="520" MaxWidth="520" Padding="32" Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Border Width="520" MaxWidth="520" Padding="32" Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
                     <TextBlock Text="НОВАЯ ДОСКА" Style="{StaticResource Caption}"/>
                     <TextBlock Text="Соберите изображения на одном полотне" Style="{StaticResource DisplayTitle}" FontSize="29" TextWrapping="Wrap" Margin="0,10,0,12"/>
-                    <TextBlock Text="Каждое изображение станет отдельным слоем. Выберите размер, затем добавляйте, перемещайте и поворачивайте объекты." Foreground="{StaticResource TextSecondaryBrush}" TextWrapping="Wrap" LineHeight="21" Margin="0,0,0,23"/>
+                    <TextBlock Text="Каждое изображение станет отдельным слоем. Выберите размер, затем добавляйте, перемещайте и поворачивайте объекты." Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" LineHeight="21" Margin="0,0,0,23"/>
                     <TextBlock Text="Ширина, px" Margin="0,0,0,6"/>
                     <local:IntegerInput x:Name="widthInput" Minimum="128" Maximum="16384" Value="1200" AutomationProperties.Name="Ширина доски" Margin="0,0,0,15"/>
                     <TextBlock Text="Высота, px" Margin="0,0,0,6"/>
@@ -33,7 +33,7 @@
         </Grid>
         <Grid x:Name="editorPanel" Grid.Row="1" Visibility="Collapsed">
             <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-            <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10,8">
+            <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10,8">
                 <WrapPanel>
                     <Button x:Name="newButton" Content="Новая доска…" Margin="0,0,7,5"/>
                     <Button x:Name="addButton" Content="Добавить изображения…" Margin="0,0,7,5"/>
@@ -46,7 +46,7 @@
             <Grid x:Name="editorContent" Grid.Row="1">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="0"/></Grid.RowDefinitions>
-                <Border x:Name="layersPanel" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Padding="14">
+                <Border x:Name="layersPanel" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Padding="14">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
@@ -59,7 +59,7 @@
                             <TextBlock Text="Цвет фона" Margin="0,12,0,6"/>
                             <Button x:Name="backgroundColorButton" AutomationProperties.Name="Выбрать цвет фона доски" HorizontalAlignment="Left" Margin="0,0,0,12">
                                 <StackPanel Orientation="Horizontal">
-                                    <Border x:Name="backgroundSwatch" Width="22" Height="22" Background="White" BorderBrush="#777777" BorderThickness="1" Margin="0,0,8,0"/>
+                                    <Border x:Name="backgroundSwatch" Width="22" Height="22" Background="White" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Margin="0,0,8,0"/>
                                     <TextBlock x:Name="backgroundHex" Text="#FFFFFF" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Button>
@@ -73,25 +73,25 @@
                             </WrapPanel>
                             <TextBlock Text="Поворот" Margin="0,0,0,5"/>
                             <Slider x:Name="rotationSlider" Minimum="-180" Maximum="180" Value="0" TickFrequency="1" IsSnapToTickEnabled="True" AutomationProperties.Name="Поворот выделенных слоёв"/>
-                            <TextBlock x:Name="rotationLabel" Text="0°" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="rotationLabel" Text="0°" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,10"/>
                             <TextBlock Text="Размер" Margin="0,0,0,5"/>
                             <Slider x:Name="scaleSlider" Minimum="10" Maximum="300" Value="100" TickFrequency="1" IsSnapToTickEnabled="True" AutomationProperties.Name="Размер выделенных слоёв"/>
-                            <TextBlock x:Name="scaleLabel" Text="100%" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="scaleLabel" Text="100%" Foreground="{DynamicResource Ts.TextSecondary}"/>
                         </StackPanel>
                     </DockPanel>
                     </ScrollViewer>
                 </Border>
-                <Grid x:Name="boardArea" Grid.Column="1" Background="#101010" AllowDrop="True">
-                    <ScrollViewer x:Name="boardScroll" Background="#101010" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" CanContentScroll="False" PanningMode="Both">
-                        <Grid x:Name="boardZoomHost" Background="#101010" HorizontalAlignment="Left" VerticalAlignment="Top">
+                <Grid x:Name="boardArea" Grid.Column="1" Background="{DynamicResource Ts.Canvas}" AllowDrop="True">
+                    <ScrollViewer x:Name="boardScroll" Background="{DynamicResource Ts.Canvas}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" CanContentScroll="False" PanningMode="Both">
+                        <Grid x:Name="boardZoomHost" Background="{DynamicResource Ts.Canvas}" HorizontalAlignment="Left" VerticalAlignment="Top">
                             <Viewbox x:Name="boardViewbox" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Border x:Name="boardFrame" BorderBrush="#666666" BorderThickness="1" Background="White">
+                                <Border x:Name="boardFrame" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Background="White">
                                     <Canvas x:Name="boardSurface" Background="White" ClipToBounds="True" Width="1200" Height="800"/>
                                 </Border>
                             </Viewbox>
                         </Grid>
                     </ScrollViewer>
-                    <TextBlock x:Name="emptyHint" Text="Добавьте изображения или перетащите их сюда" FontSize="16" Foreground="#777777" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
+                    <TextBlock x:Name="emptyHint" Text="Добавьте изображения или перетащите их сюда" FontSize="16" Foreground="{DynamicResource Ts.BorderStrong}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False"/>
                 </Grid>
             </Grid>
         </Grid>

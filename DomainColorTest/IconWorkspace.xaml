@@ -2,21 +2,21 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:DomainColorTest"
-    Background="{DynamicResource CanvasBrush}" Foreground="{DynamicResource TextBrush}">
+    Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}">
     <UserControl.Resources>
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries><ResourceDictionary Source="Theme.xaml"/></ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries>
             <DrawingBrush x:Key="IconChecker" TileMode="Tile" Viewport="0,0,16,16" ViewportUnits="Absolute">
                 <DrawingBrush.Drawing><DrawingGroup>
-                    <GeometryDrawing Brush="#151515" Geometry="M0,0 H16 V16 H0 Z"/>
-                    <GeometryDrawing Brush="#242424" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z"/>
+                    <GeometryDrawing Brush="{DynamicResource Ts.Thumbnail}" Geometry="M0,0 H16 V16 H0 Z"/>
+                    <GeometryDrawing Brush="{DynamicResource Ts.Hover}" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z"/>
                 </DrawingGroup></DrawingBrush.Drawing>
             </DrawingBrush>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <Border Background="{StaticResource PanelBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="10">
+        <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button x:Name="iconOpenButton" Content="Открыть…" Margin="0,0,7,0"/>
@@ -30,18 +30,18 @@
             <Grid x:Name="iconSetupGrid">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                 <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="0"/></Grid.RowDefinitions>
-                <Border x:Name="iconSettingsPanel" Background="{StaticResource RaisedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0" Padding="16">
+                <Border x:Name="iconSettingsPanel" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Padding="16">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="iconControls">
                             <StackPanel x:Name="iconImagePanel">
                                 <TextBlock Text="ИСТОЧНИК" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
-                                <Border Height="156" Background="{StaticResource IconChecker}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                <Border Height="156" Background="{StaticResource IconChecker}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1">
                                     <Grid>
                                         <Image x:Name="iconSourceImage" Margin="12" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
-                                        <TextBlock x:Name="iconEmptyHint" Text="Перетащите изображение" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource TextMutedBrush}"/>
+                                        <TextBlock x:Name="iconEmptyHint" Text="Перетащите изображение" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}"/>
                                     </Grid>
                                 </Border>
-                                <TextBlock x:Name="iconFileLabel" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,8,0,16" Foreground="{StaticResource TextMutedBrush}"/>
+                                <TextBlock x:Name="iconFileLabel" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,8,0,16" Foreground="{DynamicResource Ts.TextMuted}"/>
                             </StackPanel>
                             <local:EditorMaterialPicker x:Name="iconEditorChoices" Visibility="Collapsed" Margin="0,0,0,12"/>
                             <TextBlock Text="Размеры ICO" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
@@ -79,17 +79,17 @@
                 <ScrollViewer x:Name="iconScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="16">
                         <TextBlock Text="РЕЗУЛЬТАТЫ" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
-                        <TextBlock x:Name="iconPreviewHint" Text="Выберите размеры — они будут сохранены в одном ICO." Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,16"/>
+                        <TextBlock x:Name="iconPreviewHint" Text="Выберите размеры — они будут сохранены в одном ICO." Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,16"/>
                         <ItemsControl x:Name="iconFrames">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel VerticalAlignment="Bottom"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate><DataTemplate>
                                 <StackPanel Margin="0,0,24,24" VerticalAlignment="Bottom">
                                     <Grid Height="256" MinWidth="40">
-                                        <Border Width="{Binding Size}" Height="{Binding Size}" VerticalAlignment="Bottom" Background="{StaticResource IconChecker}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                                        <Border Width="{Binding Size}" Height="{Binding Size}" VerticalAlignment="Bottom" Background="{StaticResource IconChecker}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1">
                                             <Image Source="{Binding Image}" Stretch="Fill" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
                                         </Border>
                                     </Grid>
-                                    <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" Foreground="{StaticResource TextMutedBrush}" Margin="0,10,0,0" Style="{StaticResource TechnicalText}"/>
+                                    <TextBlock Text="{Binding Label}" HorizontalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,10,0,0" Style="{StaticResource TechnicalText}"/>
                                 </StackPanel>
                             </DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>

@@ -28,10 +28,13 @@ public partial class MainWindow : Window
     private readonly OpenFileDialog openDialog = new() { Filter = "Изображения|*.jpg;*.jpeg;*.png;*.bmp;*.gif", Title = "Добавить изображения", Multiselect = true };
     private readonly SaveFileDialog saveDialog = new() { DefaultExt = ".png", AddExtension = true, OverwritePrompt = true, Title = "Сохранить результат" };
 
-    public MainWindow() : this(LibraryLocation.PrepareDefault()) { _autoCheckUpdates = true; }
+    public MainWindow() : this(LibraryLocation.PrepareDefault(), AppearanceSettings.DefaultPath) { _autoCheckUpdates = true; }
 
-    public MainWindow(string libraryDirectory)
+    public MainWindow(string libraryDirectory, string? appearancePath = null)
     {
+        _appearancePath = appearancePath ?? Path.Combine(libraryDirectory, "appearance.json");
+        _appearanceSettings = AppearanceSettings.Load(_appearancePath);
+        AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
         InitializeWindowFrame();
