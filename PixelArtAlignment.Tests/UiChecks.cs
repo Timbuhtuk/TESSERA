@@ -58,8 +58,8 @@ internal static class UiChecks
             noButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(storyDialog.Result == MessageBoxResult.No && !storyDialog.IsVisible,
                 "StoryBook dialog did not return the selected action");
-            Require(!Get<Button>("processButton").IsEnabled && !Get<Button>("saveButton").IsEnabled &&
-                !Get<Button>("saveAllButton").IsEnabled, "Empty state permits processing/saving");
+            Require(!Get<Button>("processButton").IsEnabled && !Get<MenuItem>("saveMenuItem").IsEnabled &&
+                !Get<MenuItem>("saveAllMenuItem").IsEnabled, "Empty state permits processing/saving");
             Require(Get<ScrollViewer>("homeScroll").Visibility == Visibility.Visible && Get<Border>("emptyLibrary").Visibility == Visibility.Visible, "Startup home or empty library missing");
             Capture("empty.png");
             window.Width = 560; Capture("home-narrow.png");
@@ -72,7 +72,7 @@ internal static class UiChecks
             Invoke("LoadImage", inputPath);
             Require(Get<Button>("alignButton").IsEnabled, "Loading did not enable alignment");
             Require(Get<ScrollViewer>("homeScroll").Visibility == Visibility.Collapsed, "Import did not open editor");
-            Click("backToLibraryButton"); Pump();
+            Click("libraryButton"); Pump();
             Require(Get<Border>("emptyLibrary").Visibility == Visibility.Collapsed && Get<ItemsControl>("libraryCards").Items.Count == 1, "Home did not reflect imported source");
             var cardSource = (SourceEntry)Get<ItemsControl>("libraryCards").Items[0];
             var item = (ContentPresenter)Get<ItemsControl>("libraryCards").ItemContainerGenerator.ContainerFromIndex(0);
@@ -87,10 +87,9 @@ internal static class UiChecks
             window.MinWidth = 1600; window.Width = 1600; Pump();
             Require(Math.Abs(window.ActualWidth - 1600) < 1,
                 $"Wide layout fixture was constrained to {window.ActualWidth} instead of 1600");
-            double toolbarY = Get<Button>("backToLibraryButton").TranslatePoint(new System.Windows.Point(), window).Y;
-            Require(Math.Abs(Get<Button>("gridToolButton").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5 &&
-                Math.Abs(Get<ComboBox>("zoomInput").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5,
-                "Wide editor toolbar did not fit onto one row");
+            double navbarY = Get<Button>("libraryButton").TranslatePoint(new System.Windows.Point(), window).Y;
+            Require(Math.Abs(Get<Menu>("mainMenu").TranslatePoint(new System.Windows.Point(), window).Y - navbarY) < 5 &&
+                window.FindName("editorToolbar") is null, "Editor commands are not in the title bar");
             Require(Get<PixelPreview>("sourcePreview").TranslatePoint(new System.Windows.Point(), window).X >
                 Get<PixelPreview>("resultPreview").TranslatePoint(new System.Windows.Point(), window).X + 200,
                 "Wide editor previews were not placed side by side");
@@ -99,16 +98,16 @@ internal static class UiChecks
             window.Width = 1220; Pump();
             var action = Get<Button>("processButton");
             Require(action.Visibility == Visibility.Visible && action.Content?.ToString() == "Обработать" &&
-                !Get<WrapPanel>("editorToolbar").Children.Contains(action), "Processing action remained in the main toolbar");
-            Click("fileMenuButton");
-            Require(Get<System.Windows.Controls.Primitives.Popup>("fileMenuPopup").IsOpen &&
-                Get<Button>("openButton").IsEnabled && !Get<Button>("saveButton").IsEnabled &&
-                !Get<Button>("saveAllButton").IsEnabled, "File menu did not expose Open and Save");
-            Get<System.Windows.Controls.Primitives.Popup>("fileMenuPopup").IsOpen = false;
-            Click("gridToolButton"); Pump();
+                window.FindName("editorToolbar") is null, "Processing action remained in the main toolbar");
+            Click("fileMenu");
+            Require(Get<MenuItem>("fileMenu").IsSubmenuOpen &&
+                Get<MenuItem>("openMenuItem").IsEnabled && !Get<MenuItem>("saveMenuItem").IsEnabled &&
+                !Get<MenuItem>("saveAllMenuItem").IsEnabled, "File menu did not expose Open and Save");
+            Get<MenuItem>("fileMenu").IsSubmenuOpen = false;
+            Click("gridMenuItem"); Pump();
             var gridTool = Window.GetWindow(Get<IntegerInput>("gridCellInput"));
             Require(gridTool is not null && gridTool != window && gridTool.IsVisible, "Grid tool did not open a separate window");
-            Click("sizeToolButton"); Pump();
+            Click("sizeMenuItem"); Pump();
             var sizeTool = Window.GetWindow(Get<IntegerInput>("widthInput"));
             Require(sizeTool is not null && sizeTool != window && sizeTool != gridTool &&
                 ReferenceEquals(Window.GetWindow(Get<Slider>("brightnessInput")), sizeTool) &&
@@ -126,19 +125,19 @@ internal static class UiChecks
                 "Slider did not use the StoryBook circular thumb style");
             Require(sliderThumb.Width == 16 && sliderThumb.Height == 16,
                 $"StoryBook slider thumb has an unexpected size: {sliderThumb.Width} × {sliderThumb.Height}");
-            Click("colorToolButton"); Pump();
+            Click("colorMenuItem"); Pump();
             var colorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
             Require(colorTool is not null && colorTool != sizeTool &&
                 !ReferenceEquals(Window.GetWindow(Get<Slider>("localBrightnessInput")), colorTool) &&
-                colorTool.Title.StartsWith("Палитра"),
+                colorTool.Title.StartsWith("Число цветов"),
                 "Palette tool did not open independently");
-            Click("smoothingToolButton"); Pump();
+            Click("smoothingMenuItem"); Pump();
             var smoothingTool = Window.GetWindow(Get<Slider>("localBrightnessInput"));
             Require(smoothingTool is not null && smoothingTool != colorTool &&
-                smoothingTool.Title.StartsWith("Сглаживание") &&
+                smoothingTool.Title.StartsWith("Очистить цвета") &&
                 ReferenceEquals(Window.GetWindow(Get<Button>("neighborColorsButton")), smoothingTool),
                 "Smoothing did not open as an independent action");
-            Click("filtersToolButton"); Pump();
+            Click("filtersMenuItem"); Pump();
             var filtersTool = Window.GetWindow(Get<TextBox>("asciiCharactersInput"));
             Require(filtersTool is not null && filtersTool != smoothingTool &&
                 filtersTool.Title.StartsWith("Фильтры") &&
@@ -157,7 +156,7 @@ internal static class UiChecks
             Get<TextBox>("asciiCharactersInput").Text = "01"; Pump();
             Require(Get<ComboBox>("asciiRampPresetInput").SelectedIndex == 4,
                 "Manual ASCII ramp did not switch to Custom");
-            Click("profileToolButton"); Pump();
+            Click("profileMenuItem"); Pump();
             var profileTool = Window.GetWindow(Get<TextBox>("processingLog"));
             Require(profileTool is not null && profileTool != colorTool &&
                 ReferenceEquals(Window.GetWindow(Get<RadioButton>("sceneMode")), profileTool) &&
@@ -176,7 +175,7 @@ internal static class UiChecks
             Get<CheckBox>("colorWeightsInput").IsChecked = true;
             Get<IntegerInput>("gridCellInput").Value = 4;
             Click("alignButton");
-            Require(Get<bool>("_processing") && !Get<Button>("openButton").IsEnabled && !Get<StackPanel>("settingsPanel").IsEnabled, "Busy state did not lock mutable inputs");
+            Require(Get<bool>("_processing") && !Get<MenuItem>("openMenuItem").IsEnabled && !Get<StackPanel>("settingsPanel").IsEnabled, "Busy state did not lock mutable inputs");
             Wait();
             Require(Get<bool>("_resultIsAlignment"), "Alignment was not run");
             var output = Get<Bitmap>("_downscaledResult");
@@ -189,7 +188,7 @@ internal static class UiChecks
             Click("alignButton");
             Wait();
             window.MinWidth = 1600; window.Width = 1600; Pump();
-            Require(Get<Button>("saveAllButton").IsEnabled, "Batch save was not enabled after processing");
+            Require(Get<MenuItem>("saveAllMenuItem").IsEnabled, "Batch save was not enabled after processing");
             Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("historyRow")) &&
                 ReferenceEquals(Get<TextBlock>("sourceCaption").Parent, Get<ListBox>("sourceStrip").Parent) &&
                 Get<TextBlock>("sourceCaption").Text.StartsWith("ИСХОДНИК ·") &&
@@ -216,24 +215,16 @@ internal static class UiChecks
             window.Width = window.MinWidth;
             window.Height = window.MinHeight;
             Capture("minimum.png");
-            Require(Get<StackPanel>("compactToolNavigation").Visibility == Visibility.Visible &&
-                Get<StackPanel>("toolNavigation").Visibility == Visibility.Collapsed,
-                "Narrow editor did not collapse tools into the processing menu");
-            Click("toolsMenuButton");
-            Require(Get<System.Windows.Controls.Primitives.Popup>("toolsMenuPopup").IsOpen,
-                "Processing menu did not open on a narrow window");
-            Click("compactSmoothingToolButton"); Pump();
-            Require(Window.GetWindow(Get<Slider>("localBrightnessInput")) is { IsVisible: true },
-                "Narrow processing menu did not open smoothing");
+            Require(Get<Menu>("mainMenu").Items.Count == 2 && Get<MenuItem>("moreMenu").Items.Count == 3,
+                "Narrow title bar did not group the remaining sections under More");
+            Click("moreMenu");
+            Require(Get<MenuItem>("moreMenu").IsSubmenuOpen, "More menu did not open");
+            Click("smoothingMenuItem"); Pump();
+            Require(Window.GetWindow(Get<Slider>("localBrightnessInput")) is { IsVisible: true }, "Narrow menu did not open smoothing");
             Window.GetWindow(Get<Slider>("localBrightnessInput"))!.Close();
-            Click("toolsMenuButton");
-            Click("compactInfoToolButton"); Pump();
-            Require(Window.GetWindow(Get<TextBlock>("infoSourceSummary")) is { IsVisible: true },
-                "Narrow processing menu did not open Info");
+            Click("moreMenu"); Click("infoMenuItem"); Pump();
+            Require(Window.GetWindow(Get<TextBlock>("infoSourceSummary")) is { IsVisible: true }, "Narrow menu did not open Info");
             Window.GetWindow(Get<TextBlock>("infoSourceSummary"))!.Close();
-            var sourceSelector = Get<ComboBox>("operationSourceInput");
-            Require(sourceSelector.TranslatePoint(new System.Windows.Point(sourceSelector.ActualWidth, 0), window).X <
-                window.ActualWidth - 8, "Narrow toolbar clips the input selector");
             Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("previewArea")) &&
                 Grid.GetRow(Get<Border>("sourceTray")) == 2, "Narrow editor did not return source history below previews");
             Require(Get<PixelPreview>("sourcePreview").TranslatePoint(new System.Windows.Point(), window).Y >
@@ -246,7 +237,7 @@ internal static class UiChecks
             Reject("SaveResult", inputPath);
             Reject("SaveResult", Path.Combine(directory, "alpha.jpg"));
             using (var original = new Bitmap(inputPath)) EqualPixels(original, source, "Original was overwritten");
-            Click("profileToolButton"); Pump();
+            Click("profileMenuItem"); Pump();
             Click("processButton");
             Wait();
             Window.GetWindow(action)!.Close();
@@ -275,11 +266,11 @@ internal static class UiChecks
                 Get<StackPanel>("paletteColorControls").IsEnabled &&
                 ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == IndependentColorMode.Palette,
                 "Palette mode did not disable quantization controls");
-            Click("colorToolButton"); Pump();
+            Click("colorMenuItem"); Pump();
             var activeColorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
             CaptureTool(activeColorTool!, "color-tool-palette.png");
             activeColorTool!.Close();
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
             Click("scaleOnlyButton"); Wait();
             var sizeOnly = Get<Bitmap>("_downscaledResult");
             Require(sizeOnly.Width == 15 && sizeOnly.Height == 7, "Independent scaling used the wrong size");
@@ -288,8 +279,8 @@ internal static class UiChecks
             for (int y = 0; y < sizeOnly.Height; y++) for (int x = 0; x < sizeOnly.Width; x++)
                 Require(sourceColors.Contains(sizeOnly.GetPixel(x, y).ToArgb()), "Independent scaling changed a source color");
             var sizeGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
-            Require(((ComboBoxItem)Get<ComboBox>("operationSourceInput").Items[1]).Content?.ToString()?.StartsWith("Результат №") == true,
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
+            Require(Get<MenuItem>("resultBasisMenuItem").Header?.ToString()?.StartsWith("Результат №") == true,
                 "Selected result was not named in the processing basis");
             Click("colorOnlyButton"); Wait();
             var colorGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
@@ -302,7 +293,7 @@ internal static class UiChecks
             var paletteColors = Palettes.GetPalette(PaletteKind.GameBoy).ToHashSet();
             for (int y = 0; y < colorOnly.Height; y++) for (int x = 0; x < colorOnly.Width; x++)
                 Require(paletteColors.Contains(colorOnly.GetPixel(x, y).ToArgb() & 0xFFFFFF), "Color operation ignored the palette");
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
             Click("colorOnlyButton"); Wait();
             Require(Get<Bitmap>("_downscaledResult").Size == source.Size && Get<SourceEntry>("_activeSource").SelectedGeneration!.ParentGenerationId is null,
                 "Color operation on the source unexpectedly scaled or chained a result");
@@ -321,7 +312,7 @@ internal static class UiChecks
             Require(Get<RadioButton>("paletteColorModeInput").IsChecked == true &&
                 Get<StackPanel>("paletteColorControls").IsEnabled,
                 "History did not restore the selected color mode");
-            Click("sizeToolButton"); Pump();
+            Click("sizeMenuItem"); Pump();
             Get<RadioButton>("manualInput").IsChecked = true;
             Get<Slider>("brightnessInput").Value = 73;
             Require(((DownscaleOptions)Invoke("BuildOptionsFromUi")!).ManualCriteria?.TargetBrightness == .73, "Manual criteria mapping failed");
@@ -341,7 +332,7 @@ internal static class UiChecks
             Require(Get<Slider>("localBrightnessInput").Value == 20,
                 "Size-tool brightness changed the local 3×3 slider");
             Get<Slider>("brightnessInput").Value = 73;
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
             Click("neighborColorsButton"); Wait();
             var neighborSourceGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             var neighborSourceResult = Get<Bitmap>("_downscaledResult");
@@ -355,7 +346,7 @@ internal static class UiChecks
                 Require(sourceColors.Contains(neighborSourceResult.GetPixel(x, y).ToArgb()),
                     "Local colors introduced a color absent from the source");
             Get<IntegerInput>("localColorPassesInput").Value = 5;
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             Click("neighborColorsButton"); Wait();
             var neighborResultGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             Require(neighborResultGeneration.ParentGenerationId == neighborSourceGeneration.Id &&
@@ -382,8 +373,8 @@ internal static class UiChecks
                 options.Palette == beforeMode.Palette &&
                 options.ManualCriteria?.TargetBrightness == .73,
                 "Choosing a mode changed settings before processing");
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
-            Click("profileToolButton"); Pump();
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
+            Click("profileMenuItem"); Pump();
             Click("processButton"); Wait();
             Window.GetWindow(action)!.Close();
             options = Get<SourceEntry>("_activeSource").SelectedGeneration!.Settings.Downscale;
@@ -397,7 +388,7 @@ internal static class UiChecks
             Require(Get<SourceEntry>("_activeSource").SelectedGeneration?.ParentGenerationId == selectedParent.Id,
                 "Mode processing ignored the selected result");
             Require(!Get<CheckBox>("ditheringInput").IsEnabled, "Sprite mode permits dithering");
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
             Get<CheckBox>("aspectLock").IsChecked = true;
             Get<IntegerInput>("widthInput").Value = 24;
             Require(Get<IntegerInput>("heightInput").Value == (int)Math.Round(24.0 * source.Height / source.Width), "Aspect ratio failed");
@@ -409,10 +400,10 @@ internal static class UiChecks
             string newInputPath = Path.Combine(directory, "second-fixture.png");
             source.Save(newInputPath);
             Invoke("LoadImage", newInputPath);
-            Require(!Get<Button>("saveButton").IsEnabled && Get<PixelPreview>("resultPreview").Image is null, "Loading retained the former output");
+            Require(!Get<MenuItem>("saveMenuItem").IsEnabled && Get<PixelPreview>("resultPreview").Image is null, "Loading retained the former output");
             Reject("LoadImage", Path.Combine(directory, "missing.png"));
             Require(Get<Bitmap>("_sourceImage").Width == source.Width, "Failed load damaged source");
-            Click("infoToolButton"); Pump();
+            Click("infoMenuItem"); Pump();
             var infoTool = Window.GetWindow(Get<TextBlock>("infoSourceSummary"));
             Require(infoTool is { IsVisible: true }, "Info did not open a separate window");
             var infoUntil = DateTime.UtcNow.AddSeconds(15);
@@ -465,7 +456,7 @@ internal static class UiChecks
                 replaced.GetPixel(0, 0).ToArgb() == Color.FromArgb(oldColor.A, 1, 254, 3).ToArgb() &&
                 Get<Bitmap>("_sourceImage").GetPixel(0, 0).ToArgb() == oldColor.ToArgb(),
                 "Info color replacement damaged source or missed result history");
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             infoUntil = DateTime.UtcNow.AddSeconds(15);
             while (Get<TextBlock>("infoPaletteStatus").Text.Contains("Подсчёт") && DateTime.UtcNow < infoUntil)
             {
@@ -483,7 +474,7 @@ internal static class UiChecks
                 manyColors.Save(manyPath);
                 Invoke("LoadImage", manyPath);
             }
-            Click("infoToolButton"); Pump();
+            Click("infoMenuItem"); Pump();
             infoTool = Window.GetWindow(Get<TextBlock>("infoSourceSummary"));
             infoUntil = DateTime.UtcNow.AddSeconds(15);
             while (Get<TextBlock>("infoPaletteStatus").Text.Contains("Подсчёт") && DateTime.UtcNow < infoUntil)
@@ -512,7 +503,7 @@ internal static class UiChecks
             infoTool!.Close();
             // These checks use the generated fixtures and require no external image collection.
             window.Width = 1220; window.Height = 880;
-            Click("backToLibraryButton"); Pump();
+            Click("libraryButton"); Pump();
             Capture("home-library.png");
             Get<ScrollViewer>("homeScroll").ScrollToBottom(); Capture("home-library-bottom.png");
             window.Width = 560; Get<ScrollViewer>("homeScroll").ScrollToTop(); Capture("home-library-narrow.png");
@@ -523,7 +514,7 @@ internal static class UiChecks
 
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
         object? Invoke(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, args);
-        void Click(string name) => Get<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        void Click(string name) => NavigationTest.Click(window, name);
         void Reject(string method, string path)
         {
             try { Invoke(method, path); } catch (TargetInvocationException) { return; }

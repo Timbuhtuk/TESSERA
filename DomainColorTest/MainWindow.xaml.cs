@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
+        InitializeNavigation();
         InitializeWindowFrame();
         threadsInput.Maximum = threadsInput.Value = Math.Max(1, Environment.ProcessorCount);
         foreach (var mode in new[] { backgroundMode, sceneMode, detailsMode })
@@ -61,24 +62,13 @@ public partial class MainWindow : Window
         widthInput.ValueChanged += (_, _) => SizeChangedByUser(widthChanged: true);
         heightInput.ValueChanged += (_, _) => SizeChangedByUser(widthChanged: false);
         aspectLock.Checked += (_, _) => SizeChangedByUser(widthChanged: true);
-        zoomInput.SelectionChanged += (_, _) => UpdatePreviewSettings();
-        backgroundInput.SelectionChanged += (_, _) => UpdatePreviewSettings();
         detectGridInput.Checked += (_, _) => { gridCellInput.IsEnabled = false; AlignmentSettingsChanged(); };
         detectGridInput.Unchecked += (_, _) => { gridCellInput.IsEnabled = true; AlignmentSettingsChanged(); };
         gridCellInput.ValueChanged += (_, _) => AlignmentSettingsChanged();
-        openButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; OpenImage(sender, e); };
         processButton.Click += ProcessImage;
         scaleOnlyButton.Click += ScaleOnlyImage;
         colorOnlyButton.Click += ApplyColorsOnly;
         neighborColorsButton.Click += ApplyNeighborColorsOnly;
-        operationSourceInput.SelectionChanged += (_, _) =>
-        {
-            if (aspectLock.IsChecked == true) SizeChangedByUser(widthChanged: true);
-            else UpdateSizeHint();
-            SetProcessingState(_processing);
-        };
-        saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
-        saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
         Closing += (_, e) => { if (_workspaceImporting || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = Localization.Text("Дождитесь завершения обработки."); } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
         Closed += (_, _) =>
@@ -97,7 +87,6 @@ public partial class MainWindow : Window
         InitializeAseprite();
         InitializeBackground();
         InitializeMoodboard();
-        InitializeEditorTools();
         InitializeInfo();
         InitializeFilters();
         InitializeUpdates();
@@ -183,7 +172,7 @@ public partial class MainWindow : Window
         _updatingSize = true;
         try
         {
-            var sizeSource = operationSourceInput.SelectedIndex == 1 ? _downscaledResult : _sourceImage;
+            var sizeSource = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
             if (aspectLock.IsChecked == true && sizeSource is not null)
             {
                 var input = widthChanged ? heightInput : widthInput;
@@ -200,7 +189,7 @@ public partial class MainWindow : Window
 
     private void UpdateSizeHint()
     {
-        var sizeSource = operationSourceInput.SelectedIndex == 1 ? _downscaledResult : _sourceImage;
+        var sizeSource = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
         if (sizeSource is null)
         {
             sizeHint.Text = Localization.Text("Укажите ширину и высоту результата.");
@@ -233,11 +222,11 @@ public partial class MainWindow : Window
 
     private void UpdatePreviewSettings()
     {
-        double zoom = ZoomFactors[Math.Clamp(zoomInput.SelectedIndex, 0, ZoomFactors.Length - 1)];
+        double zoom = ZoomFactors[Math.Clamp(PreviewZoom, 0, ZoomFactors.Length - 1)];
         foreach (var preview in new[] { sourcePreview, resultPreview })
         {
             preview.Zoom = zoom;
-            preview.PreviewBackground = backgroundInput.SelectedIndex;
+            preview.PreviewBackground = PreviewBackground;
         }
     }
 
@@ -263,7 +252,7 @@ public partial class MainWindow : Window
         CommitInputs();
         var settings = CaptureReadyModeSettings();
         DownscaleOptions options = settings.Downscale;
-        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
         if (options.TargetWidth > basis.Width || options.TargetHeight > basis.Height)
         {
@@ -312,34 +301,19 @@ public partial class MainWindow : Window
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
         if (_workspaceToolContent is not null) _workspaceToolContent.IsEnabled = !processing;
-        if (_workspaceActions is not null) _workspaceActions.IsEnabled = !processing;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
-        foreach (var button in new[] { fileMenuButton, toolsMenuButton, gridToolButton, sizeToolButton,
-            colorToolButton, smoothingToolButton, profileToolButton, filtersToolButton, infoToolButton, compactProfileToolButton,
-            compactSizeToolButton, compactColorToolButton, compactSmoothingToolButton, compactGridToolButton,
-            compactFiltersToolButton, compactInfoToolButton })
-            button.IsEnabled = !processing;
-        operationSourceInput.IsEnabled = !processing;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
-        openButton.IsEnabled = !processing;
         homeContent.IsEnabled = !processing;
-        backToLibraryButton.IsEnabled = !processing;
         processButton.IsEnabled = !processing && _sourceImage is not null;
         scaleOnlyButton.IsEnabled = colorOnlyButton.IsEnabled = neighborColorsButton.IsEnabled =
             !processing && _sourceImage is not null;
-        var selectedGeneration = _activeSource?.SelectedGeneration;
-        int generationNumber = selectedGeneration is null ? -1 : _activeSource!.Generations.IndexOf(selectedGeneration) + 1;
-        ((ComboBoxItem)operationSourceInput.Items[1]).Content = generationNumber > 0
-            ? Localization.Format("Результат №{0}", generationNumber) : Localization.Text("Выбранный результат");
-        ((ComboBoxItem)operationSourceInput.Items[1]).IsEnabled = !processing && _downscaledResult is not null;
-        if (_downscaledResult is null && operationSourceInput.SelectedIndex == 1) operationSourceInput.SelectedIndex = 0;
+        if (_downscaledResult is null && ProcessingBasis == 1) ProcessingBasis = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
-        saveButton.IsEnabled = !processing && _downscaledResult is not null;
-        saveAllButton.IsEnabled = !processing && _activeSource?.Generations.Count > 0;
         Cursor = processing ? Cursors.Wait : null;
         UpdateBusyIndicator();
         if (!processing) RefreshInfo();
         RefreshFilterState();
+        UpdateNavigationState();
         if (!processing) SynchronizeWorkspace();
     }
 
@@ -403,7 +377,7 @@ public partial class MainWindow : Window
 
     private async void SaveAllImages(object sender, RoutedEventArgs e)
     {
-        fileMenuPopup.IsOpen = false;
+        CloseNavigationMenus();
         if (_processing || _activeSource?.Generations.Count is not > 0) return;
         var folderDialog = new OpenFolderDialog { Title = Localization.Text("Сохранить все результаты текущего исходника") };
         if (folderDialog.ShowDialog(this) != true) return;
@@ -517,7 +491,7 @@ public partial class MainWindow : Window
         CommitInputs();
         var settings = CaptureSettings();
         var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize };
-        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
         var document = _activeSource;
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;

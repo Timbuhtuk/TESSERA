@@ -64,15 +64,15 @@ public partial class MainWindow
         if ((modifiers & ModifierKeys.Control) == 0 || preview.Image is null || delta == 0) return false;
         var image = preview.Image;
         var anchor = preview.ImagePointAt(pointer);
-        double factor = zoomInput.SelectedIndex > 0 ? ZoomFactors[zoomInput.SelectedIndex] : preview.EffectiveZoom;
+        double factor = PreviewZoom > 0 ? ZoomFactors[PreviewZoom] : preview.EffectiveZoom;
         int steps = Math.Max(1, Math.Abs(delta / 120));
         for (int step = 0; step < steps; step++)
             factor = delta > 0
                 ? ZoomFactors.Skip(1).Where(z => z > factor + .000001).DefaultIfEmpty(factor).Min()
                 : ZoomFactors.Skip(1).Where(z => z < factor - .000001).DefaultIfEmpty(factor).Max();
         int index = Array.IndexOf(ZoomFactors, factor);
-        if (index < 1 || zoomInput.SelectedIndex == index) return true;
-        zoomInput.SelectedIndex = index;
+        if (index < 1 || PreviewZoom == index) return true;
+        PreviewZoom = index;
         int revision = ++_zoomRequestRevision;
         Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
         {

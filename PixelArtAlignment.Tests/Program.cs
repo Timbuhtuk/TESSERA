@@ -16,7 +16,7 @@ if (args is ["--evaluate", var actualPath, var referencePath, "--cell-size", var
     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(quality, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     return quality.Score >= 90 ? 0 : 1;
 }
-if (args.Any(a => a is not ("--invariants" or "--ui" or "--moodboard" or "--tiles" or "--workspace" or "--localization" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--invariants" or "--ui" or "--moodboard" or "--tiles" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -83,6 +83,7 @@ if (args.Contains("--invariants")) ImageColorToolsChecks.Run(Check);
 if (args.Contains("--invariants")) ImageFilterChecks.Run(Check);
 if (args.Contains("--invariants")) BackgroundRemovalChecks.Run(Check);
 if (args.Contains("--invariants")) GitHubUpdaterChecks.Run(Check);
+if (args.Contains("--navigation")) Check("Top navigation, menus, state and responsive layouts", NavigationChecks.Run);
 if (args.Contains("--workspace")) Check("Workspace catalog, projects, shared assets, copies and WPF", WorkspaceChecks.Run);
 if (args.Contains("--localization")) Check("English localization, SVG settings and language persistence", LocalizationChecks.Run);
 if (args.Contains("--ui")) Check("Independent GUI alignment and downscale, normal and minimum layouts", UiChecks.Run);

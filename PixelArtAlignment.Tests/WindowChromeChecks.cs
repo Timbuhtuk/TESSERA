@@ -26,8 +26,10 @@ internal static class WindowChromeChecks
             var handle = new WindowInteropHelper(window).Handle;
             Require(WindowChrome.GetWindowChrome(window) is { UseAeroCaptionButtons: false }, "Native title bar was not replaced");
             var caption = (Border)window.FindName("titleBar");
-            var point = caption.PointToScreen(new Point(220, 20));
+            var point = DragPoint();
             Require(HitTest(handle, point) == 2, "Title bar cannot be dragged or double-clicked by Windows");
+            var fileMenu = (MenuItem)window.FindName("fileMenu");
+            Require(HitTest(handle, fileMenu.PointToScreen(new Point(10, 20))) == 1, "Top menu is swallowed by native dragging");
             var close = (Button)window.FindName("closeButton");
             Require(HitTest(handle, close.PointToScreen(new Point(20, 20))) == 1, "Caption button is swallowed by native dragging");
             Require(GetWindowRect(handle, out var normal), "Cannot read window bounds");
@@ -53,7 +55,7 @@ internal static class WindowChromeChecks
             Require(window.WindowState == WindowState.Normal && Math.Abs(window.ActualWidth - normalWidth) < 1 && Math.Abs(window.ActualHeight - normalHeight) < 1,
                 $"Restore lost the window dimensions: expected {normalWidth}x{normalHeight}, got {window.ActualWidth}x{window.ActualHeight}");
 
-            point = caption.PointToScreen(new Point(220, 20));
+            point = DragPoint();
             SendMessage(handle, 0xA3, 2, Pack(point));
             Pump();
             Require(window.WindowState == WindowState.Maximized, "Native title double-click failed");
@@ -77,6 +79,7 @@ internal static class WindowChromeChecks
         }
 
         void Click(string name) { ((Button)window.FindName(name)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
+        Point DragPoint() => ((Border)window.FindName("titleBar")).PointToScreen(new Point(((Border)window.FindName("titleBar")).ActualWidth - ((StackPanel)window.FindName("captionButtons")).ActualWidth - 24, 20));
         void SetBusy(bool value) => typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [value]);
     }
 

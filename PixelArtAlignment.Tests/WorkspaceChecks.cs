@@ -162,6 +162,7 @@ internal static class WorkspaceChecks
             var animation = window.Workspace.State.Assets.Single(a => a.Kind == WorkspaceAssetKind.Animation);
             Wait(window.OpenWorkspaceAssetAsync(animation));
             var aseprite = Get<AsepriteWorkspace>(window, "asepriteWorkspace");
+            Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && Equals(Get<MenuItem>(window, "saveMenuItem").Header, "PNG + JSON…") && Get<MenuItem>(window, "exportIcoMenuItem").Visibility == Visibility.Collapsed, "File menu follows the active animation and hides image-only exports");
             Require(aseprite.CurrentSheetPath is not null && animation.Thumbnail is not null, "Animation source is retained and its converted preview enters the catalog");
             Get<ComboBox>(aseprite, "sheetLayout").SelectedIndex = 2; Get<IntegerInput>(aseprite, "sheetColumns").Value = 1; Wait(aseprite.RebuildAsync());
             typeof(MainWindow).GetMethod("ShowHome", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null); Pump();
@@ -171,6 +172,7 @@ internal static class WorkspaceChecks
 
             var board = window.Workspace.State.Assets.Single(a => a.Kind == WorkspaceAssetKind.Board);
             Wait(window.OpenWorkspaceAssetAsync(board)); var boardEditor = Get<MoodboardWorkspace>(window, "moodboardWorkspace");
+            Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && !Get<MenuItem>(window, "imageMenu").IsEnabled, "Board file commands are available while image actions are disabled");
             Wait(boardEditor.AddFilesAsync([second])); Wait(boardEditor.SaveWorkspaceAsync());
             Require(File.ReadAllBytes(boardPath).SequenceEqual(boardOriginal) && board.Thumbnail is not null, "Board edits and thumbnail save to owned document, preserving external original");
             var boardReload = new MoodboardWorkspace(); boardReload.LoadFromFile(window.Workspace.ContentPath(board));

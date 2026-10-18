@@ -10,40 +10,6 @@ public partial class MainWindow
 {
     private readonly Dictionary<string, EditorToolWindow> _toolWindows = [];
 
-    private void InitializeEditorTools()
-    {
-        profileToolButton.Click += (_, _) => OpenEditorTool("profile", Localization.Text("Готовые режимы"), 320, profileToolGroup, executionToolGroup);
-        sizeToolButton.Click += (_, _) => OpenEditorTool("size", Localization.Text("Размер"), 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
-        colorToolButton.Click += (_, _) => OpenEditorTool("color", Localization.Text("Палитра"), 440, colorToolGroup);
-        smoothingToolButton.Click += (_, _) => OpenEditorTool("smoothing", Localization.Text("Сглаживание"), 470, smoothingToolGroup);
-        gridToolButton.Click += (_, _) => OpenEditorTool("grid", Localization.Text("Сетка"), 280, gridToolGroup);
-        filtersToolButton.Click += (_, _) => OpenEditorTool("filters", Localization.Text("Фильтры"), 410, filtersToolGroup);
-        infoToolButton.Click += (_, _) => { OpenEditorTool("info", Localization.Text("Инфо"), 560, infoToolGroup); RefreshInfo(); };
-        fileMenuButton.Click += (_, _) => fileMenuPopup.IsOpen = !fileMenuPopup.IsOpen;
-        toolsMenuButton.Click += (_, _) => toolsMenuPopup.IsOpen = !toolsMenuPopup.IsOpen;
-        foreach (var pair in new[]
-        {
-            (compactProfileToolButton, profileToolButton),
-            (compactSizeToolButton, sizeToolButton),
-            (compactColorToolButton, colorToolButton),
-            (compactSmoothingToolButton, smoothingToolButton),
-            (compactGridToolButton, gridToolButton),
-            (compactFiltersToolButton, filtersToolButton),
-            (compactInfoToolButton, infoToolButton)
-        })
-            pair.Item1.Click += (_, _) => { toolsMenuPopup.IsOpen = false; pair.Item2.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); };
-        SizeChanged += (_, _) => UpdateToolNavigation();
-        UpdateToolNavigation();
-    }
-
-    private void UpdateToolNavigation()
-    {
-        bool compact = (ActualWidth > 0 ? ActualWidth : Width) < 1500;
-        SetVisible(toolNavigation, !compact);
-        SetVisible(compactToolNavigation, compact);
-        if (!compact) toolsMenuPopup.IsOpen = false;
-    }
-
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
     {
         if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); if (key == "info") RefreshInfo(); return; }
@@ -94,8 +60,7 @@ public partial class MainWindow
     {
         CloseDockedWorkspaceTool();
         foreach (var tool in _toolWindows.Values.ToArray()) tool.Close();
-        fileMenuPopup.IsOpen = false;
-        toolsMenuPopup.IsOpen = false;
+        CloseNavigationMenus();
     }
 
     private sealed class EditorToolWindow : Window
@@ -135,7 +100,7 @@ public partial class MainWindow
             {
                 if (Keyboard.Modifiers != ModifierKeys.Control) return;
                 if (e.Key == Key.O) owner.OpenImage(this, EventArgs.Empty);
-                else if (e.Key == Key.S && owner.saveButton.IsEnabled) owner.SaveImage(this, EventArgs.Empty);
+                else if (e.Key == Key.S && owner.saveMenuItem.IsEnabled) owner.SaveImage(this, EventArgs.Empty);
                 else return;
                 e.Handled = true;
             };

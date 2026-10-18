@@ -65,7 +65,7 @@ internal static class AppearanceChecks
             }
             bitmap.Save(input);
             Invoke(window, "LoadImage", input);
-            foreach (string name in new[] { "sizeToolButton", "colorToolButton", "smoothingToolButton", "profileToolButton", "gridToolButton", "infoToolButton", "filtersToolButton" })
+            foreach (string name in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "profileMenuItem", "gridMenuItem", "infoMenuItem", "filtersMenuItem" })
                 Click(window, name);
             Pump();
             var tools = window.OwnedWindows.Cast<Window>().Where(w => w is not AppearanceWindow).ToArray();
@@ -82,7 +82,7 @@ internal static class AppearanceChecks
             var preview = Get<PixelPreview>(window, "sourcePreview");
             var source = preview.Image;
             var originalPixel = source!.GetPixel(60, 40);
-            Get<ComboBox>(window, "backgroundInput").SelectedIndex = 1;
+            NavigationTest.Select(window, "PreviewBackground").SelectedIndex = 1;
             foreach (var theme in Themes)
             {
                 Select(appearance, theme);
@@ -92,7 +92,7 @@ internal static class AppearanceChecks
                     CheckChrome(tool, theme);
                     Capture(tool, Path.Combine(directory, $"{theme}-{tool.Title.Split('·')[0].Trim()}.png"));
                 }
-                var toggle = FindVisual<ToggleButton>(Get<ComboBox>(window, "operationSourceInput"))!;
+                var toggle = FindVisual<ToggleButton>(Get<ComboBox>(window, "paletteInput"))!;
                 var arrow = FindVisual<System.Windows.Shapes.Path>(toggle)!;
                 var presenter = FindVisual<ContentPresenter>(toggle)!;
                 Require(arrow.ActualWidth <= presenter.ActualWidth && arrow.ActualHeight <= presenter.ActualHeight,
@@ -107,21 +107,22 @@ internal static class AppearanceChecks
                     "Theme switching changed source image pixels");
                 foreach (int background in new[] { 0, 1, 2 })
                 {
-                    Get<ComboBox>(window, "backgroundInput").SelectedIndex = background; Pump();
+                    NavigationTest.Select(window, "PreviewBackground").SelectedIndex = background; Pump();
                     Require(background == 0 ? preview.Background is DrawingBrush : ColorOf(preview.Background) ==
                         (background == 1 ? MediaColor.FromRgb(17, 17, 17) : MediaColor.FromRgb(224, 224, 224)),
                         "Appearance theme overrides explicit preview backgrounds");
                 }
-                Get<ComboBox>(window, "backgroundInput").SelectedIndex = 0;
+                NavigationTest.Select(window, "PreviewBackground").SelectedIndex = 0;
                 Capture(window, Path.Combine(directory, $"{theme}-editor.png"));
                 Capture(picker, Path.Combine(directory, $"{theme}-picker.png"));
                 Capture(dialog, Path.Combine(directory, $"{theme}-dialog.png"));
-                Click(window, "fileMenuButton"); Pump();
-                var menu = Get<Popup>(window, "fileMenuPopup");
-                Require(ColorOf(((Border)menu.Child).Background) == ColorOf((Brush)window.FindResource("Ts.Panel")),
+                Click(window, "fileMenu"); Pump();
+                var file = Get<MenuItem>(window, "fileMenu"); file.ApplyTemplate();
+                var menu = (Popup)file.Template.FindName("PART_Popup", file);
+                Require(ColorOf(((Border)menu.Child).Background) == ColorOf((Brush)window.FindResource("Ts.Raised")),
                     "File menu retained a fixed dark background");
                 Capture((FrameworkElement)menu.Child, Path.Combine(directory, $"{theme}-file-menu.png"));
-                menu.IsOpen = false;
+                file.IsSubmenuOpen = false;
             }
             picker.Close(); dialog.Close();
             foreach (var tool in tools) tool.Close();
@@ -185,7 +186,7 @@ internal static class AppearanceChecks
 
     private static MediaColor ColorOf(Brush brush) => ((SolidColorBrush)brush).Color;
     private static T Get<T>(FrameworkElement element, string name) => (T)element.FindName(name);
-    private static void Click(MainWindow window, string name) => Get<Button>(window, name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+    private static void Click(MainWindow window, string name) => NavigationTest.Click(window, name);
     private static object? Invoke(MainWindow window, string name, params object[] args) =>
         typeof(MainWindow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, args);
 

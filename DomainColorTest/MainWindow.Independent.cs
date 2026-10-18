@@ -18,7 +18,7 @@ public partial class MainWindow
         CommitInputs();
         var settings = CaptureSettings();
         DownscaleOptions options = settings.Downscale;
-        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
         bool changeSize = operation == IndependentOperation.Size;
         bool neighborColors = operation == IndependentOperation.NeighborColors;

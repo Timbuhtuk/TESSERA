@@ -60,7 +60,7 @@ internal static class PixelWorkflowChecks
             Invoke("SaveResult", Path.Combine(folder, "one-pixel.png"));
             using (var saved = new Bitmap(Path.Combine(folder, "one-pixel.png"))) EqualPixels(expected, saved, "PNG export");
 
-            Get<ComboBox>("zoomInput").SelectedIndex = 9; Pump(); // 1600%
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 9; Pump(); // 1600%
             var preview = Get<PixelPreview>("resultPreview");
             var other = Get<PixelPreview>("sourcePreview");
             var viewport = (ScrollViewer)preview.Children[0];
@@ -74,16 +74,16 @@ internal static class PixelWorkflowChecks
             Require(!(bool)Invoke("ChangePreviewZoom", preview, -120, pointer, ModifierKeys.None)! && preview.Zoom == 32, "Ordinary wheel was intercepted");
             Invoke("ChangePreviewZoom", preview, -120, pointer, ModifierKeys.Control); Pump();
             Require(preview.Zoom == 16 && other.Zoom == 16, "Ctrl+wheel down failed");
-            Get<ComboBox>("zoomInput").SelectedIndex = 3; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 3; Pump();
             Invoke("ChangePreviewZoom", preview, 120, pointer, ModifierKeys.Control); Pump();
             Require(preview.Zoom == .5 && other.Zoom == .5, "Wheel could not increase 25% zoom on odd image dimensions");
             Invoke("ChangePreviewZoom", preview, 120, pointer, ModifierKeys.Control); Pump();
             Require(preview.Zoom == 1 && other.Zoom == 1, "Wheel could not increase 50% zoom on odd image dimensions");
-            Get<ComboBox>("zoomInput").SelectedIndex = 0; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 0; Pump();
             double fit = other.EffectiveZoom;
             Invoke("ChangePreviewZoom", other, 120, new Point(100, 80), ModifierKeys.Control); Pump();
             Require(other.Zoom > fit, "Wheel from Fit reduced the zoom");
-            Get<ComboBox>("zoomInput").SelectedIndex = 0; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 0; Pump();
 
             var data = (DataObject)Invoke("CreateGenerationDragData", parent, reduced)!;
             // A result is accepted over the source tray or source preview, not over the result itself.
@@ -123,7 +123,7 @@ internal static class PixelWorkflowChecks
         }
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window))!;
         object? Invoke(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, args);
-        void Click(string name) => Get<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        void Click(string name) => NavigationTest.Click(window, name);
         DragEventArgs Drop(DataObject data, UIElement target)
         {
             var e = (DragEventArgs)Activator.CreateInstance(typeof(DragEventArgs), BindingFlags.Instance | BindingFlags.NonPublic,

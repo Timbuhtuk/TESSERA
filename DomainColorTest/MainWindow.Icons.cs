@@ -23,7 +23,7 @@ public partial class MainWindow
         SetVisible(moodboardWorkspace, false);
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
-        SetVisible(editorToolbar, false);
+
         SetVisible(iconWorkspace, true);
         iconWorkspace.SetEditorMaterials(GetEditorMaterials());
         HideWorkspaceBrowser();

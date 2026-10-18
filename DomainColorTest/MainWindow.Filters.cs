@@ -40,7 +40,7 @@ public partial class MainWindow
     }
 
     private Bitmap? GetFilterBasis()
-        => operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null ? _downscaledResult : _sourceImage;
+        => ProcessingBasis == 1 && _downscaledResult is not null ? _downscaledResult : _sourceImage;
 
     private void RefreshFilterState()
     {

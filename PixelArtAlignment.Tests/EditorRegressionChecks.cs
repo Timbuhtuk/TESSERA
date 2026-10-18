@@ -61,8 +61,8 @@ internal static class EditorRegressionChecks
             string status = Get<TextBlock>("statusLabel").Text;
             var changes = new List<string>();
             Get<Slider>("brightnessInput").ValueChanged += (_, e) => changes.Add($"brightness {e.OldValue} -> {e.NewValue}");
-            foreach (var pair in new[] { ("sizeToolButton", "widthInput"), ("smoothingToolButton", "localBrightnessInput"),
-                ("colorToolButton", "paletteInput"), ("gridToolButton", "gridCellInput"), ("profileToolButton", "sceneMode") })
+            foreach (var pair in new[] { ("sizeMenuItem", "widthInput"), ("smoothingMenuItem", "localBrightnessInput"),
+                ("colorMenuItem", "paletteInput"), ("gridMenuItem", "gridCellInput"), ("profileMenuItem", "sceneMode") })
                 for (int q = 0; q < 2; q++)
                 {
                     Click(pair.Item1); Pump();
@@ -85,12 +85,12 @@ internal static class EditorRegressionChecks
 
         void VerifyAspectLock()
         {
-            var basis = Get<ComboBox>("operationSourceInput");
+            var basis = NavigationTest.Select(window, "ProcessingBasis");
             var width = Get<IntegerInput>("widthInput");
             var height = Get<IntegerInput>("heightInput");
             basis.SelectedIndex = 1;
             Get<CheckBox>("aspectLock").IsChecked = true;
-            Click("sizeToolButton"); Pump();
+            Click("sizeMenuItem"); Pump();
             basis.SelectedIndex = 0;
             Require(width.Value == 128 && height.Value == 85, $"Source switch kept {width.Value} x {height.Value} with aspect lock enabled");
             basis.SelectedIndex = 1;
@@ -114,7 +114,7 @@ internal static class EditorRegressionChecks
             var document = Get<SourceEntry>("_activeSource");
             var parent = document.SelectedGeneration!;
             using var basis = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             Get<CheckBox>("detectGridInput").IsChecked = false;
             Get<IntegerInput>("gridCellInput").Value = 2;
             Click("alignButton"); Wait();
@@ -122,7 +122,7 @@ internal static class EditorRegressionChecks
                 EqualPixels(expected.Aligned, Get<Bitmap>("_downscaledResult"), "Alignment of selected result");
             Require(document.SelectedGeneration!.ParentGenerationId == parent.Id, "Alignment lost its selected-result parent");
             EqualPixels(source, Get<Bitmap>("_sourceImage"), "Alignment modified the original");
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 0;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
             Get<CheckBox>("detectGridInput").IsChecked = true;
             Click("alignButton"); Wait();
             using (var expected = new PixelGridAligner().Align(source, new GridAlignmentOptions()))
@@ -133,7 +133,7 @@ internal static class EditorRegressionChecks
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
         object? Invoke(string method, params object[] values) => typeof(MainWindow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, values);
         string Settings() => JsonSerializer.Serialize((EditorSettings)Invoke("CaptureSettings")!);
-        void Click(string name) => Get<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        void Click(string name) => NavigationTest.Click(window, name);
         void Wait()
         {
             var until = DateTime.UtcNow.AddSeconds(20);

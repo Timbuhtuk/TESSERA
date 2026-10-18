@@ -13,8 +13,11 @@ public partial class MainWindow
         Closed += (_, _) => backgroundWorkspace.Dispose();
     }
 
-    private void UpdateBusyIndicator() => SetVisible(busyIndicator,
-        _processing || _workspaceImporting || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy);
+    private void UpdateBusyIndicator()
+    {
+        SetVisible(busyIndicator, WorkspaceBusy);
+        UpdateNavigationState();
+    }
 
     private void OpenBackgroundWorkspace(object sender, RoutedEventArgs e) => ShowBackgroundWorkspace();
 
@@ -23,7 +26,7 @@ public partial class MainWindow
         if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
-        SetVisible(editorToolbar, false);
+
         SetVisible(iconWorkspace, false);
         SetVisible(asepriteWorkspace, false);
         SetVisible(backgroundWorkspace, true);

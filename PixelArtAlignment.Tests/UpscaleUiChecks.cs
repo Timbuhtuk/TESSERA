@@ -51,7 +51,7 @@ internal static class UpscaleUiChecks
             Invoke("SaveResult", export);
             using (var saved = new Bitmap(export)) CompareNearest(source, saved);
 
-            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             Get<IntegerInput>("widthInput").Value = 12;
             Get<IntegerInput>("heightInput").Value = 9;
             Click("scaleOnlyButton"); Wait();
@@ -79,7 +79,7 @@ internal static class UpscaleUiChecks
         }
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
         object? Invoke(string method, params object[] values) => typeof(MainWindow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, values);
-        void Click(string name) => Get<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        void Click(string name) => NavigationTest.Click(window, name);
         void Wait()
         {
             var until = DateTime.UtcNow.AddSeconds(20);

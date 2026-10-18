@@ -35,7 +35,7 @@ public partial class MainWindow
         if (_processing || !_toolWindows.ContainsKey("info")) return;
         Bitmap? source = _sourceImage;
         Bitmap? result = _downscaledResult;
-        Bitmap? basis = operationSourceInput.SelectedIndex == 1 && result is not null ? result : source;
+        Bitmap? basis = ProcessingBasis == 1 && result is not null ? result : source;
         if (ReferenceEquals(source, _infoSourceShown) &&
             ReferenceEquals(result, _infoResultShown) &&
             ReferenceEquals(basis, _infoBasisShown)) return;
@@ -121,7 +121,7 @@ public partial class MainWindow
     {
         if (_processing || _activeSource is null || oldColor.ToArgb() == newColor.ToArgb()) return;
 
-        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         Bitmap? basis = useResult ? _downscaledResult : _sourceImage;
         if (basis is null) return;
         var document = _activeSource;

@@ -18,7 +18,7 @@ public partial class MainWindow
     private void ShowAsepriteWorkspace()
     {
         if (_processing || iconWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
-        SetVisible(homeScroll, false); SetVisible(workspaceHost, false); SetVisible(editorToolbar, false); SetVisible(iconWorkspace, false);
+        SetVisible(homeScroll, false); SetVisible(workspaceHost, false);  SetVisible(iconWorkspace, false);
         SetVisible(asepriteWorkspace, true);
         SetVisible(backgroundWorkspace, false);
         SetVisible(moodboardWorkspace, false);

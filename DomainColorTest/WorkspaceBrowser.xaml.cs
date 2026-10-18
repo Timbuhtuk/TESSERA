@@ -54,6 +54,8 @@ public partial class WorkspaceBrowser : UserControl
         };
     }
 
+    public void CreateProject() => NewProjectClicked(this, new());
+
     public void Bind(WorkspaceCatalog catalog)
     {
         _catalog = catalog;

@@ -44,10 +44,18 @@
     </ResourceDictionary></Window.Resources>
     <Grid x:Name="rootLayout" Background="{DynamicResource Ts.Canvas}">
         <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-        <StackPanel>
-            <Border x:Name="titleBar" Height="40" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1">
-                <DockPanel LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+        <Border x:Name="titleBar" Height="40" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <Button x:Name="libraryButton" Style="{StaticResource BrandButton}" Click="GoToLibrary" ToolTip="{local:Translate Text59CEF240ACA0}" AutomationProperties.Name="{local:Translate Text59CEF240ACA0}" shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <StackPanel Orientation="Horizontal" Margin="12,0">
+                        <Image Source="Assets/app-icon.png" Width="18" Height="18" Margin="0,0,9,0"/>
+                        <TextBlock Text="TESSERA" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Menu x:Name="mainMenu" Grid.Column="1" IsMainMenu="True" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                <TextBlock x:Name="fileLabel" Grid.Column="2" Margin="12,0,60,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" HorizontalAlignment="Left" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <StackPanel x:Name="captionButtons" Grid.Column="3" Orientation="Horizontal">
                         <Button x:Name="appearanceButton" Style="{StaticResource CaptionButton}" Click="OpenAppearance" ToolTip="{local:Translate Text985B5E0F2CCF}" AutomationProperties.Name="{local:Translate Text985B5E0F2CCF}" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                             <local:SettingsIcon Width="18" Height="18" IsHitTestVisible="False" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
                         </Button>
@@ -66,70 +74,8 @@
                             <Path Data="M 0,0 L 10,10 M 10,0 L 0,10" Width="10" Height="10" Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1" />
                         </Button>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False">
-                        <Image Source="Assets/app-icon.png" Width="18" Height="18" Margin="0,0,9,0" />
-                        <TextBlock Text="TESSERA" FontSize="13" FontWeight="SemiBold" />
-                    </StackPanel>
-                </DockPanel>
-            </Border>
-
-            <WrapPanel x:Name="editorToolbar" Margin="18,8,18,9" VerticalAlignment="Center">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,4">
-                    <Button x:Name="backToLibraryButton" Content="←" Width="34" Height="32" Margin="0,0,10,0" Click="GoToLibrary" ToolTip="{local:Translate Text59CEF240ACA0}" AutomationProperties.Name="{local:Translate Text59CEF240ACA0}" />
-                    <Button x:Name="fileMenuButton" Content="{local:Translate Text32E8EC107B96}" Width="70" Height="32" Margin="0,0,14,0" AutomationProperties.Name="{local:Translate TextB4720A394308}" />
-                    <Popup x:Name="fileMenuPopup" PlacementTarget="{Binding ElementName=fileMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                        <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Padding="5">
-                            <StackPanel Width="225">
-                                <Button x:Name="openButton" Content="{local:Translate Text0DF7E1837013}" HorizontalContentAlignment="Left" ToolTip="{local:Translate TextFB5661CD199F}" />
-                                <Button x:Name="saveButton" Content="{local:Translate TextEE96E239C644}" HorizontalContentAlignment="Left" Margin="0,4,0,0" IsEnabled="False" ToolTip="{local:Translate TextCE9ED9C59F0F}" />
-                                <Button x:Name="saveAllButton" Content="{local:Translate Text217CDAAF368F}" HorizontalContentAlignment="Left" Margin="0,4,0,0" IsEnabled="False" ToolTip="{local:Translate Text8A58415C9858}" />
-                                <Button x:Name="checkUpdatesMenuButton" Content="{local:Translate Text93B08F7B1465}" HorizontalContentAlignment="Left" Margin="0,8,0,0" />
-                            </StackPanel>
-                        </Border>
-                    </Popup>
-                    <TextBlock x:Name="fileLabel" Width="150" Text="{local:Translate TextDEEA9C26AAEA}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,4">
-                    <TextBlock Text="{local:Translate Text6038C4D13566}" Foreground="{DynamicResource Ts.TextSecondary}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox x:Name="operationSourceInput" SelectedIndex="0" Width="168" AutomationProperties.Name="{local:Translate TextF3DE540714D4}">
-                        <ComboBoxItem Content="{local:Translate Text0B5267F774E0}" />
-                        <ComboBoxItem Content="{local:Translate TextCDD93F63767E}" />
-                    </ComboBox>
-                </StackPanel>
-                <StackPanel x:Name="toolNavigation" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,4">
-                    <Button x:Name="profileToolButton" Content="{local:Translate TextFFFF942D80B2}" Margin="0,0,6,0" ToolTip="{local:Translate Text819EB5D382B4}" />
-                    <Button x:Name="sizeToolButton" Content="{local:Translate Text572095D4A787}" Margin="0,0,6,0" ToolTip="{local:Translate TextC64E97B8B785}" />
-                    <Button x:Name="colorToolButton" Content="{local:Translate TextC5F0893AFD67}" Margin="0,0,6,0" ToolTip="{local:Translate TextA54DBD5BB0E1}" />
-                    <Button x:Name="smoothingToolButton" Content="{local:Translate Text49E62FCACE44}" Margin="0,0,6,0" ToolTip="{local:Translate Text4BE77FC1D8F7}" />
-                    <Button x:Name="gridToolButton" Content="{local:Translate TextA221A6B37955}" Margin="0,0,6,0" ToolTip="{local:Translate Text57E4D139B181}" />
-                    <Button x:Name="filtersToolButton" Content="{local:Translate TextA69757B1DBE1}" Margin="0,0,6,0" ToolTip="{local:Translate TextBE59B6C0336D}" />
-                    <Button x:Name="infoToolButton" Content="{local:Translate Text3319B9B01F2A}" ToolTip="{local:Translate TextAB37B2FF434C}" />
-                </StackPanel>
-                <StackPanel x:Name="compactToolNavigation" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,18,4" Visibility="Collapsed">
-                    <Button x:Name="toolsMenuButton" Content="{local:Translate Text8904CD71FB15}" AutomationProperties.Name="{local:Translate TextA9E65DA16AD4}" />
-                    <Popup x:Name="toolsMenuPopup" PlacementTarget="{Binding ElementName=toolsMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                        <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Padding="5">
-                            <StackPanel Width="180">
-                                <Button x:Name="compactProfileToolButton" Content="{local:Translate TextFFFF942D80B2}" HorizontalContentAlignment="Left" />
-                                <Button x:Name="compactSizeToolButton" Content="{local:Translate Text572095D4A787}" HorizontalContentAlignment="Left" />
-                                <Button x:Name="compactColorToolButton" Content="{local:Translate TextC5F0893AFD67}" HorizontalContentAlignment="Left" />
-                                <Button x:Name="compactSmoothingToolButton" Content="{local:Translate Text49E62FCACE44}" HorizontalContentAlignment="Left" />
-                                <Button x:Name="compactGridToolButton" Content="{local:Translate TextA221A6B37955}" HorizontalContentAlignment="Left" />
-                                <Button x:Name="compactFiltersToolButton" Content="{local:Translate TextA69757B1DBE1}" HorizontalContentAlignment="Left" />
-                                <Button x:Name="compactInfoToolButton" Content="{local:Translate Text3319B9B01F2A}" HorizontalContentAlignment="Left" />
-                            </StackPanel>
-                        </Border>
-                    </Popup>
-                </StackPanel>
-                <Border Width="1" Background="{DynamicResource Ts.Border}" Margin="0,4,16,8" />
-                <StackPanel x:Name="previewNavigation" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
-                    <TextBlock Text="{local:Translate TextE037E967D3D8}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox x:Name="zoomInput" SelectedIndex="0" Width="100" Margin="0,0,16,0" ToolTip="{local:Translate TextCAB0AB5B9D48}"><ComboBoxItem Content="{local:Translate Text3681A2658AB5}" /><ComboBoxItem Content="6,25%" /><ComboBoxItem Content="12,5%" /><ComboBoxItem Content="25%" /><ComboBoxItem Content="50%" /><ComboBoxItem Content="100%" /><ComboBoxItem Content="200%" /><ComboBoxItem Content="400%" /><ComboBoxItem Content="800%" /><ComboBoxItem Content="1600%" /><ComboBoxItem Content="3200%" /><ComboBoxItem Content="6400%" /></ComboBox>
-                    <TextBlock Text="{local:Translate Text2084425180CA}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox x:Name="backgroundInput" SelectedIndex="0" Width="116"><ComboBoxItem Content="{local:Translate Text5E7EC04C97C5}" /><ComboBoxItem Content="{local:Translate Text21943A44634E}" /><ComboBoxItem Content="{local:Translate Text5405EB821E3A}" /></ComboBox>
-                </StackPanel>
-            </WrapPanel>
-        </StackPanel>
+            </Grid>
+        </Border>
         <ScrollViewer x:Name="workspaceHost" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid x:Name="workspaceGrid">
             <Grid x:Name="previewArea" Margin="18,0,18,12">

@@ -16,9 +16,9 @@ public partial class MainWindow
             if (_availableRelease is null) await CheckForUpdatesAsync(true);
             else await InstallUpdateAsync();
         };
-        checkUpdatesMenuButton.Click += async (_, _) =>
+        checkUpdatesMenuItem.Click += async (_, _) =>
         {
-            fileMenuPopup.IsOpen = false;
+            CloseNavigationMenus();
             await CheckForUpdatesAsync(true);
         };
         Loaded += async (_, _) => { if (_autoCheckUpdates) await CheckForUpdatesAsync(false); };
@@ -28,7 +28,7 @@ public partial class MainWindow
     {
         if (_checkingUpdates) return;
         _checkingUpdates = true;
-        updateButton.IsEnabled = checkUpdatesMenuButton.IsEnabled = false;
+        updateButton.IsEnabled = checkUpdatesMenuItem.IsEnabled = false;
         updateButton.Content = Localization.Text("Проверка…");
         try
         {
@@ -45,7 +45,7 @@ public partial class MainWindow
         finally
         {
             _checkingUpdates = false;
-            updateButton.IsEnabled = checkUpdatesMenuButton.IsEnabled = true;
+            updateButton.IsEnabled = checkUpdatesMenuItem.IsEnabled = true;
         }
     }
 
@@ -67,7 +67,7 @@ public partial class MainWindow
             Localization.Text("Обновление Tessera"), MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (choice != MessageBoxResult.Yes) return;
 
-        updateButton.IsEnabled = checkUpdatesMenuButton.IsEnabled = false;
+        updateButton.IsEnabled = checkUpdatesMenuItem.IsEnabled = false;
         updateButton.Content = Localization.Text("Загрузка…");
         try
         {
@@ -84,7 +84,7 @@ public partial class MainWindow
         finally
         {
             updateButton.Content = UpdateButtonText();
-            updateButton.IsEnabled = checkUpdatesMenuButton.IsEnabled = true;
+            updateButton.IsEnabled = checkUpdatesMenuItem.IsEnabled = true;
         }
     }
 

@@ -17,7 +17,6 @@ public partial class MainWindow
     private WorkspaceAsset? _workspaceActive;
     private Border? _workspaceDock;
     private StackPanel? _workspaceToolContent;
-    private WrapPanel? _workspaceActions;
     private readonly List<GroupBox> _workspaceGroups = [];
     private readonly HashSet<Guid> _observedSources = [];
     private readonly ObservableCollection<SourceEntry> _workspaceSources = [];
@@ -68,33 +67,12 @@ public partial class MainWindow
         _workspaceDock.SetResourceReference(Border.BackgroundProperty, "Ts.Raised");
         _workspaceDock.SetResourceReference(Border.BorderBrushProperty, "Ts.Border");
         Grid.SetColumn(_workspaceDock, 1); Grid.SetRow(_workspaceDock, 1); workspaceGrid.Children.Add(_workspaceDock);
-        _workspaceActions = new WrapPanel { Margin = new Thickness(18, 0, 18, 8) };
-        var parent = (StackPanel)editorToolbar.Parent; parent.Children.Add(_workspaceActions);
-        foreach (var pair in new[] { (Localization.Text("Удалить фон"), "background"), (Localization.Text("Проверить тайлы"), "tiles"), (Localization.Text("Экспорт ICO"), "ico"), (Localization.Text("На доску…"), "board"), (Localization.Text("Экспорт PNG…"), "export"), (Localization.Text("Заменить цвет"), "replace") })
-        {
-            var button = new Button { Content = pair.Item1, Margin = new Thickness(0, 0, 6, 6), Padding = new Thickness(9, 5, 9, 5) };
-            button.Click += async (_, _) => { try { await WorkspaceActionAsync(pair.Item2, _workspaceActive); } catch (Exception ex) { WorkspaceError(ex); } };
-            _workspaceActions.Children.Add(button);
-        }
-        profileToolButton.Content = compactProfileToolButton.Content = Localization.Text("Готовые сценарии");
-        colorToolButton.Content = compactColorToolButton.Content = Localization.Text("Число цветов");
-        smoothingToolButton.Content = compactSmoothingToolButton.Content = Localization.Text("Очистить цвета");
-        infoToolButton.Content = compactInfoToolButton.Content = Localization.Text("Цвета и сведения");
         colorToolGroup.Header = Localization.Text("Число цветов");
         colorOnlyButton.Content = Localization.Text("Уменьшить число цветов");
         resultPreview.EmptyText = Localization.Text("Выберите действие справа.\nНовый вариант появится здесь и сохранится в истории.");
-        saveButton.Content = Localization.Text("Экспортировать PNG…");
         updateButton.Content = Localization.Text("Экспериментальная версия"); updateButton.IsEnabled = false;
-        checkUpdatesMenuButton.IsEnabled = false;
+        checkUpdatesMenuItem.IsEnabled = false;
         SizeChanged += (_, _) => UpdateWorkspaceDockLayout();
-        PreviewKeyDown += async (_, e) =>
-        {
-            if (e.Handled) return;
-            if (Keyboard.Modifiers != ModifierKeys.Control) return;
-            if (e.Key == Key.O && _workspaceBrowser.Visibility == Visibility.Visible) { e.Handled = true; await PromptWorkspaceFilesAsync(); }
-            else if (e.Key == Key.S && moodboardWorkspace.Visibility == Visibility.Visible && moodboardWorkspace.HasBoard)
-            { e.Handled = true; try { await moodboardWorkspace.SaveWorkspaceAsync(); } catch (Exception ex) { WorkspaceError(ex); } }
-        };
         Closing += (_, e) =>
         {
             if (e.Cancel) return;
@@ -190,9 +168,9 @@ public partial class MainWindow
                 SelectSource(source);
                 if (source.SelectedGeneration is { } selected) SelectGeneration(selected);
                 if (asset.Draft is { } draft) RestoreSettings(draft);
-                operationSourceInput.SelectedIndex = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
-                zoomInput.SelectedIndex = Math.Clamp(asset.Zoom, 0, zoomInput.Items.Count - 1);
-                backgroundInput.SelectedIndex = Math.Clamp(asset.Background, 0, 2);
+                ProcessingBasis = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
+                PreviewZoom = Math.Clamp(asset.Zoom, 0, ZoomFactors.Length - 1);
+                PreviewBackground = Math.Clamp(asset.Background, 0, 2);
                 OpenDockedWorkspaceTool(Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
             }
             else if (asset.Kind == WorkspaceAssetKind.Animation)
@@ -207,7 +185,7 @@ public partial class MainWindow
                 moodboardWorkspace.WorkspaceSavePath = _workspaceCatalog.ContentPath(asset);
             }
             else await OpenWorkspaceTilesAsync(asset);
-            _workspaceCatalog.State.SelectedAsset = asset.Id; _workspaceCatalog.Save();
+            _workspaceCatalog.State.SelectedAsset = asset.Id; _workspaceCatalog.Save(); UpdateNavigationState();
         }
         catch (Exception ex) { WorkspaceError(ex); }
     }
@@ -250,7 +228,7 @@ public partial class MainWindow
             string? name = _workspaceBrowser!.Prompt(Localization.Text("Создать коллекцию тайлов"), Localization.Text("Название коллекции"), Localization.Text("Новые тайлы")); if (string.IsNullOrWhiteSpace(name)) return;
             var tiles = new WorkspaceAsset { Kind = WorkspaceAssetKind.Tiles, Name = name, ContentFile = "content.ttiles" };
             string path = _workspaceCatalog.ContentPath(tiles); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            TileCollectionFile.Save(path, [], new()); _workspaceCatalog.State.Assets.Add(tiles); AddNewWorkspaceAsset(tiles); await OpenWorkspaceTilesAsync(tiles); return;
+            TileCollectionFile.Save(path, [], new()); _workspaceCatalog.State.Assets.Add(tiles); AddNewWorkspaceAsset(tiles); _workspaceActive = tiles; await OpenWorkspaceTilesAsync(tiles); return;
         }
         if (asset is null || asset.Kind != WorkspaceAssetKind.Image) return;
         if (_activeSource?.Id != asset.Id) await OpenWorkspaceAssetAsync(asset);
@@ -286,14 +264,14 @@ public partial class MainWindow
         _workspaceCatalog.Save(); _workspaceBrowser!.Refresh(asset.Id);
     }
 
-    private Bitmap WorkspaceBasis() => operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null ? _downscaledResult : _sourceImage!;
-    private string WorkspaceBasisPath() => operationSourceInput.SelectedIndex == 1 && _activeSource!.SelectedGeneration is { } selected ? _library.ResultPath(_activeSource, selected) : _library.SourcePath(_activeSource!);
+    private Bitmap WorkspaceBasis() => ProcessingBasis == 1 && _downscaledResult is not null ? _downscaledResult : _sourceImage!;
+    private string WorkspaceBasisPath() => ProcessingBasis == 1 && _activeSource!.SelectedGeneration is { } selected ? _library.ResultPath(_activeSource, selected) : _library.SourcePath(_activeSource!);
     private void SaveWorkspaceImageResult(Bitmap result, string operation, SourceEntry? target = null)
     {
         target ??= _activeSource; if (target is null || !_sources.Contains(target)) throw new InvalidOperationException(Localization.Text("Исходный ассет больше не доступен."));
         var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = target.SelectedGeneration?.Id, PreservesTransparency = true, Settings = target == _activeSource ? CaptureSettings() : target.DraftSettings ?? new() });
         target.Generations.Add(entry); target.SelectedGeneration = entry;
-        if (target == _activeSource) { SelectGeneration(entry); operationSourceInput.SelectedIndex = 1; }
+        if (target == _activeSource) { SelectGeneration(entry); ProcessingBasis = 1; }
         SynchronizeWorkspace();
     }
     private void ExportWorkspaceImage()
@@ -418,7 +396,7 @@ public partial class MainWindow
         if (_activeSource is not null && _workspaceCatalog.State.Assets.FirstOrDefault(a => a.Id == _activeSource.Id) is { } asset)
         {
             asset.Draft = CaptureSettings(); asset.SelectedResult = _activeSource.SelectedGeneration?.Id;
-            asset.Basis = operationSourceInput.SelectedIndex; asset.Zoom = zoomInput.SelectedIndex; asset.Background = backgroundInput.SelectedIndex;
+            asset.Basis = ProcessingBasis; asset.Zoom = PreviewZoom; asset.Background = PreviewBackground;
             _activeSource.DraftSettings = asset.Draft;
         }
         _workspaceCatalog.Save();
@@ -428,14 +406,14 @@ public partial class MainWindow
     {
         if (_workspaceBrowser is null) return;
         PersistWorkspaceState(); _workspaceBrowser.Visibility = Visibility.Visible;
-        if (_workspaceActions is not null) _workspaceActions.Visibility = Visibility.Collapsed;
         SynchronizeWorkspace(); _workspaceBrowser.Refresh();
         statusLabel.Text = Localization.Text("Библиотека · материалы, проекты и общие результаты");
+        UpdateNavigationState();
     }
     private void HideWorkspaceBrowser()
     {
         if (_workspaceBrowser is not null) _workspaceBrowser.Visibility = Visibility.Collapsed;
-        if (_workspaceActions is not null) _workspaceActions.Visibility = workspaceHost.Visibility == Visibility.Visible ? Visibility.Visible : Visibility.Collapsed;
+        UpdateNavigationState();
     }
 
     private void AdoptWorkspaceSource(SourceEntry source)
@@ -475,9 +453,9 @@ public partial class MainWindow
     {
         if (!_workspaceReady || _workspaceCatalog?.State.Assets.FirstOrDefault(a => a.Id == source.Id) is not { } asset) return;
         if (source.DraftSettings is { } draft) RestoreSettings(draft);
-        operationSourceInput.SelectedIndex = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
-        zoomInput.SelectedIndex = Math.Clamp(asset.Zoom, 0, zoomInput.Items.Count - 1);
-        backgroundInput.SelectedIndex = Math.Clamp(asset.Background, 0, 2);
+        ProcessingBasis = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
+        PreviewZoom = Math.Clamp(asset.Zoom, 0, ZoomFactors.Length - 1);
+        PreviewBackground = Math.Clamp(asset.Background, 0, 2);
         if (_workspaceDock?.Visibility != Visibility.Visible) OpenDockedWorkspaceTool(Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
     }
 

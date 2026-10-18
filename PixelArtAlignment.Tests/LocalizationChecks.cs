@@ -49,6 +49,7 @@ internal static class LocalizationChecks
         {
             window.EnableWorkspacePrototype(); window.Show(); Pump();
             Require(Localization.Language == "en", "Saved language was not loaded on startup");
+            CheckMenu(Get<Menu>(window, "mainMenu").Items);
             Require(Get<Button>(window, "appearanceButton").Content is SettingsIcon { ActualWidth: > 0 }, "Settings SVG did not render");
             Require(AutomationProperties.GetName(Get<Button>(window, "appearanceButton")) == "Settings", "Settings accessibility label is not translated");
             var browser = window.Browser!;
@@ -85,6 +86,15 @@ internal static class LocalizationChecks
     }
 
     private static T Get<T>(FrameworkElement owner, string name) => (T)owner.FindName(name);
+    private static void CheckMenu(ItemCollection items)
+    {
+        foreach (var item in items.OfType<MenuItem>())
+        {
+            string label = item.Header?.ToString() ?? "";
+            Require(!label.Any(c => c is >= '\u0400' and <= '\u04ff'), "Untranslated English navigation item: " + label);
+            CheckMenu(item.Items);
+        }
+    }
     private static void Pump() { var frame = new DispatcherFrame(); Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.SystemIdle, new Action(() => frame.Continue = false)); Dispatcher.PushFrame(frame); }
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
 }

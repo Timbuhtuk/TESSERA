@@ -9,6 +9,8 @@ namespace DomainColorTest;
 
 public partial class BackgroundWorkspace
 {
+    public bool CanExport => backgroundSaveButton.IsEnabled;
+    public Task ExportDialogAsync() => SaveDialogAsync();
     private Button? _workspaceApplyButton;
     private Func<Bitmap, Task>? _workspaceApply;
     public void EnableWorkspaceApply(Func<Bitmap, Task> apply)
@@ -33,6 +35,7 @@ public partial class BackgroundWorkspace
 
 public partial class MoodboardWorkspace
 {
+    public Task ExportDialogAsync() => ExportPngAsync();
     private string? _workspaceSavePath;
     public string? WorkspaceSavePath
     {
@@ -57,6 +60,8 @@ public partial class MoodboardWorkspace
 
 public partial class AsepriteWorkspace
 {
+    public bool CanExport => sheetSaveButton.IsEnabled;
+    public Task ExportDialogAsync() => SaveDialogAsync(false);
     public Func<IReadOnlyList<string>, Task>? WorkspaceImport { get; set; }
     public string? CurrentSheetPath => (sheetStrip.SelectedItem as SheetEntry)?.Result?.ImagePath;
     public void ApplyWorkspaceSettings(WorkspaceAsset asset)
@@ -71,6 +76,8 @@ public partial class AsepriteWorkspace
 
 public partial class TileInspectorWindow
 {
+    public void SaveWorkspaceDocument() => SaveCollectionClicked(this, new());
+    public void ExportDialog() => ExportClicked(this, new());
     public string? WorkspaceSavePath { get; set; }
     public event Action? WorkspaceSaved;
     public void EnableWorkspaceApply(Action<TileAsset> apply)
@@ -90,6 +97,8 @@ public partial class TileInspectorWindow
 
 public partial class IconWorkspace
 {
+    public bool CanExport => iconSaveButton.IsEnabled;
+    public Task ExportDialogAsync() => SaveDialogAsync();
     public void UseWorkspaceExport()
     {
         iconOpenButton.Visibility = Visibility.Collapsed;
