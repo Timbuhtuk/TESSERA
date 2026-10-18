@@ -81,7 +81,7 @@ public partial class WorkspaceBrowser : UserControl
         assetList.ItemsSource = assets;
         foreach (var asset in assets.Where(a => select == a.Id || select is null && selected.Contains(a.Id))) assetList.SelectedItems.Add(asset);
         if (assetList.SelectedItem is null && state.SelectedAsset is { } last) assetList.SelectedItem = assets.FirstOrDefault(a => a.Id == last);
-        viewTitle.Text = state.View switch { "unassigned" => Localization.Text("Без проекта"), "recent" => Localization.Text("Недавние"), "project" => state.FolderId is { } folder ? _catalog.State.Folders.FirstOrDefault(f => f.Id == folder)?.Name ?? Localization.Text("Проект") : _catalog.State.Projects.FirstOrDefault(p => p.Id == state.ProjectId)?.Name ?? Localization.Text("Проект"), _ => Localization.Text("Все ассеты") };
+        viewTitle.Text = state.View switch { "unassigned" => Localization.Text("Без проекта"), "recent" => Localization.Text("Недавние"), "project" => state.ProjectId is { } project ? _catalog.Location(new WorkspaceLink { ProjectId = project, FolderId = state.FolderId }) : Localization.Text("Проект"), _ => Localization.Text("Все ассеты") };
         emptyHint.Visibility = assets.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         countLabel.Text = Localization.Format("Материалов: {0} · Выбрано: {1} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия", assets.Count, Selection.Count);
         SaveFilters(); UpdateDetails();
