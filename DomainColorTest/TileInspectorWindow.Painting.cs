@@ -41,7 +41,7 @@ public partial class TileInspectorWindow
             if (begin)
             {
                 paintColorInput.Text = target.GetPixel(point.X, point.Y).ToString();
-                statusLabel.Text = "Цвет взят из исходных пикселей · " + paintColorInput.Text;
+                statusLabel.Text = Localization.Text("Цвет взят из исходных пикселей · ") + paintColorInput.Text;
             }
             return;
         }
@@ -49,7 +49,7 @@ public partial class TileInspectorWindow
         {
             FinishStroke();
             if (paintToolInput.SelectedIndex == 2) _strokeColor = Colors.Transparent;
-            else if (!TryColor(paintColorInput.Text, out _strokeColor)) { statusLabel.Text = "Введите цвет #RRGGBB или #AARRGGBB."; return; }
+            else if (!TryColor(paintColorInput.Text, out _strokeColor)) { statusLabel.Text = Localization.Text("Введите цвет #RRGGBB или #AARRGGBB."); return; }
             _strokeAsset = target; _strokeBefore = target.Capture();
             _strokeStart = _lastPoint = point;
             _strokeSize = brushSizeInput.SelectedIndex == 1 ? 2 : brushSizeInput.SelectedIndex == 2 ? 4 : 1;
@@ -82,9 +82,9 @@ public partial class TileInspectorWindow
         paintToolInput.IsEnabled = !_busy;
         preview.EditingEnabled = !_busy && paintToolInput.SelectedIndex > 0;
         preview.Cursor = preview.EditingEnabled ? Cursors.Cross : Cursors.Arrow;
-        undoButton.ToolTip = $"Отменить: {history?.Name ?? "тайл"} (Ctrl+Z)";
-        redoButton.ToolTip = $"Повторить: {history?.Name ?? "тайл"} (Ctrl+Y)";
-        editHint.Text = $"Рисование — по копии A или B. Сглаживание — весь A / его края. Отмена: {history?.Name ?? "активный тайл"}.";
+        undoButton.ToolTip = Localization.Format("Отменить: {0} (Ctrl+Z)", history?.Name ?? Localization.Text("тайл"));
+        redoButton.ToolTip = Localization.Format("Повторить: {0} (Ctrl+Y)", history?.Name ?? Localization.Text("тайл"));
+        editHint.Text = Localization.Format("Рисование — по копии A или B. Сглаживание — весь A / его края. Отмена: {0}.", history?.Name ?? Localization.Text("активный тайл"));
     }
 
     private void UndoClicked(object sender, RoutedEventArgs e)
@@ -120,27 +120,27 @@ public partial class TileInspectorWindow
     {
         if (_busy || ActiveAsset is not { } asset) return;
         FinishStroke();
-        if (passes is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(passes), "Число проходов: 1–100.");
+        if (passes is < 1 or > 100) throw new ArgumentOutOfRangeException(nameof(passes), Localization.Text("Число проходов: 1–100."));
         byte[] pixels = (byte[])asset.Pixels.Clone();
         int band = (int)stripeInput.Value;
         long version = asset.Version;
         _busy = true; UpdateEditControls();
-        statusLabel.Text = $"Сглаживание цветов · {asset.Name} · {passes} проходов…";
+        statusLabel.Text = Localization.Format("Сглаживание цветов · {0} · {1} проходов…", asset.Name, passes);
         try
         {
             byte[] output = await Task.Run(() => TileAssetProcessing.Smooth(pixels, asset.Width, asset.Height, passes, edgesOnly, band));
             if (_closed || !_assets.Contains(asset) || asset.Version != version) return;
             _historyAsset = asset;
-            if (asset.ReplacePixels(output)) { SetProjectDirty(); UpdateAnalysis(); statusLabel.Text = "Цвета сглажены · можно отменить правку."; }
-            else statusLabel.Text = "Сглаживание завершено · подходящих изменений нет.";
+            if (asset.ReplacePixels(output)) { SetProjectDirty(); UpdateAnalysis(); statusLabel.Text = Localization.Text("Цвета сглажены · можно отменить правку."); }
+            else statusLabel.Text = Localization.Text("Сглаживание завершено · подходящих изменений нет.");
         }
         finally { _busy = false; UpdateEditControls(); }
     }
     private async void SmoothClicked(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(smoothPassesInput.Text, out int passes) || passes is < 1 or > 100)
-        { statusLabel.Text = "Число проходов должно быть от 1 до 100."; return; }
+        { statusLabel.Text = Localization.Text("Число проходов должно быть от 1 до 100."); return; }
         try { await SmoothActiveAsync(passes, smoothEdgesInput.IsChecked == true); }
-        catch (Exception ex) { statusLabel.Text = "Не удалось сгладить цвета: " + ex.Message; }
+        catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось сгладить цвета: ") + ex.Message; }
     }
 }

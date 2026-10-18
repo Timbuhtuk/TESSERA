@@ -12,13 +12,13 @@ public partial class MainWindow
 
     private void InitializeEditorTools()
     {
-        profileToolButton.Click += (_, _) => OpenEditorTool("profile", "Готовые режимы", 320, profileToolGroup, executionToolGroup);
-        sizeToolButton.Click += (_, _) => OpenEditorTool("size", "Размер", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
-        colorToolButton.Click += (_, _) => OpenEditorTool("color", "Палитра", 440, colorToolGroup);
-        smoothingToolButton.Click += (_, _) => OpenEditorTool("smoothing", "Сглаживание", 470, smoothingToolGroup);
-        gridToolButton.Click += (_, _) => OpenEditorTool("grid", "Сетка", 280, gridToolGroup);
-        filtersToolButton.Click += (_, _) => OpenEditorTool("filters", "Фильтры", 410, filtersToolGroup);
-        infoToolButton.Click += (_, _) => { OpenEditorTool("info", "Инфо", 560, infoToolGroup); RefreshInfo(); };
+        profileToolButton.Click += (_, _) => OpenEditorTool("profile", Localization.Text("Готовые режимы"), 320, profileToolGroup, executionToolGroup);
+        sizeToolButton.Click += (_, _) => OpenEditorTool("size", Localization.Text("Размер"), 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
+        colorToolButton.Click += (_, _) => OpenEditorTool("color", Localization.Text("Палитра"), 440, colorToolGroup);
+        smoothingToolButton.Click += (_, _) => OpenEditorTool("smoothing", Localization.Text("Сглаживание"), 470, smoothingToolGroup);
+        gridToolButton.Click += (_, _) => OpenEditorTool("grid", Localization.Text("Сетка"), 280, gridToolGroup);
+        filtersToolButton.Click += (_, _) => OpenEditorTool("filters", Localization.Text("Фильтры"), 410, filtersToolGroup);
+        infoToolButton.Click += (_, _) => { OpenEditorTool("info", Localization.Text("Инфо"), 560, infoToolGroup); RefreshInfo(); };
         fileMenuButton.Click += (_, _) => fileMenuPopup.IsOpen = !fileMenuPopup.IsOpen;
         toolsMenuButton.Click += (_, _) => toolsMenuPopup.IsOpen = !toolsMenuPopup.IsOpen;
         foreach (var pair in new[]
@@ -46,7 +46,7 @@ public partial class MainWindow
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
     {
-        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => "Готовые сценарии", "color" => "Уменьшить число цветов", "smoothing" => "Очистить цвета", "info" => "Цвета и сведения", _ => title }, groups); if (key == "info") RefreshInfo(); return; }
+        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); if (key == "info") RefreshInfo(); return; }
         if (_toolWindows.TryGetValue(key, out var existing))
         {
             if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
@@ -59,7 +59,7 @@ public partial class MainWindow
         for (int index = 0; index < groups.Length; index++)
         {
             var group = groups[index];
-            if (group.Parent is not Panel parent) throw new InvalidOperationException("Панель инструмента уже используется.");
+            if (group.Parent is not Panel parent) throw new InvalidOperationException(Localization.Text("Панель инструмента уже используется."));
             // Сохраняем стили при переносе: иначе Slider временно получает Maximum = 10 и меняет Value.
             if (!group.Resources.MergedDictionaries.Contains(Resources)) group.Resources.MergedDictionaries.Add(Resources);
             parent.Children.Remove(group);
@@ -69,7 +69,7 @@ public partial class MainWindow
         if (advancedContent is not null)
             content.Children.Add(new Expander
             {
-                Header = "Дополнительные настройки",
+                Header = Localization.Text("Дополнительные настройки"),
                 Content = advancedContent,
                 Style = (Style)FindResource("ToolExpander"),
                 Margin = new Thickness(0, 2, 0, 8)
@@ -166,7 +166,7 @@ public partial class MainWindow
                 Width = 42,
                 Height = 38,
                 FontSize = 19,
-                ToolTip = "Закрыть",
+                ToolTip = Localization.Text("Закрыть"),
                 Style = (Style)FindResource("CloseCaptionButton")
             };
             close.Click += (_, _) => Close();

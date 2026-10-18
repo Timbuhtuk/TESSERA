@@ -22,7 +22,7 @@
       <ContentPresenter x:Name="PART_Header" ContentSource="Header" Margin="20,0,0,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
      </Border>
      <ToggleButton x:Name="Expander" Width="20" Focusable="False" IsTabStop="False" ClickMode="Press" Foreground="{TemplateBinding Foreground}"
-                   IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" AutomationProperties.Name="Развернуть или свернуть">
+                   IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" AutomationProperties.Name="{local:Translate TextC7F4E3E28851}">
       <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
        <Border Background="Transparent">
         <Path x:Name="Arrow" Data="M 0,0 L 4,4 L 0,8" Width="4" Height="8" Stretch="Uniform" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.2" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"/>
@@ -62,36 +62,36 @@
   <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Background="{DynamicResource Ts.Raised}">
    <DockPanel Margin="14,18">
     <StackPanel DockPanel.Dock="Top">
-     <TextBlock Text="РАБОЧЕЕ ПРОСТРАНСТВО" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,12"/>
-     <Button Content="Все ассеты" Style="{StaticResource NavButton}" Click="AllClicked"/>
-     <Button Content="Без проекта" Style="{StaticResource NavButton}" Click="UnassignedClicked"/>
-     <Button Content="Недавние" Style="{StaticResource NavButton}" Click="RecentClicked"/>
-     <DockPanel Margin="0,24,0,8"><Button Content="+" DockPanel.Dock="Right" Click="NewProjectClicked" ToolTip="Создать проект" AutomationProperties.Name="Создать проект"/><TextBlock Text="ПРОЕКТЫ" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11"/></DockPanel>
+     <TextBlock Text="{local:Translate Text0D7F700390DB}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,12"/>
+     <Button Content="{local:Translate TextFC14887CED6F}" Style="{StaticResource NavButton}" Click="AllClicked"/>
+     <Button Content="{local:Translate Text7F8044F85387}" Style="{StaticResource NavButton}" Click="UnassignedClicked"/>
+     <Button Content="{local:Translate TextF4EDEAE56B65}" Style="{StaticResource NavButton}" Click="RecentClicked"/>
+     <DockPanel Margin="0,24,0,8"><Button Content="+" DockPanel.Dock="Right" Click="NewProjectClicked" ToolTip="{local:Translate Text49ED84AC6492}" AutomationProperties.Name="{local:Translate Text49ED84AC6492}"/><TextBlock Text="{local:Translate TextBB9EC32D295C}" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11"/></DockPanel>
     </StackPanel>
-    <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="Проекты и папки"/>
+    <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="{local:Translate TextA71D10D12ADC}"/>
    </DockPanel>
   </Border>
   <Grid Grid.Column="1" Margin="20,18,8,8">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <DockPanel>
-    <WrapPanel DockPanel.Dock="Right"><Button Content="Открыть файлы…" Click="ImportClicked"/><Button Content="Создать ▾" Click="CreateClicked" Margin="6,0,0,0"/></WrapPanel>
-    <TextBlock x:Name="viewTitle" Text="Все ассеты" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+    <WrapPanel DockPanel.Dock="Right"><Button Content="{local:Translate Text753CB453EF62}" Click="ImportClicked"/><Button Content="{local:Translate Text5AE910EC31BB}" Click="CreateClicked" Margin="6,0,0,0"/></WrapPanel>
+    <TextBlock x:Name="viewTitle" Text="{local:Translate TextFC14887CED6F}" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
    </DockPanel>
    <Grid Grid.Row="1" Margin="0,18,4,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
-    <Grid><TextBox x:Name="searchInput" TextChanged="FiltersChanged" ToolTip="Поиск по названию и тегам; несколько слов уточняют поиск" AutomationProperties.Name="Поиск по названию и тегам"/>
-     <TextBlock Text="Название или теги…" Margin="10,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=searchInput}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+    <Grid><TextBox x:Name="searchInput" TextChanged="FiltersChanged" ToolTip="{local:Translate Text776DC2577A66}" AutomationProperties.Name="{local:Translate TextD275FDA822F3}"/>
+     <TextBlock Text="{local:Translate TextD6E65E98BB7A}" Margin="10,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=searchInput}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
     </Grid>
-    <ComboBox x:Name="scopeInput" Grid.Column="1" Margin="8,0,0,0" SelectedIndex="0" SelectionChanged="FiltersChanged" AutomationProperties.Name="Область поиска"><ComboBoxItem Content="Папка и вложенные"/><ComboBoxItem Content="Весь проект"/><ComboBoxItem Content="Вся библиотека"/></ComboBox>
+    <ComboBox x:Name="scopeInput" Grid.Column="1" Margin="8,0,0,0" SelectedIndex="0" SelectionChanged="FiltersChanged" AutomationProperties.Name="{local:Translate Text87038A34D05B}"><ComboBoxItem Content="{local:Translate Text2948A31485B8}"/><ComboBoxItem Content="{local:Translate Text7D70BED45C3F}"/><ComboBoxItem Content="{local:Translate Text57597C1CB946}"/></ComboBox>
    </Grid>
    <WrapPanel Grid.Row="2" Margin="0,0,0,14">
-    <ComboBox x:Name="kindInput" Width="154" SelectedIndex="0" SelectionChanged="FiltersChanged" AutomationProperties.Name="Тип материала"><ComboBoxItem Content="Все типы"/><ComboBoxItem Content="Изображения"/><ComboBoxItem Content="Анимации"/><ComboBoxItem Content="Доски"/><ComboBoxItem Content="Коллекции тайлов"/></ComboBox>
-    <TextBlock Text="Размер:" Margin="8,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}"/><TextBox x:Name="filterWidth" Width="54" TextChanged="FiltersChanged" ToolTip="Ширина в пикселях" AutomationProperties.Name="Фильтр ширины"/>
-    <TextBlock Text="×" Margin="3,0" VerticalAlignment="Center"/><TextBox x:Name="filterHeight" Width="54" TextChanged="FiltersChanged" ToolTip="Высота в пикселях" AutomationProperties.Name="Фильтр высоты"/>
-    <ComboBox x:Name="alphaInput" Width="140" Margin="6,0,0,0" SelectedIndex="0" SelectionChanged="FiltersChanged" AutomationProperties.Name="Фильтр прозрачности"><ComboBoxItem Content="Любой фон"/><ComboBoxItem Content="С прозрачностью"/><ComboBoxItem Content="Без прозрачности"/></ComboBox>
-    <Button Content="Сбросить" Click="ResetFilters" Margin="6,0,0,0" Padding="6,4"/>
+    <ComboBox x:Name="kindInput" Width="154" SelectedIndex="0" SelectionChanged="FiltersChanged" AutomationProperties.Name="{local:Translate TextD60CFB118B9C}"><ComboBoxItem Content="{local:Translate Text19161353D3BF}"/><ComboBoxItem Content="{local:Translate Text0A6258A5F30F}"/><ComboBoxItem Content="{local:Translate TextDF37C74A068D}"/><ComboBoxItem Content="{local:Translate Text9143EB5DCC80}"/><ComboBoxItem Content="{local:Translate TextE7BD3412C5C6}"/></ComboBox>
+    <TextBlock Text="{local:Translate TextD0F7B8094A0B}" Margin="8,0,4,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}"/><TextBox x:Name="filterWidth" Width="54" TextChanged="FiltersChanged" ToolTip="{local:Translate Text817E81333022}" AutomationProperties.Name="{local:Translate Text37D5FF67F65F}"/>
+    <TextBlock Text="×" Margin="3,0" VerticalAlignment="Center"/><TextBox x:Name="filterHeight" Width="54" TextChanged="FiltersChanged" ToolTip="{local:Translate TextF02B06AD635E}" AutomationProperties.Name="{local:Translate Text20E3F28A9E09}"/>
+    <ComboBox x:Name="alphaInput" Width="140" Margin="6,0,0,0" SelectedIndex="0" SelectionChanged="FiltersChanged" AutomationProperties.Name="{local:Translate Text04A35F4E4903}"><ComboBoxItem Content="{local:Translate Text1DA75E23160B}"/><ComboBoxItem Content="{local:Translate Text00BA8ACD5E78}"/><ComboBoxItem Content="{local:Translate Text2496129FC3DE}"/></ComboBox>
+    <Button Content="{local:Translate Text407F871778D3}" Click="ResetFilters" Margin="6,0,0,0" Padding="6,4"/>
    </WrapPanel>
    <Grid Grid.Row="3">
-    <ListBox x:Name="assetList" SelectionMode="Extended" SelectionChanged="AssetSelected" MouseDoubleClick="OpenDoubleClick" KeyDown="AssetKeyDown" PreviewMouseLeftButtonDown="AssetMouseDown" PreviewMouseMove="AssetMouseMove" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource AssetItem}" AutomationProperties.Name="Ассеты библиотеки">
+    <ListBox x:Name="assetList" SelectionMode="Extended" SelectionChanged="AssetSelected" MouseDoubleClick="OpenDoubleClick" KeyDown="AssetKeyDown" PreviewMouseLeftButtonDown="AssetMouseDown" PreviewMouseMove="AssetMouseMove" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource AssetItem}" AutomationProperties.Name="{local:Translate Text36484D8C388F}">
      <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
      <ListBox.ItemTemplate><DataTemplate><Grid Width="180" ToolTip="{Binding Name}">
       <Grid.RowDefinitions><RowDefinition Height="128"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -99,27 +99,27 @@
       <StackPanel Grid.Row="1" Margin="10"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Summary}" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding TagLabel}" FontSize="11" Foreground="{DynamicResource Ts.TextMuted}" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/><TextBlock Text="{Binding LocationLabel}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/></StackPanel>
      </Grid></DataTemplate></ListBox.ItemTemplate>
     </ListBox>
-    <StackPanel x:Name="emptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="330" IsHitTestVisible="False"><TextBlock Text="Место для ваших материалов" FontSize="19" TextAlignment="Center"/><TextBlock Text="Откройте или перетащите файлы. Их можно оставить самостоятельными или добавить в проект." TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,12,0,0"/></StackPanel>
+    <StackPanel x:Name="emptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="330" IsHitTestVisible="False"><TextBlock Text="{local:Translate TextB69BDD2BCE72}" FontSize="19" TextAlignment="Center"/><TextBlock Text="{local:Translate Text8E308FD21650}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,12,0,0"/></StackPanel>
    </Grid>
    <TextBlock x:Name="countLabel" Grid.Row="4" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,8" FontSize="11"/>
   </Grid>
   <Border x:Name="detailsBorder" Grid.Column="2" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="18">
-    <TextBlock Text="ВЫБРАННЫЙ МАТЕРИАЛ" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}"/>
+    <TextBlock Text="{local:Translate Text1A5F1627B232}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}"/>
     <Image x:Name="detailPreview" Height="130" Margin="0,16" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
-    <TextBlock x:Name="detailName" Text="Выберите ассет" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="detailName" Text="{local:Translate Text85DE61BC1CCC}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
     <TextBlock x:Name="detailSummary" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,7,0,14"/>
-    <Button x:Name="openAssetButton" Content="Открыть материал" Click="OpenClicked" IsEnabled="False"/>
-    <TextBlock Text="Теги через запятую" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,20,0,6"/>
-    <TextBox x:Name="tagsInput" TextWrapping="Wrap" MinHeight="50" AutomationProperties.Name="Теги выбранных ассетов"/>
-    <Button Content="Применить теги" Click="TagsClicked" Margin="0,7,0,0"/>
+    <Button x:Name="openAssetButton" Content="{local:Translate Text7969171D49E8}" Click="OpenClicked" IsEnabled="False"/>
+    <TextBlock Text="{local:Translate TextC8FA45FB52C9}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,20,0,6"/>
+    <TextBox x:Name="tagsInput" TextWrapping="Wrap" MinHeight="50" AutomationProperties.Name="{local:Translate Text598B799BA7A9}"/>
+    <Button Content="{local:Translate Text443D403DF52E}" Click="TagsClicked" Margin="0,7,0,0"/>
     <TextBlock x:Name="usageLabel" Text="" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,20,0,12"/>
-    <Button Content="Добавить в проект…" Click="AddToProjectClicked" Margin="0,3"/>
-    <Button Content="Переместить в папку…" Click="MoveClicked" Margin="0,3"/>
-    <Button Content="Убрать из проекта" Click="UnlinkClicked" Margin="0,3"/>
-    <Button Content="Независимая копия" Click="CopyClicked" Margin="0,3" ToolTip="Сделать независимую копию для текущего проекта"/>
+    <Button Content="{local:Translate Text0CC4E220DE75}" Click="AddToProjectClicked" Margin="0,3"/>
+    <Button Content="{local:Translate Text1212BAEB7103}" Click="MoveClicked" Margin="0,3"/>
+    <Button Content="{local:Translate TextBA5A59519E29}" Click="UnlinkClicked" Margin="0,3"/>
+    <Button Content="{local:Translate Text70566E0E10B0}" Click="CopyClicked" Margin="0,3" ToolTip="{local:Translate Text8E5DAAB68277}"/>
     <Separator Margin="0,15"/>
-    <Button Content="Удалить из библиотеки…" Click="DeleteClicked" Margin="0,3"/>
+    <Button Content="{local:Translate Text19DA9CC76C17}" Click="DeleteClicked" Margin="0,3"/>
    </StackPanel></ScrollViewer>
   </Border>
  </Grid>

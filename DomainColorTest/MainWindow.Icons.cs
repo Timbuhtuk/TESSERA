@@ -27,7 +27,7 @@ public partial class MainWindow
         SetVisible(iconWorkspace, true);
         iconWorkspace.SetEditorMaterials(GetEditorMaterials());
         HideWorkspaceBrowser();
-        statusLabel.Text = "Готово";
+        statusLabel.Text = Localization.Text("Готово");
     }
 
     private void UseEditorMaterialForIcon(EditorMaterial material)
@@ -38,7 +38,7 @@ public partial class MainWindow
             using var image = ImageLibrary.ReadBitmap(material.SnapshotPath);
             iconWorkspace.SetImage(image, material.FileLabel, material.OriginalPath ?? material.SnapshotPath);
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть материал: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось открыть материал: {0}", ex.Message); }
     }
 
     private bool IsIconDropTarget(DependencyObject? target)
@@ -71,6 +71,6 @@ public partial class MainWindow
                 if (path is not null) await iconWorkspace.LoadFileAsync(path);
             }
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть изображение для ICO: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось открыть изображение для ICO: {0}", ex.Message); }
     }
 }

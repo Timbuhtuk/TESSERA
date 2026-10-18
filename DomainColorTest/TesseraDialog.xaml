@@ -29,7 +29,7 @@
                                TextWrapping="Wrap" VerticalAlignment="Center" />
                     <Button x:Name="dialogCloseButton" Grid.Column="1" Content="×" Width="32" Height="32"
                             FontSize="18" Style="{StaticResource CloseCaptionButton}" Click="CloseDialog"
-                            ToolTip="Закрыть" AutomationProperties.Name="Закрыть диалог" />
+                            ToolTip="{local:Translate TextA7A4033657E8}" AutomationProperties.Name="{local:Translate TextC1F02F0702F1}" />
                 </Grid>
                 <ScrollViewer Grid.Row="1" MaxHeight="320" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled" Background="Transparent">

@@ -7,6 +7,8 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        var startupSettings = AppearanceSettings.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "WorkspaceData", "Library", "appearance.json"));
+        Localization.Initialize(startupSettings.Language);
         if (e.Args is ["--apply-update", var target, var processId, var digest] && int.TryParse(processId, out int pid))
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -33,7 +35,7 @@ public partial class App : Application
     private async Task ApplyUpdateAsync(string target, int processId, string digest)
     {
         try { await Task.Run(() => GitHubUpdater.ApplyUpdate(target, processId, digest)); }
-        catch (Exception ex) { TesseraDialog.Show($"Не удалось установить обновление: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { TesseraDialog.Show(Localization.Format("Не удалось установить обновление: {0}", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally { Shutdown(); }
     }
 }

@@ -29,18 +29,18 @@ public partial class MainWindow
         if (_checkingUpdates) return;
         _checkingUpdates = true;
         updateButton.IsEnabled = checkUpdatesMenuButton.IsEnabled = false;
-        updateButton.Content = "Проверка…";
+        updateButton.Content = Localization.Text("Проверка…");
         try
         {
             _availableRelease = await GitHubUpdater.CheckAsync();
             updateButton.Content = UpdateButtonText();
             if (showResult && _availableRelease is null)
-                TesseraDialog.Show(this, $"Установлена актуальная версия ({GitHubUpdater.CurrentVersion.ToString(3)}).", "Tessera");
+                TesseraDialog.Show(this, Localization.Format("Установлена актуальная версия ({0}).", GitHubUpdater.CurrentVersion.ToString(3)), "Tessera");
         }
         catch (Exception ex)
         {
             updateButton.Content = UpdateButtonText();
-            if (showResult) TesseraDialog.Show(this, $"Не удалось проверить обновления: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (showResult) TesseraDialog.Show(this, Localization.Format("Не удалось проверить обновления: {0}", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         finally
         {
@@ -59,27 +59,27 @@ public partial class MainWindow
         }
         if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy)
         {
-            TesseraDialog.Show(this, "Дождитесь завершения обработки перед обновлением.", "Tessera");
+            TesseraDialog.Show(this, Localization.Text("Дождитесь завершения обработки перед обновлением."), "Tessera");
             return;
         }
         var choice = TesseraDialog.Show(this,
-            $"Скачать Tessera {release.Tag} и перезапустить приложение? История изображений сохранится.",
-            "Обновление Tessera", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            Localization.Format("Скачать Tessera {0} и перезапустить приложение? История изображений сохранится.", release.Tag),
+            Localization.Text("Обновление Tessera"), MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (choice != MessageBoxResult.Yes) return;
 
         updateButton.IsEnabled = checkUpdatesMenuButton.IsEnabled = false;
-        updateButton.Content = "Загрузка…";
+        updateButton.Content = Localization.Text("Загрузка…");
         try
         {
             string downloaded = await GitHubUpdater.DownloadAsync(release);
             if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy)
-                throw new InvalidOperationException("Дождитесь завершения обработки и нажмите обновление снова.");
+                throw new InvalidOperationException(Localization.Text("Дождитесь завершения обработки и нажмите обновление снова."));
             GitHubUpdater.StartInstall(downloaded, release.Sha256);
             Close();
         }
         catch (Exception ex)
         {
-            TesseraDialog.Show(this, $"Не удалось обновить Tessera: {ex.Message}", "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, Localization.Format("Не удалось обновить Tessera: {0}", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -88,6 +88,6 @@ public partial class MainWindow
         }
     }
 
-    private string UpdateButtonText() => _availableRelease is null ? "Проверить обновления" :
-        GitHubUpdater.CanInstall ? $"Обновить до {_availableRelease.Tag}" : $"Открыть релиз {_availableRelease.Tag}";
+    private string UpdateButtonText() => _availableRelease is null ? Localization.Text("Проверить обновления") :
+        GitHubUpdater.CanInstall ? Localization.Format("Обновить до {0}", _availableRelease.Tag) : Localization.Format("Открыть релиз {0}", _availableRelease.Tag);
 }

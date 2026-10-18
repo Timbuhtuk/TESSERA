@@ -31,7 +31,7 @@ public static class GitHubUpdater
         var page = new Uri(root.GetProperty("html_url").GetString() ?? "");
         if (page.Scheme != Uri.UriSchemeHttps || page.Host != "github.com" ||
             !page.AbsolutePath.StartsWith("/Timbuhtuk/TESSERA/releases/tag/", StringComparison.Ordinal))
-            throw new InvalidDataException("Некорректная ссылка на релиз GitHub.");
+            throw new InvalidDataException(Localization.Text("Некорректная ссылка на релиз GitHub."));
 
         JsonElement? exe = null;
         JsonElement? checksums = null;
@@ -41,19 +41,19 @@ public static class GitHubUpdater
             if (name == "Tessera.exe") exe = asset;
             if (name == "SHA256SUMS.txt") checksums = asset;
         }
-        if (exe is null) throw new InvalidDataException("В релизе нет Tessera.exe.");
+        if (exe is null) throw new InvalidDataException(Localization.Text("В релизе нет Tessera.exe."));
         var download = AssetUri(exe.Value, tag, "Tessera.exe");
         string? digest = exe.Value.TryGetProperty("digest", out var value) ? value.GetString() : null;
         if (digest is null && checksums is not null)
         {
             var checksumUri = AssetUri(checksums.Value, tag, "SHA256SUMS.txt");
             string content = await http.GetStringAsync(checksumUri, timeout.Token);
-            if (content.Length > 65536) throw new InvalidDataException("Файл контрольных сумм слишком велик.");
+            if (content.Length > 65536) throw new InvalidDataException(Localization.Text("Файл контрольных сумм слишком велик."));
             digest = content.Split('\n').Select(line => line.Trim()).FirstOrDefault(line => line.EndsWith("  Tessera.exe", StringComparison.Ordinal))?.Split(' ', 2)[0];
         }
-        if (digest is null) throw new InvalidDataException("В релизе нет SHA-256 для Tessera.exe.");
+        if (digest is null) throw new InvalidDataException(Localization.Text("В релизе нет SHA-256 для Tessera.exe."));
         if (digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)) digest = digest[7..];
-        if (!IsSha256(digest)) throw new InvalidDataException("Некорректная контрольная сумма релиза.");
+        if (!IsSha256(digest)) throw new InvalidDataException(Localization.Text("Некорректная контрольная сумма релиза."));
         return new TesseraRelease(version, tag, page, download, digest.ToLowerInvariant());
     }
 
@@ -69,7 +69,7 @@ public static class GitHubUpdater
             using var response = await http.GetAsync(release.Download, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             response.EnsureSuccessStatusCode();
             if (response.Content.Headers.ContentLength is > 500_000_000)
-                throw new InvalidDataException("Файл обновления слишком велик.");
+                throw new InvalidDataException(Localization.Text("Файл обновления слишком велик."));
             await using (var input = await response.Content.ReadAsStreamAsync(timeout.Token))
             await using (var output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
             {
@@ -79,12 +79,12 @@ public static class GitHubUpdater
                 while ((read = await input.ReadAsync(buffer, timeout.Token)) > 0)
                 {
                     total += read;
-                    if (total > 500_000_000) throw new InvalidDataException("Файл обновления слишком велик.");
+                    if (total > 500_000_000) throw new InvalidDataException(Localization.Text("Файл обновления слишком велик."));
                     await output.WriteAsync(buffer.AsMemory(0, read), timeout.Token);
                 }
             }
             if (new FileInfo(path).Length is 0 or > 500_000_000 || !MatchesSha256(path, release.Sha256))
-                throw new InvalidDataException("Контрольная сумма обновления не совпала.");
+                throw new InvalidDataException(Localization.Text("Контрольная сумма обновления не совпала."));
             return path;
         }
         catch
@@ -96,7 +96,7 @@ public static class GitHubUpdater
 
     public static void StartInstall(string downloadedPath, string digest)
     {
-        if (!CanInstall) throw new InvalidOperationException("Автоустановка доступна только для Tessera.exe из релиза.");
+        if (!CanInstall) throw new InvalidOperationException(Localization.Text("Автоустановка доступна только для Tessera.exe из релиза."));
         string target = Environment.ProcessPath!;
         string directory = Path.GetDirectoryName(target)!;
         string probe = Path.Combine(directory, $".Tessera-write-check-{Guid.NewGuid():N}");
@@ -106,24 +106,24 @@ public static class GitHubUpdater
         start.ArgumentList.Add(target);
         start.ArgumentList.Add(Environment.ProcessId.ToString());
         start.ArgumentList.Add(digest);
-        if (Process.Start(start) is null) throw new IOException("Не удалось запустить установщик обновления.");
+        if (Process.Start(start) is null) throw new IOException(Localization.Text("Не удалось запустить установщик обновления."));
     }
 
     public static void ApplyUpdate(string target, int processId, string digest)
     {
-        string source = Environment.ProcessPath ?? throw new IOException("Не найден файл обновления.");
+        string source = Environment.ProcessPath ?? throw new IOException(Localization.Text("Не найден файл обновления."));
         if (!IsSha256(digest) || !MatchesSha256(source, digest))
-            throw new InvalidDataException("Контрольная сумма обновления не совпала.");
+            throw new InvalidDataException(Localization.Text("Контрольная сумма обновления не совпала."));
         if (!string.Equals(Path.GetFileName(target), "Tessera.exe", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Некорректный путь приложения.");
+            throw new InvalidDataException(Localization.Text("Некорректный путь приложения."));
         target = Path.GetFullPath(target);
         if (!File.Exists(target) || Path.GetFullPath(source).Equals(target, StringComparison.OrdinalIgnoreCase))
-            throw new FileNotFoundException("Не найден установленный Tessera.exe.", target);
+            throw new FileNotFoundException(Localization.Text("Не найден установленный Tessera.exe."), target);
 
         try
         {
             using var oldProcess = Process.GetProcessById(processId);
-            if (!oldProcess.WaitForExit(30000)) throw new TimeoutException("Приложение не закрылось за 30 секунд.");
+            if (!oldProcess.WaitForExit(30000)) throw new TimeoutException(Localization.Text("Приложение не закрылось за 30 секунд."));
         }
         catch (ArgumentException) { }
 
@@ -138,7 +138,7 @@ public static class GitHubUpdater
             try
             {
                 var launch = new ProcessStartInfo(target) { UseShellExecute = true, WorkingDirectory = directory };
-                if (Process.Start(launch) is null) throw new IOException("Не удалось открыть обновлённую Tessera.");
+                if (Process.Start(launch) is null) throw new IOException(Localization.Text("Не удалось открыть обновлённую Tessera."));
             }
             catch
             {
@@ -166,7 +166,7 @@ public static class GitHubUpdater
         var uri = new Uri(asset.GetProperty("browser_download_url").GetString() ?? "");
         if (uri.Scheme != Uri.UriSchemeHttps || uri.Host != "github.com" ||
             uri.AbsoluteUri != AssetPrefix + Uri.EscapeDataString(tag) + "/" + name)
-            throw new InvalidDataException("Некорректная ссылка на файл релиза.");
+            throw new InvalidDataException(Localization.Text("Некорректная ссылка на файл релиза."));
         return uri;
     }
 

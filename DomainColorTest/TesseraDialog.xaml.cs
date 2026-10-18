@@ -37,10 +37,10 @@ public partial class TesseraDialog : Window
 
     private void BuildButtons(MessageBoxButton buttons)
     {
-        if (buttons is MessageBoxButton.OK or MessageBoxButton.OKCancel) AddButton("ОК", MessageBoxResult.OK, true, false);
-        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton("Да", MessageBoxResult.Yes, true, false);
-        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton("Нет", MessageBoxResult.No, false, buttons == MessageBoxButton.YesNo);
-        if (buttons is MessageBoxButton.OKCancel or MessageBoxButton.YesNoCancel) AddButton("Отмена", MessageBoxResult.Cancel, false, true);
+        if (buttons is MessageBoxButton.OK or MessageBoxButton.OKCancel) AddButton(Localization.Text("ОК"), MessageBoxResult.OK, true, false);
+        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton(Localization.Text("Да"), MessageBoxResult.Yes, true, false);
+        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton(Localization.Text("Нет"), MessageBoxResult.No, false, buttons == MessageBoxButton.YesNo);
+        if (buttons is MessageBoxButton.OKCancel or MessageBoxButton.YesNoCancel) AddButton(Localization.Text("Отмена"), MessageBoxResult.Cancel, false, true);
     }
 
     private void AddButton(string label, MessageBoxResult result, bool primary, bool cancel)

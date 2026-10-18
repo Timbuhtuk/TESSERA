@@ -28,7 +28,7 @@ public sealed class WorkspaceAsset
     public int SheetColumns { get; set; } = 8;
     public int SheetPadding { get; set; }
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
-    [JsonIgnore] public string KindLabel => Kind switch { WorkspaceAssetKind.Animation => "Анимация", WorkspaceAssetKind.Board => "Доска", WorkspaceAssetKind.Tiles => "Коллекция тайлов", _ => "Изображение" };
+    [JsonIgnore] public string KindLabel => Kind switch { WorkspaceAssetKind.Animation => Localization.Text("Анимация"), WorkspaceAssetKind.Board => Localization.Text("Доска"), WorkspaceAssetKind.Tiles => Localization.Text("Коллекция тайлов"), _ => Localization.Text("Изображение") };
     [JsonIgnore] public string Summary => Width > 0 ? $"{KindLabel} · {Width} × {Height}" : KindLabel;
     [JsonIgnore] public string TagLabel => string.Join(" · ", Tags);
     [JsonIgnore] public string LocationLabel { get; set; } = "";
@@ -85,10 +85,10 @@ public sealed class WorkspaceCatalog
         Root = Path.GetFullPath(root);
         string path = Path.Combine(Root, "workspace.json");
         State = File.Exists(path) ? JsonSerializer.Deserialize<WorkspaceState>(File.ReadAllText(path), JsonOptions)
-            ?? throw new InvalidDataException("Пустой каталог рабочего пространства.") : new();
-        if (State.Version != 1) throw new InvalidDataException("Неизвестная версия рабочего пространства.");
+            ?? throw new InvalidDataException(Localization.Text("Пустой каталог рабочего пространства.")) : new();
+        if (State.Version != 1) throw new InvalidDataException(Localization.Text("Неизвестная версия рабочего пространства."));
         if (State.Assets.Select(a => a.Id).Distinct().Count() != State.Assets.Count)
-            throw new InvalidDataException("Повторяющиеся ассеты в каталоге.");
+            throw new InvalidDataException(Localization.Text("Повторяющиеся ассеты в каталоге."));
     }
 
     public void Save()
@@ -119,7 +119,7 @@ public sealed class WorkspaceCatalog
     public WorkspaceProject CreateProject(string name)
     {
         name = CleanName(name);
-        if (State.Projects.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("Проект с таким названием уже есть.");
+        if (State.Projects.Any(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(Localization.Text("Проект с таким названием уже есть."));
         var project = new WorkspaceProject { Name = name };
         State.Projects.Add(project); Save(); return project;
     }
@@ -128,7 +128,7 @@ public sealed class WorkspaceCatalog
     {
         RequireProject(projectId); RequireFolder(projectId, parentId); name = CleanName(name);
         if (State.Folders.Any(f => f.ProjectId == projectId && f.ParentId == parentId && f.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
-            throw new ArgumentException("Папка с таким названием уже есть.");
+            throw new ArgumentException(Localization.Text("Папка с таким названием уже есть."));
         var folder = new WorkspaceFolder { ProjectId = projectId, ParentId = parentId, Name = name };
         State.Folders.Add(folder); Save(); return folder;
     }
@@ -138,15 +138,15 @@ public sealed class WorkspaceCatalog
         name = CleanName(name);
         if (State.Projects.FirstOrDefault(p => p.Id == id) is { } project)
         {
-            if (State.Projects.Any(p => p.Id != id && p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("Такой проект уже есть.");
+            if (State.Projects.Any(p => p.Id != id && p.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(Localization.Text("Такой проект уже есть."));
             project.Name = name;
         }
         else if (State.Folders.FirstOrDefault(f => f.Id == id) is { } folder)
         {
-            if (State.Folders.Any(f => f.Id != id && f.ProjectId == folder.ProjectId && f.ParentId == folder.ParentId && f.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("Такая папка уже есть.");
+            if (State.Folders.Any(f => f.Id != id && f.ProjectId == folder.ProjectId && f.ParentId == folder.ParentId && f.Name.Equals(name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(Localization.Text("Такая папка уже есть."));
             folder.Name = name;
         }
-        else throw new ArgumentException("Раздел не найден.");
+        else throw new ArgumentException(Localization.Text("Раздел не найден."));
         Save();
     }
 
@@ -154,14 +154,14 @@ public sealed class WorkspaceCatalog
     {
         var folder = State.Folders.Single(f => f.Id == folderId);
         RequireFolder(folder.ProjectId, parentId);
-        if (parentId == folderId || Descendants(folderId).Contains(parentId ?? Guid.Empty)) throw new ArgumentException("Нельзя переместить папку внутрь самой себя.");
-        if (State.Folders.Any(f => f.Id != folder.Id && f.ProjectId == folder.ProjectId && f.ParentId == parentId && f.Name.Equals(folder.Name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException("В месте назначения уже есть такая папка.");
+        if (parentId == folderId || Descendants(folderId).Contains(parentId ?? Guid.Empty)) throw new ArgumentException(Localization.Text("Нельзя переместить папку внутрь самой себя."));
+        if (State.Folders.Any(f => f.Id != folder.Id && f.ProjectId == folder.ProjectId && f.ParentId == parentId && f.Name.Equals(folder.Name, StringComparison.OrdinalIgnoreCase))) throw new ArgumentException(Localization.Text("В месте назначения уже есть такая папка."));
         folder.ParentId = parentId; Save();
     }
 
     public void Link(Guid assetId, Guid projectId, Guid? folderId)
     {
-        if (!State.Assets.Any(a => a.Id == assetId)) throw new ArgumentException("Ассет не найден.");
+        if (!State.Assets.Any(a => a.Id == assetId)) throw new ArgumentException(Localization.Text("Ассет не найден."));
         RequireProject(projectId); RequireFolder(projectId, folderId);
         var link = State.Links.FirstOrDefault(l => l.AssetId == assetId && l.ProjectId == projectId);
         if (link is null) { link = new WorkspaceLink { AssetId = assetId, ProjectId = projectId }; State.Links.Add(link); }
@@ -191,7 +191,7 @@ public sealed class WorkspaceCatalog
     {
         string root = Path.Combine(Root, "documents", asset.Id.ToString("N"));
         string path = Path.GetFullPath(Path.Combine(root, asset.ContentFile));
-        if (!path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("Недопустимый путь документа.");
+        if (!path.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException(Localization.Text("Недопустимый путь документа."));
         return path;
     }
 
@@ -200,7 +200,7 @@ public sealed class WorkspaceCatalog
         var kind = Path.GetExtension(path).ToLowerInvariant() switch
         {
             ".ase" or ".aseprite" => WorkspaceAssetKind.Animation, ".tboard" => WorkspaceAssetKind.Board,
-            ".ttiles" => WorkspaceAssetKind.Tiles, _ => throw new ArgumentException("Формат документа не поддерживается.")
+            ".ttiles" => WorkspaceAssetKind.Tiles, _ => throw new ArgumentException(Localization.Text("Формат документа не поддерживается."))
         };
         var asset = new WorkspaceAsset { Kind = kind, Name = Path.GetFileName(path), ContentFile = "content" + Path.GetExtension(path).ToLowerInvariant() };
         string target = ContentPath(asset); Directory.CreateDirectory(Path.GetDirectoryName(target)!); File.Copy(path, target);
@@ -213,7 +213,7 @@ public sealed class WorkspaceCatalog
         var link = State.Links.Single(l => l.AssetId == assetId && l.ProjectId == projectId);
         var original = State.Assets.Single(a => a.Id == assetId);
         var copy = JsonSerializer.Deserialize<WorkspaceAsset>(JsonSerializer.Serialize(original))!;
-        copy.Id = Guid.NewGuid(); copy.Name = original.Name + " — копия"; copy.OpenedAt = default; copy.ModifiedAt = DateTimeOffset.Now;
+        copy.Id = Guid.NewGuid(); copy.Name = original.Name + Localization.Text(" — копия"); copy.OpenedAt = default; copy.ModifiedAt = DateTimeOffset.Now;
         if (original.Kind == WorkspaceAssetKind.Image)
         {
             var source = images.Load().Single(s => s.Id == original.Id);
@@ -281,7 +281,7 @@ public sealed class WorkspaceCatalog
         return (view == "recent" ? assets.OrderByDescending(a => a.OpenedAt) : assets.OrderByDescending(a => a.ModifiedAt)).ToList();
     }
 
-    private void RequireProject(Guid id) { if (!State.Projects.Any(p => p.Id == id)) throw new ArgumentException("Проект не найден."); }
-    private void RequireFolder(Guid project, Guid? id) { if (id is { } value && !State.Folders.Any(f => f.Id == value && f.ProjectId == project)) throw new ArgumentException("Папка не принадлежит проекту."); }
-    private static string CleanName(string name) => string.IsNullOrWhiteSpace(name) || name.IndexOfAny(['/', '\\']) >= 0 ? throw new ArgumentException("Введите название без разделителей пути.") : name.Trim();
+    private void RequireProject(Guid id) { if (!State.Projects.Any(p => p.Id == id)) throw new ArgumentException(Localization.Text("Проект не найден.")); }
+    private void RequireFolder(Guid project, Guid? id) { if (id is { } value && !State.Folders.Any(f => f.Id == value && f.ProjectId == project)) throw new ArgumentException(Localization.Text("Папка не принадлежит проекту.")); }
+    private static string CleanName(string name) => string.IsNullOrWhiteSpace(name) || name.IndexOfAny(['/', '\\']) >= 0 ? throw new ArgumentException(Localization.Text("Введите название без разделителей пути.")) : name.Trim();
 }

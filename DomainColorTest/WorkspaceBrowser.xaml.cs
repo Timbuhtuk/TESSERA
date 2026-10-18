@@ -40,7 +40,7 @@ public partial class WorkspaceBrowser : UserControl
             if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { ImportRequested?.Invoke(files); e.Handled = true; }
         };
         var context = new ContextMenu();
-        foreach (var pair in new[] { ("Открыть", "open"), ("Добавить в проект…", "link"), ("Переместить в папку…", "move"), ("Изменить теги…", "tags"), ("Независимая копия", "copy"), ("Убрать из проекта", "unlink"), ("Удалить из библиотеки…", "delete") })
+        foreach (var pair in new[] { (Localization.Text("Открыть"), "open"), (Localization.Text("Добавить в проект…"), "link"), (Localization.Text("Переместить в папку…"), "move"), (Localization.Text("Изменить теги…"), "tags"), (Localization.Text("Независимая копия"), "copy"), (Localization.Text("Убрать из проекта"), "unlink"), (Localization.Text("Удалить из библиотеки…"), "delete") })
         {
             var item = new MenuItem { Header = pair.Item1 };
             item.Click += (_, _) => RunMenuAction(pair.Item2);
@@ -81,9 +81,9 @@ public partial class WorkspaceBrowser : UserControl
         assetList.ItemsSource = assets;
         foreach (var asset in assets.Where(a => select == a.Id || select is null && selected.Contains(a.Id))) assetList.SelectedItems.Add(asset);
         if (assetList.SelectedItem is null && state.SelectedAsset is { } last) assetList.SelectedItem = assets.FirstOrDefault(a => a.Id == last);
-        viewTitle.Text = state.View switch { "unassigned" => "Без проекта", "recent" => "Недавние", "project" => state.FolderId is { } folder ? _catalog.State.Folders.FirstOrDefault(f => f.Id == folder)?.Name ?? "Проект" : _catalog.State.Projects.FirstOrDefault(p => p.Id == state.ProjectId)?.Name ?? "Проект", _ => "Все ассеты" };
+        viewTitle.Text = state.View switch { "unassigned" => Localization.Text("Без проекта"), "recent" => Localization.Text("Недавние"), "project" => state.FolderId is { } folder ? _catalog.State.Folders.FirstOrDefault(f => f.Id == folder)?.Name ?? Localization.Text("Проект") : _catalog.State.Projects.FirstOrDefault(p => p.Id == state.ProjectId)?.Name ?? Localization.Text("Проект"), _ => Localization.Text("Все ассеты") };
         emptyHint.Visibility = assets.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        countLabel.Text = $"Материалов: {assets.Count} · Выбрано: {Selection.Count} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия";
+        countLabel.Text = Localization.Format("Материалов: {0} · Выбрано: {1} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия", assets.Count, Selection.Count);
         SaveFilters(); UpdateDetails();
     }
 
@@ -104,11 +104,11 @@ public partial class WorkspaceBrowser : UserControl
         Guid project = tag is WorkspaceProject p ? p.Id : ((WorkspaceFolder)tag).ProjectId;
         Guid? folder = (tag as WorkspaceFolder)?.Id;
         var menu = new ContextMenu();
-        var create = new MenuItem { Header = "Создать папку…" };
+        var create = new MenuItem { Header = Localization.Text("Создать папку…") };
         create.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => CreateFolder(project, folder))));
-        var rename = new MenuItem { Header = "Переименовать…" };
+        var rename = new MenuItem { Header = Localization.Text("Переименовать…") };
         rename.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => RenameSection(tag))));
-        var delete = new MenuItem { Header = folder is null ? "Удалить проект…" : "Удалить папку…" };
+        var delete = new MenuItem { Header = folder is null ? Localization.Text("Удалить проект…") : Localization.Text("Удалить папку…") };
         delete.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => DeleteSection(project, folder))));
         menu.Items.Add(create); menu.Items.Add(rename); menu.Items.Add(new Separator()); menu.Items.Add(delete);
         menu.Opened += (_, _) => node.IsSelected = true;
@@ -153,24 +153,24 @@ public partial class WorkspaceBrowser : UserControl
     }
     private void NewProjectClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
-        string? name = Prompt("Создать проект", "Название проекта"); if (name is null) return;
+        string? name = Prompt(Localization.Text("Создать проект"), Localization.Text("Название проекта")); if (name is null) return;
         var project = _catalog!.CreateProject(name); Navigate("project", project.Id); RebuildTree();
     });
     private void CreateFolder(Guid project, Guid? parent)
     {
-        string? name = Prompt("Создать папку", "Название папки"); if (name is null) return;
+        string? name = Prompt(Localization.Text("Создать папку"), Localization.Text("Название папки")); if (name is null) return;
         var folder = _catalog!.CreateFolder(project, parent, name); Navigate("project", project, folder.Id); RebuildTree();
     }
     private void RenameSection(object section)
     {
         Guid id = section is WorkspaceProject project ? project.Id : ((WorkspaceFolder)section).Id;
         string currentName = section is WorkspaceProject p ? p.Name : ((WorkspaceFolder)section).Name;
-        string? name = Prompt("Переименовать", "Название", currentName); if (name is null) return;
+        string? name = Prompt(Localization.Text("Переименовать"), Localization.Text("Название"), currentName); if (name is null) return;
         _catalog!.Rename(id, name); RebuildTree(); Refresh();
     }
     private void DeleteSection(Guid project, Guid? folder)
     {
-        if (TesseraDialog.Show(Window.GetWindow(this), "Удалить выбранный раздел? Ассеты останутся в библиотеке. Содержимое папки перейдёт в родительскую.", "Структура проекта", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        if (TesseraDialog.Show(Window.GetWindow(this), Localization.Text("Удалить выбранный раздел? Ассеты останутся в библиотеке. Содержимое папки перейдёт в родительскую."), Localization.Text("Структура проекта"), MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
         if (folder is { } id)
         {
             var parent = _catalog!.State.Folders.Single(f => f.Id == id).ParentId;
@@ -182,13 +182,13 @@ public partial class WorkspaceBrowser : UserControl
 
     private void ImportClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Multiselect = true, Title = "Добавить материалы", Filter = "Материалы Tessera|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.ase;*.aseprite;*.tboard;*.ttiles" };
+        var dialog = new OpenFileDialog { Multiselect = true, Title = Localization.Text("Добавить материалы"), Filter = Localization.Text("Материалы Tessera|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.ase;*.aseprite;*.tboard;*.ttiles") };
         if (dialog.ShowDialog(Window.GetWindow(this)) == true) ImportRequested?.Invoke(dialog.FileNames);
     }
     private void CreateClicked(object sender, RoutedEventArgs e)
     {
         var menu = new ContextMenu();
-        foreach (var pair in new[] { ("Доску изображений", "new-board"), ("Коллекцию тайлов", "new-tiles"), ("Проект", "project") })
+        foreach (var pair in new[] { (Localization.Text("Доску изображений"), "new-board"), (Localization.Text("Коллекцию тайлов"), "new-tiles"), (Localization.Text("Проект"), "project") })
         {
             var item = new MenuItem { Header = pair.Item1 }; item.Click += (_, _) => { if (pair.Item2 == "project") NewProjectClicked(this, new()); else ActionRequested?.Invoke(pair.Item2, null); }; menu.Items.Add(item);
         }
@@ -199,12 +199,12 @@ public partial class WorkspaceBrowser : UserControl
     {
         var selection = Selection; var asset = selection.FirstOrDefault();
         openAssetButton.IsEnabled = asset is not null;
-        detailName.Text = selection.Count > 1 ? $"Выбрано: {selection.Count}" : asset?.Name ?? "Выберите ассет";
+        detailName.Text = selection.Count > 1 ? Localization.Format("Выбрано: {0}", selection.Count) : asset?.Name ?? Localization.Text("Выберите ассет");
         detailSummary.Text = asset?.Summary ?? ""; detailPreview.Source = asset?.Thumbnail;
         tagsInput.Text = asset is null ? "" : string.Join(", ", asset.Tags.Where(t => selection.All(a => a.Tags.Contains(t))));
-        usageLabel.Text = asset is null ? "" : "Используется:\n" + (string.IsNullOrEmpty(asset.LocationLabel) ? "Без проекта" : asset.LocationLabel.Replace(" · ", "\n"));
+        usageLabel.Text = asset is null ? "" : Localization.Text("Используется:\n") + (string.IsNullOrEmpty(asset.LocationLabel) ? Localization.Text("Без проекта") : asset.LocationLabel.Replace(" · ", "\n"));
         if (asset is not null && _catalog is not null) _catalog.State.SelectedAsset = asset.Id;
-        if (_ready && _catalog is not null) countLabel.Text = $"Материалов: {assetList.Items.Count} · Выбрано: {selection.Count} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия";
+        if (_ready && _catalog is not null) countLabel.Text = Localization.Format("Материалов: {0} · Выбрано: {1} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия", assetList.Items.Count, selection.Count);
     }
     private void OpenClicked(object sender, RoutedEventArgs e) { if (Selection.FirstOrDefault() is { } asset) OpenRequested?.Invoke(asset); }
     private void OpenDoubleClick(object sender, MouseButtonEventArgs e) { if (ItemsControl.ContainerFromElement(assetList, e.OriginalSource as DependencyObject) is ListBoxItem) OpenClicked(sender, e); }
@@ -222,32 +222,32 @@ public partial class WorkspaceBrowser : UserControl
     {
         if (Selection.Count == 0) return;
         var state = _catalog!.State;
-        if (currentProject && state.ProjectId is null) { Tell("Сначала выберите проект."); return; }
+        if (currentProject && state.ProjectId is null) { Tell(Localization.Text("Сначала выберите проект.")); return; }
         var choices = new List<(string Name, Guid Project, Guid? Folder)>();
         foreach (var project in state.Projects.Where(p => !currentProject || p.Id == state.ProjectId))
         {
             choices.Add((project.Name, project.Id, null));
             foreach (var folder in state.Folders.Where(f => f.ProjectId == project.Id)) choices.Add((_catalog.Location(new WorkspaceLink { ProjectId = project.Id, FolderId = folder.Id }), project.Id, folder.Id));
         }
-        if (choices.Count == 0) { Tell("Создайте проект кнопкой + слева."); return; }
-        int choice = Choose("Выберите папку проекта", choices.Select(c => c.Name).ToArray()); if (choice < 0) return;
+        if (choices.Count == 0) { Tell(Localization.Text("Создайте проект кнопкой + слева.")); return; }
+        int choice = Choose(Localization.Text("Выберите папку проекта"), choices.Select(c => c.Name).ToArray()); if (choice < 0) return;
         var target = choices[choice]; foreach (var asset in Selection) _catalog.Link(asset.Id, target.Project, target.Folder);
-        Refresh(); Tell("Материалы добавлены: " + target.Name);
+        Refresh(); Tell(Localization.Text("Материалы добавлены: ") + target.Name);
     }
     private void UnlinkClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
-        if (_catalog!.State.ProjectId is not { } project) { Tell("Сначала выберите проект."); return; }
+        if (_catalog!.State.ProjectId is not { } project) { Tell(Localization.Text("Сначала выберите проект.")); return; }
         foreach (var asset in Selection) _catalog.Unlink(asset.Id, project); Refresh();
     });
     private void CopyClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
-        if (_catalog!.State.ProjectId is null) { Tell("Выберите проект, для которого нужна независимая копия."); return; }
+        if (_catalog!.State.ProjectId is null) { Tell(Localization.Text("Выберите проект, для которого нужна независимая копия.")); return; }
         foreach (var asset in Selection.ToArray()) ActionRequested?.Invoke("copy", asset); Refresh();
     });
     private void DeleteClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
         var assets = Selection.ToArray(); if (assets.Length == 0) return;
-        if (TesseraDialog.Show(Window.GetWindow(this), $"Удалить из библиотеки: {assets.Length}? Они исчезнут из всех проектов. Внешние исходные файлы сохранятся.\n\n" + string.Join("\n", assets.Select(a => a.Name + " · " + a.LocationLabel)), "Удалить ассеты", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (TesseraDialog.Show(Window.GetWindow(this), Localization.Format("Удалить из библиотеки: {0}? Они исчезнут из всех проектов. Внешние исходные файлы сохранятся.\n\n", assets.Length) + string.Join("\n", assets.Select(a => a.Name + " · " + a.LocationLabel)), Localization.Text("Удалить ассеты"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         foreach (var asset in assets) ActionRequested?.Invoke("delete", asset); Refresh();
     });
     private void RunMenuAction(string action)
@@ -257,7 +257,7 @@ public partial class WorkspaceBrowser : UserControl
             case "open": OpenClicked(this, new()); break; case "link": AddToProjectClicked(this, new()); break;
             case "move": MoveClicked(this, new()); break; case "copy": CopyClicked(this, new()); break;
             case "unlink": UnlinkClicked(this, new()); break; case "delete": DeleteClicked(this, new()); break;
-            case "tags": string? tags = Prompt("Общие теги выбранных ассетов", "Теги через запятую (заменяют текущие)", tagsInput.Text); if (tags is not null) Safe(() => SetTags(tags)); break;
+            case "tags": string? tags = Prompt(Localization.Text("Общие теги выбранных ассетов"), Localization.Text("Теги через запятую (заменяют текущие)"), tagsInput.Text); if (tags is not null) Safe(() => SetTags(tags)); break;
         }
     }
 
@@ -295,7 +295,7 @@ public partial class WorkspaceBrowser : UserControl
         if (e.Data.GetData(AssetDragFormat) is Guid[] assets) foreach (Guid asset in assets) _catalog!.Link(asset, project.Value, folder);
         if (e.Data.GetData(FolderDragFormat) is Guid moved)
         {
-            if (_catalog!.State.Folders.Single(f => f.Id == moved).ProjectId != project) throw new ArgumentException("Папки перемещаются внутри своего проекта.");
+            if (_catalog!.State.Folders.Single(f => f.Id == moved).ProjectId != project) throw new ArgumentException(Localization.Text("Папки перемещаются внутри своего проекта."));
             _catalog.MoveFolder(moved, folder);
         }
         e.Handled = true; RebuildTree(); Refresh();
@@ -313,17 +313,17 @@ public partial class WorkspaceBrowser : UserControl
     {
         var text = new TextBox { Text = value, Margin = new Thickness(0, 8, 0, 16), MinWidth = 300 };
         var panel = new StackPanel(); panel.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }); panel.Children.Add(text);
-        return InlineDialog(title, panel, text, "Готово") ? text.Text : null;
+        return InlineDialog(title, panel, text, Localization.Text("Готово")) ? text.Text : null;
     }
     private int Choose(string title, string[] choices)
     {
         var panel = new StackPanel(); var combo = new ComboBox { ItemsSource = choices, SelectedIndex = 0, Margin = new Thickness(0, 0, 0, 16), MinWidth = 300 }; panel.Children.Add(combo);
-        return InlineDialog(title, panel, combo, "Добавить сюда") ? combo.SelectedIndex : -1;
+        return InlineDialog(title, panel, combo, Localization.Text("Добавить сюда")) ? combo.SelectedIndex : -1;
     }
     public string? ChooseBoard(IReadOnlyList<WorkspaceAsset> boards)
     {
-        if (boards.Count == 0) { Tell("Сначала создайте доску в библиотеке через «Создать»."); return null; }
-        int choice = Choose("Добавить изображение на доску", boards.Select(b => b.Name).ToArray());
+        if (boards.Count == 0) { Tell(Localization.Text("Сначала создайте доску в библиотеке через «Создать».")); return null; }
+        int choice = Choose(Localization.Text("Добавить изображение на доску"), boards.Select(b => b.Name).ToArray());
         return choice < 0 ? null : boards[choice].Id.ToString();
     }
     private bool InlineDialog(string title, StackPanel content, Control input, string action)
@@ -336,7 +336,7 @@ public partial class WorkspaceBrowser : UserControl
         panel.Children.Add(new TextBlock { Text = title, FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 20), TextWrapping = TextWrapping.Wrap });
         panel.Children.Add(content);
         var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
-        var cancel = new Button { Content = "Отмена", Margin = new Thickness(0, 0, 8, 0) };
+        var cancel = new Button { Content = Localization.Text("Отмена"), Margin = new Thickness(0, 0, 8, 0) };
         var okay = new Button { Content = action };
         buttons.Children.Add(cancel); buttons.Children.Add(okay); panel.Children.Add(buttons);
         var border = new Border { Child = panel, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 540, BorderThickness = new Thickness(1), Margin = new Thickness(16) };

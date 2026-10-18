@@ -45,11 +45,11 @@ public partial class MainWindow
         _infoResultShown = result;
         _infoBasisShown = basis;
         long version = ++_infoRefreshVersion;
-        infoSourceSummary.Text = source is null ? "Нет изображения" : $"{source.Width} × {source.Height} px · подсчёт цветов…";
-        infoResultSummary.Text = result is null ? "Пока нет результата" : $"{result.Width} × {result.Height} px · подсчёт цветов…";
+        infoSourceSummary.Text = source is null ? Localization.Text("Нет изображения") : Localization.Format("{0} × {1} px · подсчёт цветов…", source.Width, source.Height);
+        infoResultSummary.Text = result is null ? Localization.Text("Пока нет результата") : Localization.Format("{0} × {1} px · подсчёт цветов…", result.Width, result.Height);
         infoBasisLabel.Text = ReferenceEquals(basis, result) && result is not null
-            ? "Цвета выбранного результата" : "Цвета исходника";
-        infoPaletteStatus.Text = basis is null ? "Откройте изображение" : "Подсчёт видимых цветов…";
+            ? Localization.Text("Цвета выбранного результата") : Localization.Text("Цвета исходника");
+        infoPaletteStatus.Text = basis is null ? Localization.Text("Откройте изображение") : Localization.Text("Подсчёт видимых цветов…");
         _infoPalette.Clear();
         infoManualReplaceButton.Visibility = Visibility.Collapsed;
         if (basis is null) return;
@@ -71,12 +71,12 @@ public partial class MainWindow
             if (version != _infoRefreshVersion || !_toolWindows.ContainsKey("info")) return;
 
             if (source is not null)
-                infoSourceSummary.Text = $"{source.Width} × {source.Height} px · {summary.sourceColors:N0} видимых цветов";
+                infoSourceSummary.Text = Localization.Format("{0} × {1} px · {2:N0} видимых цветов", source.Width, source.Height, summary.sourceColors);
             if (result is not null)
-                infoResultSummary.Text = $"{result.Width} × {result.Height} px · {summary.resultColors:N0} видимых цветов";
+                infoResultSummary.Text = Localization.Format("{0} × {1} px · {2:N0} видимых цветов", result.Width, result.Height, summary.resultColors);
             infoPaletteStatus.Text = summary.count > ImageColorTools.MaxPaletteColors
-                ? $"Цветов: {summary.count:N0}. Список доступен до {ImageColorTools.MaxPaletteColors} цветов."
-                : summary.count == 0 ? "Видимых цветов нет" : $"Цветов: {summary.count:N0}. Нажмите на цвет, чтобы заменить его.";
+                ? Localization.Format("Цветов: {0:N0}. Список доступен до {1} цветов.", summary.count, ImageColorTools.MaxPaletteColors)
+                : summary.count == 0 ? Localization.Text("Видимых цветов нет") : Localization.Format("Цветов: {0:N0}. Нажмите на цвет, чтобы заменить его.", summary.count);
             infoManualReplaceButton.Visibility = summary.count > ImageColorTools.MaxPaletteColors
                 ? Visibility.Visible : Visibility.Collapsed;
             foreach (DrawingColor color in summary.palette)
@@ -86,7 +86,7 @@ public partial class MainWindow
         {
             if (version != _infoRefreshVersion) return;
             _infoSourceShown = _infoResultShown = _infoBasisShown = null;
-            infoPaletteStatus.Text = $"Не удалось прочитать цвета: {ex.Message}";
+            infoPaletteStatus.Text = Localization.Format("Не удалось прочитать цвета: {0}", ex.Message);
         }
     }
 
@@ -129,7 +129,7 @@ public partial class MainWindow
         var settings = CaptureSettings();
         using var input = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = "Замена цвета…";
+        statusLabel.Text = Localization.Text("Замена цвета…");
         try
         {
             var generation = await Task.Run(() =>
@@ -138,20 +138,20 @@ public partial class MainWindow
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
-                    Operation = "Замена цвета",
+                    Operation = Localization.Text("Замена цвета"),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
-                    Caption = $"ЗАМЕНА ЦВЕТА · {output.Width} × {output.Height}",
-                    Log = $"#{oldColor.R:X2}{oldColor.G:X2}{oldColor.B:X2} → #{newColor.R:X2}{newColor.G:X2}{newColor.B:X2}. Размер и прозрачность сохранены."
+                    Caption = Localization.Format("ЗАМЕНА ЦВЕТА · {0} × {1}", output.Width, output.Height),
+                    Log = Localization.Format("#{0:X2}{1:X2}{2:X2} → #{3:X2}{4:X2}{5:X2}. Размер и прозрачность сохранены.", oldColor.R, oldColor.G, oldColor.B, newColor.R, newColor.G, newColor.B)
                 });
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = "Цвет заменён. Результат сохранён в истории.";
+            statusLabel.Text = Localization.Text("Цвет заменён. Результат сохранён в истории.");
         }
         catch (Exception ex)
         {
-            statusLabel.Text = $"Не удалось заменить цвет: {ex.Message}";
+            statusLabel.Text = Localization.Format("Не удалось заменить цвет: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }

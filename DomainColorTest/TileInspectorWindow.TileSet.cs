@@ -6,13 +6,13 @@ public partial class TileInspectorWindow
 {
     public void AddTileSetAssets(IReadOnlyList<TileAsset> assets)
     {
-        if (_busy) throw new InvalidOperationException("Дождитесь сглаживания.");
+        if (_busy) throw new InvalidOperationException(Localization.Text("Дождитесь сглаживания."));
         FinishStroke();
         if (assets.Count == 0) return;
         foreach (var asset in assets) _assets.Add(asset);
         assetList.SelectedItem = assets[0];
         RefreshActiveAsset(); SelectCompanion(null); ConfigureWatchers(); SetProjectDirty();
-        statusLabel.Text = $"Тайлсет добавлен · {assets.Count} отдельных тайлов";
+        statusLabel.Text = Localization.Format("Тайлсет добавлен · {0} отдельных тайлов", assets.Count);
     }
 
     private void OpenTileSetClicked(object sender, RoutedEventArgs e)

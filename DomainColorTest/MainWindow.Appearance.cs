@@ -18,14 +18,14 @@ public partial class MainWindow
             return;
         }
 
-        _appearanceWindow = new AppearanceWindow(_appearanceSettings.Theme, ApplyAppearance) { Owner = this };
+        _appearanceWindow = new AppearanceWindow(_appearanceSettings.Theme, ApplyAppearance, _appearanceSettings.Language, ApplyLanguage) { Owner = this };
         _appearanceWindow.Closed += (_, _) => _appearanceWindow = null;
         _appearanceWindow.Show();
     }
 
     private bool ApplyAppearance(TesseraTheme theme)
     {
-        var settings = new AppearanceSettings { Theme = theme };
+        var settings = new AppearanceSettings { Theme = theme, Language = _appearanceSettings.Language };
         try
         {
             settings.Save(_appearancePath);
@@ -33,11 +33,24 @@ public partial class MainWindow
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             TesseraDialog.Show(_appearanceWindow ?? (Window)this,
-                "Не удалось сохранить тему. " + e.Message, "Внешний вид", MessageBoxButton.OK, MessageBoxImage.Warning);
+                Localization.Text("Не удалось сохранить тему. ") + e.Message, Localization.Text("Внешний вид"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
 
         AppearanceResources.Apply(theme);
+        _appearanceSettings = settings;
+        return true;
+    }
+
+    private bool ApplyLanguage(string language)
+    {
+        var settings = new AppearanceSettings { Theme = _appearanceSettings.Theme, Language = language };
+        try { settings.Save(_appearancePath); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("Не удалось сохранить язык. ") + e.Message, Localization.Text("Настройки"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
         _appearanceSettings = settings;
         return true;
     }

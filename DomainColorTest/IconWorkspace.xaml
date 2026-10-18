@@ -19,11 +19,11 @@
         <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button x:Name="iconOpenButton" Content="Открыть…" Margin="0,0,7,0"/>
-                    <Button x:Name="iconSaveButton" Content="Сохранить ICO…" Style="{StaticResource PrimaryButton}" IsEnabled="False"/>
+                    <Button x:Name="iconOpenButton" Content="{local:Translate Text0DF7E1837013}" Margin="0,0,7,0"/>
+                    <Button x:Name="iconSaveButton" Content="{local:Translate Text5D6114287865}" Style="{StaticResource PrimaryButton}" IsEnabled="False"/>
                 </StackPanel>
-                <Button x:Name="iconBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="На главную" AutomationProperties.Name="На главную"/>
-                <TextBlock Text="Создание иконок" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                <Button x:Name="iconBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="{local:Translate TextAD94907F6423}" AutomationProperties.Name="{local:Translate TextAD94907F6423}"/>
+                <TextBlock Text="{local:Translate Text08836605DFFE}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
             </DockPanel>
         </Border>
         <Grid x:Name="iconContent" Grid.Row="1">
@@ -34,43 +34,43 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="iconControls">
                             <StackPanel x:Name="iconImagePanel">
-                                <TextBlock Text="ИСТОЧНИК" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                                <TextBlock Text="{local:Translate Text1EB3278B5211}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
                                 <Border Height="156" Background="{StaticResource IconChecker}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1">
                                     <Grid>
                                         <Image x:Name="iconSourceImage" Margin="12" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
-                                        <TextBlock x:Name="iconEmptyHint" Text="Перетащите изображение" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}"/>
+                                        <TextBlock x:Name="iconEmptyHint" Text="{local:Translate Text73C0387A0340}" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}"/>
                                     </Grid>
                                 </Border>
                                 <TextBlock x:Name="iconFileLabel" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" Margin="0,8,0,16" Foreground="{DynamicResource Ts.TextMuted}"/>
                             </StackPanel>
                             <local:EditorMaterialPicker x:Name="iconEditorChoices" Visibility="Collapsed" Margin="0,0,0,12"/>
-                            <TextBlock Text="Размеры ICO" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                            <TextBlock Text="{local:Translate Text575D5055D734}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
                             <WrapPanel x:Name="iconSizes" Margin="0,0,0,2"/>
                             <DockPanel Margin="0,0,0,16">
-                                <CheckBox x:Name="iconCustomCheck" Content="Свой размер" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                <local:IntegerInput x:Name="iconCustomSize" Minimum="1" Maximum="256" Value="96" Width="78" IsEnabled="False" AutomationProperties.Name="Сторона иконки в пикселях"/>
+                                <CheckBox x:Name="iconCustomCheck" Content="{local:Translate TextB5311F8310FC}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <local:IntegerInput x:Name="iconCustomSize" Minimum="1" Maximum="256" Value="96" Width="78" IsEnabled="False" AutomationProperties.Name="{local:Translate TextB74101A9928D}"/>
                             </DockPanel>
-                            <TextBlock Text="Масштабирование" Margin="0,0,0,6"/>
+                            <TextBlock Text="{local:Translate Text91377953A789}" Margin="0,0,0,6"/>
                             <ComboBox x:Name="iconResizeMode" SelectedIndex="0" Margin="0,0,0,12">
-                                <ComboBoxItem Content="Пиксельное"/><ComboBoxItem Content="Плавное"/>
+                                <ComboBoxItem Content="{local:Translate TextB2B2565DFCB8}"/><ComboBoxItem Content="{local:Translate TextCAA44972888C}"/>
                             </ComboBox>
-                            <TextBlock Text="Пропорции" Margin="0,0,0,6"/>
+                            <TextBlock Text="{local:Translate TextAA7F21A2DE79}" Margin="0,0,0,6"/>
                             <ComboBox x:Name="iconFitMode" SelectedIndex="0" Margin="0,0,0,12">
-                                <ComboBoxItem Content="Вписать в квадрат"/><ComboBoxItem Content="Обрезать по центру"/><ComboBoxItem Content="Растянуть"/>
+                                <ComboBoxItem Content="{local:Translate Text8196B8163A31}"/><ComboBoxItem Content="{local:Translate Text129593A4C4E0}"/><ComboBoxItem Content="{local:Translate Text647AA759250F}"/>
                             </ComboBox>
-                            <CheckBox x:Name="iconRemoveBackground" Content="Удалить фон" ToolTip="Исходник не изменяется."/>
+                            <CheckBox x:Name="iconRemoveBackground" Content="{local:Translate TextE0139DC77000}" ToolTip="{local:Translate TextED3C4D64FF9A}"/>
                             <WrapPanel x:Name="iconBackgroundSettings" Visibility="Collapsed" Margin="0,8,0,0">
                                 <StackPanel Width="220">
-                                    <TextBlock Text="Способ удаления" Margin="0,0,0,6"/>
-                                    <ComboBox x:Name="iconBackgroundMode" SelectedIndex="0" Margin="0,0,0,12" AutomationProperties.Name="Способ удаления фона">
-                                        <ComboBoxItem Content="По цвету везде"/><ComboBoxItem Content="От краёв"/>
+                                    <TextBlock Text="{local:Translate TextC058D95FDDDA}" Margin="0,0,0,6"/>
+                                    <ComboBox x:Name="iconBackgroundMode" SelectedIndex="0" Margin="0,0,0,12" AutomationProperties.Name="{local:Translate TextBE4B7CFCDA6F}">
+                                        <ComboBoxItem Content="{local:Translate TextEED43C5404C3}"/><ComboBoxItem Content="{local:Translate TextE649FA322395}"/>
                                     </ComboBox>
-                                    <TextBlock Text="Цвет фона" Margin="0,0,0,6"/>
+                                    <TextBlock Text="{local:Translate Text03449D9A17C3}" Margin="0,0,0,6"/>
                                     <ComboBox x:Name="iconBackgroundColor" SelectedIndex="0" Margin="0,0,0,12">
-                                        <ComboBoxItem Content="Авто по краям"/><ComboBoxItem Content="Белый"/><ComboBoxItem Content="Чёрный"/>
+                                        <ComboBoxItem Content="{local:Translate Text2BC89F591254}"/><ComboBoxItem Content="{local:Translate TextA024A93D4E0C}"/><ComboBoxItem Content="{local:Translate Text1CA9B6B05DFC}"/>
                                     </ComboBox>
-                                    <DockPanel Margin="0,0,0,6"><TextBlock Text="Допуск"/><TextBlock Text="{Binding Value, ElementName=iconBackgroundTolerance, StringFormat={}{0}%}" HorizontalAlignment="Right"/></DockPanel>
-                                    <Slider x:Name="iconBackgroundTolerance" Minimum="0" Maximum="100" Value="8" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" AutomationProperties.Name="Допуск удаления фона"/>
+                                    <DockPanel Margin="0,0,0,6"><TextBlock Text="{local:Translate TextC6F992FFD17B}"/><TextBlock Text="{Binding Value, ElementName=iconBackgroundTolerance, StringFormat={}{0}%}" HorizontalAlignment="Right"/></DockPanel>
+                                    <Slider x:Name="iconBackgroundTolerance" Minimum="0" Maximum="100" Value="8" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" AutomationProperties.Name="{local:Translate Text0C4B88F7B78A}"/>
                                 </StackPanel>
                             </WrapPanel>
                         </StackPanel>
@@ -78,8 +78,8 @@
                 </Border>
                 <ScrollViewer x:Name="iconScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="16">
-                        <TextBlock Text="РЕЗУЛЬТАТЫ" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
-                        <TextBlock x:Name="iconPreviewHint" Text="Выберите размеры — они будут сохранены в одном ICO." Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,16"/>
+                        <TextBlock Text="{local:Translate Text870884E44CE1}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="iconPreviewHint" Text="{local:Translate Text2C678E406BF6}" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,16"/>
                         <ItemsControl x:Name="iconFrames">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel VerticalAlignment="Bottom"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate><DataTemplate>

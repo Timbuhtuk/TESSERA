@@ -48,7 +48,7 @@ internal static class AppearanceChecks
                 window.Width = 560; Pump();
                 Require(Get<ScrollViewer>(window, "homeScroll").ScrollableWidth == 0, "Themed home overflows at minimum width");
                 var button = Get<Button>(window, "appearanceButton");
-                Require(button.ActualWidth > 80 && button.TranslatePoint(new System.Windows.Point(), window).X >= 0,
+                Require(button.ActualWidth >= 32 && button.Content is SettingsIcon && button.TranslatePoint(new System.Windows.Point(), window).X >= 0,
                     "Appearance entry is clipped on narrow windows");
                 Capture(window, Path.Combine(directory, $"{theme}-home-narrow.png"));
                 window.Width = 1220;

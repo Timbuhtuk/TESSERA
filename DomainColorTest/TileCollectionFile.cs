@@ -34,7 +34,7 @@ public static class TileCollectionFile
         path = Path.GetFullPath(path);
         if (assets.Any(asset => string.Equals(asset.SourcePath, path, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(asset.AtlasSourcePath, path, StringComparison.OrdinalIgnoreCase)))
-            throw new IOException("Проект не может заменить исходное изображение.");
+            throw new IOException(Localization.Text("Проект не может заменить исходное изображение."));
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
@@ -59,22 +59,22 @@ public static class TileCollectionFile
     public static (List<TileAsset> Assets, TileCollectionSettings Settings) Load(string path)
     {
         using var archive = ZipFile.OpenRead(path);
-        using var manifestStream = (archive.GetEntry("collection.json") ?? throw new InvalidDataException("Нет описания коллекции.")).Open();
-        var manifest = JsonSerializer.Deserialize<Manifest>(manifestStream) ?? throw new InvalidDataException("Пустой проект.");
+        using var manifestStream = (archive.GetEntry("collection.json") ?? throw new InvalidDataException(Localization.Text("Нет описания коллекции."))).Open();
+        var manifest = JsonSerializer.Deserialize<Manifest>(manifestStream) ?? throw new InvalidDataException(Localization.Text("Пустой проект."));
         if (manifest.Version != 1 || manifest.Settings is null || manifest.Assets is null)
-            throw new InvalidDataException("Неизвестная версия проекта.");
+            throw new InvalidDataException(Localization.Text("Неизвестная версия проекта."));
         var assets = new List<TileAsset>();
         var ids = new HashSet<Guid>();
         foreach (var entry in manifest.Assets)
         {
-            if (!ids.Add(entry.Id)) throw new InvalidDataException("Повторяющийся идентификатор ассета.");
-            using var stream = (archive.GetEntry(entry.Image) ?? throw new InvalidDataException("Не найдено изображение тайла.")).Open();
+            if (!ids.Add(entry.Id)) throw new InvalidDataException(Localization.Text("Повторяющийся идентификатор ассета."));
+            using var stream = (archive.GetEntry(entry.Image) ?? throw new InvalidDataException(Localization.Text("Не найдено изображение тайла."))).Open();
             // Decode from memory: ZIP entry streams do not necessarily support seeking.
             using var imageStream = new MemoryStream(); stream.CopyTo(imageStream); imageStream.Position = 0;
             string? source = entry.SourcePath is null ? null : Path.GetFullPath(entry.SourcePath);
             string? atlas = entry.AtlasSourcePath is null ? null : Path.GetFullPath(entry.AtlasSourcePath);
             assets.Add(new TileAsset(TileAsset.Decode(imageStream), entry.Edited)
-                { Id = entry.Id, Name = entry.Name ?? "Тайл", SourcePath = source, AtlasSourcePath = atlas });
+                { Id = entry.Id, Name = entry.Name ?? Localization.Text("Тайл"), SourcePath = source, AtlasSourcePath = atlas });
         }
         return (assets, manifest.Settings);
     }

@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\settings.svg" />
+    <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
     <Resource Include="Assets\app-icon.png" />
     <Resource Include="Assets\landscape.png" />
     <Resource Include="Assets\animation-banner.png" />

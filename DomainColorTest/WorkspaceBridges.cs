@@ -18,7 +18,7 @@ public partial class BackgroundWorkspace
         backgroundEditorChoices.Visibility = Visibility.Collapsed;
         if (_workspaceApplyButton is null)
         {
-            _workspaceApplyButton = new Button { Content = "В историю ассета", Margin = new Thickness(6, 0, 0, 0) };
+            _workspaceApplyButton = new Button { Content = Localization.Text("В историю ассета"), Margin = new Thickness(6, 0, 0, 0) };
             ((StackPanel)backgroundSaveButton.Parent).Children.Add(_workspaceApplyButton);
             _workspaceApplyButton.Click += async (_, _) =>
             {
@@ -76,7 +76,7 @@ public partial class TileInspectorWindow
     public void EnableWorkspaceApply(Action<TileAsset> apply)
     {
         var original = ActiveAsset;
-        var button = new Button { Content = "В историю ассета", Margin = new Thickness(6, 0, 0, 6), ToolTip = "Сохранить правки исходного тайла новым результатом в библиотеке" };
+        var button = new Button { Content = Localization.Text("В историю ассета"), Margin = new Thickness(6, 0, 0, 6), ToolTip = Localization.Text("Сохранить правки исходного тайла новым результатом в библиотеке") };
         workspaceTileToolbar.Children.Add(button);
         button.Click += (_, _) =>
         {

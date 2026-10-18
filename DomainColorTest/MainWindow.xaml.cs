@@ -25,8 +25,8 @@ public partial class MainWindow : Window
     private bool _processing;
     private bool _resultStale;
 
-    private readonly OpenFileDialog openDialog = new() { Filter = "Изображения|*.jpg;*.jpeg;*.png;*.bmp;*.gif", Title = "Добавить изображения", Multiselect = true };
-    private readonly SaveFileDialog saveDialog = new() { DefaultExt = ".png", AddExtension = true, OverwritePrompt = true, Title = "Сохранить результат" };
+    private readonly OpenFileDialog openDialog = new() { Multiselect = true };
+    private readonly SaveFileDialog saveDialog = new() { DefaultExt = ".png", AddExtension = true, OverwritePrompt = true };
 
     public MainWindow() : this(LibraryLocation.PrepareDefault(), AppearanceSettings.DefaultPath) { _autoCheckUpdates = true; }
 
@@ -34,6 +34,10 @@ public partial class MainWindow : Window
     {
         _appearancePath = appearancePath ?? Path.Combine(libraryDirectory, "appearance.json");
         _appearanceSettings = AppearanceSettings.Load(_appearancePath);
+        Localization.Initialize(_appearanceSettings.Language);
+        openDialog.Filter = Localization.Text("Изображения|*.jpg;*.jpeg;*.png;*.bmp;*.gif");
+        openDialog.Title = Localization.Text("Добавить изображения");
+        saveDialog.Title = Localization.Text("Сохранить результат");
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
@@ -76,7 +80,7 @@ public partial class MainWindow : Window
         saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
         saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
-        Closing += (_, e) => { if (_workspaceImporting || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
+        Closing += (_, e) => { if (_workspaceImporting || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = Localization.Text("Дождитесь завершения обработки."); } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
         Closed += (_, _) =>
         {
             CloseEditorTools();
@@ -100,19 +104,19 @@ public partial class MainWindow : Window
         UpdatePreviewSettings();
         UpdateDependentControls();
         if (LibraryLocation.MigrationWarning is { } warning)
-            statusLabel.Text = $"Не удалось полностью перенести старую историю: {warning}";
+            statusLabel.Text = Localization.Format("Не удалось полностью перенести старую историю: {0}", warning);
     }
 
-    private string CurrentModeName => detailsMode.IsChecked == true ? "Детали" : backgroundMode.IsChecked == true ? "Фон" : "Сцена";
+    private string CurrentModeName => detailsMode.IsChecked == true ? Localization.Text("Детали") : backgroundMode.IsChecked == true ? Localization.Text("Фон") : Localization.Text("Сцена");
     private static void SetVisible(UIElement control, bool visible) => control.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     private void UpdateModeDescription()
     {
         modeDescription.Text = detailsMode.IsChecked == true
-            ? "Пиксель-арт и спрайты: приоритет контуров и прозрачности. При уменьшении часть деталей может исчезнуть."
+            ? Localization.Text("Пиксель-арт и спрайты: приоритет контуров и прозрачности. При уменьшении часть деталей может исчезнуть.")
             : backgroundMode.IsChecked == true
-                ? "Крупные фоновые изображения: цельные цветовые области и общая композиция, без акцента на мелочах."
-                : "Сцены средней детализации: сохраняем значимые формы, свет и цветовые переходы.";
-        profileState.Text = "Параметры режима применятся при обработке";
+                ? Localization.Text("Крупные фоновые изображения: цельные цветовые области и общая композиция, без акцента на мелочах.")
+                : Localization.Text("Сцены средней детализации: сохраняем значимые формы, свет и цветовые переходы.");
+        profileState.Text = Localization.Text("Параметры режима применятся при обработке");
     }
 
     private void ApplyProfile()
@@ -132,11 +136,11 @@ public partial class MainWindow : Window
             ditheringInput.IsChecked = false;
             cropHorizontalInput.SelectedIndex = cropVerticalInput.SelectedIndex = 0;
             brightnessInput.Value = contrastInput.Value = saturationInput.Value = edgeInput.Value = 50;
-            profileState.Text = "Настройки режима";
+            profileState.Text = Localization.Text("Настройки режима");
             UpdateDependentControls();
             MarkResultStale();
             UpdateSizeHint();
-            statusLabel.Text = $"Параметры режима «{CurrentModeName}» применены.";
+            statusLabel.Text = Localization.Format("Параметры режима «{0}» применены.", CurrentModeName);
         }
         finally { _applyingProfile = false; }
     }
@@ -145,7 +149,7 @@ public partial class MainWindow : Window
     {
         if (_applyingProfile || _restoringHistory) return;
         UpdateDependentControls();
-        profileState.Text = "Настройки изменены вручную";
+        profileState.Text = Localization.Text("Настройки изменены вручную");
         MarkResultStale();
         UpdateSizeHint();
     }
@@ -163,14 +167,14 @@ public partial class MainWindow : Window
         ditheringInput.IsEnabled = paletteColorControls.IsEnabled && ditheringAllowed;
         if (!ditheringAllowed) ditheringInput.IsChecked = false;
         SetVisible(manualControls, manualInput.IsChecked == true);
-        brightnessLabel.Text = $"Яркость · {brightnessInput.Value}";
-        contrastLabel.Text = $"Контраст · {contrastInput.Value}";
-        saturationLabel.Text = $"Насыщенность · {saturationInput.Value}";
-        edgeLabel.Text = $"Контур · {edgeInput.Value}";
-        localBrightnessLabel.Text = $"Яркость · {localBrightnessInput.Value}";
-        localContrastLabel.Text = $"Контраст · {localContrastInput.Value}";
-        localSaturationLabel.Text = $"Насыщенность · {localSaturationInput.Value}";
-        localEdgeLabel.Text = $"Контур · {localEdgeInput.Value}";
+        brightnessLabel.Text = Localization.Format("Яркость · {0}", brightnessInput.Value);
+        contrastLabel.Text = Localization.Format("Контраст · {0}", contrastInput.Value);
+        saturationLabel.Text = Localization.Format("Насыщенность · {0}", saturationInput.Value);
+        edgeLabel.Text = Localization.Format("Контур · {0}", edgeInput.Value);
+        localBrightnessLabel.Text = Localization.Format("Яркость · {0}", localBrightnessInput.Value);
+        localContrastLabel.Text = Localization.Format("Контраст · {0}", localContrastInput.Value);
+        localSaturationLabel.Text = Localization.Format("Насыщенность · {0}", localSaturationInput.Value);
+        localEdgeLabel.Text = Localization.Format("Контур · {0}", localEdgeInput.Value);
     }
 
     private void SizeChangedByUser(bool widthChanged)
@@ -199,20 +203,20 @@ public partial class MainWindow : Window
         var sizeSource = operationSourceInput.SelectedIndex == 1 ? _downscaledResult : _sourceImage;
         if (sizeSource is null)
         {
-            sizeHint.Text = "Укажите ширину и высоту результата.";
+            sizeHint.Text = Localization.Text("Укажите ширину и высоту результата.");
             sizeToolGroup.ToolTip = sizeHint.Text;
             frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = true;
             return;
         }
         int width = (int)widthInput.Value, height = (int)heightInput.Value;
         if (width > sizeSource.Width || height > sizeSource.Height)
-            sizeHint.Text = $"Основа {sizeSource.Width} × {sizeSource.Height}. Увеличение через «Изменить размер» сохраняет цвета и прозрачность без сглаживания. «Обработать» не увеличивает исходник.";
+            sizeHint.Text = Localization.Format("Основа {0} × {1}. Увеличение через «Изменить размер» сохраняет цвета и прозрачность без сглаживания. «Обработать» не увеличивает исходник.", sizeSource.Width, sizeSource.Height);
         else if (spriteInput.IsChecked == true && Math.Abs((double)width / height / ((double)sizeSource.Width / sizeSource.Height) - 1) > .02)
-            sizeHint.Text = "Пропорции отличаются от исходника: весь кадр будет растянут. Включите сохранение пропорций.";
+            sizeHint.Text = Localization.Text("Пропорции отличаются от исходника: весь кадр будет растянут. Включите сохранение пропорций.");
         else
             sizeHint.Text = spriteInput.IsChecked == true
-                ? "Весь исходник попадёт в сетку. Порог заполнения регулирует края прозрачных объектов."
-                : "Область исходника подгоняется обрезкой под целые блоки. Положение области задаётся ниже.";
+                ? Localization.Text("Весь исходник попадёт в сетку. Порог заполнения регулирует края прозрачных объектов.")
+                : Localization.Text("Область исходника подгоняется обрезкой под целые блоки. Положение области задаётся ниже.");
         sizeToolGroup.ToolTip = sizeHint.Text;
         bool reducing = width <= sizeSource.Width && height <= sizeSource.Height;
         frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = reducing;
@@ -223,8 +227,8 @@ public partial class MainWindow : Window
         if (_resultIsAlignment || _restoringHistory || _activeSource?.SelectedGeneration?.IsGridReduction == true) return;
         if (_downscaledResult is null) return;
         _resultStale = true;
-        resultCaption.Text = $"РЕЗУЛЬТАТ · {_downscaledResult.Width} × {_downscaledResult.Height} · предыдущие настройки";
-        statusLabel.Text = "Настройки изменены. Выберите нужную операцию, чтобы создать новый результат.";
+        resultCaption.Text = Localization.Format("РЕЗУЛЬТАТ · {0} × {1} · предыдущие настройки", _downscaledResult.Width, _downscaledResult.Height);
+        statusLabel.Text = Localization.Text("Настройки изменены. Выберите нужную операцию, чтобы создать новый результат.");
     }
 
     private void UpdatePreviewSettings()
@@ -240,8 +244,8 @@ public partial class MainWindow : Window
     private void UpdateSourcePreview()
     {
         sourcePreview.Image = _sourceImage;
-        sourceCaption.Text = _sourceImage is null ? "ИСХОДНИК" :
-            $"ИСХОДНИК · {_sourceImage.Width} × {_sourceImage.Height}";
+        sourceCaption.Text = _sourceImage is null ? Localization.Text("ИСХОДНИК") :
+            Localization.Format("ИСХОДНИК · {0} × {1}", _sourceImage.Width, _sourceImage.Height);
     }
 
     private async void OpenImage(object? sender, EventArgs e)
@@ -263,7 +267,7 @@ public partial class MainWindow : Window
         var basis = useResult ? _downscaledResult! : _sourceImage;
         if (options.TargetWidth > basis.Width || options.TargetHeight > basis.Height)
         {
-            statusLabel.Text = "Уменьшите размер результата: он не должен превышать размер выбранной основы.";
+            statusLabel.Text = Localization.Text("Уменьшите размер результата: он не должен превышать размер выбранной основы.");
             return;
         }
         string mode = CurrentModeName;
@@ -271,7 +275,7 @@ public partial class MainWindow : Window
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
         using var source = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = $"Обработка · {mode} · {options.TargetWidth} × {options.TargetHeight}…";
+        statusLabel.Text = Localization.Format("Обработка · {0} · {1} × {2}…", mode, options.TargetWidth, options.TargetHeight);
         try
         {
             var generation = await Task.Run(() =>
@@ -284,21 +288,21 @@ public partial class MainWindow : Window
                         Settings = settings,
                         ParentGenerationId = parentId,
                         PreservesTransparency = options.SpriteMode,
-                        Caption = $"РЕЗУЛЬТАТ · {result.Downscaled.Width} × {result.Downscaled.Height} · {mode}",
-                        Log = string.Join(Environment.NewLine, result.StageTimingsSeconds.Select(stage => $"{stage.Key}: {stage.Value:F3} с")) +
-                            $"{Environment.NewLine}Основной цвет: {result.DominantColor}"
+                        Caption = Localization.Format("РЕЗУЛЬТАТ · {0} × {1} · {2}", result.Downscaled.Width, result.Downscaled.Height, mode),
+                        Log = string.Join(Environment.NewLine, result.StageTimingsSeconds.Select(stage => Localization.Format("{0}: {1:F3} с", stage.Key, stage.Value))) +
+                            Localization.Format("{0}Основной цвет: {1}", Environment.NewLine, result.DominantColor)
                     });
                 }
                 finally { result.CroppedSource.Dispose(); result.Downscaled.Dispose(); }
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = $"Готово · {generation.Width} × {generation.Height}. Результат сохранён в истории.";
+            statusLabel.Text = Localization.Format("Готово · {0} × {1}. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)
         {
-            statusLabel.Text = "Обработка или сохранение истории не завершены. Предыдущий результат доступен.";
-            TesseraDialog.Show(this, ex.Message, "Ошибка обработки", MessageBoxButton.OK, MessageBoxImage.Error);
+            statusLabel.Text = Localization.Text("Обработка или сохранение истории не завершены. Предыдущий результат доступен.");
+            TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка обработки"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { SetProcessingState(false); }
     }
@@ -326,7 +330,7 @@ public partial class MainWindow : Window
         var selectedGeneration = _activeSource?.SelectedGeneration;
         int generationNumber = selectedGeneration is null ? -1 : _activeSource!.Generations.IndexOf(selectedGeneration) + 1;
         ((ComboBoxItem)operationSourceInput.Items[1]).Content = generationNumber > 0
-            ? $"Результат №{generationNumber}" : "Выбранный результат";
+            ? Localization.Format("Результат №{0}", generationNumber) : Localization.Text("Выбранный результат");
         ((ComboBoxItem)operationSourceInput.Items[1]).IsEnabled = !processing && _downscaledResult is not null;
         if (_downscaledResult is null && operationSourceInput.SelectedIndex == 1) operationSourceInput.SelectedIndex = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
@@ -384,16 +388,16 @@ public partial class MainWindow : Window
     private void SaveImage(object? sender, EventArgs e)
     {
         if (_downscaledResult is null) return;
-        string suffix = _resultIsAlignment ? "aligned" : _activeSource?.SelectedGeneration?.IsGridReduction == true ? "pixels" : _activeSource?.SelectedGeneration?.Operation == "Увеличение" ? "upscaled" : "pixelized";
+        string suffix = _resultIsAlignment ? "aligned" : _activeSource?.SelectedGeneration?.IsGridReduction == true ? "pixels" : _activeSource?.SelectedGeneration?.Operation == Localization.Text("Увеличение") ? "upscaled" : "pixelized";
         saveDialog.FileName = $"{Path.GetFileNameWithoutExtension(_activeSource?.Label ?? _selectedFilePath) ?? "result"}_{suffix}.png";
-        saveDialog.Filter = _resultPreservesTransparency ? "PNG (с прозрачностью)|*.png"
+        saveDialog.Filter = _resultPreservesTransparency ? Localization.Text("PNG (с прозрачностью)|*.png")
             : "PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp";
         saveDialog.FilterIndex = 1;
         if (saveDialog.ShowDialog(this) != true) return;
         try { SaveResult(saveDialog.FileName); }
         catch (Exception ex)
         {
-            TesseraDialog.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка сохранения"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -401,34 +405,34 @@ public partial class MainWindow : Window
     {
         fileMenuPopup.IsOpen = false;
         if (_processing || _activeSource?.Generations.Count is not > 0) return;
-        var folderDialog = new OpenFolderDialog { Title = "Сохранить все результаты текущего исходника" };
+        var folderDialog = new OpenFolderDialog { Title = Localization.Text("Сохранить все результаты текущего исходника") };
         if (folderDialog.ShowDialog(this) != true) return;
 
         SetProcessingState(true);
-        statusLabel.Text = "Сохранение результатов…";
+        statusLabel.Text = Localization.Text("Сохранение результатов…");
         try
         {
             var (saved, errors) = await Task.Run(() => SaveAllResults(folderDialog.FolderName));
             statusLabel.Text = errors.Count == 0
-                ? $"Сохранено результатов: {saved} · {folderDialog.FolderName}"
-                : $"Сохранено: {saved}. Ошибок: {errors.Count}.";
+                ? Localization.Format("Сохранено результатов: {0} · {1}", saved, folderDialog.FolderName)
+                : Localization.Format("Сохранено: {0}. Ошибок: {1}.", saved, errors.Count);
             if (errors.Count > 0)
-                TesseraDialog.Show(this, string.Join(Environment.NewLine, errors), "Не все результаты сохранены",
+                TesseraDialog.Show(this, string.Join(Environment.NewLine, errors), Localization.Text("Не все результаты сохранены"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
-            statusLabel.Text = "Не удалось сохранить результаты.";
-            TesseraDialog.Show(this, ex.Message, "Ошибка сохранения", MessageBoxButton.OK, MessageBoxImage.Error);
+            statusLabel.Text = Localization.Text("Не удалось сохранить результаты.");
+            TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка сохранения"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { SetProcessingState(false); }
     }
 
     private (int Saved, List<string> Errors) SaveAllResults(string directory)
     {
-        var source = _activeSource ?? throw new InvalidOperationException("Выберите исходник.");
+        var source = _activeSource ?? throw new InvalidOperationException(Localization.Text("Выберите исходник."));
         var generations = source.Generations.ToArray();
-        if (generations.Length == 0) throw new InvalidOperationException("У исходника пока нет результатов.");
+        if (generations.Length == 0) throw new InvalidOperationException(Localization.Text("У исходника пока нет результатов."));
         string outputDirectory = Path.GetFullPath(directory);
         Directory.CreateDirectory(outputDirectory);
         string sourceName = Path.GetFileNameWithoutExtension(source.Label);
@@ -470,18 +474,18 @@ public partial class MainWindow : Window
 
     private void SaveResult(string path)
     {
-        if (_downscaledResult is null) throw new InvalidOperationException("Сначала обработайте изображение.");
+        if (_downscaledResult is null) throw new InvalidOperationException(Localization.Text("Сначала обработайте изображение."));
         string outputPath = Path.GetFullPath(path);
         string extension = Path.GetExtension(outputPath).ToLowerInvariant();
         if (extension is not (".png" or ".jpg" or ".jpeg" or ".bmp") || (_resultPreservesTransparency && extension != ".png"))
         {
             throw new InvalidOperationException(_resultPreservesTransparency
-                ? "Сохраните этот результат в PNG, чтобы сохранить прозрачность."
-                : "Выберите формат PNG, JPEG или BMP.");
+                ? Localization.Text("Сохраните этот результат в PNG, чтобы сохранить прозрачность.")
+                : Localization.Text("Выберите формат PNG, JPEG или BMP."));
         }
         if (string.Equals(outputPath, _selectedFilePath, StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Выберите другое имя: исходное изображение нужно сохранить.");
+            throw new InvalidOperationException(Localization.Text("Выберите другое имя: исходное изображение нужно сохранить."));
         }
         string temporaryPath = Path.Combine(Path.GetDirectoryName(outputPath)!, $".{Path.GetFileName(outputPath)}.{Guid.NewGuid():N}.tmp");
         try
@@ -494,7 +498,7 @@ public partial class MainWindow : Window
             };
             _downscaledResult.Save(temporaryPath, format);
             File.Move(temporaryPath, outputPath, overwrite: true);
-            statusLabel.Text = $"Сохранено: {outputPath}" + (_resultStale ? " · результат предыдущих настроек" : "");
+            statusLabel.Text = Localization.Format("Сохранено: {0}", outputPath) + (_resultStale ? Localization.Text(" · результат предыдущих настроек") : "");
         }
         finally { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
     }
@@ -503,8 +507,8 @@ public partial class MainWindow : Window
     {
         if (_restoringHistory || !_resultIsAlignment || _downscaledResult is null) return;
         _resultStale = true;
-        resultCaption.Text = $"ВЫРОВНЕННАЯ СЕТКА · {_downscaledResult.Width} × {_downscaledResult.Height} · предыдущие настройки";
-        statusLabel.Text = "Размер ячейки изменён. Нажмите «Выровнять сетку».";
+        resultCaption.Text = Localization.Format("ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · предыдущие настройки", _downscaledResult.Width, _downscaledResult.Height);
+        statusLabel.Text = Localization.Text("Размер ячейки изменён. Нажмите «Выровнять сетку».");
     }
 
     private async void AlignImage(object? sender, EventArgs e)
@@ -519,7 +523,7 @@ public partial class MainWindow : Window
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
         using var source = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = "Выравнивание пиксельной сетки…";
+        statusLabel.Text = Localization.Text("Выравнивание пиксельной сетки…");
         try
         {
             var generation = await Task.Run(() =>
@@ -529,18 +533,18 @@ public partial class MainWindow : Window
                 {
                     Settings = settings, IsAlignment = true, PreservesTransparency = true, CellSize = result.CellSize,
                     ParentGenerationId = parentId,
-                    Caption = $"ВЫРОВНЕННАЯ СЕТКА · {result.Aligned.Width} × {result.Aligned.Height} · ячейка {result.CellSize} px",
-                    Log = $"Выравнивание: {result.ElapsedSeconds:F3} с. Ячейка: {result.CellSize} px."
+                    Caption = Localization.Format("ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px", result.Aligned.Width, result.Aligned.Height, result.CellSize),
+                    Log = Localization.Format("Выравнивание: {0:F3} с. Ячейка: {1} px.", result.ElapsedSeconds, result.CellSize)
                 });
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = $"Готово. Ячейка {generation.CellSize} px. Результат сохранён в истории.";
+            statusLabel.Text = Localization.Format("Готово. Ячейка {0} px. Результат сохранён в истории.", generation.CellSize);
         }
         catch (Exception ex)
         {
-            statusLabel.Text = "Выравнивание или сохранение истории не завершены.";
-            TesseraDialog.Show(this, ex.Message, "Выравнивание сетки", MessageBoxButton.OK, MessageBoxImage.Information);
+            statusLabel.Text = Localization.Text("Выравнивание или сохранение истории не завершены.");
+            TesseraDialog.Show(this, ex.Message, Localization.Text("Выравнивание сетки"), MessageBoxButton.OK, MessageBoxImage.Information);
         }
         finally { SetProcessingState(false); }
     }

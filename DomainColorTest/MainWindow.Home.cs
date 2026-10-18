@@ -64,7 +64,7 @@ public partial class MainWindow
         SetVisible(workspaceHost, false);
         SetVisible(editorToolbar, false);
         homeScroll.ScrollToTop();
-        statusLabel.Text = "Готово";
+        statusLabel.Text = Localization.Text("Готово");
         if (SystemParameters.ClientAreaAnimation)
             homeContent.BeginAnimation(OpacityProperty, new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(180)));
         UpdateCardWidth();
@@ -102,7 +102,7 @@ public partial class MainWindow
             SelectSource(source);
             ShowEditor();
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть изображение: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось открыть изображение: {0}", ex.Message); }
     }
 
     private void UpdateCardWidth()

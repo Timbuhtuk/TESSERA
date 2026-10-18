@@ -6,7 +6,7 @@ try {
     dotnet build PixelArtAlignment.Tests -c Release --nologo -m:1 -p:TargetPlatformDisplayName=Windows
     if ($LASTEXITCODE -ne 0) { throw 'Prototype build failed.' }
     if (!$SkipChecks) {
-        & .\PixelArtAlignment.Tests\bin\Release\net8.0-windows\PixelArtAlignment.Tests.exe --workspace --invariants --ui
+        & .\PixelArtAlignment.Tests\bin\Release\net8.0-windows\PixelArtAlignment.Tests.exe --workspace --localization --invariants --ui
         if ($LASTEXITCODE -ne 0) { throw 'Prototype verification failed.' }
     }
     $prototypeOutput = Join-Path $PSScriptRoot 'artifacts\workspace-preview'

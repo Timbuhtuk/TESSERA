@@ -10,6 +10,8 @@ The default library is `WorkspaceData/Library` beside the executable. On first l
 
 ## Organize materials
 
+The gear icon in the title bar opens **Settings**: theme and interface language (Русский / English). Theme changes apply immediately. The language is saved in the library's `appearance.json` and applies on the next launch; the active editor is left intact. Existing settings default to Russian. Asset names, projects, folders, paths and tags are never translated.
+
 - **Все ассеты** lists the whole library; **Без проекта** lists assets with no project memberships; **Недавние** lists previously opened materials.
 - Create projects using **+** beside **Проекты**. Right-click a project or folder to create a folder inside it, rename it or remove it. The same menu opens with Shift+F10 on the focused tree item.
 - Open or drop images, Aseprite files, `.tboard` boards and `.ttiles` collections. Imports made while a project is selected are linked into its selected folder. Other imports remain standalone.
@@ -42,6 +44,8 @@ Build and check with `Build-WorkspacePrototype.ps1`. The focused suite is:
 dotnet run --project PixelArtAlignment.Tests -c Release -- --workspace
 ```
 
-It covers shared membership, independent deep copies, parent history links, invalid/cyclic folder moves, deletion semantics, combined search, persistence, wide/narrow WPF layouts, multiple selection, image processing, background/tile roundtrips, board layers, document thumbnails and PNG/JSON animation export. The existing `--invariants --ui` suite checks the previous tools. Captures are under `artifacts/workspace-verification/run-*`.
+It covers shared membership, independent deep copies, parent history links, invalid/cyclic folder moves, deletion semantics, combined search, persistence, wide/narrow WPF layouts, multiple selection, image processing, background/tile roundtrips, board layers, document thumbnails and PNG/JSON animation export. Add `--localization` to check catalog placeholders, English settings/workspaces, language persistence, old settings and unchanged user names. The existing `--invariants --ui` suite checks the previous tools. Captures are under `artifacts/workspace-verification/run-*`.
+
+Translations live in `DomainColorTest/Localization/en.json`, keyed by the Russian source text. C# uses `Localization.Text` / `Localization.Format`; XAML uses `Translate` with stable keys derived from the source text. Keep format placeholders and file-filter patterns intact when editing translations. `Assets/settings.svg` is the original vector source used by the gear control.
 
 This branch is for local review. Global tags are implemented; separate per-project labels, cloud synchronization and project archive interchange are outside this prototype. Removed document payloads are retained locally for recovery and are not shown in the catalog.

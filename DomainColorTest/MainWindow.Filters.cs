@@ -61,7 +61,7 @@ public partial class MainWindow
         var settings = CaptureSettings();
         using var input = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = "Применение монохрома…";
+        statusLabel.Text = Localization.Text("Применение монохрома…");
         try
         {
             var generation = await Task.Run(() =>
@@ -70,20 +70,20 @@ public partial class MainWindow
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
-                    Operation = "Монохром",
+                    Operation = Localization.Text("Монохром"),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
-                    Caption = $"МОНОХРОМ · {output.Width} × {output.Height}",
-                    Log = "Цвета переведены в оттенки серого. Размер и прозрачность сохранены."
+                    Caption = Localization.Format("МОНОХРОМ · {0} × {1}", output.Width, output.Height),
+                    Log = Localization.Text("Цвета переведены в оттенки серого. Размер и прозрачность сохранены.")
                 });
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = "Монохром сохранён в истории.";
+            statusLabel.Text = Localization.Text("Монохром сохранён в истории.");
         }
         catch (Exception ex)
         {
-            statusLabel.Text = $"Не удалось применить монохром: {ex.Message}";
+            statusLabel.Text = Localization.Format("Не удалось применить монохром: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }
@@ -94,8 +94,8 @@ public partial class MainWindow
         if (_processing || basis is null) return;
         var dialog = new SaveFileDialog
         {
-            Title = "Сохранить ASCII как текст",
-            Filter = "Текстовый файл|*.txt",
+            Title = Localization.Text("Сохранить ASCII как текст"),
+            Filter = Localization.Text("Текстовый файл|*.txt"),
             DefaultExt = ".txt",
             AddExtension = true,
             OverwritePrompt = true,
@@ -108,7 +108,7 @@ public partial class MainWindow
         bool invertSource = asciiInvertSourceInput.IsChecked == true;
         using var input = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = "Сохранение ASCII-текста…";
+        statusLabel.Text = Localization.Text("Сохранение ASCII-текста…");
         try
         {
             string text = await Task.Run(() => keepSourceSize
@@ -122,11 +122,11 @@ public partial class MainWindow
                 File.Move(temporary, output, true);
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
-            statusLabel.Text = $"ASCII-текст сохранён: {output}";
+            statusLabel.Text = Localization.Format("ASCII-текст сохранён: {0}", output);
         }
         catch (Exception ex)
         {
-            statusLabel.Text = $"Не удалось сохранить ASCII-текст: {ex.Message}";
+            statusLabel.Text = Localization.Format("Не удалось сохранить ASCII-текст: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }
@@ -145,7 +145,7 @@ public partial class MainWindow
         var settings = CaptureSettings();
         using var input = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = "Рендер ASCII-изображения…";
+        statusLabel.Text = Localization.Text("Рендер ASCII-изображения…");
         try
         {
             var created = await Task.Run(() =>
@@ -164,18 +164,18 @@ public partial class MainWindow
                     PreservesTransparency = false,
                     Caption = $"ASCII · {output.Width} × {output.Height}",
                     Log = keepSourceSize
-                        ? $"ASCII автоматически рассчитан для {input.Width} × {input.Height} px. Размер исходника сохранён. Инверсия исходника: {invertSource}; инверсия рендера: {invertRender}."
-                        : $"ASCII один пиксель в один символ: {input.Width} × {input.Height} символов. Итог {output.Width} × {output.Height} px. Инверсия исходника: {invertSource}; инверсия рендера: {invertRender}."
+                        ? Localization.Format("ASCII автоматически рассчитан для {0} × {1} px. Размер исходника сохранён. Инверсия исходника: {2}; инверсия рендера: {3}.", input.Width, input.Height, invertSource, invertRender)
+                        : Localization.Format("ASCII один пиксель в один символ: {0} × {1} символов. Итог {2} × {3} px. Инверсия исходника: {4}; инверсия рендера: {5}.", input.Width, input.Height, output.Width, output.Height, invertSource, invertRender)
                 });
                 return generation;
             });
             document.Generations.Add(created);
             SelectGeneration(created);
-            statusLabel.Text = "ASCII-изображение сохранено в истории.";
+            statusLabel.Text = Localization.Text("ASCII-изображение сохранено в истории.");
         }
         catch (Exception ex)
         {
-            statusLabel.Text = $"Не удалось отрендерить ASCII: {ex.Message}";
+            statusLabel.Text = Localization.Format("Не удалось отрендерить ASCII: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }

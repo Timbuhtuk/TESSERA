@@ -24,7 +24,7 @@ public partial class MainWindow
         SetVisible(backgroundWorkspace, false);
         SetVisible(moodboardWorkspace, true);
         HideWorkspaceBrowser();
-        statusLabel.Text = moodboardWorkspace.HasBoard ? "Доска готова к работе" : "Создайте полотно для доски";
+        statusLabel.Text = moodboardWorkspace.HasBoard ? Localization.Text("Доска готова к работе") : Localization.Text("Создайте полотно для доски");
     }
 
     private bool IsMoodboardDropTarget(DependencyObject? target)

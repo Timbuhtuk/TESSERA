@@ -68,7 +68,7 @@ public partial class IconWorkspace : UserControl, IDisposable
     public async Task OpenAsync()
     {
         if (_busy || _disposed) return;
-        var dialog = new OpenFileDialog { Title = "Изображение для иконки", Filter = "Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff" };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Изображение для иконки"), Filter = Localization.Text("Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff") };
         if (dialog.ShowDialog(Window.GetWindow(this)) == true) await LoadFileAsync(dialog.FileName);
     }
 
@@ -81,9 +81,9 @@ public partial class IconWorkspace : UserControl, IDisposable
             using var image = await Task.Run(() => ReadImage(path));
             if (_disposed) return;
             SetImage(image, Path.GetFileName(path), path);
-            StatusChanged?.Invoke("Изображение открыто. Выберите размеры и сохраните ICO.");
+            StatusChanged?.Invoke(Localization.Text("Изображение открыто. Выберите размеры и сохраните ICO."));
         }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось открыть изображение: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось открыть изображение: {0}", ex.Message)); }
         finally { SetBusy(false); }
     }
 
@@ -164,7 +164,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         {
             iconFrames.ItemsSource = null;
             IsRendering = false;
-            iconPreviewHint.Text = options.Sizes.Count == 0 ? "Выберите хотя бы один размер." : "Выберите размеры — они будут сохранены в одном ICO.";
+            iconPreviewHint.Text = options.Sizes.Count == 0 ? Localization.Text("Выберите хотя бы один размер.") : Localization.Text("Выберите размеры — они будут сохранены в одном ICO.");
             UpdateSaveState();
             return;
         }
@@ -193,12 +193,12 @@ public partial class IconWorkspace : UserControl, IDisposable
             if (revision != _revision || _disposed) return;
             iconFrames.ItemsSource = frames.Frames;
             iconSourceImage.Source = frames.Preview;
-            iconPreviewHint.Text = options.Sizes.Count == 0 ? "Выберите хотя бы один размер." : "Выбранные размеры будут сохранены в одном ICO.";
+            iconPreviewHint.Text = options.Sizes.Count == 0 ? Localization.Text("Выберите хотя бы один размер.") : Localization.Text("Выбранные размеры будут сохранены в одном ICO.");
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            if (revision == _revision) StatusChanged?.Invoke($"Не удалось построить предпросмотр: {ex.Message}");
+            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("Не удалось построить предпросмотр: {0}", ex.Message));
         }
         finally
         {
@@ -212,27 +212,27 @@ public partial class IconWorkspace : UserControl, IDisposable
         if (_busy || _image is null) return;
         iconCustomSize.Commit();
         if (GetOptions().Sizes.Count == 0) return;
-        var dialog = new SaveFileDialog { Title = "Сохранить иконку", Filter = "Иконка Windows|*.ico", DefaultExt = ".ico", AddExtension = true,
+        var dialog = new SaveFileDialog { Title = Localization.Text("Сохранить иконку"), Filter = Localization.Text("Иконка Windows|*.ico"), DefaultExt = ".ico", AddExtension = true,
             OverwritePrompt = true, FileName = Path.GetFileNameWithoutExtension(iconFileLabel.Text) + ".ico" };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveAsync(dialog.FileName, true); }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось сохранить ICO: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить ICO: {0}", ex.Message)); }
     }
 
     public async Task SaveAsync(string path, bool overwrite = false)
     {
-        if (_busy || _disposed || _image is null) throw new InvalidOperationException("Сначала откройте изображение.");
+        if (_busy || _disposed || _image is null) throw new InvalidOperationException(Localization.Text("Сначала откройте изображение."));
         if (string.Equals(Path.GetFullPath(path), _inputPath, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Нельзя перезаписать исходное изображение.");
+            throw new InvalidOperationException(Localization.Text("Нельзя перезаписать исходное изображение."));
         var options = GetOptions();
-        if (options.Sizes.Count == 0) throw new InvalidOperationException("Выберите хотя бы один размер.");
+        if (options.Sizes.Count == 0) throw new InvalidOperationException(Localization.Text("Выберите хотя бы один размер."));
         using var image = (Bitmap)_image.Clone();
         SetBusy(true);
-        StatusChanged?.Invoke("Сохранение ICO…");
+        StatusChanged?.Invoke(Localization.Text("Сохранение ICO…"));
         try
         {
             await Task.Run(() => IconExporter.Save(image, path, options, overwrite));
-            StatusChanged?.Invoke($"Сохранено: {path}");
+            StatusChanged?.Invoke(Localization.Format("Сохранено: {0}", path));
         }
         finally { SetBusy(false); }
     }

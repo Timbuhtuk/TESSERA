@@ -24,13 +24,13 @@
         <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button x:Name="sheetOpenButton" Content="Открыть файлы…" Margin="0,0,7,0" ToolTip="Открыть несколько .aseprite или .ase (Ctrl+O)"/>
-                    <Button x:Name="sheetSaveButton" Content="Сохранить выбранный…" Margin="0,0,7,0" IsEnabled="False"/>
-                    <Button x:Name="sheetSaveAllButton" Content="Сохранить все…" Style="{StaticResource PrimaryButton}" Margin="0,0,7,0" IsEnabled="False"/>
-                    <Button x:Name="sheetCancelButton" Content="Отменить" Visibility="Collapsed"/>
+                    <Button x:Name="sheetOpenButton" Content="{local:Translate Text753CB453EF62}" Margin="0,0,7,0" ToolTip="{local:Translate TextAA489583B64F}"/>
+                    <Button x:Name="sheetSaveButton" Content="{local:Translate Text001F4F54EC6B}" Margin="0,0,7,0" IsEnabled="False"/>
+                    <Button x:Name="sheetSaveAllButton" Content="{local:Translate Text4A41402E808B}" Style="{StaticResource PrimaryButton}" Margin="0,0,7,0" IsEnabled="False"/>
+                    <Button x:Name="sheetCancelButton" Content="{local:Translate Text7C47F7292BA4}" Visibility="Collapsed"/>
                 </StackPanel>
-                <Button x:Name="sheetBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="На главную" AutomationProperties.Name="На главную"/>
-                <TextBlock Text="Экспорт анимаций" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                <Button x:Name="sheetBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="{local:Translate TextAD94907F6423}" AutomationProperties.Name="{local:Translate TextAD94907F6423}"/>
+                <TextBlock Text="{local:Translate Text46F655DF7238}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
             </DockPanel>
         </Border>
         <Grid x:Name="sheetWorkspaceGrid" Grid.Row="1">
@@ -39,41 +39,41 @@
             <Border x:Name="sheetSettingsPanel" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Padding="16">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel x:Name="sheetOptions">
-                        <TextBlock Text="Настройки" Style="{StaticResource CardTitle}" Margin="0,0,0,14"/>
-                        <TextBlock Text="Раскладка" Margin="0,0,0,6"/>
+                        <TextBlock Text="{local:Translate Text985B5E0F2CCF}" Style="{StaticResource CardTitle}" Margin="0,0,0,14"/>
+                        <TextBlock Text="{local:Translate Text5D6E8294104B}" Margin="0,0,0,6"/>
                         <ComboBox x:Name="sheetLayout" SelectedIndex="0" Margin="0,0,0,14">
-                            <ComboBoxItem Content="Горизонтально"/><ComboBoxItem Content="Вертикально"/><ComboBoxItem Content="Сетка"/>
+                            <ComboBoxItem Content="{local:Translate TextA1EBFF589928}"/><ComboBoxItem Content="{local:Translate TextB9EBBE5D3FDD}"/><ComboBoxItem Content="{local:Translate TextA221A6B37955}"/>
                         </ComboBox>
                         <StackPanel x:Name="sheetColumnsPanel" Visibility="Collapsed">
-                            <TextBlock Text="Столбцы" Margin="0,0,0,6"/>
+                            <TextBlock Text="{local:Translate Text2BF0E323C556}" Margin="0,0,0,6"/>
                             <local:IntegerInput x:Name="sheetColumns" Value="4" Minimum="1" Maximum="256" Margin="0,0,0,14"/>
                         </StackPanel>
-                        <TextBlock Text="Промежуток, px" Margin="0,0,0,6"/>
+                        <TextBlock Text="{local:Translate Text524E6FD7BF2D}" Margin="0,0,0,6"/>
                         <local:IntegerInput x:Name="sheetPadding" Value="0" Minimum="0" Maximum="128" Margin="0,0,0,14"/>
-                        <TextBlock Text="Масштаб предпросмотра" Margin="0,0,0,6"/>
+                        <TextBlock Text="{local:Translate Text99E7EE90E765}" Margin="0,0,0,6"/>
                         <ComboBox x:Name="sheetZoom" SelectedIndex="0" Margin="0,0,0,14">
-                            <ComboBoxItem Content="Вписать"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/>
+                            <ComboBoxItem Content="{local:Translate Text3681A2658AB5}"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/>
                         </ComboBox>
-                        <TextBlock Text="Фон предпросмотра" Margin="0,0,0,6"/>
+                        <TextBlock Text="{local:Translate Text9D6D5197FC22}" Margin="0,0,0,6"/>
                         <ComboBox x:Name="sheetBackground" SelectedIndex="0" Margin="0,0,0,16">
-                            <ComboBoxItem Content="Шахматка"/><ComboBoxItem Content="Тёмный"/><ComboBoxItem Content="Светлый"/>
+                            <ComboBoxItem Content="{local:Translate Text5E7EC04C97C5}"/><ComboBoxItem Content="{local:Translate Text21943A44634E}"/><ComboBoxItem Content="{local:Translate Text5405EB821E3A}"/>
                         </ComboBox>
-                        <Button x:Name="sheetClearButton" Content="Очистить результаты" IsEnabled="False"/>
+                        <Button x:Name="sheetClearButton" Content="{local:Translate TextC57BE9C60728}" IsEnabled="False"/>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
             <Grid x:Name="sheetContentPanel" Grid.Column="1" Margin="12">
                 <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="230"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                <TextBlock Text="ПРЕДПРОСМОТР" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                <TextBlock Text="{local:Translate Text2B13C2EBE58F}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
                 <Border x:Name="sheetDropPanel" Grid.Row="1" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Thumbnail}">
-                    <local:PixelPreview x:Name="sheetPreview" EmptyText="Перетащите сюда файлы .aseprite или .ase&#x0a;Спрайтлисты будут подготовлены автоматически"/>
+                    <local:PixelPreview x:Name="sheetPreview" EmptyText="{local:Translate Text400B07218DBA}"/>
                 </Border>
                 <TextBlock x:Name="sheetDetail" Grid.Row="2" Margin="0,8,0,8" Foreground="{DynamicResource Ts.TextMuted}" TextWrapping="Wrap" MaxHeight="52"/>
                 <StackPanel Grid.Row="3">
-                    <TextBlock x:Name="sheetCount" Text="РЕЗУЛЬТАТЫ" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="sheetCount" Text="{local:Translate Text870884E44CE1}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
                     <ListBox x:Name="sheetStrip" Height="124" Background="Transparent" BorderThickness="0" Padding="0"
                              ItemContainerStyle="{StaticResource SheetItemStyle}" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                             ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Результаты экспорта анимаций">
+                             ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{local:Translate TextFA5EF9DA9434}">
                         <ListBox.Template><ControlTemplate TargetType="ListBox">
                             <Border Background="{TemplateBinding Background}" BorderThickness="0" Padding="{TemplateBinding Padding}">
                                 <ScrollViewer x:Name="PART_ScrollViewer" Focusable="False" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><ItemsPresenter/></ScrollViewer>
@@ -87,7 +87,7 @@
                                     <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="12" Margin="0,5,0,0"/>
                                     <TextBlock Text="{Binding State}" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,3,0,0"/>
                                 </StackPanel>
-                                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Click="RemoveSheet" ToolTip="Убрать из списка" AutomationProperties.Name="Убрать из списка"/>
+                                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Click="RemoveSheet" ToolTip="{local:Translate Text328E7466826E}" AutomationProperties.Name="{local:Translate Text328E7466826E}"/>
                             </Grid>
                         </DataTemplate></ListBox.ItemTemplate>
                     </ListBox>

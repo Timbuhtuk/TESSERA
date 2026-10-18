@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:DomainColorTest"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="Замена цвета · TESSERA" Icon="Assets/app.ico"
+        Title="{local:Translate Text60AAB69B2C54}" Icon="Assets/app.ico"
         Width="460" Height="740" MinWidth="390" MinHeight="540"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False" Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
@@ -46,9 +46,9 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Grid Height="38" Background="{DynamicResource Ts.Raised}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock x:Name="dialogTitle" Text="Замена цвета" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <TextBlock x:Name="dialogTitle" Text="{local:Translate TextFF8DA5F2551E}" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
             <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
-                    Style="{StaticResource CloseCaptionButton}" ToolTip="Закрыть"
+                    Style="{StaticResource CloseCaptionButton}" ToolTip="{local:Translate TextA7A4033657E8}"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
         </Grid>
         <Grid Grid.Row="1" Background="{DynamicResource Ts.Canvas}">
@@ -57,18 +57,18 @@
                 <Border x:Name="dialogFrame" Style="{StaticResource Ts.DialogBorder}"
                         Margin="14" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <StackPanel>
-                        <TextBlock x:Name="oldColorLabel" Text="Цвет в изображении" FontWeight="SemiBold" Margin="0,0,0,7"/>
+                        <TextBlock x:Name="oldColorLabel" Text="{local:Translate Text79E7630E008B}" FontWeight="SemiBold" Margin="0,0,0,7"/>
                         <DockPanel x:Name="oldColorPanel">
                             <Border x:Name="oldPreview" Width="30" Height="30" BorderBrush="{DynamicResource Ts.BorderStrong}"
                                     BorderThickness="1" Margin="0,0,8,0"/>
-                            <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="Заменяемый цвет HEX"/>
+                            <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate TextF2B1EEC11E15}"/>
                         </DockPanel>
-                        <TextBlock x:Name="newColorLabel" Text="Новый цвет" FontWeight="SemiBold" Margin="0,18,0,10"/>
+                        <TextBlock x:Name="newColorLabel" Text="{local:Translate TextF2E966D64488}" FontWeight="SemiBold" Margin="0,18,0,10"/>
                         <Grid x:Name="colorField" Width="320" Height="290" HorizontalAlignment="Center"
                               ClipToBounds="True" Cursor="Cross"
                               MouseLeftButtonDown="ColorFieldMouseDown" MouseMove="ColorFieldMouseMove"
                               MouseLeftButtonUp="ColorFieldMouseUp" LostMouseCapture="PickerLostCapture"
-                              AutomationProperties.Name="Поле выбора насыщенности и яркости">
+                              AutomationProperties.Name="{local:Translate Text6F4778880073}">
                             <Border x:Name="hueSurface"/>
                             <Rectangle IsHitTestVisible="False">
                                 <Rectangle.Fill>
@@ -99,7 +99,7 @@
                               ClipToBounds="False" Cursor="Hand"
                               MouseLeftButtonDown="HueStripMouseDown" MouseMove="HueStripMouseMove"
                               MouseLeftButtonUp="HueStripMouseUp" LostMouseCapture="PickerLostCapture"
-                              AutomationProperties.Name="Выбор цветового тона">
+                              AutomationProperties.Name="{local:Translate Text477CA1567B76}">
                             <Border>
                                 <Border.Background>
                                     <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
@@ -125,14 +125,14 @@
                         <DockPanel Margin="0,15,0,0">
                             <Border x:Name="newPreview" Width="30" Height="30" BorderBrush="{DynamicResource Ts.BorderStrong}"
                                     BorderThickness="1" Margin="0,0,8,0"/>
-                            <TextBox x:Name="newHexInput" MaxLength="7" AutomationProperties.Name="Новый цвет HEX"/>
+                            <TextBox x:Name="newHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate Text65EA219C02F5}"/>
                         </DockPanel>
                         <StackPanel x:Name="paletteSection" Margin="0,18,0,0">
-                            <TextBlock Text="Палитра изображения" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="{local:Translate Text0D9C06814133}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <ListBox x:Name="paletteList" Height="205" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}"
                                      BorderThickness="1" Padding="8" ItemContainerStyle="{StaticResource ColorChoiceItem}"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     AutomationProperties.Name="Палитра выбора цвета">
+                                     AutomationProperties.Name="{local:Translate Text3A4090D6D468}">
                                 <ListBox.ItemsPanel>
                                     <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
                                 </ListBox.ItemsPanel>
@@ -147,9 +147,9 @@
                         <TextBlock x:Name="validationText" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap"
                                    Margin="0,12,0,0"/>
                         <DockPanel Margin="0,14,0,0">
-                            <Button Content="Отмена" Width="95" DockPanel.Dock="Right" Margin="8,0,0,0"
+                            <Button Content="{local:Translate Text8FBE9B75CBDF}" Width="95" DockPanel.Dock="Right" Margin="8,0,0,0"
                                     IsCancel="True" Click="CloseWindow"/>
-                            <Button x:Name="replaceButton" Content="Заменить цвет" IsEnabled="False"
+                            <Button x:Name="replaceButton" Content="{local:Translate Text91282980BE62}" IsEnabled="False"
                                     IsDefault="True" Style="{StaticResource PrimaryButton}" Click="ApplyColor"/>
                         </DockPanel>
                     </StackPanel>

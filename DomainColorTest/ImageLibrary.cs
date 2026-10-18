@@ -32,7 +32,7 @@ public sealed class SourceEntry
     public Guid? OriginGenerationId { get; set; }
     [JsonIgnore] public string Label => DisplayName ?? Path.GetFileName(OriginalPath);
     [JsonIgnore] public string Description => $"{Label}\n{Width} × {Height}\n{OriginalPath}";
-    [JsonIgnore] public string RemoveDescription => $"Удалить исходник «{Label}» и его результаты из программы";
+    [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить исходник «{0}» и его результаты из программы", Label);
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
     [JsonIgnore] public ObservableCollection<GenerationEntry> Generations { get; } = [];
     [JsonIgnore] public GenerationEntry? SelectedGeneration { get; set; }
@@ -55,10 +55,10 @@ public sealed class GenerationEntry
     public int Height { get; set; }
     public int CellSize { get; set; }
     public EditorSettings Settings { get; set; } = new();
-    [JsonIgnore] public string Label => IsAlignment ? $"Сетка {CellSize} px · {CreatedAt:HH:mm:ss}"
-        : $"{(Operation.Length > 0 ? Operation + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
-    [JsonIgnore] public string Description => $"{Caption}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{Log}";
-    [JsonIgnore] public string RemoveDescription => $"Удалить результат «{Label}» из истории";
+    [JsonIgnore] public string Label => IsAlignment ? Localization.Format("Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
+        : $"{(Operation.Length > 0 ? Localization.StoredText(Operation) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
+    [JsonIgnore] public string Description => $"{Localization.StoredText(Caption)}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{Localization.StoredText(Log)}";
+    [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить результат «{0}» из истории", Label);
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
 }
 
@@ -87,7 +87,7 @@ public sealed class ImageLibrary(string directory)
             try
             {
                 var source = Read<SourceEntry>(manifest);
-                if (source.Id != id) throw new InvalidDataException("Идентификатор исходника не совпадает.");
+                if (source.Id != id) throw new InvalidDataException(Localization.Text("Идентификатор исходника не совпадает."));
                 source.Thumbnail = ReadThumbnail(SourcePath(source));
                 string generations = Path.Combine(folder, "generations");
                 if (Directory.Exists(generations))
@@ -101,9 +101,9 @@ public sealed class ImageLibrary(string directory)
                         try
                         {
                             var generation = Read<GenerationEntry>(record);
-                            if (generation.Id != generationId || generation.Settings?.Downscale is null) throw new InvalidDataException("Повреждены параметры результата.");
+                            if (generation.Id != generationId || generation.Settings?.Downscale is null) throw new InvalidDataException(Localization.Text("Повреждены параметры результата."));
                             generation.Thumbnail = ReadThumbnail(ResultPath(source, generation));
-                            if (generation.HasCrop && !File.Exists(CropPath(source, generation))) throw new InvalidDataException("Отсутствует область обработки.");
+                            if (generation.HasCrop && !File.Exists(CropPath(source, generation))) throw new InvalidDataException(Localization.Text("Отсутствует область обработки."));
                             results.Add(generation);
                         }
                         catch (Exception ex) when (IsFileError(ex)) { LoadWarnings.Add($"{source.Label}: {ex.Message}"); }
@@ -123,7 +123,7 @@ public sealed class ImageLibrary(string directory)
 
     public SourceEntry ImportGeneration(SourceEntry parent, GenerationEntry generation, IEnumerable<SourceEntry> existing)
     {
-        if (!parent.Generations.Contains(generation)) throw new ArgumentException("Результат не принадлежит исходнику.");
+        if (!parent.Generations.Contains(generation)) throw new ArgumentException(Localization.Text("Результат не принадлежит исходнику."));
         string suffix = generation.IsAlignment ? "aligned" : generation.IsGridReduction ? "pixels" : "pixelized";
         return ImportImage(ResultPath(parent, generation), existing, new SourceEntry
         {
@@ -197,7 +197,7 @@ public sealed class ImageLibrary(string directory)
 
     public void RemoveGeneration(SourceEntry source, GenerationEntry generation)
     {
-        if (!source.Generations.Contains(generation)) throw new ArgumentException("Результат не принадлежит исходнику.");
+        if (!source.Generations.Contains(generation)) throw new ArgumentException(Localization.Text("Результат не принадлежит исходнику."));
         RemoveEntryDirectory(GenerationDirectory(source, generation));
     }
 
@@ -206,13 +206,13 @@ public sealed class ImageLibrary(string directory)
         string target = Path.GetFullPath(directory);
         string root = Path.TrimEndingDirectorySeparator(DirectoryPath) + Path.DirectorySeparatorChar;
         if (!target.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Удалять можно только записи библиотеки.");
+            throw new InvalidOperationException(Localization.Text("Удалять можно только записи библиотеки."));
         if (!Directory.Exists(target)) return;
         // Reject redirected library paths before moving or recursively deleting anything.
         for (var current = new DirectoryInfo(target); current is not null; current = current.Parent)
         {
             if ((current.Attributes & FileAttributes.ReparsePoint) != 0)
-                throw new IOException("Запись библиотеки находится в перенаправленной папке.");
+                throw new IOException(Localization.Text("Запись библиотеки находится в перенаправленной папке."));
             if (string.Equals(Path.TrimEndingDirectorySeparator(current.FullName), Path.TrimEndingDirectorySeparator(DirectoryPath), StringComparison.OrdinalIgnoreCase)) break;
         }
         // Renaming commits deletion atomically. Load ignores these non-GUID directories,
@@ -272,7 +272,7 @@ public sealed class ImageLibrary(string directory)
         image.Freeze();
         return image;
     }
-    private static T Read<T>(string path) => JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) ?? throw new InvalidDataException("Пустая запись истории.");
+    private static T Read<T>(string path) => JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) ?? throw new InvalidDataException(Localization.Text("Пустая запись истории."));
     private static void WriteRecord<T>(string path, T entry)
     {
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";

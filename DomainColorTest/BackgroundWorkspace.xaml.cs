@@ -50,7 +50,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     public async Task OpenAsync()
     {
         if (_busy || _disposed) return;
-        var dialog = new OpenFileDialog { Title = "Изображение для удаления фона", Filter = "Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff" };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Изображение для удаления фона"), Filter = Localization.Text("Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff") };
         if (dialog.ShowDialog(Window.GetWindow(this)) == true) await LoadFileAsync(dialog.FileName);
     }
 
@@ -63,9 +63,9 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
             using var image = await Task.Run(() => IconWorkspace.ReadImage(path));
             if (_disposed) return;
             SetImage(image, Path.GetFileName(path), path);
-            StatusChanged?.Invoke("Изображение открыто. Настройте удаление фона и сохраните PNG.");
+            StatusChanged?.Invoke(Localization.Text("Изображение открыто. Настройте удаление фона и сохраните PNG."));
         }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось открыть изображение: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось открыть изображение: {0}", ex.Message)); }
         finally { SetBusy(false); }
     }
 
@@ -130,7 +130,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            if (revision == _revision) StatusChanged?.Invoke($"Не удалось удалить фон: {ex.Message}");
+            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("Не удалось удалить фон: {0}", ex.Message));
         }
         finally
         {
@@ -142,23 +142,23 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     private async Task SaveDialogAsync()
     {
         if (_busy || _result is null) return;
-        var dialog = new SaveFileDialog { Title = "Сохранить без фона", Filter = "PNG с прозрачностью|*.png", DefaultExt = ".png",
+        var dialog = new SaveFileDialog { Title = Localization.Text("Сохранить без фона"), Filter = Localization.Text("PNG с прозрачностью|*.png"), DefaultExt = ".png",
             AddExtension = true, OverwritePrompt = true, FileName = Path.GetFileNameWithoutExtension(backgroundFileLabel.Text) + "_transparent.png" };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveAsync(dialog.FileName, true); }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось сохранить PNG: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить PNG: {0}", ex.Message)); }
     }
 
     public async Task SaveAsync(string path, bool overwrite = false)
     {
-        if (_busy || _disposed || _result is null || IsRendering) throw new InvalidOperationException("Дождитесь результата обработки.");
+        if (_busy || _disposed || _result is null || IsRendering) throw new InvalidOperationException(Localization.Text("Дождитесь результата обработки."));
         string output = Path.GetFullPath(path);
         if (string.Equals(output, _inputPath, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Нельзя перезаписать исходное изображение.");
-        if (!overwrite && File.Exists(output)) throw new IOException("Файл уже существует.");
+            throw new InvalidOperationException(Localization.Text("Нельзя перезаписать исходное изображение."));
+        if (!overwrite && File.Exists(output)) throw new IOException(Localization.Text("Файл уже существует."));
         using var image = (Bitmap)_result.Clone();
         SetBusy(true);
-        StatusChanged?.Invoke("Сохранение PNG…");
+        StatusChanged?.Invoke(Localization.Text("Сохранение PNG…"));
         try
         {
             await Task.Run(() =>
@@ -171,7 +171,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
             });
-            StatusChanged?.Invoke($"Сохранено: {output}");
+            StatusChanged?.Invoke(Localization.Format("Сохранено: {0}", output));
         }
         finally { SetBusy(false); }
     }

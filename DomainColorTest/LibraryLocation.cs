@@ -27,7 +27,7 @@ public static class LibraryLocation
 
         if (File.Exists(marker) || !Directory.Exists(legacy)) return library;
         if (IsLink(legacy) || Directory.Exists(tessera) && IsLink(tessera) || Directory.Exists(library) && IsLink(library))
-            throw new IOException("Папка библиотеки перенаправлена. Перенос истории остановлен.");
+            throw new IOException(Localization.Text("Папка библиотеки перенаправлена. Перенос истории остановлен."));
 
         Directory.CreateDirectory(library);
         foreach (string source in Directory.EnumerateDirectories(legacy))
