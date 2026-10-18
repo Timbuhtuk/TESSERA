@@ -53,6 +53,8 @@ The editable Tessera mark and its generation script are documented in the [asset
 
 ## Tile seam inspector
 
+`TileInspectorWindow.Zoom.cs` handles Ctrl+wheel with the main editor's 6.25–6400% scale steps, using the current fitted scale for the first wheel step. The deferred scroll adjustment retains the source point under the cursor and ignores stale zoom requests. Unmodified wheel input remains available for scrolling. Collection settings use an optional `ZoomScale` value and retain the original `Zoom` index for compatibility; old projects keep their original Fit/100–3200% zoom. WPF checks cover cursor anchoring, limits, multi-notch/small deltas, Fit transitions and old/new project zoom round trips.
+
 Holding either Alt key temporarily enables the heatmap without changing the saved checkbox state or marking the project dirty. Preview key-up and window deactivation restore the selected mode; only the preview is invalidated, so holding Alt does not rerun edge analysis. Seam statistics are below the preview, while drawing/smoothing stays above it. The WPF checks exercise rendered press/release behavior, repeated keydown, both Alt keys, focus loss, persistent visibility, project settings and panel order at normal/minimum sizes.
 
 `DomainColorTest/TileInspectorWindow.xaml(.cs)` owns the independent inspector window, collection selection, file loading and debounced directory watchers. Its `Collection` partial handles projects, export and unsaved changes; its `Painting` partial handles strokes, histories and smoothing. `MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
@@ -75,7 +77,7 @@ Build the tests, then run `dotnet run --project PixelArtAlignment.Tests -c Relea
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library now lives at `%LOCALAPPDATA%\Tessera\Library`. On first launch, `LibraryLocation` copies entries from `%LOCALAPPDATA%\Pixelizator\Library` without deleting the old directory. A marker in the Tessera data directory prevents removed entries from being imported again on later launches.
+Tessera was previously named Pixelizator. The repository is `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. Startup prepares the portable `WorkspaceData/Library` beside the executable. It copies existing GUID image/history directories from `%LOCALAPPDATA%\Tessera\Library` once. `LibraryLocation` first handles older `%LOCALAPPDATA%\Pixelizator\Library` entries without deleting their originals. Migration markers prevent later launches from overwriting workspace edits.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 
@@ -96,9 +98,9 @@ The release stays a draft until all assets are uploaded. Rerunning a completed p
 
 Manual publication is available through **Actions → Build and release → Run workflow**, selecting `main`. The workflow uses the built-in `GITHUB_TOKEN`; no additional secret is required. The latest-release link follows the most recent published release.
 
-The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; the library remains in `%LOCALAPPDATA%\Tessera\Library`.
+The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; `WorkspaceData` remains in place.
 
 See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 # Workspace experiment
 
-The `codex/tessera-workspace-prototype` branch uses `WorkspaceCatalog` and `WorkspaceBrowser` around the existing image history and processors. App startup enables the prototype with a separate library beside the executable; `MainWindow(libraryDirectory)` remains available for legacy UI regression tests. `--workspace-library <path>` selects an explicit test library. Build the portable review app with `Build-WorkspacePrototype.ps1` and run the focused suite with `--workspace`. See [WORKSPACE_PROTOTYPE.md](WORKSPACE_PROTOTYPE.md).
+`WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).

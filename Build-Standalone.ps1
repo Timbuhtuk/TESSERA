@@ -23,7 +23,7 @@ try {
     Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" --nologo
     if (!$SkipChecks) {
         Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --ui --invariants
+        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --navigation --workspace --localization --ui --invariants
         Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
     }
     Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$output/" --nologo
@@ -39,14 +39,16 @@ pixel grids and inconsistent pixel sizes in AI-generated images.
 Its name refers to an individual piece of a mosaic.
 
 Open images from File > Open, with Ctrl+O or drag and drop.
-The home screen keeps your source library and result histories.
+The library organizes shared assets in projects and nested folders, with
+tags, search, filters and result histories. Right-click projects/folders
+for organization commands. The title bar contains File, Image, Tools and
+View, with More on narrow windows. Settings selects theme and RU/EN.
 The editor can change size and colors separately or together, with crisp
 pixel enlargement. It also aligns grids and reduces cells to one pixel.
 The interface includes bundled Cascadia Code and Science Gothic fonts.
 Size fields accept dimensions above 4K, subject to available memory and codec limits.
-The toolbar opens Presets, Size, Palette, Smoothing, Grid, Filters and Info.
-On narrow windows, find them in the Processing menu. Select Source or a
-saved result as the input. Info shows dimensions, color counts and palette
+Image and Tools open processing settings beside the previews. Select
+Source or a saved result as the input. Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
 Choose any new color with the hue strip and color field, an image swatch,
 or HEX. The original stays intact.
@@ -58,30 +60,48 @@ or render an opaque black-and-white image into the history. Choose a preset
 character set or enter your own. Keep the input size or use one character
 per pixel for a larger image. Input and render inversion are independent.
 
-The centred animation banner opens Aseprite conversion. Drop multiple files
+Open Aseprite conversion from Tools. Drop multiple files
 to prepare sprite sheets automatically; save one result or the entire batch
 as PNG + JSON. Existing output files receive distinct names.
 Visible RGBA image layers are composited in order; hidden layers and groups
 are excluded. Visible layers require Normal blending and full layer/cel opacity.
 
-The icon banner opens ICO creation: choose an image and several sizes,
+Open ICO creation from Tools: choose an image and several sizes,
 inspect the previews, then save them together in one icon file.
 You can also use a source or result from the editor. Optional solid-color
 background removal supports color selection and adjustable tolerance.
 The separate background workspace saves full-size transparent PNG files.
 Hover over From editor to choose any library source or saved result.
 It does not segment objects from complex photographic backgrounds.
-The application interface currently uses Russian labels.
+Choose Russian or English in Settings; language changes apply on restart.
 
 Image board lets you arrange images on a canvas with a solid background.
 Move, rotate, scale and reorder layers individually or as a selection.
 Save an editable .tboard project with embedded images, or export a PNG.
-Boards are saved separately from the image library. Save before closing.
+Boards can be retained as editable documents in the workspace. Save before closing.
 
-Your library is at %LOCALAPPDATA%\Tessera\Library.
-On first launch, existing Pixelizator images and histories are copied there.
-The old library remains as a backup. Copy the Tessera folder separately
-when moving your library to another computer.
+Tile inspector repeats an image on X/Y and shows a seam heatmap. Compare
+two equal-size assets in both directions, paint pixels, undo/redo edits,
+and smooth the active tile or its borders. Save embedded images and edits
+as a .ttiles collection, or export an edited asset as PNG. Open directly
+with Tessera.exe --tiles [image-or-collection].
+Hold Alt to temporarily show the heatmap while its switch is off; release
+Alt to restore the selected view. Seam statistics sit below the preview.
+Choose a neighboring tile from its thumbnail. Hover for its name; the
+self-comparison thumbnail shows the active tile and a loop marker.
+Ctrl + mouse wheel zooms toward the cursor, like the main editor.
+The zoom selector offers Fit and fixed scales from 6.25% to 6400%.
+
+Import a tileset atlas by tile dimensions or a columns/rows grid. Preview
+grid suggestions, set margins and gaps, and optionally skip transparent
+cells. Each slice becomes an editable asset with its original pixels and
+alpha. Save slices in a .ttiles collection. Atlas imports are snapshots;
+later changes to the source atlas do not reload imported tiles.
+
+Your library is in WorkspaceData/Library beside Tessera.exe.
+On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
+are copied there. The original library stays intact. Keep WorkspaceData
+when moving the app to another folder or computer.
 
 Tessera checks GitHub Releases for updates at startup. Use the bottom-bar button
 to check manually and install a newer version. Your library remains in place.

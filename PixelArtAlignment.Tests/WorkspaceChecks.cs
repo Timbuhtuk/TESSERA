@@ -25,6 +25,37 @@ internal static class WorkspaceChecks
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
         string root = Path.GetFullPath(Path.Combine("artifacts", "workspace-verification", "run-" + Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(root);
+        string previousData = Path.Combine(root, "previous-data");
+        string previousAsset = Path.Combine(previousData, "Tessera", "Library", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(previousAsset, "generations"));
+        File.WriteAllText(Path.Combine(previousAsset, "source.json"), "original source");
+        File.WriteAllText(Path.Combine(previousAsset, "generations", "history.txt"), "original history");
+        string portableDirectory = Path.Combine(root, "portable");
+        string portableLibrary = WorkspacePrototypeLocation.Prepare(portableDirectory, previousData);
+        string copiedAsset = Path.Combine(portableLibrary, Path.GetFileName(previousAsset));
+        Require(File.ReadAllText(Path.Combine(copiedAsset, "generations", "history.txt")) == "original history" &&
+            File.Exists(Path.Combine(previousAsset, "source.json")), "Portable workspace migration lost history or changed the previous library");
+        File.WriteAllText(Path.Combine(copiedAsset, "source.json"), "workspace edit");
+        WorkspacePrototypeLocation.Prepare(portableDirectory, previousData);
+        Require(File.ReadAllText(Path.Combine(copiedAsset, "source.json")) == "workspace edit",
+            "A later launch overwrote the portable workspace from the previous library");
+        string oldData = Path.Combine(root, "pixelizator-data");
+        string oldAsset = Path.Combine(oldData, "Pixelizator", "Library", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(oldAsset);
+        File.WriteAllText(Path.Combine(oldAsset, "source.json"), "legacy source");
+        string migratedLibrary = WorkspacePrototypeLocation.Prepare(Path.Combine(root, "legacy-portable"), oldData);
+        Require(File.ReadAllText(Path.Combine(migratedLibrary, Path.GetFileName(oldAsset), "source.json")) == "legacy source" &&
+            File.Exists(Path.Combine(oldAsset, "source.json")), "Direct upgrade from Pixelizator lost the old library");
+        var releaseWindow = new MainWindow(Path.Combine(root, "release-library"));
+        try
+        {
+            releaseWindow.EnableWorkspacePrototype(enableUpdates: true);
+            var updateMenu = (MenuItem)typeof(MainWindow).GetField("checkUpdatesMenuItem", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(releaseWindow)!;
+            bool automaticUpdates = (bool)typeof(MainWindow).GetField("_autoCheckUpdates", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(releaseWindow)!;
+            Require(Get<Button>(releaseWindow, "updateButton").IsEnabled && updateMenu.IsEnabled && automaticUpdates,
+                "Released workspace disabled startup or manual updates");
+        }
+        finally { releaseWindow.Close(); }
         string input = Path.Combine(root, "grass.png"), second = Path.Combine(root, "stone.png");
         using (var image = new Bitmap(32, 32))
         {

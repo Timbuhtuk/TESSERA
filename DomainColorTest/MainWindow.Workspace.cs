@@ -26,10 +26,10 @@ public partial class MainWindow
     public WorkspaceCatalog? Workspace => _workspaceCatalog;
     public WorkspaceBrowser? Browser => _workspaceBrowser;
 
-    public void EnableWorkspacePrototype()
+    public void EnableWorkspacePrototype(bool enableUpdates = false)
     {
         WorkspaceBrushSafety.Register();
-        _autoCheckUpdates = false;
+        _autoCheckUpdates = enableUpdates;
         _workspaceCatalog = new WorkspaceCatalog(_library.DirectoryPath);
         foreach (var source in _sources)
             if (_workspaceCatalog.State.Assets.FirstOrDefault(a => a.Id == source.Id) is { } saved)
@@ -39,7 +39,7 @@ public partial class MainWindow
             }
         _activeSource = null;
         _workspaceCatalog.SyncImages(_sources);
-        Title = "TESSERA · Workspace prototype";
+        Title = enableUpdates ? "TESSERA" : "TESSERA · Workspace prototype";
         _workspaceBrowser = new WorkspaceBrowser();
         Grid.SetRow(_workspaceBrowser, 1); rootLayout.Children.Add(_workspaceBrowser);
         _workspaceBrowser.ImportRequested += async paths => await ImportWorkspaceFilesAsync(paths);
@@ -70,8 +70,8 @@ public partial class MainWindow
         colorToolGroup.Header = Localization.Text("Число цветов");
         colorOnlyButton.Content = Localization.Text("Уменьшить число цветов");
         resultPreview.EmptyText = Localization.Text("Выберите действие справа.\nНовый вариант появится здесь и сохранится в истории.");
-        updateButton.Content = Localization.Text("Экспериментальная версия"); updateButton.IsEnabled = false;
-        checkUpdatesMenuItem.IsEnabled = false;
+        updateButton.Content = enableUpdates ? UpdateButtonText() : Localization.Text("Экспериментальная версия");
+        updateButton.IsEnabled = checkUpdatesMenuItem.IsEnabled = enableUpdates;
         SizeChanged += (_, _) => UpdateWorkspaceDockLayout();
         Closing += (_, e) =>
         {
@@ -498,11 +498,11 @@ public partial class MainWindow
 
 public static class WorkspacePrototypeLocation
 {
-    public static string Prepare()
+    public static string Prepare(string? applicationDirectory = null, string? appDataDirectory = null)
     {
-        string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        string root = Path.Combine(AppContext.BaseDirectory, "WorkspaceData", "Library");
-        string source = Path.Combine(local, "Tessera", "Library");
+        string local = appDataDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        string root = Path.Combine(applicationDirectory ?? AppContext.BaseDirectory, "WorkspaceData", "Library");
+        string source = LibraryLocation.Prepare(local);
         string marker = Path.Combine(root, ".copied-library");
         if (!File.Exists(marker))
         {

@@ -12,6 +12,7 @@ public sealed class TileCollectionSettings
     public bool RepeatY { get; set; } = true;
     public int Copies { get; set; }
     public int Zoom { get; set; }
+    public double? ZoomScale { get; set; }
     public bool Heat { get; set; } = true;
     public bool Guides { get; set; }
     public int Background { get; set; }

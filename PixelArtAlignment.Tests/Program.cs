@@ -2,7 +2,7 @@ using PixelArtAlignment.Tests;
 
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("PixelArtAlignment.Tests: --invariants, --ui, --moodboard, --tiles, --workspace, --localization, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("PixelArtAlignment.Tests: --invariants, --ui, --moodboard, --tiles, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;

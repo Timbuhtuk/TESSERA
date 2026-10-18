@@ -1,6 +1,6 @@
 # Using Tessera
 
-> This experimental branch starts in the new library/project interface. Read [Workspace prototype](WORKSPACE_PROTOTYPE.md) for navigation, shared assets and prototype storage. The processing descriptions below also document the existing tools reused by that interface.
+Read the [workspace guide](WORKSPACE_PROTOTYPE.md) for the File/Image/Tools/View menus, projects, shared assets, themes, language settings and portable storage. The processing descriptions below document the tools available through those menus.
 
 Download `Tessera.exe` or `Tessera-win-x64.zip` from [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). These Windows x64 builds run offline without installing .NET. Earlier releases used the Pixelizator name.
 
@@ -36,9 +36,9 @@ On wide windows, the result and source filmstrips sit above their previews; on n
 
 On the home screen, select **Проверить тайл…** under **Проверка тайлинга**. This opens an independent window. Drop several images into it or use **Добавить тайлы…** / Ctrl+O. PNG, BMP, GIF, JPEG and TIFF are supported; animated and multipage files use the first frame. The tool never modifies imported source files.
 
-The collection on the left keeps separate assets and thumbnails. Select the active **A**, then choose **B** under **Сосед B** to compare different images. The neighbor list includes assets with exactly the same dimensions; images are never stretched to make them fit. **Сам с собой** restores the original single-asset mode. With B selected, copies alternate A/B along each enabled axis. Both **A→B** and **B→A** are measured, because matching one direction does not establish the other. Pair summaries show Δ as mean/maximum and the number/percentage above the threshold.
+The collection on the left keeps separate assets and thumbnails. Select the active **A**, then choose **B** under **Сосед B** to compare different images. The neighbor selector shows pixel thumbnails on a transparency checkerboard, including the selected B. Hover a thumbnail for its asset name; **↻ A** previews the active tile for self comparison. Thumbnails update with edits. The neighbor list includes assets with exactly the same dimensions; images are never stretched to make them fit. **Сам с собой** restores the original single-asset mode. With B selected, copies alternate A/B along each enabled axis. Both **A→B** and **B→A** are measured, because matching one direction does not establish the other. Pair summaries show Δ as mean/maximum and the number/percentage above the threshold.
 
-Enable **X** for horizontal repetition, **Y** for vertical repetition, or both. Each enabled axis repeats 3, 5 or 7 times. **Вписать** fits the preview, while 100–3200% zoom preserves hard pixel edges and enables scrolling. Checkerboard, white and dark backgrounds make transparency visible.
+Enable **X** for horizontal repetition, **Y** for vertical repetition, or both. Each enabled axis repeats 3, 5 or 7 times. **Вписать** fits the preview, while 6.25–6400% zoom preserves hard pixel edges and enables scrolling. **Ctrl + mouse wheel** over the preview zooms toward the cursor, matching the main editor; the first step from Fit uses the currently displayed scale. The wheel alone scrolls as usual. Checkerboard, white and dark backgrounds make transparency visible.
 
 **Тепловая карта краёв** overlays the opposite edges of every copy. The algorithm compares left/right pixels at each row and top/bottom pixels at each column using Euclidean OKLab distance multiplied by 100. Transparent pixels are composited in linear sRGB over both black and white; the larger distance is retained. Invisible RGB does not create false errors. The metric follows [Björn Ottosson's OKLab conversion](https://bottosson.github.io/posts/oklab/).
 
@@ -94,9 +94,9 @@ Open **Image board** from the home screen and choose a canvas size from 128 to 1
 
 ## Storage and updates
 
-The library is saved automatically in `%LOCALAPPDATA%\Tessera\Library`. On the first launch after updating, Tessera copies existing images and result histories from `%LOCALAPPDATA%\Pixelizator\Library` into the new library. The old directory remains as a backup and is not read again after a successful migration. To move the library to another computer, copy the Tessera library directory separately.
+The workspace library is saved automatically in `WorkspaceData/Library` beside `Tessera.exe`. On first launch, existing images and histories from `%LOCALAPPDATA%\Tessera\Library` are copied into it. The original library remains intact. Move the entire `WorkspaceData` directory with the executable to retain projects, tags, documents and histories.
 
-Tessera checks the latest GitHub release in the background at startup. Use **Check for updates** in the bottom bar or File menu to check manually. When a newer version is available, select **Update to v…** and confirm. Tessera downloads the standalone executable, verifies its SHA-256 digest, closes, replaces the executable and restarts. Your image library stays in `%LOCALAPPDATA%\Tessera\Library`. The automatic install is available when running the published `Tessera.exe` from a writable folder; development builds open the release page instead. If a check fails or you are offline, the current app keeps working.
+Tessera checks the latest GitHub release in the background at startup. Use **Check for updates** in the bottom bar or File menu to check manually. When a newer version is available, select **Update to v…** and confirm. Tessera downloads the standalone executable, verifies its SHA-256 digest, closes, replaces the executable and restarts. `WorkspaceData` stays in place. The automatic install is available when running the published `Tessera.exe` from a writable folder; development builds open the release page instead. If a check fails or you are offline, the current app keeps working.
 
 For more detail, see [grid alignment](../PixelArtAlignment/README.md), [ICO export](../PixelArtDownscale/ICO.md) and the [CLI reference](CLI.md).
 

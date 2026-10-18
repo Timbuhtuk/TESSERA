@@ -4,7 +4,7 @@
 
 **A local workspace for preparing and assembling 2D graphics.**
 
-This branch contains the experimental asset library and project interface: standalone and shared assets, nested project folders, tags, search and connected processing tools. See the [workspace prototype guide](docs/WORKSPACE_PROTOTYPE.md) for launch, storage and review instructions.
+Organize standalone and shared assets in projects and nested folders, add tags, search and open connected processing tools from one top menu. See the [workspace guide](docs/WORKSPACE_PROTOTYPE.md) for navigation and storage.
 
 Tessera is a standalone Windows app for preparing pixel art and icons. It began with a specific problem: AI-generated pixel art often looks pixelated, but its grid is uneven and its “pixels” have different sizes. Tessera helps align those shapes to a consistent grid so you can keep working with the image.
 
@@ -20,6 +20,7 @@ Today, Tessera brings the rest of that workflow together:
 - Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
 - Create Windows ICO files containing several icon sizes.
 - Arrange images on a layered moodboard, save an editable project and export the composition as PNG.
+- Inspect repeating tiles and directional seams, edit pixels and save portable asset collections.
 - Remove a solid background in its own workspace and save a transparent PNG, or apply it while creating an ICO. Adjust tolerance and remove matching colors globally or only from edge-connected regions.
 - Preserve transparency and export one result or all results for an image.
 - Drop several Aseprite animations to create PNG sprite sheets with JSON frame timings, then save individual results or the whole batch.

@@ -1,12 +1,12 @@
-# Workspace prototype
+# Tessera workspace
 
-This experimental branch presents Tessera as a local workspace for preparing and assembling 2D graphics for games, applications and everyday image work.
+Tessera is a local workspace for preparing and assembling 2D graphics for games, applications and everyday image work.
 
 ## Start and storage
 
-Run `artifacts/workspace-preview/Tessera.exe`, or `Start-Workspace-Prototype.cmd` after building. No .NET installation is needed for the published executable. Automatic updates are disabled in the prototype.
+Run the published `Tessera.exe`. No .NET installation is needed. Automatic update checks and installation are available from the File menu and bottom-bar update button.
 
-The default library is `WorkspaceData/Library` beside the executable. On first launch, existing image snapshots and histories from `%LOCALAPPDATA%/Tessera/Library` are copied into it. The original library is never used for edits. Keep the `WorkspaceData` directory when moving the prototype. An explicit `--workspace-library <absolute-directory>` selects a separate library for testing.
+The default library is `WorkspaceData/Library` beside the executable. On first launch, existing image snapshots and histories from `%LOCALAPPDATA%/Tessera/Library` are copied into it. The original library is never used for edits. Keep the `WorkspaceData` directory when moving the app. An explicit `--workspace-library <absolute-directory>` selects a separate library for testing.
 
 ## Organize materials
 
@@ -62,4 +62,4 @@ It covers shared membership, independent deep copies, parent history links, inva
 
 Translations live in `DomainColorTest/Localization/en.json`, keyed by the Russian source text. C# uses `Localization.Text` / `Localization.Format`; XAML uses `Translate` with stable keys derived from the source text. Keep format placeholders and file-filter patterns intact when editing translations. `Assets/settings.svg` is the original vector source used by the gear control.
 
-This branch is for local review. Global tags are implemented; separate per-project labels, cloud synchronization and project archive interchange are outside this prototype. Removed document payloads are retained locally for recovery and are not shown in the catalog.
+Tags apply to shared assets. Separate per-project labels, cloud synchronization and project archive interchange are not available. Removed document payloads are retained locally for recovery and are not shown in the catalog.

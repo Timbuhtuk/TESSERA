@@ -879,5 +879,7 @@
   "ICO…": "ICO…",
   "PNG + JSON…": "PNG + JSON…",
   "Обрабатывать": "Process",
-  "Инс_трументы": "_Tools"
+  "Инс_трументы": "_Tools",
+  "Ctrl + колёсико над предпросмотром — масштаб к точке под курсором": "Ctrl + mouse wheel over the preview zooms toward the cursor",
+  "Ctrl + колёсико · к точке под курсором": "Ctrl + mouse wheel · zoom toward the cursor"
 }

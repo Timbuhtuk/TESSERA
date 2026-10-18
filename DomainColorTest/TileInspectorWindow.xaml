@@ -10,6 +10,12 @@
         PreviewKeyUp="WindowKeyUp" Deactivated="WindowDeactivated">
     <Window.Resources><ResourceDictionary>
         <ResourceDictionary.MergedDictionaries><local:TileInspectorResources/></ResourceDictionary.MergedDictionaries>
+        <DrawingBrush x:Key="NeighborChecker" TileMode="Tile" ViewportUnits="Absolute" Viewport="0,0,16,16">
+            <DrawingBrush.Drawing><DrawingGroup>
+                <GeometryDrawing Brush="#3E3E3E" Geometry="M0,0 H16 V16 H0 Z"/>
+                <GeometryDrawing Brush="#2E2E2E" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z"/>
+            </DrawingGroup></DrawingBrush.Drawing>
+        </DrawingBrush>
     </ResourceDictionary></Window.Resources>
     <Grid Margin="18">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -45,7 +51,16 @@
                         </UniformGrid>
                         <Button x:Name="importTilesetButton" Content="{local:Translate Text84C7E25A5D80}" Click="OpenTileSetClicked" Margin="0,8,0,0" ToolTip="{local:Translate Text7F9D0F11F37B}"/>
                         <TextBlock Text="{local:Translate Text1A07A205D3E2}" Margin="0,12,0,5"/>
-                        <ComboBox x:Name="companionInput" DisplayMemberPath="Label" SelectionChanged="CompanionSelected" AutomationProperties.Name="{local:Translate TextE6D398B72B94}"/>
+                        <ComboBox x:Name="companionInput" MaxDropDownHeight="340" SelectionChanged="CompanionSelected" AutomationProperties.Name="{local:Translate TextE6D398B72B94}">
+                            <ComboBox.ItemTemplate><DataTemplate>
+                                <StackPanel Orientation="Horizontal" Margin="0,3" ToolTip="{Binding Label}" AutomationProperties.Name="{Binding Label}">
+                                    <Border Width="66" Height="66" BorderThickness="1" BorderBrush="{DynamicResource Ts.Border}" Background="{StaticResource NeighborChecker}">
+                                        <Image Source="{Binding DisplayAsset.Image}" Width="64" Height="64" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding Caption}" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextSecondary}"/>
+                                </StackPanel>
+                            </DataTemplate></ComboBox.ItemTemplate>
+                        </ComboBox>
                         <TextBlock x:Name="pairLabel" Text="{local:Translate Text70033FB0F84C}" Style="{StaticResource Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,14"/>
                         <TextBlock Text="{local:Translate Text3472342D6716}" FontWeight="SemiBold" Margin="0,0,0,8"/>
@@ -56,10 +71,12 @@
                             <ComboBoxItem Content="3"/><ComboBoxItem Content="5"/><ComboBoxItem Content="7"/>
                         </ComboBox>
                         <TextBlock Text="{local:Translate Text1E06500C00FE}" Margin="0,12,0,5"/>
-                        <ComboBox x:Name="zoomInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate TextCA188CF6DE16}">
-                            <ComboBoxItem Content="{local:Translate Text3681A2658AB5}"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/>
-                            <ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/>
+                        <ComboBox x:Name="zoomInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate TextCA188CF6DE16}" ToolTip="{local:Translate Text615232E03EF9}">
+                            <ComboBoxItem Content="{local:Translate Text3681A2658AB5}"/><ComboBoxItem Content="6,25%"/><ComboBoxItem Content="12,5%"/><ComboBoxItem Content="25%"/><ComboBoxItem Content="50%"/>
+                            <ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/>
+                            <ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/><ComboBoxItem Content="6400%"/>
                         </ComboBox>
+                        <TextBlock Text="{local:Translate TextA72811DF62D8}" Style="{StaticResource Hint}"/>
                         <TextBlock Text="{local:Translate Text2E118F8CFC37}" Margin="0,12,0,5"/>
                         <ComboBox x:Name="backgroundInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate Text9D6D5197FC22}">
                             <ComboBoxItem Content="{local:Translate Text5E7EC04C97C5}"/><ComboBoxItem Content="{local:Translate TextA024A93D4E0C}"/><ComboBoxItem Content="{local:Translate Text21943A44634E}"/>

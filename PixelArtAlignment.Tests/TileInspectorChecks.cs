@@ -10,6 +10,7 @@ using DomainColorTest;
 using PixelArtDownscale;
 using Color = System.Drawing.Color;
 using Point = System.Windows.Point;
+using Image = System.Windows.Controls.Image;
 
 namespace PixelArtAlignment.Tests;
 
@@ -118,8 +119,9 @@ internal static class TileInspectorChecks
             Click(window, "repeatYInput", false);
             Require(preview.Columns == 1 && preview.Rows == 1, "Single tile mode incorrect");
             Click(window, "repeatXInput", true); Click(window, "repeatYInput", true);
+            VerifyWheelZoom(window, preview, folder);
             Get<ComboBox>(window, "copiesInput").SelectedIndex = 2;
-            Get<ComboBox>(window, "zoomInput").SelectedIndex = 6; Pump();
+            Get<ComboBox>(window, "zoomInput").SelectedIndex = 10; Pump();
             Require(preview.Columns == 7 && preview.Rows == 7 && preview.PixelScale == 32 &&
                 Get<ScrollViewer>(window, "previewScroll").ScrollableWidth > 0 && Get<ScrollViewer>(window, "previewScroll").ScrollableHeight > 0,
                 "Fixed pixel zoom or two-axis scrolling failed");
@@ -207,6 +209,7 @@ internal static class TileInspectorChecks
         var assetA = window.Assets.Single(asset => asset.SourcePath == aPath);
         var assetB = window.Assets.Single(asset => asset.SourcePath == bPath);
         window.SelectAsset(assetA.Id); window.SelectCompanion(assetB.Id); Pump();
+        var companionThumbnail = VerifyCompanionPreviews(window, assetA, assetB, folder);
         Require(window.Analysis!.Horizontal[2] == 0 && window.Analysis.Vertical[2] == 0 &&
             window.ReverseAnalysis!.Horizontal[2] > 99 && window.ReverseAnalysis.Vertical[2] > 99,
             "A->B and B->A seam orientations were confused");
@@ -236,8 +239,10 @@ internal static class TileInspectorChecks
         Get<Button>(window, "redoButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Require(assetA.GetPixel(7, 3) == System.Windows.Media.Colors.Black, "Redo lost the stroke");
         Get<ComboBox>(window, "paintToolInput").SelectedIndex = 2;
+        byte[] thumbnailBefore = Pixels(Render(companionThumbnail));
         Paint(new TilePointer(true, 0, 2, 1, 0), true); Finish();
         Require(assetB.GetPixel(0, 2).A == 0, "Eraser did not clear alpha in B");
+        Require(!Pixels(Render(companionThumbnail)).SequenceEqual(thumbnailBefore), "Neighbor thumbnail did not reflect the edit live");
         Get<Button>(window, "undoButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         Require(assetB.GetPixel(0, 2) == System.Windows.Media.Colors.White, "Undo did not target the last painted asset B");
         Get<ComboBox>(window, "paintToolInput").SelectedIndex = 3;
@@ -364,6 +369,128 @@ internal static class TileInspectorChecks
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(Render(element)));
         using var stream = File.Create(path); encoder.Save(stream);
     }
+    private static Image VerifyCompanionPreviews(TileInspectorWindow window, TileAsset a, TileAsset b, string folder)
+    {
+        var combo = Get<ComboBox>(window, "companionInput");
+        Require(combo.Items.Count == 2 && combo.DisplayMemberPath.Length == 0, "Neighbor choices lost dimension filtering or still use names");
+        var selected = FindVisual<Image>(combo)!;
+        Require(selected?.Source == b.Image && RenderOptions.GetBitmapScalingMode(selected) == BitmapScalingMode.NearestNeighbor,
+            "The selected neighbor is not shown as a pixel thumbnail");
+        var row = (StackPanel)VisualTreeHelper.GetParent(VisualTreeHelper.GetParent(selected));
+        Require(row.ToolTip?.ToString()?.Contains(b.Name) == true && FindVisual<TextBlock>(row)?.Text.Contains(b.Name) == false,
+            "The asset name must be in the tooltip instead of the visible row");
+        window.SelectCompanion(null); Pump();
+        Require(FindVisual<Image>(combo)?.Source == a.Image, "Self mode does not preview the active tile");
+        window.SelectCompanion(b.Id); Pump();
+        combo.IsDropDownOpen = true; Pump();
+        try
+        {
+            for (int q = 0; q < 2; q++)
+            {
+                var item = (ComboBoxItem)combo.ItemContainerGenerator.ContainerFromIndex(q);
+                Require(FindVisual<Image>(item)?.Source == (q == 0 ? a.Image : b.Image), "A dropdown item has the wrong thumbnail");
+            }
+            DependencyObject root = (ComboBoxItem)combo.ItemContainerGenerator.ContainerFromIndex(0);
+            while (VisualTreeHelper.GetParent(root) is { } parent) root = parent;
+            Capture((FrameworkElement)root, Path.Combine(folder, "neighbor-dropdown.png"));
+        }
+        finally { combo.IsDropDownOpen = false; Pump(); }
+        Capture(window, Path.Combine(folder, "neighbor-selected.png"));
+        return FindVisual<Image>(combo)!;
+    }
+
+    private static T? FindVisual<T>(DependencyObject parent) where T : DependencyObject
+    {
+        for (int q = 0; q < VisualTreeHelper.GetChildrenCount(parent); q++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, q);
+            if (child is T found) return found;
+            if (FindVisual<T>(child) is { } nested) return nested;
+        }
+        return null;
+    }
+
+    private static void VerifyWheelZoom(TileInspectorWindow window, TilePreview preview, string folder)
+    {
+        double width = window.Width, height = window.Height;
+        foreach (var size in new[] { new System.Windows.Size(1180, 800), new System.Windows.Size(720, 560) })
+        {
+            window.Width = size.Width; window.Height = size.Height; Pump();
+            VerifyWheelZoomAtCurrentSize(window, preview, folder);
+        }
+        window.Width = width; window.Height = height; Pump();
+    }
+
+    private static void VerifyWheelZoomAtCurrentSize(TileInspectorWindow window, TilePreview preview, string folder)
+    {
+        var changeZoom = typeof(TileInspectorWindow).GetMethod("ChangePreviewZoom", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var scroll = Get<ScrollViewer>(window, "previewScroll");
+        var zoom = Get<ComboBox>(window, "zoomInput");
+        bool Wheel(int delta, Point pointer, ModifierKeys modifiers = ModifierKeys.Control) =>
+            (bool)changeZoom.Invoke(window, [delta, pointer, modifiers])!;
+        var pointer = new Point(scroll.ViewportWidth * .37, scroll.ViewportHeight * .44);
+        Require(!Wheel(120, pointer, ModifierKeys.None) && !Wheel(0, pointer), "Unmodified or zero wheel was consumed for zoom");
+        double fitScale = preview.PixelScale;
+        Require(Wheel(120, pointer), "Ctrl+wheel was ignored in Fit mode"); Pump();
+        Require(preview.PixelScale > fitScale && zoom.SelectedIndex > 0, "Wheel did not leave Fit for the next fixed scale");
+        Get<ComboBox>(window, "copiesInput").SelectedIndex = 2;
+        zoom.SelectedIndex = 9; Pump(); // 1600%, with both axes scrollable.
+        scroll.ScrollToHorizontalOffset(200); scroll.ScrollToVerticalOffset(150); Pump();
+        pointer = new Point(scroll.ViewportWidth * .37, scroll.ViewportHeight * .44);
+        Point SourcePoint()
+        {
+            var point = scroll.TranslatePoint(pointer, preview);
+            return new Point(point.X / preview.PixelScale, point.Y / preview.PixelScale);
+        }
+        var anchor = SourcePoint();
+        void RequireAnchor(double scale, string operation)
+        {
+            var difference = SourcePoint() - anchor;
+            var dpi = VisualTreeHelper.GetDpi(preview);
+            // WPF rounds layout positions to device pixels. Measure the visible displacement,
+            // rather than requiring an arbitrary fraction of a source pixel at every zoom.
+            double error = Math.Max(Math.Abs(difference.X * preview.PixelScale * dpi.DpiScaleX),
+                Math.Abs(difference.Y * preview.PixelScale * dpi.DpiScaleY));
+            Require(preview.PixelScale == scale && error <= 1.000001,
+                $"{operation} moved the anchor by {error:F3} device pixels: {anchor} -> {SourcePoint()}, " +
+                $"viewport {scroll.ViewportWidth}x{scroll.ViewportHeight}, offset {scroll.HorizontalOffset},{scroll.VerticalOffset}");
+        }
+        Wheel(120, pointer); Pump();
+        RequireAnchor(32, "Zoom-in");
+        Wheel(-120, pointer); Pump();
+        RequireAnchor(16, "Zoom-out");
+        Wheel(240, pointer); Pump();
+        Require(preview.PixelScale == 64, "Multi-notch wheel did not advance two zoom levels");
+        Wheel(30, pointer); Pump();
+        Require(preview.PixelScale == 64, "Zoom exceeded 6400%");
+        Wheel(-int.MaxValue, pointer); Pump();
+        Require(preview.PixelScale == .0625, "Zoom did not stop at 6.25%");
+        Wheel(-30, pointer); Pump();
+        Require(preview.PixelScale == .0625, "Zoom went below 6.25%");
+        Wheel(30, pointer); Pump();
+        Require(preview.PixelScale == .125, "High-resolution wheel delta was ignored");
+        foreach (int index in new[] { 1, 4, 11, 0 })
+        {
+            zoom.SelectedIndex = index; Pump();
+            double scale = index == 0 ? 0 : preview.PixelScale;
+            string path = Path.Combine(folder, "wheel-zoom.ttiles");
+            window.SaveCollectionToFile(path);
+            Require(TileCollectionFile.Load(path).Settings.ZoomScale == scale, "Saved fixed zoom factor is wrong");
+            window.LoadCollectionFromFile(path); Pump();
+            Require(zoom.SelectedIndex == index, "Zoom factor did not survive project reload");
+        }
+        for (int legacy = 0; legacy <= 6; legacy++)
+        {
+            string path = Path.Combine(folder, "legacy-zoom.ttiles");
+            TileCollectionFile.Save(path, window.Assets, new TileCollectionSettings { Zoom = legacy });
+            window.LoadCollectionFromFile(path); Pump();
+            Require(zoom.SelectedIndex == (legacy == 0 ? 0 : legacy + 4), "A legacy project's zoom changed");
+        }
+        Get<ComboBox>(window, "copiesInput").SelectedIndex = 0;
+        zoom.SelectedIndex = 0; Pump();
+        Capture(window, Path.Combine(folder, "wheel-fit.png"));
+    }
+
     private static void VerifyTemporaryHeatmap(TileInspectorWindow window, TilePreview preview, BitmapSource heatOn, BitmapSource heatOff, string folder)
     {
         var toggle = Get<CheckBox>(window, "heatInput");

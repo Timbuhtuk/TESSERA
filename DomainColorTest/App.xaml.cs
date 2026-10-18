@@ -27,7 +27,7 @@ public partial class App : Application
 
         string prototypeLibrary = e.Args is ["--workspace-library", var requestedLibrary] ? System.IO.Path.GetFullPath(requestedLibrary) : WorkspacePrototypeLocation.Prepare();
         var prototype = new MainWindow(prototypeLibrary);
-        prototype.EnableWorkspacePrototype();
+        prototype.EnableWorkspacePrototype(enableUpdates: true);
         MainWindow = prototype;
         MainWindow.Show();
     }
