@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,6 +20,9 @@ public partial class MainWindow
     private WrapPanel? _workspaceActions;
     private readonly List<GroupBox> _workspaceGroups = [];
     private readonly HashSet<Guid> _observedSources = [];
+    private readonly ObservableCollection<SourceEntry> _workspaceSources = [];
+    private Guid? _workspaceSourceProject;
+    private bool _workspaceSourcesUnassigned;
     private bool _workspaceReady, _workspaceSyncing, _workspaceImporting;
     public WorkspaceCatalog? Workspace => _workspaceCatalog;
     public WorkspaceBrowser? Browser => _workspaceBrowser;
@@ -108,6 +112,9 @@ public partial class MainWindow
             UpdateDocumentPreview(asset); _workspaceCatalog.Save();
         };
         foreach (var document in _workspaceCatalog.State.Assets.Where(a => a.Kind != WorkspaceAssetKind.Image)) UpdateDocumentPreview(document);
+        _restoringHistory = true;
+        try { sourceStrip.ItemsSource = _workspaceSources; }
+        finally { _restoringHistory = false; }
         _workspaceReady = true; SynchronizeWorkspace(); ShowHome();
     }
 
@@ -155,6 +162,7 @@ public partial class MainWindow
                 }
                 catch (Exception ex) { if (pendingDocument is not null) _workspaceCatalog.ForgetAsset(pendingDocument.Id); failures.Add(Path.GetFileName(path) + ": " + ex.Message); }
             }
+            RefreshWorkspaceSources();
             _workspaceCatalog.Save(); _workspaceBrowser!.Refresh(imported.LastOrDefault()?.Id);
             statusLabel.Text = Localization.Format("Добавлено: {0}", imported.Count) + (failures.Count > 0 ? Localization.Text(" · Ошибки: ") + string.Join("; ", failures) : Localization.Text(" · Выберите материал для работы"));
         }
@@ -177,6 +185,7 @@ public partial class MainWindow
             if (asset.Kind == WorkspaceAssetKind.Image)
             {
                 var source = _sources.Single(s => s.Id == asset.Id);
+                SetWorkspaceSourceScope(asset);
                 if (asset.SelectedResult is { } result) source.SelectedGeneration = source.Generations.FirstOrDefault(g => g.Id == result) ?? source.SelectedGeneration;
                 SelectSource(source);
                 if (source.SelectedGeneration is { } selected) SelectGeneration(selected);
@@ -273,6 +282,7 @@ public partial class MainWindow
     private void AddNewWorkspaceAsset(WorkspaceAsset asset)
     {
         if (_workspaceCatalog!.State.ProjectId is { } project) _workspaceCatalog.Link(asset.Id, project, _workspaceCatalog.State.FolderId);
+        RefreshWorkspaceSources();
         _workspaceCatalog.Save(); _workspaceBrowser!.Refresh(asset.Id);
     }
 
@@ -333,6 +343,7 @@ public partial class MainWindow
                 var asset = _workspaceCatalog.State.Assets.Single(a => a.Id == source.Id);
                 if (asset.Transparent is null || asset.SelectedResult != source.SelectedGeneration?.Id) UpdateImageMetadata(asset, source);
             }
+            RefreshWorkspaceSources();
             _workspaceCatalog.Save();
             if (_workspaceBrowser?.Visibility == Visibility.Visible) _workspaceBrowser.Refresh();
         }
@@ -432,6 +443,32 @@ public partial class MainWindow
         if (!_workspaceReady || _workspaceActive?.Id == source.Id) return;
         PersistWorkspaceState();
         _workspaceActive = _workspaceCatalog!.State.Assets.FirstOrDefault(a => a.Id == source.Id);
+    }
+
+    private void SetWorkspaceSourceScope(WorkspaceAsset asset)
+    {
+        var state = _workspaceCatalog!.State;
+        _workspaceSourceProject = state.View == "project" && state.ProjectId is { } project && state.Links.Any(l => l.ProjectId == project && l.AssetId == asset.Id) ? project : null;
+        _workspaceSourcesUnassigned = state.View == "unassigned" && !state.Links.Any(l => l.AssetId == asset.Id);
+        RefreshWorkspaceSources();
+    }
+
+    private void RefreshWorkspaceSources()
+    {
+        if (!_workspaceReady || _workspaceCatalog is null) return;
+        var links = _workspaceCatalog.State.Links;
+        var members = links.Where(l => _workspaceSourceProject is null || l.ProjectId == _workspaceSourceProject).Select(l => l.AssetId).ToHashSet();
+        var sources = _sources.Where(s => _workspaceSourceProject is not null ? members.Contains(s.Id) : !_workspaceSourcesUnassigned || !members.Contains(s.Id)).ToArray();
+        if (_workspaceSources.SequenceEqual(sources)) return;
+        bool restoring = _restoringHistory;
+        _restoringHistory = true;
+        try
+        {
+            _workspaceSources.Clear();
+            foreach (var source in sources) _workspaceSources.Add(source);
+            sourceStrip.SelectedItem = _workspaceSources.Contains(_activeSource!) ? _activeSource : null;
+        }
+        finally { _restoringHistory = restoring; }
     }
 
     private void RestoreWorkspaceImageView(SourceEntry source)

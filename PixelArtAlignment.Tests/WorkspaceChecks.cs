@@ -90,11 +90,43 @@ internal static class WorkspaceChecks
             Wait(window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == asset.Id))); Pump();
             Require(Get<System.Windows.Controls.ScrollViewer>(window, "workspaceHost").Visibility == Visibility.Visible, "Asset opens existing editor");
             Require(window.OwnedWindows.Count == 0, "Processing settings are docked, not floating windows");
+            var sources = Get<ListBox>(window, "sourceStrip");
+            Require(SourceIds().SetEquals([asset.Id]) && images.Load().Count == 3, "Project filmstrip excludes unrelated images without changing the library");
+            browser.Navigate("all"); Wait(Open(clone.Id));
+            Require(SourceIds().SetEquals(images.Load().Select(s => s.Id)), "All-assets editor retains the complete image library");
+            browser.Navigate("unassigned"); Wait(Open(clone.Id));
+            Require(SourceIds().Count == 2 && !SourceIds().Contains(asset.Id), "Unassigned editor excludes project images");
+            var sharedProject = window.Workspace.CreateProject("Общий проект");
+            window.Workspace.Link(asset.Id, sharedProject.Id, null); window.Workspace.Link(clone.Id, sharedProject.Id, null);
+            browser.Navigate("project", sharedProject.Id); Wait(Open(asset.Id));
+            Require(SourceIds().SetEquals([asset.Id, clone.Id]), "Shared asset uses the project it was opened from");
+            browser.Navigate("project", projectA.Id, grass.Id); Wait(Open(asset.Id));
+            var stone = window.Workspace.State.Assets.Single(a => a.Name == Path.GetFileName(second));
+            window.Workspace.Link(stone.Id, projectA.Id, null); Wait(Open(asset.Id));
+            Require(SourceIds().SetEquals([asset.Id, stone.Id]), "Opening a nested folder includes images from the whole project");
+            sources.SelectedItem = sources.Items.Cast<SourceEntry>().Single(s => s.Id == stone.Id); Pump();
+            Require(SourceIds().SetEquals([asset.Id, stone.Id]), "Switching filmstrip images preserves the project scope");
+            Wait(Open(asset.Id));
+            string scopedInput = Path.Combine(root, "scoped.png");
+            using (var image = new Bitmap(12, 12)) { using var draw = Graphics.FromImage(image); draw.Clear(Color.Gold); image.Save(scopedInput); }
+            Wait((Task)typeof(MainWindow).GetMethod("AddImagesAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [new[] { scopedInput }])!);
+            var scoped = window.Workspace.State.Assets.Single(a => a.Name == Path.GetFileName(scopedInput));
+            Require(SourceIds().SetEquals([asset.Id, stone.Id, scoped.Id]), "Project import refreshes the scoped filmstrip after linking");
+            Wait(Open(scoped.Id)); Remove(scoped.Id);
+            Require(sources.SelectedItem is SourceEntry neighbor && SourceIds().Contains(neighbor.Id), "Deleting a source selects a neighbor inside the project");
+            Wait(Open(stone.Id)); Remove(stone.Id);
+            Require(sources.SelectedItem is SourceEntry remaining && remaining.Id == asset.Id && images.Load().Count == 2, "Deleting a project neighbor keeps unrelated global sources intact");
+            Wait(Open(asset.Id));
             Get<DomainColorTest.IntegerInput>(window, "widthInput").Value = 4; Get<DomainColorTest.IntegerInput>(window, "heightInput").Value = 4;
             Get<Button>(window, "scaleOnlyButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             WaitUntil(() => !(bool)typeof(MainWindow).GetField("_processing", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window)!);
             Require(source.Id == asset.Id && images.Load().Single(s => s.Id == asset.Id).Generations.Count == 3, "Docked action adds persistent shared history");
             window.Width = 1440; Pump(); Capture(window, Path.Combine(root, "workspace-editor.png"));
+            var editedSource = (SourceEntry)sources.SelectedItem;
+            Wait((Task)typeof(MainWindow).GetMethod("AddGenerationAsSourceAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [editedSource, editedSource.Generations.Last()])!);
+            var derived = (SourceEntry)sources.SelectedItem;
+            Require(SourceIds().SetEquals([asset.Id, derived.Id]) && window.Workspace.State.Links.Any(l => l.AssetId == derived.Id && l.ProjectId == projectA.Id && l.FolderId == grass.Id), "Result-to-source drop stays in the current project and folder");
+            Remove(derived.Id);
 
             Wait(Action("background", window.Workspace.State.Assets.Single(a => a.Id == asset.Id)));
             var background = Get<BackgroundWorkspace>(window, "backgroundWorkspace"); Wait(background.RefreshPreviewAsync());
@@ -116,6 +148,9 @@ internal static class WorkspaceChecks
             var stateCopy = window.Workspace.State.Assets.Single(a => !beforeCopy.Contains(a.Id));
             var stateCopySource = images.Load().Single(s => s.Id == stateCopy.Id);
             Require(stateCopy.SelectedResult == stateCopySource.Generations[0].Id, "Independent UI copy preserves an older selected result rather than jumping to the latest");
+            Require(SourceIds().SetEquals([stateCopy.Id]), "Independent copy replaces the source in the current project filmstrip");
+            Wait(Open(stateCopy.Id)); Remove(stateCopy.Id);
+            Require(browser.Visibility == Visibility.Visible && images.Load().Count == 2 && sources.Items.Count == 0, "Deleting the last project image returns to its browser instead of opening another project");
 
             string boardPath = Path.Combine(root, "references.tboard");
             var boardFixture = new MoodboardWorkspace(); boardFixture.CreateWorkspaceBoard(256, 128); Wait(boardFixture.AddFilesAsync([input])); boardFixture.SaveToFile(boardPath);
@@ -146,12 +181,19 @@ internal static class WorkspaceChecks
             Require(hover.Background is SolidColorBrush { IsFrozen: false }, "Frozen theme brushes remain safe for hover motion");
 
             Task Action(string name, WorkspaceAsset selectedAsset) => (Task)typeof(MainWindow).GetMethod("WorkspaceActionAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [name, selectedAsset])!;
+            Task Open(Guid id) => window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == id));
+            HashSet<Guid> SourceIds() => sources.Items.Cast<SourceEntry>().Select(s => s.Id).ToHashSet();
+            void Remove(Guid id)
+            {
+                var selected = sources.Items.Cast<SourceEntry>().Single(s => s.Id == id);
+                typeof(MainWindow).GetMethod("RemoveSource", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [selected]); Pump();
+            }
         }
         finally { window.Close(); Pump(); }
         var reopened = new WorkspaceCatalog(libraryRoot);
         Require(reopened.State.ProjectId == projectA.Id && reopened.State.SelectedAsset is not null, "Navigation survives restart");
         Console.WriteLine("  Workspace artifacts: " + root);
-        Console.WriteLine("  Workspace storage, shared/copy history, WPF layouts, background/tile roundtrips, boards and animation passed");
+        Console.WriteLine("  Workspace storage, project source scope, shared/copy history, WPF layouts, background/tile roundtrips, boards and animation passed");
     }
 
     private static T Get<T>(FrameworkElement element, string name) => (T)element.FindName(name);

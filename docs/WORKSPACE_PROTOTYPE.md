@@ -28,6 +28,8 @@ Search matches asset names and tags; multiple words must all match. Choose the c
 
 Open a material by double-click or Enter. Image processing settings are docked beside the previews; narrow windows place the settings above them. Advanced settings remain collapsible. The image algorithms are the existing shared processors.
 
+Opening an image from a project limits the source filmstrip to that project's images, including all its folders. Switching images keeps this context; shared images use the project they were opened from. **Все ассеты** opens the full image library, while **Без проекта** keeps only standalone images. Imports and independent copies update the filmstrip. Removing the last project image returns to its browser.
+
 Use the image action bar to remove a solid background, inspect tiles, export ICO, replace a color, export PNG, or add the chosen input to an existing board. Background removal and tile correction offer **В историю ассета**, which appends a result directly to the originating image. The **Обрабатывать** selector identifies whether the source or a saved result is the next input.
 
 Boards and tile collections remain editable documents. **Сохранить** / Ctrl+S stores their library-owned document; **Экспортировать** writes a deliverable. Aseprite source snapshots and layout settings are retained in the catalog; the PNG/JSON sheet can be regenerated and exported. Boards preserve separate layers and Ctrl/Shift selection.

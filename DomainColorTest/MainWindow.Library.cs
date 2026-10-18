@@ -116,6 +116,12 @@ public partial class MainWindow
 
     private async Task AddImagesAsync(IEnumerable<string> paths)
     {
+        if (_workspaceReady)
+        {
+            await ImportWorkspaceFilesAsync(paths.ToArray());
+            if (_workspaceCatalog?.State.Assets.FirstOrDefault(a => a.Id == _workspaceCatalog.State.SelectedAsset) is { } asset) await OpenWorkspaceAssetAsync(asset);
+            return;
+        }
         if (_processing) return;
         SetProcessingState(true);
         var failures = new List<string>();
@@ -245,7 +251,9 @@ public partial class MainWindow
         int index = _sources.IndexOf(source);
         if (index < 0) return;
         bool selected = ReferenceEquals(_activeSource, source);
-        var next = _sources.Count <= 1 ? null : _sources[index + 1 < _sources.Count ? index + 1 : index - 1];
+        var visible = sourceStrip.Items.Cast<SourceEntry>().ToList();
+        int visibleIndex = visible.IndexOf(source);
+        var next = visible.Count <= 1 || visibleIndex < 0 ? null : visible[visibleIndex + 1 < visible.Count ? visibleIndex + 1 : visibleIndex - 1];
         _library.RemoveSource(source);
         _restoringHistory = true;
         try
@@ -268,6 +276,7 @@ public partial class MainWindow
         }
         finally { _restoringHistory = false; }
         if (selected && next is not null) SelectSource(next);
+        else if (selected && _workspaceReady) { _workspaceActive = null; ShowHome(); }
         statusLabel.Text = _sources.Count == 0
             ? Localization.Text("Все исходники удалены из программы. Откройте или перетащите новое изображение.")
             : Localization.Text("Исходник и его результаты удалены из программы.");

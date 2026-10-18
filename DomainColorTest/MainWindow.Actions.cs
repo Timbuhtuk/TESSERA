@@ -173,6 +173,7 @@ public partial class MainWindow
             var existing = _sources.ToArray();
             var imported = await Task.Run(() => _library.ImportGeneration(source, generation, existing));
             if (!_sources.Contains(imported)) _sources.Add(imported);
+            if (_workspaceReady && _workspaceCatalog!.State.Assets.FirstOrDefault(a => a.Id == imported.Id) is { } asset) AddNewWorkspaceAsset(asset);
             SelectSource(imported);
             statusLabel.Text = Localization.Text("Результат добавлен как отдельный исходник. Можно продолжать обработку.");
         }
