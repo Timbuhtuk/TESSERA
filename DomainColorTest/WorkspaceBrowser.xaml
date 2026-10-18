@@ -8,6 +8,41 @@
   <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource Ts.CompactButton}">
    <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Margin" Value="0,2"/>
   </Style>
+  <Style TargetType="TreeViewItem">
+   <Setter Property="Foreground" Value="{DynamicResource Ts.Text}"/>
+   <Setter Property="Background" Value="Transparent"/>
+   <Setter Property="BorderBrush" Value="Transparent"/>
+   <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+   <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TreeViewItem">
+    <Grid SnapsToDevicePixels="True" UseLayoutRounding="True">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+     <Border x:Name="HeaderFrame" Grid.ColumnSpan="2" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}" MinHeight="28">
+      <ContentPresenter x:Name="PART_Header" ContentSource="Header" Margin="20,0,0,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+     </Border>
+     <ToggleButton x:Name="Expander" Width="20" Focusable="False" IsTabStop="False" ClickMode="Press" Foreground="{TemplateBinding Foreground}"
+                   IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" AutomationProperties.Name="Развернуть или свернуть">
+      <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
+       <Border Background="Transparent">
+        <Path x:Name="Arrow" Data="M 0,0 L 4,4 L 0,8" Width="4" Height="8" Stretch="Uniform" Stroke="{TemplateBinding Foreground}" StrokeThickness="1.2" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5"/>
+       </Border>
+       <ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Arrow" Property="RenderTransform"><Setter.Value><RotateTransform Angle="90"/></Setter.Value></Setter></Trigger></ControlTemplate.Triggers>
+      </ControlTemplate></ToggleButton.Template>
+     </ToggleButton>
+     <Border x:Name="ChildrenGuide" Grid.Row="1" Width="1" HorizontalAlignment="Center" Background="{DynamicResource Ts.BorderStrong}" IsHitTestVisible="False"/>
+     <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Grid.Column="1"/>
+    </Grid>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsExpanded" Value="False"><Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/><Setter TargetName="ChildrenGuide" Property="Visibility" Value="Collapsed"/></Trigger>
+     <Trigger Property="HasItems" Value="False"><Setter TargetName="Expander" Property="Visibility" Value="Hidden"/><Setter TargetName="ChildrenGuide" Property="Visibility" Value="Collapsed"/></Trigger>
+     <Trigger SourceName="HeaderFrame" Property="IsMouseOver" Value="True"><Setter TargetName="HeaderFrame" Property="Background" Value="{DynamicResource Ts.Hover}"/></Trigger>
+     <Trigger Property="IsSelected" Value="True"><Setter TargetName="HeaderFrame" Property="Background" Value="{DynamicResource Ts.Text}"/><Setter Property="Foreground" Value="{DynamicResource Ts.Canvas}"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="HeaderFrame" Property="BorderBrush" Value="{DynamicResource Ts.Focus}"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="HeaderFrame" Property="Opacity" Value="0.4"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
   <Style x:Key="AssetItem" TargetType="ListBoxItem">
    <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,12,12"/>
    <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/>

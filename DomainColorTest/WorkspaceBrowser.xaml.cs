@@ -126,7 +126,7 @@ public partial class WorkspaceBrowser : UserControl
         foreach (var folder in _catalog!.State.Folders.Where(f => f.ProjectId == project && f.ParentId == parentId))
         {
             if (!visited.Add(folder.Id)) continue;
-            var item = MakeNode("▸ " + folder.Name, folder, folder.Id == _catalog.State.FolderId);
+            var item = MakeNode(folder.Name, folder, folder.Id == _catalog.State.FolderId);
             parent.Items.Add(item); AddFolders(item, project, folder.Id, visited);
         }
     }
