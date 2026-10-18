@@ -2,7 +2,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Microsoft.Win32;
 
 namespace DomainColorTest;
 
@@ -182,20 +181,6 @@ public partial class WorkspaceBrowser : UserControl
         RebuildTree();
     }
 
-    private void ImportClicked(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog { Multiselect = true, Title = Localization.Text("Добавить материалы"), Filter = Localization.Text("Материалы Tessera|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff;*.ase;*.aseprite;*.tboard;*.ttiles") };
-        if (dialog.ShowDialog(Window.GetWindow(this)) == true) ImportRequested?.Invoke(dialog.FileNames);
-    }
-    private void CreateClicked(object sender, RoutedEventArgs e)
-    {
-        var menu = new ContextMenu();
-        foreach (var pair in new[] { (Localization.Text("Доску изображений"), "new-board"), (Localization.Text("Коллекцию тайлов"), "new-tiles"), (Localization.Text("Проект"), "project") })
-        {
-            var item = new MenuItem { Header = pair.Item1 }; item.Click += (_, _) => { if (pair.Item2 == "project") NewProjectClicked(this, new()); else ActionRequested?.Invoke(pair.Item2, null); }; menu.Items.Add(item);
-        }
-        menu.PlacementTarget = (UIElement)sender; menu.IsOpen = true;
-    }
     private void AssetSelected(object sender, SelectionChangedEventArgs e) { if (_ready) UpdateDetails(); }
     private void UpdateDetails()
     {
@@ -324,7 +309,7 @@ public partial class WorkspaceBrowser : UserControl
     }
     public string? ChooseBoard(IReadOnlyList<WorkspaceAsset> boards)
     {
-        if (boards.Count == 0) { Tell(Localization.Text("Сначала создайте доску в библиотеке через «Создать».")); return null; }
+        if (boards.Count == 0) { Tell(Localization.Text("Сначала создайте доску через «Файл → Создать → Доску».")); return null; }
         int choice = Choose(Localization.Text("Добавить изображение на доску"), boards.Select(b => b.Name).ToArray());
         return choice < 0 ? null : boards[choice].Id.ToString();
     }

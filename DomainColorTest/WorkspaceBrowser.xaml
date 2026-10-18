@@ -73,10 +73,7 @@
   </Border>
   <Grid Grid.Column="1" Margin="20,18,8,8">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-   <DockPanel>
-    <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0"><Button Content="{local:Translate Text753CB453EF62}" Click="ImportClicked"/><Button Content="{local:Translate Text5AE910EC31BB}" Click="CreateClicked" Margin="6,0,0,0"/></WrapPanel>
-    <TextBlock x:Name="viewTitle" Text="{local:Translate TextFC14887CED6F}" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
-   </DockPanel>
+   <TextBlock x:Name="viewTitle" Text="{local:Translate TextFC14887CED6F}" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
    <Grid Grid.Row="1" Margin="0,18,4,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
     <Grid><TextBox x:Name="searchInput" TextChanged="FiltersChanged" ToolTip="{local:Translate Text776DC2577A66}" AutomationProperties.Name="{local:Translate TextD275FDA822F3}"/>
      <TextBlock Text="{local:Translate TextD6E65E98BB7A}" Margin="10,0" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" IsHitTestVisible="False"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=searchInput}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>

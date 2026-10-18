@@ -29,6 +29,8 @@ Search matches asset names and tags; multiple words must all match. Choose the c
 
 Open a material by double-click or Enter. The title bar contains **File · Image · Tools · View** beside Tessera. Both former editor button rows have been removed. The logo returns to the current library section; the remaining title space shows the material name and its original/library path in a tooltip. The gear and window controls remain on the right.
 
+The library header shows the selected section or project/folder path. Opening files and creating materials are available from **File**, without duplicate buttons in the library header.
+
 - **File** opens materials, creates projects/boards/tile collections, saves editable documents and exports PNG, image histories, PNG + JSON or ICO for the active workspace.
 - **Image** selects the processing basis and opens size/frame, color count, color cleanup/replacement, background removal and filters.
 - **Tools** opens workflows, grid alignment/reduction, tile inspection, color information and adding an image to a board.
