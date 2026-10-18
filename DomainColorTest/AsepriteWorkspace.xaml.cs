@@ -22,7 +22,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         internal string Snapshot => Path.Combine(Directory, "source", Label);
         public AsepriteExportResult? Result { get; internal set; }
         public BitmapSource? Thumbnail { get; internal set; }
-        public string State { get; internal set; } = "В очереди";
+        public string State { get; internal set; } = Localization.Text("В очереди");
         public string Detail { get; internal set; } = inputPath;
         internal bool Pending { get; set; } = true;
         public bool Ready => !Pending && Result is not null;
@@ -86,8 +86,12 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     public async Task OpenAsync()
     {
         if (!CanAcceptFiles) return;
-        var dialog = new OpenFileDialog { Filter = "Aseprite|*.aseprite;*.ase", Title = "Открыть анимации", Multiselect = true };
-        if (dialog.ShowDialog(Window.GetWindow(this)) == true) await AddFilesAsync(dialog.FileNames);
+        var dialog = new OpenFileDialog { Filter = "Aseprite|*.aseprite;*.ase", Title = Localization.Text("Открыть анимации"), Multiselect = true };
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true)
+        {
+            if (WorkspaceImport is not null) await WorkspaceImport(dialog.FileNames);
+            else await AddFilesAsync(dialog.FileNames);
+        }
     }
 
     public Task AddFilesAsync(IEnumerable<string> paths)
@@ -131,7 +135,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         if (_converting || _saving || _disposed) return _worker;
         _settingsPending = false;
         _pending.Clear();
-        foreach (var entry in _entries) { entry.Pending = true; entry.State = "В очереди"; entry.Refresh(); _pending.Enqueue(entry); }
+        foreach (var entry in _entries) { entry.Pending = true; entry.State = Localization.Text("В очереди"); entry.Refresh(); _pending.Enqueue(entry); }
         _worker = ProcessQueueAsync();
         return _worker;
     }
@@ -148,8 +152,8 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         {
             while (_pending.TryDequeue(out var entry))
             {
-                entry.Pending = true; entry.State = "Конвертация…"; entry.Refresh();
-                StatusChanged?.Invoke($"Конвертация: {entry.Label}. Осталось: {_pending.Count}");
+                entry.Pending = true; entry.State = Localization.Text("Конвертация…"); entry.Refresh();
+                StatusChanged?.Invoke(Localization.Format("Конвертация: {0}. Осталось: {1}", entry.Label, _pending.Count));
                 string output = Path.Combine(entry.Directory, Guid.NewGuid().ToString("N"));
                 try
                 {
@@ -163,8 +167,8 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                     if (_disposed) return;
                     string? previous = entry.Result is null ? null : Path.GetDirectoryName(entry.Result.ImagePath);
                     entry.Result = result.Result; entry.Thumbnail = result.Thumbnail; entry.Pending = false;
-                    entry.State = $"{result.Result.FrameCount} кадров · {result.Result.Width} × {result.Result.Height}";
-                    entry.Detail = $"{entry.Label} · {entry.State} · {result.Result.TotalDurationMs} мс";
+                    entry.State = Localization.Format("{0} кадров · {1} × {2}", result.Result.FrameCount, result.Result.Width, result.Result.Height);
+                    entry.Detail = Localization.Format("{0} · {1} · {2} мс", entry.Label, entry.State, result.Result.TotalDurationMs);
                     if (result.Result.Warnings.Count > 0) entry.Detail += "\n" + string.Join("; ", result.Result.Warnings);
                     entry.Refresh(); converted++;
                     sheetStrip.SelectedItem = entry; UpdateSelection();
@@ -172,23 +176,23 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 }
                 catch (OperationCanceledException)
                 {
-                    entry.Pending = false; entry.Result = null; entry.State = "Отменено"; entry.Detail = entry.Label + ": конвертация отменена."; entry.Refresh();
+                    entry.Pending = false; entry.Result = null; entry.State = Localization.Text("Отменено"); entry.Detail = entry.Label + Localization.Text(": конвертация отменена."); entry.Refresh();
                     DeleteCache(output);
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    entry.Pending = false; entry.Result = null; entry.State = "Ошибка"; entry.Detail = ex.Message; entry.Refresh();
+                    entry.Pending = false; entry.Result = null; entry.State = Localization.Text("Ошибка"); entry.Detail = ex.Message; entry.Refresh();
                     DeleteCache(output); failed++;
                 }
                 UpdateControls();
             }
-            StatusChanged?.Invoke($"Готово: {converted}. Ошибок: {failed}. Сохранение — PNG и JSON для каждой анимации.");
+            StatusChanged?.Invoke(Localization.Format("Готово: {0}. Ошибок: {1}. Сохранение — PNG и JSON для каждой анимации.", converted, failed));
         }
         catch (OperationCanceledException)
         {
-            while (_pending.TryDequeue(out var entry)) { entry.Pending = false; entry.Result = null; entry.State = "Отменено"; entry.Detail = entry.Label + ": конвертация отменена."; entry.Refresh(); }
-            StatusChanged?.Invoke($"Отменено. Готовых результатов: {_entries.Count(e => e.Ready)}.");
+            while (_pending.TryDequeue(out var entry)) { entry.Pending = false; entry.Result = null; entry.State = Localization.Text("Отменено"); entry.Detail = entry.Label + Localization.Text(": конвертация отменена."); entry.Refresh(); }
+            StatusChanged?.Invoke(Localization.Format("Отменено. Готовых результатов: {0}.", _entries.Count(e => e.Ready)));
         }
         finally
         {
@@ -213,7 +217,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 {
                     token.ThrowIfCancellationRequested();
                     total = checked(total + read);
-                    if (total > 64 * 1024 * 1024) throw new InvalidDataException("Файл превышает допустимый размер 64 МБ.");
+                    if (total > 64 * 1024 * 1024) throw new InvalidDataException(Localization.Text("Файл превышает допустимый размер 64 МБ."));
                     output.Write(buffer, 0, read);
                 }
             }
@@ -237,11 +241,11 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         _previewImage?.Dispose(); _previewImage = null;
         var entry = sheetStrip.SelectedItem as SheetEntry;
         sheetDetail.Text = entry?.Detail ?? ""; sheetDetail.ToolTip = entry?.Detail;
-        sheetPreview.EmptyText = entry is null ? "Перетащите сюда файлы .aseprite или .ase\nСпрайтлисты будут подготовлены автоматически" : entry.Ready ? "" : entry.State;
+        sheetPreview.EmptyText = entry is null ? Localization.Text("Перетащите сюда файлы .aseprite или .ase\nСпрайтлисты будут подготовлены автоматически") : entry.Ready ? "" : entry.State;
         if (entry?.Ready == true)
         {
             try { _previewImage = ImageLibrary.ReadBitmap(entry.Result!.ImagePath); sheetPreview.Image = _previewImage; }
-            catch (Exception ex) { sheetDetail.Text = $"Не удалось показать предпросмотр: {ex.Message}"; }
+            catch (Exception ex) { sheetDetail.Text = Localization.Format("Не удалось показать предпросмотр: {0}", ex.Message); }
         }
         UpdateControls();
     }
@@ -255,14 +259,14 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         sheetSaveAllButton.IsEnabled = !IsBusy && _entries.Any(e => e.Ready);
         sheetClearButton.IsEnabled = !IsBusy && _entries.Count > 0;
         sheetCancelButton.Visibility = _converting || _saving ? Visibility.Visible : Visibility.Collapsed;
-        sheetCount.Text = $"Результаты ({_entries.Count})";
+        sheetCount.Text = Localization.Format("Результаты ({0})", _entries.Count);
         BusyChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private async Task SaveDialogAsync(bool all)
     {
         if (IsBusy) return;
-        var dialog = new OpenFolderDialog { Title = all ? "Сохранить все спрайтлисты и JSON" : "Сохранить спрайтлист и JSON" };
+        var dialog = new OpenFolderDialog { Title = all ? Localization.Text("Сохранить все спрайтлисты и JSON") : Localization.Text("Сохранить спрайтлист и JSON") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         await SaveAsync(dialog.FolderName, all);
     }
@@ -280,19 +284,19 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
             foreach (var item in entries)
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                StatusChanged?.Invoke($"Сохранение: {item.Label}");
+                StatusChanged?.Invoke(Localization.Format("Сохранение: {0}", item.Label));
                 try
                 {
                     string path = await Task.Run(() => ExportReady(item, directory, cancellation.Token));
                     results.Add(new SaveResult(item.InputPath, path, null));
-                    item.State = "Сохранён"; item.Detail = path; item.Refresh();
+                    item.State = Localization.Text("Сохранён"); item.Detail = path; item.Refresh();
                 }
                 catch (OperationCanceledException) { throw; }
-                catch (Exception ex) { results.Add(new SaveResult(item.InputPath, null, ex.Message)); item.State = "Ошибка сохранения"; item.Detail = ex.Message; item.Refresh(); }
+                catch (Exception ex) { results.Add(new SaveResult(item.InputPath, null, ex.Message)); item.State = Localization.Text("Ошибка сохранения"); item.Detail = ex.Message; item.Refresh(); }
             }
-            StatusChanged?.Invoke($"Сохранено: {results.Count(r => r.Error is null)}. Ошибок: {results.Count(r => r.Error is not null)}. Папка: {directory}");
+            StatusChanged?.Invoke(Localization.Format("Сохранено: {0}. Ошибок: {1}. Папка: {2}", results.Count(r => r.Error is null), results.Count(r => r.Error is not null), directory));
         }
-        catch (OperationCanceledException) { StatusChanged?.Invoke($"Сохранение отменено. Сохранено: {results.Count(r => r.Error is null)}."); }
+        catch (OperationCanceledException) { StatusChanged?.Invoke(Localization.Format("Сохранение отменено. Сохранено: {0}.", results.Count(r => r.Error is null))); }
         finally { _saving = false; _cancellation = null; if (_disposed) DeleteCache(_session); else { UpdateSelection(); UpdateControls(); } }
         return results;
     }

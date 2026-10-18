@@ -18,12 +18,13 @@ public partial class MainWindow
         if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
-        SetVisible(editorToolbar, false);
+
         SetVisible(iconWorkspace, false);
         SetVisible(asepriteWorkspace, false);
         SetVisible(backgroundWorkspace, false);
         SetVisible(moodboardWorkspace, true);
-        statusLabel.Text = moodboardWorkspace.HasBoard ? "Доска готова к работе" : "Создайте полотно для доски";
+        HideWorkspaceBrowser();
+        statusLabel.Text = moodboardWorkspace.HasBoard ? Localization.Text("Доска готова к работе") : Localization.Text("Создайте полотно для доски");
     }
 
     private bool IsMoodboardDropTarget(DependencyObject? target)

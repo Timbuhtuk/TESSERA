@@ -18,7 +18,7 @@ public partial class MainWindow
         CommitInputs();
         var settings = CaptureSettings();
         DownscaleOptions options = settings.Downscale;
-        bool useResult = operationSourceInput.SelectedIndex == 1 && _downscaledResult is not null;
+        bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
         bool changeSize = operation == IndependentOperation.Size;
         bool neighborColors = operation == IndependentOperation.NeighborColors;
@@ -30,9 +30,9 @@ public partial class MainWindow
         SetProcessingState(true);
         statusLabel.Text = operation switch
         {
-            IndependentOperation.Size => enlarged ? "Увеличение изображения…" : "Изменение размера…",
-            IndependentOperation.NeighborColors => "Локальная обработка цветов 3×3…",
-            _ => "Обработка цветов…"
+            IndependentOperation.Size => enlarged ? Localization.Text("Увеличение изображения…") : Localization.Text("Изменение размера…"),
+            IndependentOperation.NeighborColors => Localization.Text("Локальная обработка цветов 3×3…"),
+            _ => Localization.Text("Обработка цветов…")
         };
         try
         {
@@ -46,35 +46,35 @@ public partial class MainWindow
                 };
                 string colorOperation = options.IndependentColorMode switch
                 {
-                    IndependentColorMode.Quantization => "Квантование",
-                    IndependentColorMode.Palette => "Палитра",
-                    _ => "Цвет"
+                    IndependentColorMode.Quantization => Localization.Text("Квантование"),
+                    IndependentColorMode.Palette => Localization.Text("Палитра"),
+                    _ => Localization.Text("Цвет")
                 };
-                string label = changeSize ? enlarged ? "УВЕЛИЧЕНИЕ" : "РАЗМЕР" :
-                    neighborColors ? "ЛОКАЛЬНЫЙ ЦВЕТ" : colorOperation.ToUpperInvariant();
+                string label = changeSize ? enlarged ? Localization.Text("УВЕЛИЧЕНИЕ") : Localization.Text("РАЗМЕР") :
+                    neighborColors ? Localization.Text("ЛОКАЛЬНЫЙ ЦВЕТ") : colorOperation.ToUpperInvariant();
                 return _library.SaveGeneration(document, result, null, new GenerationEntry
                 {
                     Settings = settings,
-                    Operation = changeSize ? enlarged ? "Увеличение" : "Размер" :
-                        neighborColors ? "Локальные цвета" : colorOperation,
+                    Operation = changeSize ? enlarged ? Localization.Text("Увеличение") : Localization.Text("Размер") :
+                        neighborColors ? Localization.Text("Локальные цвета") : colorOperation,
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = $"{label} · {result.Width} × {result.Height}",
                     Log = changeSize
-                        ? $"Изменён размер {source.Width} × {source.Height} → {result.Width} × {result.Height}. Цвета не преобразованы." + (enlarged ? " Увеличение без сглаживания." : "")
+                        ? Localization.Format("Изменён размер {0} × {1} → {2} × {3}. Цвета не преобразованы.", source.Width, source.Height, result.Width, result.Height) + (enlarged ? Localization.Text(" Увеличение без сглаживания.") : "")
                         : neighborColors
-                            ? $"Локальная обработка 3×3: проходов {options.LocalColorPasses}. Размер и прозрачность сохранены."
-                            : $"{colorOperation}: размер {result.Width} × {result.Height} сохранён."
+                            ? Localization.Format("Локальная обработка 3×3: проходов {0}. Размер и прозрачность сохранены.", options.LocalColorPasses)
+                            : Localization.Format("{0}: размер {1} × {2} сохранён.", colorOperation, result.Width, result.Height)
                 });
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = $"Готово · {generation.Width} × {generation.Height}. Результат сохранён в истории.";
+            statusLabel.Text = Localization.Format("Готово · {0} × {1}. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)
         {
-            statusLabel.Text = "Обработка или сохранение истории не завершены. Предыдущий результат доступен.";
-            TesseraDialog.Show(this, ex.Message, "Ошибка обработки", MessageBoxButton.OK, MessageBoxImage.Error);
+            statusLabel.Text = Localization.Text("Обработка или сохранение истории не завершены. Предыдущий результат доступен.");
+            TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка обработки"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { SetProcessingState(false); }
     }

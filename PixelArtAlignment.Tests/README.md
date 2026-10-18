@@ -61,3 +61,7 @@ dotnet run --project PixelArtAlignment.Tests -c Release -- --evaluate actual.png
 ```
 
 Without a reference, grid regularity can be measured, but not an honest percentage of correctly preserved detail. Automatic cell detection has its own diagnostic confidence, separate from the quality score above. For highly irregular or fractional input grids, choose an explicit integer output cell size. Arbitrary scales and temporal consistency in animation are outside this test set.
+
+## Workspace prototype
+
+Run `--workspace` for project/folder membership, shared assets, independent copies with remapped history IDs, catalog persistence, combined search and the new WPF browser. It also covers direct background/tile results, editable boards and retained Aseprite source/layout with PNG/JSON export. Use `--invariants --ui` for the existing tools. The prototype build and launch are described in [WORKSPACE_PROTOTYPE.md](../docs/WORKSPACE_PROTOTYPE.md).

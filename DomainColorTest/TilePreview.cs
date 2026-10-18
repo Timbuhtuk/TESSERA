@@ -155,7 +155,7 @@ public sealed class TilePreview : FrameworkElement
         if (Analysis is null) return;
         var outgoing = point.Companion ? ReverseAnalysis ?? Analysis : Analysis;
         var incoming = point.Companion ? Analysis : ReverseAnalysis ?? Analysis;
-        string text = $"{(point.Companion ? "B" : "A")} · пиксель ({point.X}, {point.Y})";
+        string text = Localization.Format("{0} · пиксель ({1}, {2})", (point.Companion ? "B" : "A"), point.X, point.Y);
         if (_repeatX) text += $" · X ← {incoming.Horizontal[point.Y]:F2} / → {outgoing.Horizontal[point.Y]:F2}";
         if (_repeatY) text += $" · Y ↑ {incoming.Vertical[point.X]:F2} / ↓ {outgoing.Vertical[point.X]:F2}";
         PixelHovered?.Invoke(text);

@@ -62,6 +62,6 @@ public sealed class TileSetPreview : FrameworkElement
         int stepX = Layout.TileWidth + Layout.SpacingX, stepY = Layout.TileHeight + Layout.SpacingY;
         if (!_imageRect.Contains(point) || x < 0 || y < 0 || x / stepX >= Layout.Columns || y / stepY >= Layout.Rows ||
             x % stepX >= Layout.TileWidth || y % stepY >= Layout.TileHeight) ToolTip = null;
-        else ToolTip = $"Тайл {y / stepY * Layout.Columns + x / stepX + 1} · строка {y / stepY + 1}, столбец {x / stepX + 1}";
+        else ToolTip = Localization.Format("Тайл {0} · строка {1}, столбец {2}", y / stepY * Layout.Columns + x / stepX + 1, y / stepY + 1, x / stepX + 1);
     }
 }

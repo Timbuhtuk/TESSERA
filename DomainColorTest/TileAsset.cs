@@ -12,7 +12,7 @@ public sealed record TileEditSnapshot(byte[] Pixels, bool HasLocalEdits);
 public sealed class TileAsset : INotifyPropertyChanged
 {
     public Guid Id { get; init; } = Guid.NewGuid();
-    public string Name { get; init; } = "Тайл";
+    public string Name { get; init; } = Localization.Text("Тайл");
     public string? SourcePath { get; init; }
     public string? AtlasSourcePath { get; init; }
     public int Width { get; }
@@ -66,7 +66,7 @@ public sealed class TileAsset : INotifyPropertyChanged
 
     public bool ReplacePixels(byte[] pixels)
     {
-        if (pixels.Length != Pixels.Length) throw new ArgumentException("Размер пиксельного буфера не совпадает.");
+        if (pixels.Length != Pixels.Length) throw new ArgumentException(Localization.Text("Размер пиксельного буфера не совпадает."));
         var before = Capture();
         Pixels = (byte[])pixels.Clone();
         if (!FinishEdit(before)) return false;
@@ -76,7 +76,7 @@ public sealed class TileAsset : INotifyPropertyChanged
 
     public void Reload(BitmapSource image)
     {
-        if (image.PixelWidth != Width || image.PixelHeight != Height) throw new ArgumentException("Размер тайла изменился.");
+        if (image.PixelWidth != Width || image.PixelHeight != Height) throw new ArgumentException(Localization.Text("Размер тайла изменился."));
         image.CopyPixels(Pixels, Width * 4, 0);
         _undo.Clear(); _redo.Clear(); HasLocalEdits = false;
         Version++; UpdateImage(); Notify();
@@ -114,7 +114,7 @@ public sealed class TileAsset : INotifyPropertyChanged
     public void PaintLine(int x0, int y0, int x1, int y1, Color color, int size)
     {
         if (size is < 1 or > 32 || x0 < 0 || x0 >= Width || x1 < 0 || x1 >= Width || y0 < 0 || y0 >= Height || y1 < 0 || y1 >= Height)
-            throw new ArgumentOutOfRangeException(nameof(size), "Координаты должны быть внутри тайла; размер кисти — 1–32.");
+            throw new ArgumentOutOfRangeException(nameof(size), Localization.Text("Координаты должны быть внутри тайла; размер кисти — 1–32."));
         int dx = Math.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
         int dy = -Math.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1, error = dx + dy;
         while (true)
@@ -142,7 +142,7 @@ public sealed class TileAsset : INotifyPropertyChanged
     public static TileSeamAnalysis Compare(TileAsset first, TileAsset second)
     {
         if (first.Width != second.Width || first.Height != second.Height)
-            throw new ArgumentException("Для сравнения нужны тайлы одинакового размера.");
+            throw new ArgumentException(Localization.Text("Для сравнения нужны тайлы одинакового размера."));
         return TileSeamAnalyzer.AnalyzeEdges(first.Edge(false, true), second.Edge(false, false),
             first.Edge(true, true), second.Edge(true, false));
     }

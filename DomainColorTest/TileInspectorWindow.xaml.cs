@@ -24,7 +24,7 @@ public partial class TileInspectorWindow : Window
     private readonly DispatcherTimer _reloadTimer = new() { Interval = TimeSpan.FromMilliseconds(450) };
     private sealed record CompanionChoice(TileAsset? Asset, TileAsset? SelfAsset = null)
     {
-        public string Label => Asset?.Label ?? "Сам с собой";
+        public string Label => Asset?.Label ?? Localization.Text("Сам с собой");
         public TileAsset? DisplayAsset => Asset ?? SelfAsset;
         public string Caption => Asset is null ? "↻ A" : $"{Asset.Width}×{Asset.Height}";
         public override string ToString() => Label;
@@ -43,7 +43,7 @@ public partial class TileInspectorWindow : Window
         assetList.ItemsSource = _assets;
         _ready = true;
         preview.PixelHovered += text => pixelLabel.Text = text.Length == 0
-            ? "Наведите курсор на тайл, чтобы увидеть Δ для строки и столбца." : text;
+            ? Localization.Text("Наведите курсор на тайл, чтобы увидеть Δ для строки и столбца.") : text;
         InitializePainting();
         previewScroll.PreviewMouseWheel += (_, e) =>
         {
@@ -78,11 +78,11 @@ public partial class TileInspectorWindow : Window
         {
             if (!ConfirmReplaceCollection()) return;
             try { LoadCollectionFromFile(path); }
-            catch (Exception ex) { statusLabel.Text = "Не удалось открыть коллекцию: " + ex.Message; }
+            catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось открыть коллекцию: ") + ex.Message; }
             return;
         }
         int version = ++_loadVersion;
-        statusLabel.Text = automatic ? "Файл изменён · обновление…" : "Загрузка и анализ краёв…";
+        statusLabel.Text = automatic ? Localization.Text("Файл изменён · обновление…") : Localization.Text("Загрузка и анализ краёв…");
         try
         {
             string fullPath = Path.GetFullPath(path);
@@ -90,7 +90,7 @@ public partial class TileInspectorWindow : Window
             if (existing?.HasLocalEdits == true && !discardEdits)
             {
                 if (!automatic) assetList.SelectedItem = existing;
-                statusLabel.Text = "В тайле есть локальные правки. Перечитайте файл вручную, чтобы заменить их.";
+                statusLabel.Text = Localization.Text("В тайле есть локальные правки. Перечитайте файл вручную, чтобы заменить их.");
                 return;
             }
             long assetVersion = existing?.Version ?? 0;
@@ -114,7 +114,7 @@ public partial class TileInspectorWindow : Window
         catch (Exception ex)
         {
             if (!_closed && version == _loadVersion)
-                statusLabel.Text = $"Не удалось прочитать файл: {ex.Message}" + (Analysis is not null ? " · Показана предыдущая версия." : "");
+                statusLabel.Text = Localization.Format("Не удалось прочитать файл: {0}", ex.Message) + (Analysis is not null ? Localization.Text(" · Показана предыдущая версия.") : "");
         }
     }
 
@@ -140,7 +140,7 @@ public partial class TileInspectorWindow : Window
     public void SelectCompanion(Guid? id)
     {
         if (id is not null && !companionInput.Items.Cast<CompanionChoice>().Any(choice => choice.Asset?.Id == id))
-            throw new ArgumentException("Соседний тайл должен иметь тот же размер, что и активный.");
+            throw new ArgumentException(Localization.Text("Соседний тайл должен иметь тот же размер, что и активный."));
         companionInput.SelectedItem = companionInput.Items.Cast<CompanionChoice>().First(choice => choice.Asset?.Id == id);
     }
 
@@ -165,8 +165,8 @@ public partial class TileInspectorWindow : Window
         if (active is null)
         {
             preview.Clear(); onboarding.Visibility = Visibility.Visible;
-            fileLabel.Text = "Добавьте тайлы в коллекцию";
-            xSummary.Text = "X · нет изображения"; ySummary.Text = "Y · нет изображения";
+            fileLabel.Text = Localization.Text("Добавьте тайлы в коллекцию");
+            xSummary.Text = Localization.Text("X · нет изображения"); ySummary.Text = Localization.Text("Y · нет изображения");
             reloadButton.IsEnabled = exportButton.IsEnabled = false;
             return;
         }
@@ -176,7 +176,7 @@ public partial class TileInspectorWindow : Window
         preview.SetPair(active.Image, companion?.Image, analysis, reverse);
         onboarding.Visibility = Visibility.Collapsed;
         fileLabel.Text = $"A: {active.Label}"; fileLabel.ToolTip = active.SourcePath ?? active.AtlasSourcePath;
-        pairLabel.Text = companion is null ? "Сам с собой" : $"A: {active.Name}\nB: {companion.Name}\nЧередование A/B; Δ среднее/макс.";
+        pairLabel.Text = companion is null ? Localization.Text("Сам с собой") : Localization.Format("A: {0}\nB: {1}\nЧередование A/B; Δ среднее/макс.", active.Name, companion.Name);
         reloadButton.IsEnabled = active.SourcePath is not null && !_busy;
         exportButton.IsEnabled = !_busy;
         RefreshPreview();
@@ -194,14 +194,14 @@ public partial class TileInspectorWindow : Window
             : TileZoomFactors[zoomInput.SelectedIndex];
         if (zoomInput.SelectedIndex == 0 && scale >= 1) scale = Math.Max(1, Math.Floor(scale));
         double threshold = thresholdInput.Value;
-        thresholdLabel.Text = $"Порог различия Δ: {threshold:F1}";
-        opacityLabel.Text = $"Непрозрачность: {opacityInput.Value:F0}%";
+        thresholdLabel.Text = Localization.Format("Порог различия Δ: {0:F1}", threshold);
+        opacityLabel.Text = Localization.Format("Непрозрачность: {0:F0}%", opacityInput.Value);
         preview.Configure(repeatX, repeatY, copies, scale, HeatmapEnabled, guidesInput.IsChecked == true,
             threshold, opacityInput.Value / 100, stripeInput.Value, backgroundInput.SelectedIndex);
         if (CompanionAsset is null)
         {
-            xSummary.Text = Summary("X · левый ↔ правый", Analysis.Horizontal, repeatX, threshold);
-            ySummary.Text = Summary("Y · верхний ↔ нижний", Analysis.Vertical, repeatY, threshold);
+            xSummary.Text = Summary(Localization.Text("X · левый ↔ правый"), Analysis.Horizontal, repeatX, threshold);
+            ySummary.Text = Summary(Localization.Text("Y · верхний ↔ нижний"), Analysis.Vertical, repeatY, threshold);
         }
         else
         {
@@ -212,19 +212,19 @@ public partial class TileInspectorWindow : Window
 
     private static string Summary(string axis, double[] values, bool enabled, double threshold)
     {
-        if (!enabled) return $"{axis} · выключено";
+        if (!enabled) return Localization.Format("{0} · выключено", axis);
         var summary = TileSeamAnalysis.Summarize(values, threshold);
-        string verdict = summary.Maximum < .000001 ? "края совпадают" : summary.AboveThreshold == 0 ? "в пределах порога" : "есть различия";
-        return $"{axis} · {verdict}\nΔ среднее {summary.Mean:F2} · макс. {summary.Maximum:F2} · выше порога {summary.AboveThreshold}/{summary.Count} ({100.0 * summary.AboveThreshold / summary.Count:F1}%)";
+        string verdict = summary.Maximum < .000001 ? Localization.Text("края совпадают") : summary.AboveThreshold == 0 ? Localization.Text("в пределах порога") : Localization.Text("есть различия");
+        return Localization.Format("{0} · {1}\nΔ среднее {2:F2} · макс. {3:F2} · выше порога {4}/{5} ({6:F1}%)", axis, verdict, summary.Mean, summary.Maximum, summary.AboveThreshold, summary.Count, 100.0 * summary.AboveThreshold / summary.Count);
     }
 
     private static string PairSummary(string axis, double[] forward, double[] reverse, bool enabled, double threshold)
     {
-        if (!enabled) return $"{axis} · выключено";
+        if (!enabled) return Localization.Format("{0} · выключено", axis);
         string Describe(string direction, double[] values)
         {
             var s = TileSeamAnalysis.Summarize(values, threshold);
-            return $"{direction}: Δ {s.Mean:F2}/{s.Maximum:F2} · >порога {s.AboveThreshold}/{s.Count} ({100.0 * s.AboveThreshold / s.Count:F1}%)";
+            return Localization.Format("{0}: Δ {1:F2}/{2:F2} · >порога {3}/{4} ({5:F1}%)", direction, s.Mean, s.Maximum, s.AboveThreshold, s.Count, 100.0 * s.AboveThreshold / s.Count);
         }
         return $"{axis} · {Describe("A→B", forward)}\n     {Describe("B→A", reverse)}";
     }
@@ -245,7 +245,7 @@ public partial class TileInspectorWindow : Window
                 watcher.Error += (_, _) => QueueReload(null);
                 watcher.EnableRaisingEvents = true; _watchers.Add(watcher);
             }
-            catch (Exception ex) { statusLabel.Text = $"Автообновление недоступно: {ex.Message}"; }
+            catch (Exception ex) { statusLabel.Text = Localization.Format("Автообновление недоступно: {0}", ex.Message); }
         }
     }
 
@@ -274,7 +274,7 @@ public partial class TileInspectorWindow : Window
             {
                 var asset = _assets.FirstOrDefault(item => string.Equals(item.SourcePath, path, StringComparison.OrdinalIgnoreCase));
                 if (asset is null) continue;
-                if (asset.HasLocalEdits) { statusLabel.Text = $"{asset.Name}: файл изменён снаружи; локальные правки сохранены. Для замены перечитайте вручную."; continue; }
+                if (asset.HasLocalEdits) { statusLabel.Text = Localization.Format("{0}: файл изменён снаружи; локальные правки сохранены. Для замены перечитайте вручную.", asset.Name); continue; }
                 long version = asset.Version;
                 try
                 {
@@ -289,9 +289,9 @@ public partial class TileInspectorWindow : Window
                         if (selected) assetList.SelectedItem = replacement;
                     }
                     SetProjectDirty(); RefreshActiveAsset();
-                    statusLabel.Text = $"Обновлено из файла · {asset.Name}";
+                    statusLabel.Text = Localization.Format("Обновлено из файла · {0}", asset.Name);
                 }
-                catch (Exception ex) { if (!_closed) statusLabel.Text = $"{asset.Name}: {ex.Message} · Показана предыдущая версия."; }
+                catch (Exception ex) { if (!_closed) statusLabel.Text = Localization.Format("{0}: {1} · Показана предыдущая версия.", asset.Name, ex.Message); }
             }
         }
         finally { _reloading = false; }
@@ -300,13 +300,13 @@ public partial class TileInspectorWindow : Window
     private async void OpenClicked(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
-        var dialog = new OpenFileDialog { Title = "Добавить тайлы", Multiselect = true, Filter = "Изображения|*.png;*.bmp;*.gif;*.jpg;*.jpeg;*.tif;*.tiff|Все файлы|*.*" };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Добавить тайлы"), Multiselect = true, Filter = Localization.Text("Изображения|*.png;*.bmp;*.gif;*.jpg;*.jpeg;*.tif;*.tiff|Все файлы|*.*") };
         if (dialog.ShowDialog(this) == true) await AddFilesAsync(dialog.FileNames);
     }
     private async void ReloadClicked(object sender, RoutedEventArgs e)
     {
         if (ActiveAsset is not { SourcePath: { } path } asset || _busy) return;
-        if (asset.HasLocalEdits && TesseraDialog.Show(this, "Заменить локальные правки активного тайла содержимым исходного файла?", "Перечитать тайл", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (asset.HasLocalEdits && TesseraDialog.Show(this, Localization.Text("Заменить локальные правки активного тайла содержимым исходного файла?"), Localization.Text("Перечитать тайл"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         await LoadFileAsync(path, discardEdits: true);
     }
     private void FileDragOver(object sender, DragEventArgs e)

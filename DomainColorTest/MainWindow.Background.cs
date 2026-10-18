@@ -13,8 +13,11 @@ public partial class MainWindow
         Closed += (_, _) => backgroundWorkspace.Dispose();
     }
 
-    private void UpdateBusyIndicator() => SetVisible(busyIndicator,
-        _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy);
+    private void UpdateBusyIndicator()
+    {
+        SetVisible(busyIndicator, WorkspaceBusy);
+        UpdateNavigationState();
+    }
 
     private void OpenBackgroundWorkspace(object sender, RoutedEventArgs e) => ShowBackgroundWorkspace();
 
@@ -23,13 +26,14 @@ public partial class MainWindow
         if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
         SetVisible(homeScroll, false);
         SetVisible(workspaceHost, false);
-        SetVisible(editorToolbar, false);
+
         SetVisible(iconWorkspace, false);
         SetVisible(asepriteWorkspace, false);
         SetVisible(backgroundWorkspace, true);
         SetVisible(moodboardWorkspace, false);
         backgroundWorkspace.SetEditorMaterials(GetEditorMaterials());
-        statusLabel.Text = "Готово";
+        HideWorkspaceBrowser();
+        statusLabel.Text = Localization.Text("Готово");
     }
 
     private void UseEditorMaterialForBackground(EditorMaterial material)
@@ -40,7 +44,7 @@ public partial class MainWindow
             using var image = ImageLibrary.ReadBitmap(material.SnapshotPath);
             backgroundWorkspace.SetImage(image, material.FileLabel, material.OriginalPath ?? material.SnapshotPath);
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть материал: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось открыть материал: {0}", ex.Message); }
     }
 
     private bool IsBackgroundDropTarget(DependencyObject? target)
@@ -73,6 +77,6 @@ public partial class MainWindow
                 if (path is not null) await backgroundWorkspace.LoadFileAsync(path);
             }
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть изображение: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось открыть изображение: {0}", ex.Message); }
     }
 }

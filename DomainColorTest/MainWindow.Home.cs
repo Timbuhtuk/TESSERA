@@ -23,17 +23,14 @@ public partial class MainWindow
         {
             if (e.Key == Key.O && Keyboard.Modifiers == ModifierKeys.Control)
             {
-                if (asepriteWorkspace.Visibility == Visibility.Visible) _ = asepriteWorkspace.OpenAsync();
-                else if (iconWorkspace.Visibility == Visibility.Visible) _ = iconWorkspace.OpenAsync();
-                else if (backgroundWorkspace.Visibility == Visibility.Visible) _ = backgroundWorkspace.OpenAsync();
-                else if (moodboardWorkspace.Visibility == Visibility.Visible) _ = moodboardWorkspace.AddFilesFromDialogAsync();
-                else OpenImage(this, EventArgs.Empty);
                 e.Handled = true;
+                if (openMenuItem.IsEnabled) openMenuItem.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, openMenuItem));
             }
             if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control &&
-                workspaceHost.Visibility == Visibility.Visible && saveButton.IsEnabled)
+                (workspaceHost.Visibility == Visibility.Visible && saveMenuItem.IsEnabled || saveDocumentMenuItem.IsEnabled))
             {
-                SaveImage(this, EventArgs.Empty);
+                var command = workspaceHost.Visibility == Visibility.Visible ? saveMenuItem : saveDocumentMenuItem;
+                command.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, command));
                 e.Handled = true;
             }
         };
@@ -51,6 +48,7 @@ public partial class MainWindow
     private void ShowHome()
     {
         if (!_homeReady || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) return;
+        PersistWorkspaceState();
         CloseEditorTools();
         RefreshHome();
         SetVisible(processButton, false);
@@ -60,12 +58,14 @@ public partial class MainWindow
         SetVisible(moodboardWorkspace, false);
         SetVisible(homeScroll, true);
         SetVisible(workspaceHost, false);
-        SetVisible(editorToolbar, false);
+
         homeScroll.ScrollToTop();
-        statusLabel.Text = "Готово";
+        statusLabel.Text = Localization.Text("Готово");
         if (SystemParameters.ClientAreaAnimation)
             homeContent.BeginAnimation(OpacityProperty, new DoubleAnimation(0.65, 1, TimeSpan.FromMilliseconds(180)));
         UpdateCardWidth();
+        if (_workspaceReady) { homeScroll.Visibility = Visibility.Collapsed; ShowWorkspaceBrowser(); }
+        UpdateNavigationState();
     }
 
     private void ShowEditor()
@@ -77,9 +77,11 @@ public partial class MainWindow
         SetVisible(backgroundWorkspace, false);
         SetVisible(moodboardWorkspace, false);
         SetVisible(workspaceHost, true);
-        SetVisible(editorToolbar, true);
+
         SetVisible(processButton, true);
+        HideWorkspaceBrowser();
         UpdateResponsiveLayout();
+        UpdateNavigationState();
     }
     private void HomeOpenImage(object sender, RoutedEventArgs e) => OpenImage(sender, e);
 
@@ -87,7 +89,7 @@ public partial class MainWindow
     {
         ShowHome();
         homeScroll.UpdateLayout();
-        libraryHeading.BringIntoView();
+        if (!_workspaceReady) libraryHeading.BringIntoView();
     }
 
     private void OpenLibraryCard(object sender, RoutedEventArgs e)
@@ -98,7 +100,7 @@ public partial class MainWindow
             SelectSource(source);
             ShowEditor();
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось открыть изображение: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось открыть изображение: {0}", ex.Message); }
     }
 
     private void UpdateCardWidth()
@@ -128,12 +130,14 @@ public partial class MainWindow
         SetVisible(iconBannerArt, ActualWidth >= 1000);
         SetVisible(backgroundBannerArt, ActualWidth >= 1100);
         SetVisible(moodboardBannerArt, ActualWidth >= 1050);
+        SetVisible(heroCompactScrim, compact);
         heroTitle.LineHeight = compact ? 36 : 42;
         previewArea.Margin = compact ? new Thickness(12, 0, 12, 10) : new Thickness(18, 0, 18, 12);
         workspaceHost.VerticalScrollBarVisibility = compact ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
         UpdatePreviewOrientation();
         UpdatePreviewHeight();
         UpdateCardWidth();
+        UpdateNavigationState();
     }
 
     private void UpdatePreviewOrientation()

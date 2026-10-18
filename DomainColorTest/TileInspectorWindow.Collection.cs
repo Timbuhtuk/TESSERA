@@ -14,11 +14,11 @@ public partial class TileInspectorWindow
         UpdateProjectTitle();
     }
 
-    private void UpdateProjectTitle() => Title = $"Проверка тайлинга · {(_projectPath is null ? "TESSERA" : Path.GetFileName(_projectPath))}{(_projectDirty ? " *" : "")}";
+    private void UpdateProjectTitle() => Title = Localization.Format("Проверка тайлинга · {0}{1}", (_projectPath is null ? "TESSERA" : Path.GetFileName(_projectPath)), (_projectDirty ? " *" : ""));
 
     public void SaveCollectionToFile(string path)
     {
-        if (_busy) throw new InvalidOperationException("Дождитесь сглаживания.");
+        if (_busy) throw new InvalidOperationException(Localization.Text("Дождитесь сглаживания."));
         FinishStroke();
         var settings = new TileCollectionSettings
         {
@@ -34,12 +34,13 @@ public partial class TileInspectorWindow
         };
         TileCollectionFile.Save(path, _assets, settings);
         _projectPath = Path.GetFullPath(path); _projectDirty = false;
-        UpdateProjectTitle(); statusLabel.Text = "Коллекция и правки сохранены · " + Path.GetFileName(path);
+        UpdateProjectTitle(); statusLabel.Text = Localization.Text("Коллекция и правки сохранены · ") + Path.GetFileName(path);
+        WorkspaceSaved?.Invoke();
     }
 
     public void LoadCollectionFromFile(string path)
     {
-        if (_busy) throw new InvalidOperationException("Дождитесь сглаживания.");
+        if (_busy) throw new InvalidOperationException(Localization.Text("Дождитесь сглаживания."));
         // Read the complete project before changing the current session.
         var loaded = TileCollectionFile.Load(path);
         FinishStroke(); _loadVersion++;
@@ -75,7 +76,7 @@ public partial class TileInspectorWindow
         _projectPath = Path.GetFullPath(path); _projectDirty = false;
         UpdateProjectTitle(); ConfigureWatchers();
         if (ActiveAsset is not null) assetList.ScrollIntoView(ActiveAsset);
-        statusLabel.Text = $"Коллекция открыта · {_assets.Count} ассетов";
+        statusLabel.Text = Localization.Format("Коллекция открыта · {0} ассетов", _assets.Count);
     }
 
     private static double Finite(double value, double min, double max, double fallback) => double.IsFinite(value) ? Math.Clamp(value, min, max) : fallback;
@@ -84,26 +85,26 @@ public partial class TileInspectorWindow
     {
         var dialog = new SaveFileDialog
         {
-            Title = "Сохранить коллекцию тайлов", Filter = "Коллекция Tessera|*.ttiles", DefaultExt = ".ttiles",
+            Title = Localization.Text("Сохранить коллекцию тайлов"), Filter = Localization.Text("Коллекция Tessera|*.ttiles"), DefaultExt = ".ttiles",
             AddExtension = true, FileName = _projectPath is null ? "tiles.ttiles" : Path.GetFileName(_projectPath),
             InitialDirectory = _projectPath is null ? "" : Path.GetDirectoryName(_projectPath)
         };
         if (dialog.ShowDialog(this) != true) return false;
         try { SaveCollectionToFile(dialog.FileName); return true; }
-        catch (Exception ex) { statusLabel.Text = "Не удалось сохранить коллекцию: " + ex.Message; return false; }
+        catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось сохранить коллекцию: ") + ex.Message; return false; }
     }
 
     private bool ConfirmReplaceCollection()
     {
         FinishStroke();
         if (_allowClose || !_projectDirty) return true;
-        var answer = TesseraDialog.Show(this, "Сохранить изменения коллекции перед закрытием или открытием другого проекта?", "Коллекция тайлов", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        var answer = TesseraDialog.Show(this, Localization.Text("Сохранить изменения коллекции перед закрытием или открытием другого проекта?"), Localization.Text("Коллекция тайлов"), MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return answer == MessageBoxResult.No || answer == MessageBoxResult.Yes && SaveCollectionWithDialog();
     }
 
     private void ConfirmWindowClosing(object? sender, CancelEventArgs e)
     {
-        if (_busy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения сглаживания."; return; }
+        if (_busy) { e.Cancel = true; statusLabel.Text = Localization.Text("Дождитесь завершения сглаживания."); return; }
         if (!ConfirmReplaceCollection()) e.Cancel = true;
     }
 
@@ -112,28 +113,29 @@ public partial class TileInspectorWindow
     private void SaveCollectionClicked(object sender, RoutedEventArgs e)
     {
         if (_busy) return;
+        if (WorkspaceSavePath is { } workspacePath) { try { SaveCollectionToFile(workspacePath); } catch (Exception ex) { statusLabel.Text = ex.Message; } return; }
         if (_projectPath is null || sender is System.Windows.Controls.Button) SaveCollectionWithDialog();
         else
         {
             try { SaveCollectionToFile(_projectPath); }
-            catch (Exception ex) { statusLabel.Text = "Не удалось сохранить коллекцию: " + ex.Message; }
+            catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось сохранить коллекцию: ") + ex.Message; }
         }
     }
 
     private void OpenCollectionClicked(object sender, RoutedEventArgs e)
     {
         if (_busy || !ConfirmReplaceCollection()) return;
-        var dialog = new OpenFileDialog { Title = "Открыть коллекцию", Filter = "Коллекция Tessera|*.ttiles" };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Открыть коллекцию"), Filter = Localization.Text("Коллекция Tessera|*.ttiles") };
         if (dialog.ShowDialog(this) != true) return;
         try { LoadCollectionFromFile(dialog.FileName); }
-        catch (Exception ex) { statusLabel.Text = "Не удалось открыть коллекцию: " + ex.Message; }
+        catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось открыть коллекцию: ") + ex.Message; }
     }
 
     private void RemoveAssetClicked(object sender, RoutedEventArgs e)
     {
         if (_busy || ActiveAsset is not { } asset) return;
         FinishStroke();
-        if (asset.HasLocalEdits && TesseraDialog.Show(this, "Убрать тайл с локальными правками из коллекции?", "Убрать ассет", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (asset.HasLocalEdits && TesseraDialog.Show(this, Localization.Text("Убрать тайл с локальными правками из коллекции?"), Localization.Text("Убрать ассет"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         int index = _assets.IndexOf(asset);
         _assets.Remove(asset);
         assetList.SelectedItem = _assets.Count == 0 ? null : _assets[Math.Min(index, _assets.Count - 1)];
@@ -143,13 +145,13 @@ public partial class TileInspectorWindow
 
     public void ExportActivePng(string path)
     {
-        if (ActiveAsset is not { } asset) throw new InvalidOperationException("Выберите тайл.");
+        if (ActiveAsset is not { } asset) throw new InvalidOperationException(Localization.Text("Выберите тайл."));
         FinishStroke();
         path = Path.GetFullPath(path);
         if (_assets.Any(item => string.Equals(item.SourcePath, path, StringComparison.OrdinalIgnoreCase) ||
             string.Equals(item.AtlasSourcePath, path, StringComparison.OrdinalIgnoreCase)) ||
             string.Equals(_projectPath, path, StringComparison.OrdinalIgnoreCase))
-            throw new IOException("Выберите новый PNG: исходники и проект не перезаписываются.");
+            throw new IOException(Localization.Text("Выберите новый PNG: исходники и проект не перезаписываются."));
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
@@ -162,10 +164,10 @@ public partial class TileInspectorWindow
     private void ExportClicked(object sender, RoutedEventArgs e)
     {
         if (_busy || ActiveAsset is not { } asset) return;
-        var dialog = new SaveFileDialog { Title = "Экспорт тайла", Filter = "PNG|*.png", DefaultExt = ".png", AddExtension = true,
+        var dialog = new SaveFileDialog { Title = Localization.Text("Экспорт тайла"), Filter = "PNG|*.png", DefaultExt = ".png", AddExtension = true,
             FileName = Path.GetFileNameWithoutExtension(asset.Name) + "-edited.png" };
         if (dialog.ShowDialog(this) != true) return;
-        try { ExportActivePng(dialog.FileName); statusLabel.Text = "PNG сохранён · " + Path.GetFileName(dialog.FileName); }
-        catch (Exception ex) { statusLabel.Text = "Не удалось экспортировать PNG: " + ex.Message; }
+        try { ExportActivePng(dialog.FileName); statusLabel.Text = Localization.Text("PNG сохранён · ") + Path.GetFileName(dialog.FileName); }
+        catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось экспортировать PNG: ") + ex.Message; }
     }
 }

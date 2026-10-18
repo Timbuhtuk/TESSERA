@@ -1,5 +1,7 @@
 # Using Tessera
 
+Read the [workspace guide](WORKSPACE_PROTOTYPE.md) for the File/Image/Tools/View menus, projects, shared assets, themes, language settings and portable storage. The processing descriptions below document the tools available through those menus.
+
 Download `Tessera.exe` or `Tessera-win-x64.zip` from [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). These Windows x64 builds run offline without installing .NET. Earlier releases used the Pixelizator name.
 
 The application interface currently uses Russian labels. This guide describes the actions in English.
@@ -92,9 +94,9 @@ Open **Image board** from the home screen and choose a canvas size from 128 to 1
 
 ## Storage and updates
 
-The library is saved automatically in `%LOCALAPPDATA%\Tessera\Library`. On the first launch after updating, Tessera copies existing images and result histories from `%LOCALAPPDATA%\Pixelizator\Library` into the new library. The old directory remains as a backup and is not read again after a successful migration. To move the library to another computer, copy the Tessera library directory separately.
+The workspace library is saved automatically in `WorkspaceData/Library` beside `Tessera.exe`. On first launch, existing images and histories from `%LOCALAPPDATA%\Tessera\Library` are copied into it. The original library remains intact. Move the entire `WorkspaceData` directory with the executable to retain projects, tags, documents and histories.
 
-Tessera checks the latest GitHub release in the background at startup. Use **Check for updates** in the bottom bar or File menu to check manually. When a newer version is available, select **Update to v…** and confirm. Tessera downloads the standalone executable, verifies its SHA-256 digest, closes, replaces the executable and restarts. Your image library stays in `%LOCALAPPDATA%\Tessera\Library`. The automatic install is available when running the published `Tessera.exe` from a writable folder; development builds open the release page instead. If a check fails or you are offline, the current app keeps working.
+Tessera checks the latest GitHub release in the background at startup. Use **Check for updates** in the bottom bar or File menu to check manually. When a newer version is available, select **Update to v…** and confirm. Tessera downloads the standalone executable, verifies its SHA-256 digest, closes, replaces the executable and restarts. `WorkspaceData` stays in place. The automatic install is available when running the published `Tessera.exe` from a writable folder; development builds open the release page instead. If a check fails or you are offline, the current app keeps working.
 
 For more detail, see [grid alignment](../PixelArtAlignment/README.md), [ICO export](../PixelArtDownscale/ICO.md) and the [CLI reference](CLI.md).
 

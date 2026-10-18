@@ -38,7 +38,7 @@ internal static class LibraryRemovalChecks
             var generations = Get<ListBox>("generationStrip");
             var original = sources.Items.Cast<SourceEntry>().Single(s => s.Id == seeded[0].Id);
             sources.SelectedItem = original; Pump();
-            Get<ComboBox>("zoomInput").SelectedIndex = 9; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 9; Pump();
             Capture("thumbnail-scrollbars.png");
             foreach (var bar in Descendants<ScrollBar>(window)) VerifyStyle(bar);
             var previewScroll = (ScrollViewer)Get<PixelPreview>("sourcePreview").Children[0];
@@ -47,7 +47,7 @@ internal static class LibraryRemovalChecks
             VerifyScroll(Descendants<ScrollViewer>(sources).First(), Orientation.Horizontal);
             VerifyScroll(Descendants<ScrollViewer>(generations).First(), Orientation.Horizontal);
 
-            Get<Button>("profileToolButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            NavigationTest.Click(window, "profileMenuItem"); Pump();
             var log = Get<TextBox>("processingLog");
             Descendants<Expander>(Window.GetWindow(log)!).First().IsExpanded = true; Pump();
             log.Text = string.Join(Environment.NewLine, Enumerable.Range(1, 40).Select(i => $"Строка журнала {i}"));
@@ -55,10 +55,12 @@ internal static class LibraryRemovalChecks
             foreach (var bar in Descendants<ScrollBar>(log)) VerifyStyle(bar);
             VerifyScroll(Descendants<ScrollViewer>(log).First(), Orientation.Vertical);
             Capture("scrollbars-log.png");
-            var zoom = Get<ComboBox>("zoomInput"); zoom.MaxDropDownHeight = 80; zoom.IsDropDownOpen = true; Pump();
+            NavigationTest.Click(window, "viewMenu"); Pump();
+            var zoom = Get<MenuItem>("zoomMenu"); zoom.IsSubmenuOpen = true; Pump();
             var popup = (Popup)zoom.Template.FindName("PART_Popup", zoom);
+            ((FrameworkElement)popup.Child).MaxHeight = 80; Pump();
             foreach (var bar in Descendants<ScrollBar>(popup.Child)) VerifyStyle(bar);
-            zoom.IsDropDownOpen = false;
+            zoom.IsSubmenuOpen = false; Get<MenuItem>("viewMenu").IsSubmenuOpen = false;
             Window.GetWindow(log)!.Close();
 
             var selected = original.SelectedGeneration;
@@ -83,7 +85,7 @@ internal static class LibraryRemovalChecks
                 Require(original.Generations.Count < before, "Result deletion stopped: " + Get<TextBlock>("statusLabel").Text);
             }
             Require(generations.Visibility == Visibility.Collapsed && Get<PixelPreview>("resultPreview").Image is null &&
-                !Get<Button>("saveButton").IsEnabled && Get<PixelPreview>("sourcePreview").Image is not null, "Deleting last result left stale UI");
+                !Get<MenuItem>("saveMenuItem").IsEnabled && Get<PixelPreview>("sourcePreview").Image is not null, "Deleting last result left stale UI");
 
             // Keep a generation on a different source to check cascading deletion of its history.
             var other = sources.Items.Cast<SourceEntry>().Single(s => s.Id == seeded[1].Id);
@@ -112,7 +114,7 @@ internal static class LibraryRemovalChecks
                 Require(sources.Items.Count < before, "Source deletion stopped: " + Get<TextBlock>("statusLabel").Text);
             }
             Require(Get<PixelPreview>("sourcePreview").Image is null && Get<PixelPreview>("resultPreview").Image is null &&
-                !Get<Button>("processButton").IsEnabled && !Get<Button>("saveButton").IsEnabled && !Get<Button>("alignButton").IsEnabled &&
+                !Get<Button>("processButton").IsEnabled && !Get<MenuItem>("saveMenuItem").IsEnabled && !Get<Button>("alignButton").IsEnabled &&
                 generations.Visibility == Visibility.Collapsed && library.Load().Count == 0, "Deleting last source left stale state/history");
             Require(seeded.All(s => File.Exists(s.OriginalPath)) && File.Exists(exported), "Deletion touched original/exported files");
             Invoke("LoadImage", seeded[0].OriginalPath); Pump();

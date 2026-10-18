@@ -10,7 +10,7 @@ public static class TileAssetProcessing
     public static byte[] Smooth(byte[] pixels, int width, int height, int passes, bool edgesOnly, int band)
     {
         if (width <= 0 || height <= 0 || pixels.Length != checked(width * height * 4) || band < 1)
-            throw new ArgumentException("Некорректный размер тайла или краевой полосы.");
+            throw new ArgumentException(Localization.Text("Некорректный размер тайла или краевой полосы."));
         using var source = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         var bounds = new Rectangle(0, 0, width, height);
         var sourceBits = source.LockBits(bounds, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);

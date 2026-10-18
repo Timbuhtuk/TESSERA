@@ -46,6 +46,7 @@ Historical project and namespace names are retained:
 - `Pixelizator.Cli`: [command-line interface](CLI.md) to the image algorithms.
 - `PixelArtAlignment.Tests`: algorithms, editor, library and navigation checks.
 - `Pixelizator.Cli.Tests`: CLI integration and image-processing checks.
+- `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md) for all Tessera CLI commands and options; `.agents/plugins/marketplace.json` registers the repository marketplace.
 - `artifacts`: local builds, test output and archives; ignored by Git.
 
 The editable Tessera mark and its generation script are documented in the [asset README](../DomainColorTest/Assets/README.md).
@@ -76,7 +77,7 @@ Build the tests, then run `dotnet run --project PixelArtAlignment.Tests -c Relea
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository is now `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. The library now lives at `%LOCALAPPDATA%\Tessera\Library`. On first launch, `LibraryLocation` copies entries from `%LOCALAPPDATA%\Pixelizator\Library` without deleting the old directory. A marker in the Tessera data directory prevents removed entries from being imported again on later launches.
+Tessera was previously named Pixelizator. The repository is `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. Startup prepares the portable `WorkspaceData/Library` beside the executable. It copies existing GUID image/history directories from `%LOCALAPPDATA%\Tessera\Library` once. `LibraryLocation` first handles older `%LOCALAPPDATA%\Pixelizator\Library` entries without deleting their originals. Migration markers prevent later launches from overwriting workspace edits.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 
@@ -97,6 +98,9 @@ The release stays a draft until all assets are uploaded. Rerunning a completed p
 
 Manual publication is available through **Actions → Build and release → Run workflow**, selecting `main`. The workflow uses the built-in `GITHUB_TOKEN`; no additional secret is required. The latest-release link follows the most recent published release.
 
-The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; the library remains in `%LOCALAPPDATA%\Tessera\Library`.
+The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; `WorkspaceData` remains in place.
 
 See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
+# Workspace experiment
+
+`WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).

@@ -22,7 +22,7 @@ public partial class MainWindow
             try { SelectSource(source); }
             catch (Exception ex)
             {
-                statusLabel.Text = $"Не удалось открыть сохранённый исходник: {ex.Message}";
+                statusLabel.Text = Localization.Format("Не удалось открыть сохранённый исходник: {0}", ex.Message);
                 _restoringHistory = true; sourceStrip.SelectedItem = _activeSource; _restoringHistory = false;
             }
         };
@@ -32,7 +32,7 @@ public partial class MainWindow
             try { SelectGeneration(generation); }
             catch (Exception ex)
             {
-                statusLabel.Text = $"Не удалось открыть результат: {ex.Message}";
+                statusLabel.Text = Localization.Format("Не удалось открыть результат: {0}", ex.Message);
                 _restoringHistory = true; generationStrip.SelectedItem = _activeSource?.SelectedGeneration; _restoringHistory = false;
             }
         };
@@ -45,6 +45,7 @@ public partial class MainWindow
             };
         PreviewDragOver += (sender, e) =>
         {
+            if (_workspaceBrowser?.Visibility == Visibility.Visible) return;
             if (IsMoodboardDropTarget(e.OriginalSource as DependencyObject))
             {
                 e.Effects = CanDropMoodboard(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
@@ -74,7 +75,14 @@ public partial class MainWindow
         };
         PreviewDrop += async (_, e) =>
         {
+            if (_workspaceBrowser?.Visibility == Visibility.Visible) return;
             e.Handled = true;
+            if (_workspaceReady && !IsMoodboardDropTarget(e.OriginalSource as DependencyObject) && e.Data.GetData(DataFormats.FileDrop) is string[] workspacePaths)
+            {
+                await ImportWorkspaceFilesAsync(workspacePaths);
+                if (_workspaceCatalog?.State.SelectedAsset is { } selectedId && _workspaceCatalog.State.Assets.FirstOrDefault(a => a.Id == selectedId) is { } selectedAsset) await OpenWorkspaceAssetAsync(selectedAsset);
+                return;
+            }
             if (IsMoodboardDropTarget(e.OriginalSource as DependencyObject)) { await DropMoodboardAsync(e); return; }
             if (IsAsepriteDropTarget(e.OriginalSource as DependencyObject, e.Data)) { await DropAsepriteAsync(e); return; }
             if (IsBackgroundDropTarget(e.OriginalSource as DependencyObject)) { await DropBackgroundAsync(e); return; }
@@ -98,9 +106,9 @@ public partial class MainWindow
             foreach (var source in _library.Load()) _sources.Add(source);
             if (_sources.Count > 0) SelectSource(_sources[^1]);
             if (_library.LoadWarnings.Count > 0)
-                statusLabel.Text = $"История открыта. Не удалось прочитать записей: {_library.LoadWarnings.Count}.";
+                statusLabel.Text = Localization.Format("История открыта. Не удалось прочитать записей: {0}.", _library.LoadWarnings.Count);
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось загрузить историю: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось загрузить историю: {0}", ex.Message); }
     }
 
     private static string[] DropPaths(DragEventArgs e) => e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] paths ? paths : [];
@@ -108,6 +116,12 @@ public partial class MainWindow
 
     private async Task AddImagesAsync(IEnumerable<string> paths)
     {
+        if (_workspaceReady)
+        {
+            await ImportWorkspaceFilesAsync(paths.ToArray());
+            if (_workspaceCatalog?.State.Assets.FirstOrDefault(a => a.Id == _workspaceCatalog.State.SelectedAsset) is { } asset) await OpenWorkspaceAssetAsync(asset);
+            return;
+        }
         if (_processing) return;
         SetProcessingState(true);
         var failures = new List<string>();
@@ -119,7 +133,7 @@ public partial class MainWindow
             {
                 try
                 {
-                    statusLabel.Text = $"Добавление: {Path.GetFileName(path)}…";
+                    statusLabel.Text = Localization.Format("Добавление: {0}…", Path.GetFileName(path));
                     var existing = _sources.ToArray();
                     var source = await Task.Run(() => _library.Import(path, existing));
                     if (!_sources.Contains(source)) { _sources.Add(source); added++; }
@@ -129,8 +143,8 @@ public partial class MainWindow
             }
             if (selected is not null) SelectSource(selected);
             statusLabel.Text = failures.Count == 0
-                ? $"Добавлено: {added}. Исходников в ленте: {_sources.Count}. История сохраняется автоматически."
-                : $"Добавлено: {added}. Не удалось открыть: {failures.Count}. {failures[0]}";
+                ? Localization.Format("Добавлено: {0}. Исходников в ленте: {1}. История сохраняется автоматически.", added, _sources.Count)
+                : Localization.Format("Добавлено: {0}. Не удалось открыть: {1}. {2}", added, failures.Count, failures[0]);
             statusLabel.ToolTip = failures.Count == 0 ? null : string.Join(Environment.NewLine, failures);
         }
         finally { SetProcessingState(false); }
@@ -145,6 +159,7 @@ public partial class MainWindow
 
     private void SelectSource(SourceEntry source)
     {
+        AdoptWorkspaceSource(source);
         if (ReferenceEquals(_activeSource, source)) { ShowEditor(); return; }
         var bitmap = ImageLibrary.ReadBitmap(_library.SourcePath(source));
         ShowEditor();
@@ -172,11 +187,12 @@ public partial class MainWindow
             else if (aspectLock.IsChecked == true) SizeChangedByUser(widthChanged: true);
             UpdateSourcePreview();
             UpdateSizeHint();
-            statusLabel.Text = "Исходник выбран. Перетащите ещё изображения или запустите обработку.";
+            statusLabel.Text = Localization.Text("Исходник выбран. Перетащите ещё изображения или запустите обработку.");
         }
         sourcePreview.ScrollToRelativePosition(0, 0);
         resultPreview.ScrollToRelativePosition(0, 0);
         SetProcessingState(_processing);
+        RestoreWorkspaceImageView(source);
     }
 
     private void ClearDisplayedResult()
@@ -184,7 +200,7 @@ public partial class MainWindow
         resultPreview.Image = null;
         _downscaledResult?.Dispose(); _downscaledResult = null;
         _resultStale = _resultPreservesTransparency = _resultIsAlignment = false;
-        resultCaption.Text = "РЕЗУЛЬТАТ";
+        resultCaption.Text = Localization.Text("РЕЗУЛЬТАТ");
         processingLog.Clear();
     }
 
@@ -203,8 +219,8 @@ public partial class MainWindow
             _resultIsAlignment = generation.IsAlignment;
             _resultPreservesTransparency = generation.PreservesTransparency;
             _resultStale = false;
-            resultCaption.Text = generation.Caption;
-            processingLog.Text = generation.Log;
+            resultCaption.Text = Localization.StoredText(generation.Caption);
+            processingLog.Text = Localization.StoredText(generation.Log);
             _activeSource.SelectedGeneration = generation;
             generationStrip.SelectedItem = generation;
             generationStrip.ScrollIntoView(generation);
@@ -213,7 +229,7 @@ public partial class MainWindow
         UpdateSourcePreview();
         UpdateSizeHint();
         SetProcessingState(_processing);
-        statusLabel.Text = $"Результат от {generation.CreatedAt:dd.MM.yyyy HH:mm:ss}. Сохранён в истории.";
+        statusLabel.Text = Localization.Format("Результат от {0:dd.MM.yyyy HH:mm:ss}. Сохранён в истории.", generation.CreatedAt);
     }
 
     private void RemoveLibraryItem(object sender, RoutedEventArgs e)
@@ -226,7 +242,7 @@ public partial class MainWindow
             if (element.DataContext is SourceEntry source) RemoveSource(source);
             else if (element.DataContext is GenerationEntry generation) RemoveGeneration(generation);
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось удалить запись или открыть соседнюю: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось удалить запись или открыть соседнюю: {0}", ex.Message); }
         finally { SetProcessingState(_processing); }
     }
 
@@ -235,7 +251,9 @@ public partial class MainWindow
         int index = _sources.IndexOf(source);
         if (index < 0) return;
         bool selected = ReferenceEquals(_activeSource, source);
-        var next = _sources.Count <= 1 ? null : _sources[index + 1 < _sources.Count ? index + 1 : index - 1];
+        var visible = sourceStrip.Items.Cast<SourceEntry>().ToList();
+        int visibleIndex = visible.IndexOf(source);
+        var next = visible.Count <= 1 || visibleIndex < 0 ? null : visible[visibleIndex + 1 < visible.Count ? visibleIndex + 1 : visibleIndex - 1];
         _library.RemoveSource(source);
         _restoringHistory = true;
         try
@@ -250,7 +268,7 @@ public partial class MainWindow
                 _selectedFilePath = null;
                 sourceStrip.SelectedItem = null;
                 generationStrip.ItemsSource = null;
-                fileLabel.Text = "Откройте изображение";
+                fileLabel.Text = Localization.Text("Откройте изображение");
                 fileLabel.ToolTip = null;
                 UpdateSourcePreview();
                 UpdateSizeHint();
@@ -258,9 +276,10 @@ public partial class MainWindow
         }
         finally { _restoringHistory = false; }
         if (selected && next is not null) SelectSource(next);
+        else if (selected && _workspaceReady) { _workspaceActive = null; ShowHome(); }
         statusLabel.Text = _sources.Count == 0
-            ? "Все исходники удалены из программы. Откройте или перетащите новое изображение."
-            : "Исходник и его результаты удалены из программы.";
+            ? Localization.Text("Все исходники удалены из программы. Откройте или перетащите новое изображение.")
+            : Localization.Text("Исходник и его результаты удалены из программы.");
     }
 
     private void RemoveGeneration(GenerationEntry generation)
@@ -293,7 +312,7 @@ public partial class MainWindow
             if (next is not null) SelectGeneration(next);
             else { UpdateSourcePreview(); UpdateSizeHint(); }
         }
-        statusLabel.Text = "Результат удалён из истории.";
+        statusLabel.Text = Localization.Text("Результат удалён из истории.");
     }
 
     private EditorSettings CaptureReadyModeSettings()
@@ -346,7 +365,7 @@ public partial class MainWindow
             gridCellInput.Value = settings.CellSize; detectGridInput.IsChecked = settings.DetectGrid;
             UpdateDependentControls();
             ditheringInput.IsChecked = !options.SpriteMode && options.Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && options.EnableDithering;
-            profileState.Text = "Параметры выбранного результата";
+            profileState.Text = Localization.Text("Параметры выбранного результата");
         }
         finally { _restoringHistory = false; }
     }

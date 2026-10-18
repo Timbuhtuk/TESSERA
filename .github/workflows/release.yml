@@ -98,12 +98,11 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Zoom the tile inspector with Ctrl plus the mouse wheel, keeping the point under the cursor where scroll bounds allow. Plain wheel input continues to scroll.
-          - Choose zoom steps from 6.25% to 6400%; the first wheel step from Fit uses the current displayed scale.
-          - Save the new zoom levels in collections while preserving the meaning of zoom settings in existing projects.
-          - Choose neighboring tiles by 64-pixel thumbnails on a checkerboard; names remain available as tooltips and accessibility labels.
-          - Show the active tile for the self-comparison option and update thumbnails as pixels are edited, while keeping the equal-size filter.
-          - Keep the Alt heatmap shortcut and seam statistics below the preview from the previous release.
+          - Organize images, animations, boards and tile collections in one workspace with projects, nested folders, tags and search.
+          - Use the title-bar File, Image, Tools and View menus, with responsive overflow and no duplicate opening/creation buttons on the home screen.
+          - Share assets across projects or make independent copies, and keep image histories connected to background removal, tile editing and boards.
+          - Select interface themes and Russian or English in Settings. The tile inspector retains Ctrl-wheel zoom, the Alt heatmap and neighbor thumbnails.
+          - Keep workspace data beside the executable in WorkspaceData/Library. Existing Tessera image histories are copied on first launch; move WorkspaceData with the app.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 
@@ -113,7 +112,7 @@ jobs:
 
           Download Tessera.exe or Tessera-win-x64.zip for the desktop app, or Tessera-cli-win-x64.zip for the CLI. No .NET installation is required. SHA256SUMS.txt contains the download checksums.
 
-          Previously named Pixelizator. The library is now stored at %LOCALAPPDATA%\Tessera\Library. On first launch, the old Pixelizator library is copied into it and retained as a backup. The application interface currently uses Russian labels.
+          Previously named Pixelizator. This release copies existing image histories from %LOCALAPPDATA%\Tessera\Library into WorkspaceData/Library beside the executable. The original library remains intact. Keep WorkspaceData when moving the app. Russian and English interface languages are available in Settings.
           '@
               Invoke-Gh release create $tag --target $env:GITHUB_SHA --title "Tessera $tag" --notes $notes --generate-notes --draft
           }

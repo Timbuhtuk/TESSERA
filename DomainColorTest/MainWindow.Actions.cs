@@ -64,15 +64,15 @@ public partial class MainWindow
         if ((modifiers & ModifierKeys.Control) == 0 || preview.Image is null || delta == 0) return false;
         var image = preview.Image;
         var anchor = preview.ImagePointAt(pointer);
-        double factor = zoomInput.SelectedIndex > 0 ? ZoomFactors[zoomInput.SelectedIndex] : preview.EffectiveZoom;
+        double factor = PreviewZoom > 0 ? ZoomFactors[PreviewZoom] : preview.EffectiveZoom;
         int steps = Math.Max(1, Math.Abs(delta / 120));
         for (int step = 0; step < steps; step++)
             factor = delta > 0
                 ? ZoomFactors.Skip(1).Where(z => z > factor + .000001).DefaultIfEmpty(factor).Min()
                 : ZoomFactors.Skip(1).Where(z => z < factor - .000001).DefaultIfEmpty(factor).Max();
         int index = Array.IndexOf(ZoomFactors, factor);
-        if (index < 1 || zoomInput.SelectedIndex == index) return true;
-        zoomInput.SelectedIndex = index;
+        if (index < 1 || PreviewZoom == index) return true;
+        PreviewZoom = index;
         int revision = ++_zoomRequestRevision;
         Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
         {
@@ -95,8 +95,8 @@ public partial class MainWindow
         var image = _activeSource?.SelectedGeneration is null ? _sourceImage : _downscaledResult;
         compactGridButton.IsEnabled = !_processing && image is not null && cellSize >= 2;
         compactGridButton.ToolTip = image is not null && cellSize >= 2
-            ? $"Одна ячейка {cellSize} × {cellSize} → один пиксель. Размер: {(image.Width - 1) / cellSize + 1} × {(image.Height - 1) / cellSize + 1}. Цвета и прозрачность сохраняются."
-            : "Выберите выровненный результат или добавленный из него исходник.";
+            ? Localization.Format("Одна ячейка {0} × {1} → один пиксель. Размер: {2} × {3}. Цвета и прозрачность сохраняются.", cellSize, cellSize, (image.Width - 1) / cellSize + 1, (image.Height - 1) / cellSize + 1)
+            : Localization.Text("Выберите выровненный результат или добавленный из него исходник.");
     }
 
     private async void CompactGrid(object? sender, RoutedEventArgs e)
@@ -109,7 +109,7 @@ public partial class MainWindow
         if (input is null) return;
         var settings = parent?.Settings ?? CaptureSettings();
         SetProcessingState(true);
-        statusLabel.Text = $"Сжатие сетки: ячейка {cellSize} × {cellSize} → один пиксель…";
+        statusLabel.Text = Localization.Format("Сжатие сетки: ячейка {0} × {1} → один пиксель…", cellSize, cellSize);
         try
         {
             using var source = (Bitmap)input.Clone();
@@ -120,17 +120,17 @@ public partial class MainWindow
                 {
                     Settings = settings, IsGridReduction = true, PreservesTransparency = true,
                     ParentGenerationId = parent?.Id, CellSize = cellSize,
-                    Caption = $"СЕТКА В 1 px · {compact.Width} × {compact.Height} · из ячейки {cellSize} px",
-                    Log = $"{source.Width} × {source.Height} → {compact.Width} × {compact.Height}. Одна ячейка — один пиксель. Неполные крайние ячейки сохранены."
+                    Caption = Localization.Format("СЕТКА В 1 px · {0} × {1} · из ячейки {2} px", compact.Width, compact.Height, cellSize),
+                    Log = Localization.Format("{0} × {1} → {2} × {3}. Одна ячейка — один пиксель. Неполные крайние ячейки сохранены.", source.Width, source.Height, compact.Width, compact.Height)
                 });
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = $"Готово · {generation.Width} × {generation.Height}. Каждая ячейка стала одним пикселем. Результат сохранён в истории.";
+            statusLabel.Text = Localization.Format("Готово · {0} × {1}. Каждая ячейка стала одним пикселем. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)
         {
-            statusLabel.Text = $"Не удалось сжать сетку: {ex.Message}";
+            statusLabel.Text = Localization.Format("Не удалось сжать сетку: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }
@@ -173,10 +173,11 @@ public partial class MainWindow
             var existing = _sources.ToArray();
             var imported = await Task.Run(() => _library.ImportGeneration(source, generation, existing));
             if (!_sources.Contains(imported)) _sources.Add(imported);
+            if (_workspaceReady && _workspaceCatalog!.State.Assets.FirstOrDefault(a => a.Id == imported.Id) is { } asset) AddNewWorkspaceAsset(asset);
             SelectSource(imported);
-            statusLabel.Text = "Результат добавлен как отдельный исходник. Можно продолжать обработку.";
+            statusLabel.Text = Localization.Text("Результат добавлен как отдельный исходник. Можно продолжать обработку.");
         }
-        catch (Exception ex) { statusLabel.Text = $"Не удалось добавить результат: {ex.Message}"; }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось добавить результат: {0}", ex.Message); }
         finally { SetProcessingState(false); }
     }
 }

@@ -175,7 +175,7 @@ public partial class MoodboardWorkspace : UserControl
     }
 
     public bool CanLeave() => !IsBusy && (!_dirty || TesseraDialog.Show(Window.GetWindow(this),
-        "Доска изменена. Продолжить без сохранения?", "Несохранённая доска",
+        Localization.Text("Доска изменена. Продолжить без сохранения?"), Localization.Text("Несохранённая доска"),
         MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes);
 
     private void SetBusy(bool busy)
@@ -203,7 +203,7 @@ public partial class MoodboardWorkspace : UserControl
     {
         widthInput.Commit(); heightInput.Commit();
         ResetBoard(widthInput.Value, heightInput.Value);
-        StatusChanged?.Invoke("Полотно создано. Добавьте изображения.");
+        StatusChanged?.Invoke(Localization.Text("Полотно создано. Добавьте изображения."));
     }
 
     private void ResetBoard(int width, int height)
@@ -217,7 +217,7 @@ public partial class MoodboardWorkspace : UserControl
         boardSurface.Height = height;
         _zoomRequestRevision++;
         boardZoomInput.SelectedIndex = 0;
-        boardSizeLabel.Text = $"Полотно: {width} × {height} px";
+        boardSizeLabel.Text = Localization.Format("Полотно: {0} × {1} px", width, height);
         startPanel.Visibility = Visibility.Collapsed;
         editorPanel.Visibility = Visibility.Visible;
         RebuildLayers();
@@ -294,7 +294,7 @@ public partial class MoodboardWorkspace : UserControl
     private async Task OpenImagesAsync()
     {
         if (IsBusy) return;
-        var dialog = new OpenFileDialog { Title = "Добавить изображения на доску", Filter = "Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff", Multiselect = true };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Добавить изображения на доску"), Filter = Localization.Text("Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff"), Multiselect = true };
         if (dialog.ShowDialog(Window.GetWindow(this)) == true) await AddFilesAsync(dialog.FileNames);
     }
 
@@ -314,7 +314,7 @@ public partial class MoodboardWorkspace : UserControl
         if (!HasBoard) CreateBoard();
         string[] fileNames = paths.ToArray();
         SetBusy(true);
-        StatusChanged?.Invoke("Добавление изображений…");
+        StatusChanged?.Invoke(Localization.Text("Добавление изображений…"));
         try { AddPreparedImages(await Task.Run(() => PrepareImages(fileNames))); }
         finally { SetBusy(false); }
     }
@@ -367,7 +367,7 @@ public partial class MoodboardWorkspace : UserControl
             SelectLayer(lastAdded);
             emptyHint.Visibility = Visibility.Collapsed;
         }
-        StatusChanged?.Invoke(prepared.Errors.Count > 0 ? $"Добавлено: {added}. Ошибки: {string.Join("; ", prepared.Errors)}" : $"Добавлено слоёв: {added}.");
+        StatusChanged?.Invoke(prepared.Errors.Count > 0 ? Localization.Format("Добавлено: {0}. Ошибки: {1}", added, string.Join("; ", prepared.Errors)) : Localization.Format("Добавлено слоёв: {0}.", added));
     }
 
     private static byte[] ReadImageData(string path, out int width, out int height)
@@ -675,7 +675,7 @@ public partial class MoodboardWorkspace : UserControl
         deleteButton.IsEnabled = rotationSlider.IsEnabled = scaleSlider.IsEnabled = hasSelection;
         rotationSlider.Value = hasSelection ? Math.Clamp(_selected!.Angle, -180, 180) : 0;
         scaleSlider.Value = hasSelection ? Math.Clamp(_selected!.Scale * 100, 10, 300) : 100;
-        string count = _selection.Count > 1 ? $" · {_selection.Count} слоёв" : "";
+        string count = _selection.Count > 1 ? Localization.Format(" · {0} слоёв", _selection.Count) : "";
         rotationLabel.Text = $"{rotationSlider.Value:0}°{count}";
         scaleLabel.Text = $"{scaleSlider.Value:0}%{count}";
         _updatingControls = false;
@@ -744,19 +744,20 @@ public partial class MoodboardWorkspace : UserControl
     private async Task SaveProjectAsync()
     {
         if (IsBusy) return;
-        var dialog = new SaveFileDialog { Title = "Сохранить доску", Filter = "Доска Tessera|*.tboard", DefaultExt = ".tboard", AddExtension = true,
-            FileName = _projectPath is null ? "Доска.tboard" : Path.GetFileName(_projectPath) };
+        if (WorkspaceSavePath is { } workspacePath) { await SaveToFileAsync(workspacePath); return; }
+        var dialog = new SaveFileDialog { Title = Localization.Text("Сохранить доску"), Filter = Localization.Text("Доска Tessera|*.tboard"), DefaultExt = ".tboard", AddExtension = true,
+            FileName = _projectPath is null ? Localization.Text("Доска.tboard") : Path.GetFileName(_projectPath) };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveToFileAsync(dialog.FileName); }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось сохранить доску: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить доску: {0}", ex.Message)); }
     }
 
     public async Task SaveToFileAsync(string path)
     {
-        if (!HasBoard || IsBusy) throw new InvalidOperationException("Доска сейчас недоступна.");
+        if (!HasBoard || IsBusy) throw new InvalidOperationException(Localization.Text("Доска сейчас недоступна."));
         var board = CaptureManifest(out var images);
         SetBusy(true);
-        StatusChanged?.Invoke("Сохранение доски…");
+        StatusChanged?.Invoke(Localization.Text("Сохранение доски…"));
         try
         {
             await Task.Run(() => WriteProject(path, board, images));
@@ -767,7 +768,7 @@ public partial class MoodboardWorkspace : UserControl
 
     public void SaveToFile(string path)
     {
-        if (!HasBoard) throw new InvalidOperationException("Сначала создайте полотно.");
+        if (!HasBoard) throw new InvalidOperationException(Localization.Text("Сначала создайте полотно."));
         var board = CaptureManifest(out var images);
         WriteProject(path, board, images);
         MarkSaved(path);
@@ -812,26 +813,27 @@ public partial class MoodboardWorkspace : UserControl
 
     private void MarkSaved(string path)
     {
+        ProjectSaved?.Invoke(path);
         _projectPath = path;
         _dirty = false;
-        StatusChanged?.Invoke($"Доска сохранена: {path}");
+        StatusChanged?.Invoke(Localization.Format("Доска сохранена: {0}", path));
     }
 
     private async Task OpenProjectAsync()
     {
         if (IsBusy) return;
         if (!ConfirmReplace()) return;
-        var dialog = new OpenFileDialog { Title = "Открыть доску", Filter = "Доска Tessera|*.tboard" };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Открыть доску"), Filter = Localization.Text("Доска Tessera|*.tboard") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await LoadFromFileAsync(dialog.FileName); }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось открыть доску: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось открыть доску: {0}", ex.Message)); }
     }
 
     public async Task LoadFromFileAsync(string path)
     {
-        if (IsBusy) throw new InvalidOperationException("Дождитесь завершения операции.");
+        if (IsBusy) throw new InvalidOperationException(Localization.Text("Дождитесь завершения операции."));
         SetBusy(true);
-        StatusChanged?.Invoke("Открытие доски…");
+        StatusChanged?.Invoke(Localization.Text("Открытие доски…"));
         try
         {
             var loaded = await Task.Run(() => ReadProject(path));
@@ -857,19 +859,19 @@ public partial class MoodboardWorkspace : UserControl
         if (zipped)
         {
             using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
-            using var manifestStream = archive.GetEntry("board.json")?.Open() ?? throw new InvalidDataException("Нет описания доски.");
-            var board = JsonSerializer.Deserialize<BoardManifest>(manifestStream) ?? throw new InvalidDataException("Пустой файл доски.");
+            using var manifestStream = archive.GetEntry("board.json")?.Open() ?? throw new InvalidDataException(Localization.Text("Нет описания доски."));
+            var board = JsonSerializer.Deserialize<BoardManifest>(manifestStream) ?? throw new InvalidDataException(Localization.Text("Пустой файл доски."));
             ValidateBoard(board.Version, board.Width, board.Height, board.Layers?.Count ?? -1, 2);
             background = ParseBackgroundColor(board.BackgroundColor);
-            var items = board.Layers ?? throw new InvalidDataException("Нет слоёв доски.");
+            var items = board.Layers ?? throw new InvalidDataException(Localization.Text("Нет слоёв доски."));
             width = board.Width; height = board.Height;
             foreach (var item in items)
             {
                 ValidateLayer(item.Width, item.Height, item.X, item.Y, item.Angle, item.Scale);
                 if (!item.ImageEntry.StartsWith("images/", StringComparison.Ordinal) || item.ImageEntry.Contains("..", StringComparison.Ordinal))
-                    throw new InvalidDataException("Неверная запись изображения.");
-                var entry = archive.GetEntry(item.ImageEntry) ?? throw new InvalidDataException("Нет изображения слоя.");
-                if (entry.Length is <= 0 or > 536870912) throw new InvalidDataException("Недопустимый размер изображения слоя.");
+                    throw new InvalidDataException(Localization.Text("Неверная запись изображения."));
+                var entry = archive.GetEntry(item.ImageEntry) ?? throw new InvalidDataException(Localization.Text("Нет изображения слоя."));
+                if (entry.Length is <= 0 or > 536870912) throw new InvalidDataException(Localization.Text("Недопустимый размер изображения слоя."));
                 byte[] imageData = new byte[(int)entry.Length];
                 using (var image = entry.Open()) image.ReadExactly(imageData);
                 layers.Add(new Layer { Name = item.Name, ImageData = imageData, Image = DecodePreview(imageData, PreviewPixelLimit),
@@ -878,14 +880,14 @@ public partial class MoodboardWorkspace : UserControl
         }
         else
         {
-            var board = JsonSerializer.Deserialize<BoardFile>(file) ?? throw new InvalidDataException("Пустой файл доски.");
+            var board = JsonSerializer.Deserialize<BoardFile>(file) ?? throw new InvalidDataException(Localization.Text("Пустой файл доски."));
             ValidateBoard(board.Version, board.Width, board.Height, board.Layers?.Count ?? -1, 1);
-            var items = board.Layers ?? throw new InvalidDataException("Нет слоёв доски.");
+            var items = board.Layers ?? throw new InvalidDataException(Localization.Text("Нет слоёв доски."));
             width = board.Width; height = board.Height;
             foreach (var item in items)
             {
                 ValidateLayer(item.Width, item.Height, item.X, item.Y, item.Angle, item.Scale);
-                if (item.Png is null || item.Png.Length == 0) throw new InvalidDataException("Пустое изображение слоя.");
+                if (item.Png is null || item.Png.Length == 0) throw new InvalidDataException(Localization.Text("Пустое изображение слоя."));
                 layers.Add(new Layer { Name = item.Name, ImageData = item.Png, Image = DecodePreview(item.Png, PreviewPixelLimit),
                     Width = item.Width, Height = item.Height, X = item.X, Y = item.Y, Angle = item.Angle, Scale = item.Scale });
             }
@@ -898,7 +900,7 @@ public partial class MoodboardWorkspace : UserControl
         if (string.IsNullOrEmpty(hex)) return Colors.White;
         if (hex.Length != 7 || hex[0] != '#' ||
             !uint.TryParse(hex.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint rgb))
-            throw new InvalidDataException("Неверный цвет фона доски.");
+            throw new InvalidDataException(Localization.Text("Неверный цвет фона доски."));
         return Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     }
 
@@ -910,53 +912,53 @@ public partial class MoodboardWorkspace : UserControl
         _projectPath = path;
         _dirty = false;
         RebuildLayers();
-        StatusChanged?.Invoke($"Доска открыта: {path}");
+        StatusChanged?.Invoke(Localization.Format("Доска открыта: {0}", path));
     }
 
     private static void ValidateBoard(int version, int width, int height, int layerCount, int expectedVersion)
     {
         if (version != expectedVersion || width is < 128 or > MaxBoardSize || height is < 128 or > MaxBoardSize || layerCount is < 0 or > 500)
-            throw new InvalidDataException("Неподдерживаемый формат или размер доски.");
+            throw new InvalidDataException(Localization.Text("Неподдерживаемый формат или размер доски."));
     }
 
     private static void ValidateLayer(double width, double height, double x, double y, double angle, double scale)
     {
         if (!double.IsFinite(width) || !double.IsFinite(height) || !double.IsFinite(x) || !double.IsFinite(y) ||
             !double.IsFinite(angle) || !double.IsFinite(scale) || width <= 0 || height <= 0 || scale is < .1 or > 3)
-            throw new InvalidDataException("Повреждённый слой доски.");
+            throw new InvalidDataException(Localization.Text("Повреждённый слой доски."));
     }
 
     private async Task ExportPngAsync()
     {
         if (IsBusy) return;
-        var dialog = new SaveFileDialog { Title = "Экспорт доски в PNG", Filter = "PNG|*.png", DefaultExt = ".png", AddExtension = true, FileName = "Доска.png" };
+        var dialog = new SaveFileDialog { Title = Localization.Text("Экспорт доски в PNG"), Filter = "PNG|*.png", DefaultExt = ".png", AddExtension = true, FileName = Localization.Text("Доска.png") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await ExportToPngAsync(dialog.FileName); }
-        catch (Exception ex) { StatusChanged?.Invoke($"Не удалось экспортировать PNG: {ex.Message}"); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось экспортировать PNG: {0}", ex.Message)); }
     }
 
     public async Task ExportToPngAsync(string path)
     {
-        if (!HasBoard || IsBusy) throw new InvalidOperationException("Доска сейчас недоступна.");
+        if (!HasBoard || IsBusy) throw new InvalidOperationException(Localization.Text("Доска сейчас недоступна."));
         var layers = CaptureRenderLayers();
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         SetBusy(true);
-        StatusChanged?.Invoke("Экспорт PNG…");
+        StatusChanged?.Invoke(Localization.Text("Экспорт PNG…"));
         try
         {
             Color background = _backgroundColor;
             await Task.Run(() => MoodboardPngExporter.Export(path, width, height, background, layers));
-            StatusChanged?.Invoke($"PNG сохранён: {path}");
+            StatusChanged?.Invoke(Localization.Format("PNG сохранён: {0}", path));
         }
         finally { SetBusy(false); }
     }
 
     public void ExportToPng(string path)
     {
-        if (!HasBoard) throw new InvalidOperationException("Сначала создайте полотно.");
+        if (!HasBoard) throw new InvalidOperationException(Localization.Text("Сначала создайте полотно."));
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         MoodboardPngExporter.Export(path, width, height, _backgroundColor, CaptureRenderLayers());
-        StatusChanged?.Invoke($"PNG сохранён: {path}");
+        StatusChanged?.Invoke(Localization.Format("PNG сохранён: {0}", path));
     }
 
     private MoodboardRenderLayer[] CaptureRenderLayers() => _layers.Select(item =>

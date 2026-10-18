@@ -26,7 +26,7 @@ public partial class TileSetImportWindow : Window
     {
         int version = ++_version;
         _loading = true; UpdateButtons();
-        statusLabel.Text = "Загрузка тайлсета…";
+        statusLabel.Text = Localization.Text("Загрузка тайлсета…");
         try
         {
             string fullPath = Path.GetFullPath(path);
@@ -38,7 +38,7 @@ public partial class TileSetImportWindow : Window
             sourceLabel.ToolTip = fullPath;
             await DetectAsync();
         }
-        catch (Exception ex) { if (!_closed && version == _version) statusLabel.Text = "Не удалось открыть тайлсет: " + ex.Message; }
+        catch (Exception ex) { if (!_closed && version == _version) statusLabel.Text = Localization.Text("Не удалось открыть тайлсет: ") + ex.Message; }
         finally { if (!_closed && version == _version) { _loading = false; UpdateLayoutGrid(); UpdateButtons(); } }
     }
 
@@ -51,7 +51,7 @@ public partial class TileSetImportWindow : Window
         {
             var (mx, my, sx, sy) = ReadInsets();
             _loading = true; UpdateButtons();
-            statusLabel.Text = "Подбор размера тайла…";
+            statusLabel.Text = Localization.Text("Подбор размера тайла…");
             var suggestions = await Task.Run(() =>
             {
                 byte[] pixels = new byte[checked(source.PixelWidth * source.PixelHeight * 4)];
@@ -67,11 +67,11 @@ public partial class TileSetImportWindow : Window
             else
             {
                 SetGridInputs(0, source.PixelWidth, source.PixelHeight);
-                suggestionHint.Text = "Подходящая типовая сетка не найдена. Укажите размер тайла или число столбцов и строк вручную.";
+                suggestionHint.Text = Localization.Text("Подходящая типовая сетка не найдена. Укажите размер тайла или число столбцов и строк вручную.");
             }
-            statusLabel.Text = "Проверьте предложенные границы и подтвердите импорт.";
+            statusLabel.Text = Localization.Text("Проверьте предложенные границы и подтвердите импорт.");
         }
-        catch (Exception ex) { if (!_closed && version == _version) statusLabel.Text = "Автоподбор недоступен: " + ex.Message; }
+        catch (Exception ex) { if (!_closed && version == _version) statusLabel.Text = Localization.Text("Автоподбор недоступен: ") + ex.Message; }
         finally { if (!_closed && version == _version) { _loading = false; UpdateLayoutGrid(); UpdateButtons(); } }
     }
 
@@ -80,7 +80,7 @@ public partial class TileSetImportWindow : Window
 
     private static int ReadInt(TextBox box, bool positive)
     {
-        if (!int.TryParse(box.Text, out int value) || value < (positive ? 1 : 0)) throw new ArgumentException("Введите целые размеры: тайл и сетка — от 1, отступы и промежутки — от 0.");
+        if (!int.TryParse(box.Text, out int value) || value < (positive ? 1 : 0)) throw new ArgumentException(Localization.Text("Введите целые размеры: тайл и сетка — от 1, отступы и промежутки — от 0."));
         return value;
     }
 
@@ -94,7 +94,7 @@ public partial class TileSetImportWindow : Window
             Layout = modeInput.SelectedIndex == 1
                 ? TileSetLayout.FromGrid(_source.PixelWidth, _source.PixelHeight, first, second, mx, my, sx, sy)
                 : TileSetLayout.FromTileSize(_source.PixelWidth, _source.PixelHeight, first, second, mx, my, sx, sy);
-            layoutSummary.Text = $"{_source.PixelWidth} × {_source.PixelHeight} px → {Layout.Columns} столбцов × {Layout.Rows} строк → {Layout.Count} тайлов по {Layout.TileWidth} × {Layout.TileHeight} px";
+            layoutSummary.Text = Localization.Format("{0} × {1} px → {2} столбцов × {3} строк → {4} тайлов по {5} × {6} px", _source.PixelWidth, _source.PixelHeight, Layout.Columns, Layout.Rows, Layout.Count, Layout.TileWidth, Layout.TileHeight);
         }
         catch (Exception ex) { Layout = null; layoutSummary.Text = ex.Message; }
         atlasPreview.SetLayout(Layout); UpdateButtons();
@@ -114,8 +114,8 @@ public partial class TileSetImportWindow : Window
         _updating = true;
         modeInput.SelectedIndex = mode;
         firstInput.Text = first.ToString(); secondInput.Text = second.ToString();
-        firstLabel.Text = mode == 1 ? "Столбцов" : "Ширина тайла, px";
-        secondLabel.Text = mode == 1 ? "Строк" : "Высота тайла, px";
+        firstLabel.Text = mode == 1 ? Localization.Text("Столбцов") : Localization.Text("Ширина тайла, px");
+        secondLabel.Text = mode == 1 ? Localization.Text("Строк") : Localization.Text("Высота тайла, px");
         _updating = false; UpdateLayoutGrid();
     }
 
@@ -127,7 +127,7 @@ public partial class TileSetImportWindow : Window
 
     public IReadOnlyList<TileAsset> BuildAssets()
     {
-        if (_loading || _source is null || _path is null || Layout is null) throw new InvalidOperationException("Выберите изображение и корректную сетку.");
+        if (_loading || _source is null || _path is null || Layout is null) throw new InvalidOperationException(Localization.Text("Выберите изображение и корректную сетку."));
         var assets = new List<TileAsset>();
         foreach (var region in TileSetSlicer.GetRegions(_source.PixelWidth, _source.PixelHeight, Layout))
         {
@@ -145,7 +145,7 @@ public partial class TileSetImportWindow : Window
 
     private async void OpenAtlasClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Title = "Открыть тайлсет", Filter = "Изображения|*.png;*.bmp;*.gif;*.jpg;*.jpeg;*.tif;*.tiff|Все файлы|*.*" };
+        var dialog = new OpenFileDialog { Title = Localization.Text("Открыть тайлсет"), Filter = Localization.Text("Изображения|*.png;*.bmp;*.gif;*.jpg;*.jpeg;*.tif;*.tiff|Все файлы|*.*") };
         if (dialog.ShowDialog(this) == true) await LoadFileAsync(dialog.FileName);
     }
     private async void DetectClicked(object sender, RoutedEventArgs e) => await DetectAsync();
@@ -165,10 +165,10 @@ public partial class TileSetImportWindow : Window
         try
         {
             ImportedAssets = BuildAssets();
-            if (ImportedAssets.Count == 0) { statusLabel.Text = "Все тайлы прозрачные. Отключите пропуск пустых ячеек или выберите другой тайлсет."; return; }
+            if (ImportedAssets.Count == 0) { statusLabel.Text = Localization.Text("Все тайлы прозрачные. Отключите пропуск пустых ячеек или выберите другой тайлсет."); return; }
             DialogResult = true;
         }
-        catch (Exception ex) { statusLabel.Text = "Не удалось разрезать тайлсет: " + ex.Message; }
+        catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось разрезать тайлсет: ") + ex.Message; }
     }
     private void AtlasDragOver(object sender, DragEventArgs e)
     {

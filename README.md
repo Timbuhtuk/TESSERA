@@ -2,7 +2,9 @@
 
 # Tessera
 
-**Turn uneven pixels into usable pixel art.**
+**A local workspace for preparing and assembling 2D graphics.**
+
+Organize standalone and shared assets in projects and nested folders, add tags, search and open connected processing tools from one top menu. See the [workspace guide](docs/WORKSPACE_PROTOTYPE.md) for navigation and storage.
 
 Tessera is a standalone Windows app for preparing pixel art and icons. It began with a specific problem: AI-generated pixel art often looks pixelated, but its grid is uneven and its “pixels” have different sizes. Tessera helps align those shapes to a consistent grid so you can keep working with the image.
 

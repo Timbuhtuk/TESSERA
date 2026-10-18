@@ -43,12 +43,12 @@ public partial class ColorReplaceWindow : Window
     public ColorReplaceWindow(DrawingColor initialColor) : this(initialColor, [], false)
     {
         _choosingColor = true;
-        Title = "Цвет фона · TESSERA";
-        dialogTitle.Text = "Цвет фона";
+        Title = Localization.Text("Цвет фона · TESSERA");
+        dialogTitle.Text = Localization.Text("Цвет фона");
         oldColorLabel.Visibility = oldColorPanel.Visibility = Visibility.Collapsed;
-        newColorLabel.Text = "Выберите цвет";
+        newColorLabel.Text = Localization.Text("Выберите цвет");
         newColorLabel.Margin = new Thickness(0, 0, 0, 10);
-        replaceButton.Content = "Выбрать цвет";
+        replaceButton.Content = Localization.Text("Выбрать цвет");
         Height = Math.Min(SystemParameters.WorkArea.Height - 50, 620);
         UpdateColorState(true);
     }
@@ -111,8 +111,8 @@ public partial class ColorReplaceWindow : Window
         RenderPicker();
         bool different = _choosingColor ? newValid : oldValid && newValid && oldColor.ToArgb() != newColor.ToArgb();
         replaceButton.IsEnabled = different;
-        validationText.Text = (!oldValid && !_choosingColor) || !newValid ? "Введите цвет в формате #RRGGBB."
-            : !different ? "Выберите новый цвет или введите HEX." : "";
+        validationText.Text = (!oldValid && !_choosingColor) || !newValid ? Localization.Text("Введите цвет в формате #RRGGBB.")
+            : !different ? Localization.Text("Выберите новый цвет или введите HEX.") : "";
 
         if (_settingPalette) return;
         _settingPalette = true;

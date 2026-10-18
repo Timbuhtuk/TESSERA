@@ -59,7 +59,7 @@ internal static class LibraryChecks
             EqualPixels(downscaled, Get<Bitmap>("_downscaledResult"));
 
             // Both axes and both directions: different image dimensions must use fractional offsets.
-            Get<ComboBox>("zoomInput").SelectedIndex = 9; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 9; Pump();
             var sourceScroll = (ScrollViewer)Get<PixelPreview>("sourcePreview").Children[0];
             var resultScroll = (ScrollViewer)Get<PixelPreview>("resultPreview").Children[0];
             Require(sourceScroll.ScrollableWidth > 0 && resultScroll.ScrollableWidth > 0 && resultScroll.ScrollableHeight > 0, "Zoom did not create scrollable previews");
@@ -69,9 +69,9 @@ internal static class LibraryChecks
             resultScroll.ScrollToHorizontalOffset(resultScroll.ScrollableWidth * .2);
             resultScroll.ScrollToVerticalOffset(resultScroll.ScrollableHeight * .8); Pump();
             Require(Near(sourceScroll.HorizontalOffset / sourceScroll.ScrollableWidth, .2) && Near(sourceScroll.VerticalOffset / sourceScroll.ScrollableHeight, .8), "Result-to-source scroll synchronization failed");
-            Get<ComboBox>("zoomInput").SelectedIndex = 8; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 8; Pump();
             Require(Near(sourceScroll.HorizontalOffset / sourceScroll.ScrollableWidth, .2) && Near(resultScroll.HorizontalOffset / resultScroll.ScrollableWidth, .2), "Zoom lost synchronized position");
-            Get<ComboBox>("zoomInput").SelectedIndex = 0; Pump();
+            NavigationTest.Select(window, "PreviewZoom").SelectedIndex = 0; Pump();
             Get<ListBox>("sourceStrip").SelectedItem = sources[1]; Pump();
             Require(Get<PixelPreview>("resultPreview").Image is null, "Other source shows previous source result");
             Get<IntegerInput>("gridCellInput").Value = 8; Click("alignButton"); Wait();
@@ -113,7 +113,7 @@ internal static class LibraryChecks
         }
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
         object? Invoke(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, args);
-        void Click(string name) => Get<Button>(name).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        void Click(string name) => NavigationTest.Click(window, name);
         void Wait()
         {
             var until = DateTime.UtcNow.AddSeconds(25);

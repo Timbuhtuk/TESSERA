@@ -9,7 +9,7 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <Product>Tessera</Product>
     <AssemblyTitle>Tessera</AssemblyTitle>
-    <Description>Tessera — pixel art and icon studio</Description>
+    <Description>Tessera — 2D graphics workspace</Description>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
+    <Resource Include="Assets\settings.svg" />
+    <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
     <Resource Include="Assets\app-icon.png" />
     <Resource Include="Assets\landscape.png" />
     <Resource Include="Assets\animation-banner.png" />
