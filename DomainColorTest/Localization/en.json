@@ -894,5 +894,16 @@
   "Сохраните изображение в формате PNG.": "Save the image in PNG format.",
   "Сохраните коллекцию в формате .ttiles.": "Save the collection in .ttiles format.",
   "Сохраните тайл в формате PNG.": "Save the tile in PNG format.",
-  "Обновление отменено: приложение осталось открытым.": "Update canceled: the application stayed open."
+  "Обновление отменено: приложение осталось открытым.": "Update canceled: the application stayed open.",
+  "Нет видимых пикселей": "No visible pixels",
+  "Серые тона": "Grayscale",
+  "DPI: {0:0.#} × {1:0.#}": "DPI: {0:0.#} × {1:0.#}",
+  "DPI: не указано": "DPI: unspecified",
+  "Пикселей: {0:N0} · пропорции {1} : {2}": "Pixels: {0:N0} · aspect ratio {1} : {2}",
+  "Цвета пикселей: {0}": "Pixel colors: {0}",
+  "Формат буфера: {0} · {1} бит/пиксель": "Buffer format: {0} · {1} bits/pixel",
+  "Прозрачные: {0:N0} ({1:P1})": "Transparent: {0:N0} ({1:P1})",
+  "Полупрозрачные: {0:N0} ({1:P1})": "Translucent: {0:N0} ({1:P1})",
+  "Непрозрачные: {0:N0} ({1:P1})": "Opaque: {0:N0} ({1:P1})",
+  "PNG в библиотеке: {0:N0} байт": "Library PNG: {0:N0} bytes"
 }

@@ -80,7 +80,7 @@ public partial class MainWindow
         profileMenuItem = AddTool(toolsMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
         gridMenuItem = AddTool(toolsMenu, "gridMenuItem", "Сетка…", "grid", 280, gridToolGroup);
         AddNavigation(toolsMenu, "inspectTilesMenuItem", "Проверить тайлы…", () => NavigationImageActionAsync("tiles"));
-        infoMenuItem = AddTool(toolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 560, infoToolGroup);
+        infoMenuItem = AddTool(toolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 760, infoToolGroup);
         AddNavigation(toolsMenu, "addToBoardMenuItem", "Добавить на доску…", () => NavigationImageActionAsync("board"));
         _imageCommands.AddRange(imageMenu.Items.OfType<MenuItem>()); _imageCommands.AddRange(toolsMenu.Items.OfType<MenuItem>());
         _imageCommands.Add((MenuItem)FindName("exportIcoMenuItem"));

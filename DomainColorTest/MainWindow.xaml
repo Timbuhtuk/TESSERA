@@ -136,9 +136,11 @@
                     <GroupBox x:Name="infoToolGroup" Header="{local:Translate Text0A6258A5F30F}">
                         <StackPanel>
                             <TextBlock Text="{local:Translate Text0B5267F774E0}" FontWeight="SemiBold" />
-                            <TextBlock x:Name="infoSourceSummary" Text="{local:Translate TextBE33886BF712}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,11" />
+                            <TextBlock x:Name="infoSourceSummary" Text="{local:Translate TextBE33886BF712}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,4" TextWrapping="Wrap" />
+                            <TextBlock x:Name="infoSourceDetails" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,11" />
                             <TextBlock Text="{local:Translate Text4997A5143D9F}" FontWeight="SemiBold" />
-                            <TextBlock x:Name="infoResultSummary" Text="{local:Translate TextB42477FF8040}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,12" />
+                            <TextBlock x:Name="infoResultSummary" Text="{local:Translate TextB42477FF8040}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,4" TextWrapping="Wrap" />
+                            <TextBlock x:Name="infoResultDetails" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,12" />
                             <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,3,0,12" />
                             <TextBlock x:Name="infoBasisLabel" Text="{local:Translate Text5BD4F6E8307B}" FontWeight="SemiBold" />
                             <TextBlock x:Name="infoPaletteStatus" Text="{local:Translate TextDEEA9C26AAEA}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,4,0,10" TextWrapping="Wrap" />

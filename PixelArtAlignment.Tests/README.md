@@ -43,6 +43,8 @@ Export regressions protect imported files across workspaces and the internal lib
 
 Update UI checks use a substitute helper to verify that processing and canceled close guards prevent installation, failed launches keep the window open, and an accepted close starts exactly one helper. They do not install a release.
 
+`--info` (also included in `--ui`) opens the real workspace editor and verifies docked source/result metadata, exact palette replacement with partial alpha, history parentage, direct replacement-menu entry, basis and asset switches, stale-dialog closure, grayscale details, English text, narrow layout and floating-tool compatibility.
+
 The CLI has its own integration suite, including argument validation, image formats, icon export and file protection.
 
 ## Running checks

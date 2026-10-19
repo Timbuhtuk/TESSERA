@@ -482,6 +482,7 @@ public partial class MainWindow
     }
     private void CloseDockedWorkspaceTool()
     {
+        if (_workspaceGroups.Contains(infoToolGroup)) ResetInfoSnapshot();
         foreach (var group in _workspaceGroups)
         {
             if (group.Parent is Panel panel) panel.Children.Remove(group); else if (group.Parent is Expander expander) expander.Content = null;
