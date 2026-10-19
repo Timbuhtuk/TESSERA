@@ -101,6 +101,8 @@ internal static class IconWorkspaceChecks
             trigger.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
             Require(picker.IsOpen && picker.SourceCount == 1 && picker.ResultCount == 1,
                 "ICO editor materials did not appear on hover");
+            trigger.CaptureMouse(); trigger.ReleaseMouseCapture(); Pump();
+            Require(picker.IsOpen, "Trigger click capture closed the materials popup");
             Pump();
             var popup = (System.Windows.Controls.Primitives.Popup)picker.FindName("materialPopup");
             var panel = (FrameworkElement)popup.Child;
@@ -153,6 +155,17 @@ internal static class IconWorkspaceChecks
                 }
                 GetCursorPos(out var outsideCursor);
                 Require(!picker.IsOpen, $"Picker stayed open after cursor left: expected {outside}, actual {outsideCursor.X},{outsideCursor.Y}");
+
+                window.Activate(); trigger.Focus();
+                trigger.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(trigger)!, 0, Key.Down)
+                    { RoutedEvent = Keyboard.PreviewKeyDownEvent }); Pump();
+                Require(picker.IsOpen && panel.IsKeyboardFocusWithin, "Down key did not focus an editor material");
+                typeof(EditorMaterialPicker).GetMethod("ScheduleClose", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(picker, null);
+                Thread.Sleep(160); Pump();
+                Require(picker.IsOpen, "Keyboard material selection closed while pointer was outside");
+                panel.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(panel)!, 0, Key.Escape)
+                    { RoutedEvent = Keyboard.PreviewKeyDownEvent }); Pump();
+                Require(!picker.IsOpen && trigger.IsKeyboardFocusWithin, "Escape did not close materials or restore focus");
             }
             finally { SetCursorPos(previousCursor.X, previousCursor.Y); Pump(); }
             var firstFrame = Get<ItemsControl>("iconFrames").Items.Cast<IconWorkspace.FramePreview>().First();

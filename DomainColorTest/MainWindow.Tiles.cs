@@ -5,6 +5,7 @@ namespace DomainColorTest;
 public partial class MainWindow
 {
     private TileInspectorWindow? _tileInspector;
+    private readonly HashSet<string> _closedTileSourcePaths = new(StringComparer.OrdinalIgnoreCase);
 
     private void OpenTileInspector(object sender, RoutedEventArgs e)
     {
@@ -14,8 +15,12 @@ public partial class MainWindow
             _tileInspector.Activate();
             return;
         }
-        _tileInspector = new TileInspectorWindow { Owner = this };
-        _tileInspector.Closed += (_, _) => _tileInspector = null;
+        _tileInspector = new TileInspectorWindow { Owner = this, ValidateExportPath = EnsureExportPathAllowed };
+        _tileInspector.Closed += (_, _) =>
+        {
+            foreach (string source in _tileInspector.SourcePaths) _closedTileSourcePaths.Add(source);
+            _tileInspector = null;
+        };
         _tileInspector.Show();
     }
 }

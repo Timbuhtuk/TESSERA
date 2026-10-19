@@ -280,15 +280,19 @@ public partial class MainWindow
         var dialog = new SaveFileDialog { Title = Localization.Text("Экспортировать изображение"), Filter = Localization.Text("PNG с прозрачностью|*.png"), DefaultExt = ".png", FileName = Path.GetFileNameWithoutExtension(_workspaceActive?.Name ?? "image") + ".png" };
         if (dialog.ShowDialog(this) != true) return;
         string path = Path.GetFullPath(dialog.FileName);
-        if (_sources.Any(s => string.Equals(Path.GetFullPath(s.OriginalPath), path, StringComparison.OrdinalIgnoreCase)) || path.StartsWith(_library.DirectoryPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new IOException(Localization.Text("Выберите файл вне библиотеки и исходников."));
+        EnsureExportPathAllowed(path);
         WorkspaceBasis().Save(path, System.Drawing.Imaging.ImageFormat.Png); statusLabel.Text = Localization.Text("Экспортировано: ") + path;
     }
 
     private async Task OpenWorkspaceTilesAsync(WorkspaceAsset asset)
     {
         if (_tileInspector is not null) { _tileInspector.Activate(); statusLabel.Text = Localization.Text("Закройте текущую проверку тайлов перед открытием другого материала."); return; }
-        var inspector = new TileInspectorWindow { Owner = this }; _tileInspector = inspector;
-        inspector.Closed += (_, _) => { _tileInspector = null; SynchronizeWorkspace(); };
+        var inspector = new TileInspectorWindow { Owner = this, ValidateExportPath = EnsureExportPathAllowed }; _tileInspector = inspector;
+        inspector.Closed += (_, _) =>
+        {
+            foreach (string source in inspector.SourcePaths) _closedTileSourcePaths.Add(source);
+            _tileInspector = null; SynchronizeWorkspace();
+        };
         if (asset.Kind == WorkspaceAssetKind.Tiles)
         {
             string path = _workspaceCatalog!.ContentPath(asset); inspector.LoadCollectionFromFile(path); inspector.WorkspaceSavePath = path;

@@ -881,5 +881,18 @@
   "Обрабатывать": "Process",
   "Инс_трументы": "_Tools",
   "Ctrl + колёсико над предпросмотром — масштаб к точке под курсором": "Ctrl + mouse wheel over the preview zooms toward the cursor",
-  "Ctrl + колёсико · к точке под курсором": "Ctrl + mouse wheel · zoom toward the cursor"
+  "Ctrl + колёсико · к точке под курсором": "Ctrl + mouse wheel · zoom toward the cursor",
+  " · предыдущий результат": " · previous result",
+  "\nСохранён предыдущий результат: {0} × {1}. Новые настройки не применены.": "\nPrevious result retained: {0} × {1}. The new settings were not applied.",
+  "Сохраните результат удаления фона в PNG.": "Save the background removal result as PNG.",
+  "Сохраните ASCII-текст в файле TXT.": "Save ASCII text in a TXT file.",
+  "Выберите файл вне внутренней библиотеки Tessera.": "Choose a file outside the internal Tessera library.",
+  "Выберите другое имя: исходные изображения нужно сохранить.": "Choose another name to preserve the original images.",
+  "Выберите другое имя: исходные изображения не перезаписываются.": "Choose another name: original images cannot be overwritten.",
+  "Выберите другое имя: PNG не может заменить проект доски.": "Choose another name: PNG cannot replace a board project.",
+  "Сохраните доску в формате .tboard.": "Save the board in .tboard format.",
+  "Сохраните изображение в формате PNG.": "Save the image in PNG format.",
+  "Сохраните коллекцию в формате .ttiles.": "Save the collection in .ttiles format.",
+  "Сохраните тайл в формате PNG.": "Save the tile in PNG format.",
+  "Обновление отменено: приложение осталось открытым.": "Update canceled: the application stayed open."
 }

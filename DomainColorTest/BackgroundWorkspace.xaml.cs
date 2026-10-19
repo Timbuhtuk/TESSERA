@@ -15,6 +15,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     private Bitmap? _source;
     private Bitmap? _result;
     private string? _inputPath;
+    private readonly HashSet<string> _sourcePaths = new(StringComparer.OrdinalIgnoreCase);
     private bool _busy;
     private bool _disposed;
     private int _revision;
@@ -23,6 +24,8 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     public bool IsBusy => _busy;
     public bool IsRendering { get; private set; }
     public bool HasResult => _result is not null;
+    public Action<string>? ValidateExportPath { get; set; }
+    public IReadOnlyCollection<string> SourcePaths => _sourcePaths;
     public event EventHandler? BackRequested;
     public event Action<EditorMaterial>? MaterialRequested;
 
@@ -81,6 +84,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         _source = copy;
         _result = null;
         _inputPath = inputPath is null ? null : Path.GetFullPath(inputPath);
+        if (_inputPath is not null) _sourcePaths.Add(_inputPath);
         backgroundFileLabel.Text = label;
         backgroundFileLabel.ToolTip = label;
         backgroundSourcePreview.Image = _source;
@@ -153,7 +157,10 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     {
         if (_busy || _disposed || _result is null || IsRendering) throw new InvalidOperationException(Localization.Text("Дождитесь результата обработки."));
         string output = Path.GetFullPath(path);
-        if (string.Equals(output, _inputPath, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(Path.GetExtension(output), ".png", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(Localization.Text("Сохраните результат удаления фона в PNG."));
+        ValidateExportPath?.Invoke(output);
+        if (_sourcePaths.Contains(output))
             throw new InvalidOperationException(Localization.Text("Нельзя перезаписать исходное изображение."));
         if (!overwrite && File.Exists(output)) throw new IOException(Localization.Text("Файл уже существует."));
         using var image = (Bitmap)_result.Clone();

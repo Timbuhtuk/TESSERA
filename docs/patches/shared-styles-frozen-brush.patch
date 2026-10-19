@@ -1,0 +1,7 @@
+--- a/Tessera.WpfStyles/Motion/HoverMotion.cs
++++ b/Tessera.WpfStyles/Motion/HoverMotion.cs
+@@ -120,3 +120,3 @@
+     {
+-        if (brush == null) return;
++        if (brush is null || brush.IsFrozen) return;
+         if (!SystemParameters.ClientAreaAnimation)

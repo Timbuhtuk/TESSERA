@@ -19,6 +19,8 @@ public partial class TileInspectorWindow
     public void SaveCollectionToFile(string path)
     {
         if (_busy) throw new InvalidOperationException(Localization.Text("Дождитесь сглаживания."));
+        if (WorkspaceSavePath is null || !string.Equals(Path.GetFullPath(path), Path.GetFullPath(WorkspaceSavePath), StringComparison.OrdinalIgnoreCase))
+            ValidateSharedExportPath(Path.GetFullPath(path));
         FinishStroke();
         var settings = new TileCollectionSettings
         {
@@ -32,7 +34,7 @@ public partial class TileInspectorWindow
             Passes = int.TryParse(smoothPassesInput.Text, out int passes) ? Math.Clamp(passes, 1, 100) : 1,
             SmoothEdgesOnly = smoothEdgesInput.IsChecked == true
         };
-        TileCollectionFile.Save(path, _assets, settings);
+        TileCollectionFile.Save(path, _assets, settings, _protectedSourcePaths);
         _projectPath = Path.GetFullPath(path); _projectDirty = false;
         UpdateProjectTitle(); statusLabel.Text = Localization.Text("Коллекция и правки сохранены · ") + Path.GetFileName(path);
         WorkspaceSaved?.Invoke();
@@ -42,12 +44,13 @@ public partial class TileInspectorWindow
     {
         if (_busy) throw new InvalidOperationException(Localization.Text("Дождитесь сглаживания."));
         // Read the complete project before changing the current session.
-        var loaded = TileCollectionFile.Load(path);
+        var loaded = TileCollectionFile.LoadWithSourcePaths(path);
         FinishStroke(); _loadVersion++;
         _reloadTimer.Stop(); _changedPaths.Clear();
         _settingCollection = true;
         try
         {
+            foreach (string source in loaded.SourcePaths) _protectedSourcePaths.Add(source);
             _assets.Clear();
             foreach (var asset in loaded.Assets) _assets.Add(asset);
             var s = loaded.Settings;
@@ -104,6 +107,7 @@ public partial class TileInspectorWindow
 
     private void ConfirmWindowClosing(object? sender, CancelEventArgs e)
     {
+        if (e.Cancel) return;
         if (_busy) { e.Cancel = true; statusLabel.Text = Localization.Text("Дождитесь завершения сглаживания."); return; }
         if (!ConfirmReplaceCollection()) e.Cancel = true;
     }
@@ -148,8 +152,10 @@ public partial class TileInspectorWindow
         if (ActiveAsset is not { } asset) throw new InvalidOperationException(Localization.Text("Выберите тайл."));
         FinishStroke();
         path = Path.GetFullPath(path);
-        if (_assets.Any(item => string.Equals(item.SourcePath, path, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(item.AtlasSourcePath, path, StringComparison.OrdinalIgnoreCase)) ||
+        if (!string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase))
+            throw new IOException(Localization.Text("Сохраните тайл в формате PNG."));
+        ValidateSharedExportPath(path);
+        if (_protectedSourcePaths.Contains(path) ||
             string.Equals(_projectPath, path, StringComparison.OrdinalIgnoreCase))
             throw new IOException(Localization.Text("Выберите новый PNG: исходники и проект не перезаписываются."));
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -169,5 +175,11 @@ public partial class TileInspectorWindow
         if (dialog.ShowDialog(this) != true) return;
         try { ExportActivePng(dialog.FileName); statusLabel.Text = Localization.Text("PNG сохранён · ") + Path.GetFileName(dialog.FileName); }
         catch (Exception ex) { statusLabel.Text = Localization.Text("Не удалось экспортировать PNG: ") + ex.Message; }
+    }
+
+    private void ValidateSharedExportPath(string path)
+    {
+        try { ValidateExportPath?.Invoke(path); }
+        catch (InvalidOperationException ex) { throw new IOException(ex.Message, ex); }
     }
 }

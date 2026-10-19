@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.ComponentModel;
 using System.Windows;
 
 namespace DomainColorTest;
@@ -74,8 +75,8 @@ public partial class MainWindow
             string downloaded = await GitHubUpdater.DownloadAsync(release);
             if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy)
                 throw new InvalidOperationException(Localization.Text("Дождитесь завершения обработки и нажмите обновление снова."));
-            GitHubUpdater.StartInstall(downloaded, release.Sha256);
-            Close();
+            if (!TryCloseForUpdate(() => GitHubUpdater.StartInstall(downloaded, release.Sha256)))
+                statusLabel.Text = Localization.Text("Обновление отменено: приложение осталось открытым.");
         }
         catch (Exception ex)
         {
@@ -90,4 +91,21 @@ public partial class MainWindow
 
     private string UpdateButtonText() => _availableRelease is null ? Localization.Text("Проверить обновления") :
         GitHubUpdater.CanInstall ? Localization.Format("Обновить до {0}", _availableRelease.Tag) : Localization.Format("Открыть релиз {0}", _availableRelease.Tag);
+
+    private bool TryCloseForUpdate(Action startInstall)
+    {
+        bool started = false;
+        Exception? error = null;
+        CancelEventHandler prepare = (_, e) =>
+        {
+            if (e.Cancel) return;
+            try { startInstall(); started = true; }
+            catch (Exception ex) { error = ex; e.Cancel = true; }
+        };
+        Closing += prepare;
+        try { Close(); }
+        finally { Closing -= prepare; }
+        if (error is not null) throw new InvalidOperationException(error.Message, error);
+        return started;
+    }
 }

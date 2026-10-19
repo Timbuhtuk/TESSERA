@@ -17,7 +17,8 @@ internal static class WindowChromeChecks
     {
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
         var directory = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "chrome-" + Guid.NewGuid().ToString("N")));
-        var window = new MainWindow(directory) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+        // Native minimize/restore must use the same visible, taskbar-backed window as the desktop app.
+        var window = new MainWindow(directory) { ShowActivated = true };
         bool closed = false;
         window.Closed += (_, _) => closed = true;
         try
@@ -40,7 +41,7 @@ internal static class WindowChromeChecks
             Require(HitTest(handle, new Point(normal.Right - 2, normal.Bottom - 2)) == 17, "Corner resize border is not active");
 
             Click("maximizeButton");
-            Require(window.WindowState == WindowState.Maximized, "Maximize button failed");
+            WaitFor(() => window.WindowState == WindowState.Maximized, "Maximize button failed");
             Require(AutomationProperties.GetName((Button)window.FindName("maximizeButton")) == "Восстановить", "Restore label did not update");
             var monitor = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
             Require(GetMonitorInfo(MonitorFromWindow(handle, 2), ref monitor), "Cannot read monitor work area");
@@ -52,25 +53,25 @@ internal static class WindowChromeChecks
                 $"Maximized content extends outside the work area: {topLeft}–{bottomRight}, work {monitor.Work.Left},{monitor.Work.Top}–{monitor.Work.Right},{monitor.Work.Bottom}");
             Click("maximizeButton");
             // Windows can constrain the initial window to the runner's display size.
-            Require(window.WindowState == WindowState.Normal && Math.Abs(window.ActualWidth - normalWidth) < 1 && Math.Abs(window.ActualHeight - normalHeight) < 1,
+            WaitFor(() => window.WindowState == WindowState.Normal && Math.Abs(window.ActualWidth - normalWidth) < 1 && Math.Abs(window.ActualHeight - normalHeight) < 1,
                 $"Restore lost the window dimensions: expected {normalWidth}x{normalHeight}, got {window.ActualWidth}x{window.ActualHeight}");
 
             point = DragPoint();
             SendMessage(handle, 0xA3, 2, Pack(point));
             Pump();
-            Require(window.WindowState == WindowState.Maximized, "Native title double-click failed");
+            WaitFor(() => window.WindowState == WindowState.Maximized, "Native title double-click failed");
             Click("maximizeButton");
             Click("minimizeButton");
-            Require(window.WindowState == WindowState.Minimized, "Minimize button failed");
+            WaitFor(() => window.WindowState == WindowState.Minimized, "Minimize button failed");
             SystemCommands.RestoreWindow(window); Pump();
-            Require(window.WindowState == WindowState.Normal, "Restore from minimized failed");
+            WaitFor(() => window.WindowState == WindowState.Normal, "Restore from minimized failed");
 
             SetBusy(true);
             Click("closeButton");
             Require(!closed && window.IsVisible, "Custom close bypassed the processing guard");
             SetBusy(false);
             Click("closeButton");
-            Require(closed, "Custom close did not close the window");
+            WaitFor(() => closed, "Custom close did not close the window");
             Console.WriteLine("  Window chrome: caption/button hit tests, resize edges, maximize/work area, restore, double-click, minimize and guarded close passed.");
         }
         finally
@@ -81,6 +82,16 @@ internal static class WindowChromeChecks
         void Click(string name) { ((Button)window.FindName(name)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
         Point DragPoint() => ((Border)window.FindName("titleBar")).PointToScreen(new Point(((Border)window.FindName("titleBar")).ActualWidth - ((StackPanel)window.FindName("captionButtons")).ActualWidth - 24, 20));
         void SetBusy(bool value) => typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [value]);
+        void WaitFor(Func<bool> condition, string message)
+        {
+            // SystemCommands posts a native window message; WPF can update ActualWidth/Height on a later layout pass.
+            var elapsed = System.Diagnostics.Stopwatch.StartNew();
+            bool delayed = !condition();
+            if (delayed) Console.WriteLine($"  Window chrome pending: {message}; state {window.WindowState}, size {window.ActualWidth}x{window.ActualHeight}.");
+            while (!condition() && elapsed.Elapsed < TimeSpan.FromSeconds(2)) { Pump(); Thread.Sleep(10); }
+            Require(condition(), message);
+            if (delayed) Console.WriteLine($"  Window chrome settled after {elapsed.ElapsedMilliseconds} ms: state {window.WindowState}, size {window.ActualWidth}x{window.ActualHeight}.");
+        }
     }
 
     private static int HitTest(nint handle, Point point) => (int)SendMessage(handle, 0x84, 0, Pack(point));

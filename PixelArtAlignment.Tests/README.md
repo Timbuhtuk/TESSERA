@@ -39,6 +39,10 @@ Invariant checks cover source immutability, canvas preservation with partial edg
 
 WPF checks run alignment and downscaling independently and compare the latter with the library. They cover profiles, color count and weighting, preview alpha, 800% zoom, input validation and PNG export with source protection. They also cover window controls, library history and deletion, grid reduction, ICO navigation, preview cancellation and narrow layouts. Synthetic images and screenshots are written under `artifacts/wpf/verification`.
 
+Export regressions protect imported files across workspaces and the internal library, reject incorrect extensions, and retain protection for removed tiles after reopening a collection. UI checks also cover tool closure during hover, mouse capture and keyboard navigation in the material picker, and retaining ready Aseprite results when a rebuild is canceled. Window-state checks wait for Windows state changes and layout to finish before checking the original dimensions.
+
+Update UI checks use a substitute helper to verify that processing and canceled close guards prevent installation, failed launches keep the window open, and an accepted close starts exactly one helper. They do not install a release.
+
 The CLI has its own integration suite, including argument validation, image formats, icon export and file protection.
 
 ## Running checks

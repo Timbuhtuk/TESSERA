@@ -19,6 +19,7 @@ public partial class TileInspectorWindow : Window
     private readonly ObservableCollection<TileAsset> _assets = [];
     private readonly List<FileSystemWatcher> _watchers = [];
     private readonly HashSet<string> _changedPaths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> _protectedSourcePaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<Key> _heatmapKeys = [];
     private bool HeatmapEnabled => heatInput.IsChecked == true || _heatmapKeys.Count > 0;
     private readonly DispatcherTimer _reloadTimer = new() { Interval = TimeSpan.FromMilliseconds(450) };
@@ -36,11 +37,22 @@ public partial class TileInspectorWindow : Window
     public TileSeamAnalysis? Analysis => preview.Analysis;
     public TileSeamAnalysis? ReverseAnalysis => preview.ReverseAnalysis;
     public string? SourcePath => ActiveAsset?.SourcePath;
+    public Action<string>? ValidateExportPath { get; set; }
+    public IReadOnlyCollection<string> SourcePaths => _protectedSourcePaths;
 
     public TileInspectorWindow()
     {
         InitializeComponent();
         assetList.ItemsSource = _assets;
+        _assets.CollectionChanged += (_, e) =>
+        {
+            if (e.NewItems is null) return;
+            foreach (TileAsset asset in e.NewItems)
+            {
+                if (asset.SourcePath is not null) _protectedSourcePaths.Add(Path.GetFullPath(asset.SourcePath));
+                if (asset.AtlasSourcePath is not null) _protectedSourcePaths.Add(Path.GetFullPath(asset.AtlasSourcePath));
+            }
+        };
         _ready = true;
         preview.PixelHovered += text => pixelLabel.Text = text.Length == 0
             ? Localization.Text("Наведите курсор на тайл, чтобы увидеть Δ для строки и столбца.") : text;

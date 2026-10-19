@@ -6,6 +6,7 @@ public partial class MainWindow
 {
     private void InitializeIcons()
     {
+        iconWorkspace.ValidateExportPath = EnsureExportPathAllowed;
         iconWorkspace.BackRequested += (_, _) => ShowHome();
         iconWorkspace.MaterialRequested += UseEditorMaterialForIcon;
         iconWorkspace.StatusChanged += message => statusLabel.Text = message;

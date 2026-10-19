@@ -171,6 +171,7 @@ internal static class TileInspectorChecks
             WaitUntil(() => window.Analysis!.Horizontal.All(v => v == 0));
             Require(window.SourcePath == latestFile, "Watcher followed the previous source");
             VerifyCollection(window, folder);
+            VerifyPaintColorAlpha(window);
             Console.WriteLine($"  Tile inspector captures: {folder}");
         }
         finally { window?.DiscardAndClose(); home.Close(); }
@@ -320,6 +321,60 @@ internal static class TileInspectorChecks
 
         void Paint(TilePointer point, bool begin) => typeof(TileInspectorWindow).GetMethod("HandlePaint", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, [point, begin]);
         void Finish() => typeof(TileInspectorWindow).GetMethod("FinishStroke", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, null);
+    }
+
+    private static void VerifyPaintColorAlpha(TileInspectorWindow window)
+    {
+        foreach (string color in new[] { "#8044CC66", "#0044CC66", "#FF44CC66", "#44CC66" })
+        {
+            SelectColor(color, cancel: false);
+            string alpha = color.Length == 9 ? color.Substring(1, 2) : "FF";
+            Require(Get<TextBox>(window, "paintColorInput").Text == $"#{alpha}112233", "Color picker changed the brush alpha channel");
+        }
+        SelectColor("#8044CC66", cancel: true);
+        Require(Get<TextBox>(window, "paintColorInput").Text == "#8044CC66", "Cancelling the color picker changed the brush");
+        SelectColor("#8044CC66", cancel: false);
+        var asset = window.ActiveAsset!;
+        var original = asset.GetPixel(0, 0);
+        Get<ComboBox>(window, "paintToolInput").SelectedIndex = 1;
+        typeof(TileInspectorWindow).GetMethod("HandlePaint", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(window, [new TilePointer(false, 0, 0, 0, 0), true]);
+        typeof(TileInspectorWindow).GetMethod("FinishStroke", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+        Require(asset.GetPixel(0, 0) == System.Windows.Media.Color.FromArgb(128, 17, 34, 51), "Painting ignored the selected translucent color");
+        asset.Undo();
+        Require(asset.GetPixel(0, 0) == original, "Undo did not restore the painted pixel");
+        Console.WriteLine("  Brush color: alpha 0/128/255, RGB input, cancel, painted pixels and undo passed.");
+
+        void SelectColor(string color, bool cancel)
+        {
+            Get<TextBox>(window, "paintColorInput").Text = color;
+            Exception? failure = null;
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
+            timer.Tick += (_, _) =>
+            {
+                var picker = window.OwnedWindows.OfType<ColorReplaceWindow>().SingleOrDefault();
+                if (picker is null) return;
+                timer.Stop();
+                try
+                {
+                    if (!cancel)
+                    {
+                        Get<TextBox>(picker, "newHexInput").Text = "#112233";
+                        Get<Button>(picker, "replaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    }
+                }
+                catch (Exception ex) { failure = ex; }
+                finally { if (picker.IsVisible) picker.Close(); }
+            };
+            timer.Start();
+            try
+            {
+                typeof(TileInspectorWindow).GetMethod("ChoosePaintColor", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(window, [window, new RoutedEventArgs()]);
+            }
+            finally { timer.Stop(); }
+            if (failure is not null) throw failure;
+        }
     }
 
     private static byte[] ReadDrawingPixels(Bitmap bitmap)

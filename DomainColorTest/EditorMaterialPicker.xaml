@@ -12,7 +12,7 @@
     </ResourceDictionary></UserControl.Resources>
     <Grid>
         <Button x:Name="materialTrigger" Content="{local:Translate Text951B03306A09}" Padding="18,11" AutomationProperties.Name="{local:Translate Text043B0536F028}"/>
-        <Popup x:Name="materialPopup" PlacementTarget="{Binding ElementName=materialTrigger}" Placement="Bottom" VerticalOffset="4" StaysOpen="False" AllowsTransparency="True">
+        <Popup x:Name="materialPopup" PlacementTarget="{Binding ElementName=materialTrigger}" Placement="Bottom" VerticalOffset="4" StaysOpen="True" AllowsTransparency="True">
             <Border x:Name="materialPanel" Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Padding="12" MaxWidth="430">
                 <ScrollViewer MaxHeight="350" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <StackPanel>
