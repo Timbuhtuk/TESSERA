@@ -43,32 +43,22 @@ if ($Repository) {
         }
         foreach ($release in $published) {
             $oldVersion = $release.tag_name.Substring(1)
-            if (!$history.ContainsKey($oldVersion) -and ![string]::IsNullOrWhiteSpace($release.body)) {
-                $history[$oldVersion] = [pscustomobject]@{
-                    version = $oldVersion
-                    title = @{ ru = $release.name; en = $release.name }
-                    notes = @{ ru = $release.body; en = $release.body }
-                }
-            }
+            if (!$history.ContainsKey($oldVersion)) { throw "Write user-facing history for $oldVersion in release-notes/catalog.json; raw GitHub descriptions are not patch notes." }
         }
 
-        # Reusing the previous release's curated notes would misdescribe the next release.
-        # If no new entry was written, derive honest notes from the actual new commits.
-        $oldBlob = & git -C $PSScriptRoot rev-parse "$($latest.tag_name):release-notes/catalog.json" 2>$null
+        # Only edited user-facing notes may describe a new release. Never publish commit subjects.
+        $null = & git -C $PSScriptRoot rev-parse --verify "$($latest.tag_name)^{commit}" 2>$null
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot compare patch notes; fetch full git history and tags.' }
+        $oldSource = & git -C $PSScriptRoot show "$($latest.tag_name):release-notes/catalog.json" 2>$null
         $hasPreviousSource = $LASTEXITCODE -eq 0
-        $newBlob = & git -C $PSScriptRoot hash-object $sourcePath
-        if ($LASTEXITCODE -ne 0) { throw 'Cannot read release notes source' }
-        if ($hasPreviousSource -and $oldBlob -eq $newBlob) {
-            $subjects = @(& git -C $PSScriptRoot log "$($latest.tag_name)..HEAD" --no-merges --format=%s)
-            if ($LASTEXITCODE -ne 0) { throw 'Cannot calculate release changes; fetch full git history and tags' }
-            if ($subjects.Count -eq 0) {
-                $subjects = @("Rebuilt the current main revision ($((& git -C $PSScriptRoot rev-parse --short HEAD))) with the release checks.")
+        if ($hasPreviousSource) {
+            $oldEntry = (($oldSource -join "`n") | ConvertFrom-Json).releases | Where-Object version -eq 'next'
+            $changed = $false
+            foreach ($language in @('ru', 'en')) {
+                if ($current.title.$language -cne $oldEntry.title.$language -or $current.notes.$language -cne $oldEntry.notes.$language) { $changed = $true }
             }
-            $changes = ($subjects | ForEach-Object { "- $_" }) -join "`n"
-            $current.title = [pscustomobject]@{ ru = 'Изменения этой версии'; en = 'Changes in this version' }
-            $current.notes = [pscustomobject]@{
-                ru = "Изменения из истории коммитов (язык оригинала):`n`n$changes"
-                en = "Changes from the commit history:`n`n$changes"
+            if (!$changed -and $Version -ne $latest.tag_name.Substring(1)) {
+                throw 'Write new user-facing patch notes in release-notes/catalog.json: affected tools and their changed behavior. Technical details and commit logs must not be published.'
             }
         }
     }
@@ -91,11 +81,6 @@ $($current.title.en)
 
 $($current.notes.en)
 
-## Downloads
-
-Download Tessera.exe or Tessera-win-x64.zip for the desktop app, or Tessera-cli-win-x64.zip for the CLI. No .NET installation is required. SHA256SUMS.txt contains the binary checksums.
-
-Existing users can update in Settings. Keep WorkspaceData beside the executable to preserve the library. Read these notes and earlier releases offline in Settings > Patch notes.
 "@
 [IO.File]::WriteAllText((Join-Path $output 'ReleaseNotes.md'), $body)
 Write-Output "Prepared release notes for v$Version ($($entries.Count) versions)."
