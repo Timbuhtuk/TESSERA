@@ -1,4 +1,3 @@
-using System.Drawing.Drawing2D;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -7,7 +6,6 @@ using System.Windows.Media.Imaging;
 using PixelArtDownscale;
 using Bitmap = System.Drawing.Bitmap;
 using DrawingColor = System.Drawing.Color;
-using DrawingRectangle = System.Drawing.Rectangle;
 
 namespace DomainColorTest;
 
@@ -219,7 +217,7 @@ internal sealed class PalettePreviewTooltips
             double boundary = 239 - y * 118.0 / (comparison.Height - 1);
             for (int x = 0; x < comparison.Width; x++)
             {
-                int sx = x / 2, sy = y / 2;
+                int sx = x * source.Width / comparison.Width, sy = y * source.Height / comparison.Height;
                 var color = x < boundary ? source.GetPixel(sx, sy) : result.GetPixel(sx, sy);
                 if (Math.Abs(x - boundary) <= 1) color = DrawingColor.White;
                 else if (Math.Abs(x - boundary) <= 2) color = DrawingColor.Black;
@@ -229,51 +227,12 @@ internal sealed class PalettePreviewTooltips
         return PixelPreview.ToBitmapSource(comparison);
     }
 
-    /// <summary>Bundled landscape plus a color/neutral calibration band; independent of open documents.</summary>
+    /// <summary>Bundled photograph crop; independent of open documents and processed at preview resolution.</summary>
     internal static Bitmap CreateSample()
     {
-        using var stream = Application.GetResourceStream(new Uri("pack://application:,,,/DomainColorTest;component/Assets/landscape.png"))!.Stream;
-        using var landscape = new Bitmap(stream);
-        var sample = new Bitmap(180, 100, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        using (var graphics = System.Drawing.Graphics.FromImage(sample))
-        {
-            graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-            graphics.DrawImage(landscape, new DrawingRectangle(0, 0, 180, 80));
-        }
-        for (int y = 0; y < sample.Height; y++)
-            for (int x = 0; x < sample.Width; x++)
-            {
-                DrawingColor color;
-                if (y < 80)
-                {
-                    double light = sample.GetPixel(x, y).R / 255.0;
-                    double hue = y < 38 ? 228 - y * 1.2 : 155 + (y - 38) * 1.6;
-                    color = Hsv(hue, .38 + .2 * (1 - light), light);
-                }
-                else if (y < 94)
-                    color = Hsv(x * 360.0 / 180, .9, .38 + .62 * (y - 80) / 13);
-                else
-                {
-                    int level = (int)Math.Round(x * 255.0 / 179);
-                    color = DrawingColor.FromArgb(level, level, level);
-                }
-                sample.SetPixel(x, y, color);
-            }
-        return sample;
-    }
-
-    private static DrawingColor Hsv(double hue, double saturation, double value)
-    {
-        double chroma = value * saturation;
-        double second = chroma * (1 - Math.Abs(hue / 60 % 2 - 1));
-        double offset = value - chroma;
-        var rgb = (int)(hue / 60) switch
-        {
-            0 => (chroma, second, 0.0), 1 => (second, chroma, 0.0), 2 => (0.0, chroma, second),
-            3 => (0.0, second, chroma), 4 => (second, 0.0, chroma), _ => (chroma, 0.0, second)
-        };
-        return DrawingColor.FromArgb((int)Math.Round((rgb.Item1 + offset) * 255),
-            (int)Math.Round((rgb.Item2 + offset) * 255), (int)Math.Round((rgb.Item3 + offset) * 255));
+        using var stream = Application.GetResourceStream(new Uri("pack://application:,,,/DomainColorTest;component/Assets/palette-preview-photo.png"))!.Stream;
+        using var photo = new Bitmap(stream);
+        return new Bitmap(photo);
     }
 
     private sealed record PreviewTip(FrameworkElement Owner, ToolTip ToolTip, TextBlock Title, Image Image,
