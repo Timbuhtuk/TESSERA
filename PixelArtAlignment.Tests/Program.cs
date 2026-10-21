@@ -2,7 +2,7 @@ using PixelArtAlignment.Tests;
 
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("PixelArtAlignment.Tests: --invariants, --ui, --tool-improvements, --moodboard, --tiles, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("PixelArtAlignment.Tests: --invariants, --ui, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;
@@ -16,7 +16,7 @@ if (args is ["--evaluate", var actualPath, var referencePath, "--cell-size", var
     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(quality, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     return quality.Score >= 90 ? 0 : 1;
 }
-if (args.Any(a => a is not ("--invariants" or "--ui" or "--tool-improvements" or "--moodboard" or "--tiles" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--invariants" or "--ui" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -88,6 +88,7 @@ if (args.Contains("--navigation")) Check("Top navigation, menus, state and respo
 if (args.Contains("--workspace")) Check("Workspace catalog, projects, shared assets, copies and WPF", WorkspaceChecks.Run);
 if (args.Contains("--localization")) Check("English localization, SVG settings and language persistence", LocalizationChecks.Run);
 if (args.Contains("--ui")) Check("Independent GUI alignment and downscale, normal and minimum layouts", UiChecks.Run);
+if (args.Contains("--ui") || args.Contains("--info")) Check("Image information and color replacement in docked and floating editors", InfoWorkspaceChecks.Run);
 if (args.Contains("--ui") || args.Contains("--moodboard")) Check("Moodboard canvas, layers, project and PNG export", MoodboardWorkspaceChecks.Run);
 if (args.Contains("--ui") || args.Contains("--tiles")) TileInspectorChecks.Run(Check);
 if (args.Contains("--benchmark"))

@@ -7,6 +7,7 @@ namespace DomainColorTest;
 public partial class MainWindow
 {
     private TileInspectorWindow? _tileInspector;
+    private readonly HashSet<string> _closedTileSourcePaths = new(StringComparer.OrdinalIgnoreCase);
 
     private async void OpenTileInspector(object sender, RoutedEventArgs e)
     {
@@ -20,7 +21,7 @@ public partial class MainWindow
     private TileInspectorWindow GetTileInspector()
     {
         if (_tileInspector is not null) return _tileInspector;
-        var inspector = new TileInspectorWindow { Owner = this };
+        var inspector = new TileInspectorWindow { Owner = this, ValidateExportPath = EnsureExportPathAllowed };
         _tileInspector = inspector;
         inspector.SetWorkspaceMaterials(GetTileWorkspaceContext);
         inspector.EnableWorkspaceApply(tile => SaveTileWorkspaceResult(tile), tile => FindTileWorkspaceOrigin(tile) is not null);
@@ -32,7 +33,11 @@ public partial class MainWindow
             if (document is null) return;
             document.ModifiedAt = DateTimeOffset.Now; UpdateDocumentPreview(document); _workspaceCatalog.Save();
         };
-        inspector.Closed += (_, _) => { _tileInspector = null; SynchronizeWorkspace(); };
+        inspector.Closed += (_, _) =>
+        {
+            foreach (string source in inspector.SourcePaths) _closedTileSourcePaths.Add(source);
+            _tileInspector = null; SynchronizeWorkspace();
+        };
         return inspector;
     }
 

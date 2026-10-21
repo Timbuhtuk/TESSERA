@@ -63,6 +63,26 @@ internal static class AsepriteUiChecks
             Get<IntegerInput>("sheetPadding").Value = 2;
             Wait(screen.RebuildAsync());
             Require(items.Count(e => e.Ready) == 3 && items.Single(e => e.InputPath == first).Result!.Width == 66, "Layout rebuild did not use the imported snapshot");
+
+            var readyBeforeCancel = items.Where(e => e.Ready).ToDictionary(e => e.InputPath, e => e.Result!);
+            Get<IntegerInput>("sheetPadding").Value = 3;
+            screen.StatusChanged += CancelRebuild;
+            try { Wait(screen.RebuildAsync()); }
+            finally { screen.StatusChanged -= CancelRebuild; }
+            Require(!screen.IsBusy && Get<Button>("sheetSaveAllButton").IsEnabled && items.Count(e => e.Ready) == 3,
+                "Canceling a rebuild discarded previously ready results");
+            foreach (var item in items.Where(e => e.Ready))
+                Require(ReferenceEquals(item.Result, readyBeforeCancel[item.InputPath]) && File.Exists(item.Result!.ImagePath) && item.Detail.Contains("Новые настройки не применены"),
+                    "Canceling a rebuild lost the previous output or its status");
+            var canceledSave = screen.SaveAsync(Path.Combine(folder, "after-cancel"), true); Wait(canceledSave);
+            Require(canceledSave.Result.Count == 3 && canceledSave.Result.All(r => r.Error is null), "Previous results cannot be exported after canceling a rebuild");
+            Get<IntegerInput>("sheetPadding").Value = 2; Wait(screen.RebuildAsync());
+
+            void CancelRebuild(string status)
+            {
+                if (status.StartsWith("Конвертация:", StringComparison.Ordinal))
+                    Get<Button>("sheetCancelButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }
             Get<ListBox>("sheetStrip").SelectedItem = items.Single(e => e.InputPath == second);
             var single = screen.SaveAsync(Path.Combine(folder, "single"), false); Wait(single);
             Require(single.Result.Count == 1 && single.Result[0].Input == second, "Selected export saved the wrong batch");

@@ -114,7 +114,7 @@ public partial class TileInspectorWindow
         TryColor(paintColorInput.Text, out var color);
         var picker = new ColorReplaceWindow(System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B)) { Owner = this };
         picker.ShowDialog();
-        if (picker.SelectedColor is { } selected) paintColorInput.Text = $"#FF{selected.R:X2}{selected.G:X2}{selected.B:X2}";
+        if (picker.SelectedColor is { } selected) paintColorInput.Text = $"#{color.A:X2}{selected.R:X2}{selected.G:X2}{selected.B:X2}";
     }
 
     public async Task SmoothActiveAsync(int passes, bool edgesOnly)

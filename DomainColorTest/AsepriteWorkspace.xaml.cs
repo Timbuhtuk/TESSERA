@@ -178,13 +178,13 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 }
                 catch (OperationCanceledException)
                 {
-                    entry.Pending = false; entry.Result = null; entry.State = Localization.Text("Отменено"); entry.Detail = entry.Label + Localization.Text(": конвертация отменена."); entry.Refresh();
+                    FinishUnsuccessfulConversion(entry, Localization.Text("Отменено"), entry.Label + Localization.Text(": конвертация отменена."));
                     DeleteCache(output);
                     throw;
                 }
                 catch (Exception ex)
                 {
-                    entry.Pending = false; entry.Result = null; entry.State = Localization.Text("Ошибка"); entry.Detail = ex.Message; entry.Refresh();
+                    FinishUnsuccessfulConversion(entry, Localization.Text("Ошибка"), ex.Message);
                     DeleteCache(output); failed++;
                 }
                 UpdateControls();
@@ -193,7 +193,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         }
         catch (OperationCanceledException)
         {
-            while (_pending.TryDequeue(out var entry)) { entry.Pending = false; entry.Result = null; entry.State = Localization.Text("Отменено"); entry.Detail = entry.Label + Localization.Text(": конвертация отменена."); entry.Refresh(); }
+            while (_pending.TryDequeue(out var entry)) FinishUnsuccessfulConversion(entry, Localization.Text("Отменено"), entry.Label + Localization.Text(": конвертация отменена."));
             StatusChanged?.Invoke(Localization.Format("Отменено. Готовых результатов: {0}.", _entries.Count(e => e.Ready)));
         }
         finally
@@ -202,6 +202,16 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
             if (_disposed) DeleteCache(_session);
             else { UpdateSelection(); UpdateControls(); }
         }
+    }
+
+    private static void FinishUnsuccessfulConversion(SheetEntry entry, string state, string detail)
+    {
+        entry.Pending = false;
+        entry.State = entry.Result is null ? state : state + Localization.Text(" · предыдущий результат");
+        entry.Detail = detail;
+        if (entry.Result is not null)
+            entry.Detail += Localization.Format("\nСохранён предыдущий результат: {0} × {1}. Новые настройки не применены.", entry.Result.Width, entry.Result.Height);
+        entry.Refresh();
     }
 
     private static void EnsureSnapshot(SheetEntry entry, CancellationToken token)

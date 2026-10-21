@@ -28,13 +28,18 @@ public sealed class TileCollectionSettings
 public static class TileCollectionFile
 {
     private sealed record AssetEntry(Guid Id, string Name, string? SourcePath, bool Edited, string Image, string? AtlasSourcePath = null);
-    private sealed record Manifest(int Version, TileCollectionSettings Settings, AssetEntry[] Assets);
+    private sealed record Manifest(int Version, TileCollectionSettings Settings, AssetEntry[] Assets, string[]? SourcePaths = null);
 
-    public static void Save(string path, IReadOnlyList<TileAsset> assets, TileCollectionSettings settings)
+    public static void Save(string path, IReadOnlyList<TileAsset> assets, TileCollectionSettings settings) => Save(path, assets, settings, []);
+
+    public static void Save(string path, IReadOnlyList<TileAsset> assets, TileCollectionSettings settings, IEnumerable<string>? sourcePaths)
     {
         path = Path.GetFullPath(path);
-        if (assets.Any(asset => string.Equals(asset.SourcePath, path, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(asset.AtlasSourcePath, path, StringComparison.OrdinalIgnoreCase)))
+        if (!string.Equals(Path.GetExtension(path), ".ttiles", StringComparison.OrdinalIgnoreCase))
+            throw new IOException(Localization.Text("Сохраните коллекцию в формате .ttiles."));
+        var protectedPaths = (sourcePaths ?? []).Concat(assets.SelectMany(asset => new[] { asset.SourcePath, asset.AtlasSourcePath }).OfType<string>())
+            .Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (protectedPaths.Contains(path, StringComparer.OrdinalIgnoreCase))
             throw new IOException(Localization.Text("Проект не может заменить исходное изображение."));
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -50,7 +55,7 @@ public static class TileCollectionFile
                     entries.Add(new(asset.Id, asset.Name, asset.SourcePath, asset.HasLocalEdits, image, asset.AtlasSourcePath));
                 }
                 using var manifest = archive.CreateEntry("collection.json").Open();
-                JsonSerializer.Serialize(manifest, new Manifest(1, settings, entries.ToArray()));
+                JsonSerializer.Serialize(manifest, new Manifest(1, settings, entries.ToArray(), protectedPaths));
             }
             File.Move(temporary, path, true);
         }
@@ -58,6 +63,12 @@ public static class TileCollectionFile
     }
 
     public static (List<TileAsset> Assets, TileCollectionSettings Settings) Load(string path)
+    {
+        var loaded = LoadWithSourcePaths(path);
+        return (loaded.Assets, loaded.Settings);
+    }
+
+    internal static (List<TileAsset> Assets, TileCollectionSettings Settings, string[] SourcePaths) LoadWithSourcePaths(string path)
     {
         using var archive = ZipFile.OpenRead(path);
         using var manifestStream = (archive.GetEntry("collection.json") ?? throw new InvalidDataException(Localization.Text("Нет описания коллекции."))).Open();
@@ -77,6 +88,8 @@ public static class TileCollectionFile
             assets.Add(new TileAsset(TileAsset.Decode(imageStream), entry.Edited)
                 { Id = entry.Id, Name = entry.Name ?? Localization.Text("Тайл"), SourcePath = source, AtlasSourcePath = atlas });
         }
-        return (assets, manifest.Settings);
+        var sourcePaths = (manifest.SourcePaths ?? []).Concat(assets.SelectMany(asset => new[] { asset.SourcePath, asset.AtlasSourcePath }).OfType<string>())
+            .Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        return (assets, manifest.Settings, sourcePaths);
     }
 }

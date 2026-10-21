@@ -13,6 +13,9 @@ public partial class IconWorkspace : UserControl, IDisposable
 {
     private Bitmap? _image;
     private string? _inputPath;
+    private readonly HashSet<string> _sourcePaths = new(StringComparer.OrdinalIgnoreCase);
+    public Action<string>? ValidateExportPath { get; set; }
+    public IReadOnlyCollection<string> SourcePaths => _sourcePaths;
     private bool _disposed;
     private bool _busy;
     private int _revision;
@@ -121,6 +124,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         _image?.Dispose();
         _image = copy;
         _inputPath = inputPath is null ? null : Path.GetFullPath(inputPath);
+        if (_inputPath is not null) _sourcePaths.Add(_inputPath);
         iconSourceImage.Source = preview;
         iconFileLabel.Text = label;
         iconFileLabel.ToolTip = label;
@@ -224,7 +228,8 @@ public partial class IconWorkspace : UserControl, IDisposable
     public async Task SaveAsync(string path, bool overwrite = false)
     {
         if (_busy || _disposed || _image is null) throw new InvalidOperationException(Localization.Text("Сначала откройте изображение."));
-        if (string.Equals(Path.GetFullPath(path), _inputPath, StringComparison.OrdinalIgnoreCase))
+        ValidateExportPath?.Invoke(Path.GetFullPath(path));
+        if (_sourcePaths.Contains(Path.GetFullPath(path)))
             throw new InvalidOperationException(Localization.Text("Нельзя перезаписать исходное изображение."));
         var options = GetOptions();
         if (options.Sizes.Count == 0) throw new InvalidOperationException(Localization.Text("Выберите хотя бы один размер."));

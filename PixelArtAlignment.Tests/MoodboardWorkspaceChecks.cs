@@ -19,7 +19,7 @@ internal static class MoodboardWorkspaceChecks
     public static void Run()
     {
         Exception? failure = null;
-        var thread = new Thread(() => { try { Verify(); } catch (Exception ex) { failure = ex; } }) { IsBackground = true };
+        var thread = new Thread(() => { try { Verify(); VerifyFileProtection(); } catch (Exception ex) { failure = ex; } }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         if (!thread.Join(TimeSpan.FromSeconds(120))) throw new Exception("Moodboard check timed out");
@@ -233,6 +233,102 @@ internal static class MoodboardWorkspaceChecks
         finally { window.Close(); }
 
         T GetWindow<T>(string name) => (T)typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+    }
+
+    private static void VerifyFileProtection()
+    {
+        string folder = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "board-protection-" + Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(folder);
+        string source = Path.Combine(folder, "source.png"), project = Path.Combine(folder, "board.tboard");
+        using (var image = new Bitmap(24, 16)) { image.SetPixel(0, 0, Color.Coral); image.Save(source); }
+        byte[] sourceBytes = File.ReadAllBytes(source);
+        var window = new MainWindow(Path.Combine(folder, "library")) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+        var board = (MoodboardWorkspace)window.FindName("moodboardWorkspace");
+        try
+        {
+            window.Show(); Pump();
+            board.AddFiles([source]);
+            board.SaveToFile(project);
+            byte[] projectBytes = File.ReadAllBytes(project);
+            VerifyProtected(board);
+            Require(!GetBoard<bool>(board, "_dirty") && !board.IsBusy, "Rejected writes changed the saved state or left the board busy");
+            board.SetBackgroundColor(Colors.Teal);
+            VerifyProtected(board);
+            Require(GetBoard<bool>(board, "_dirty"), "Rejected export cleared unsaved changes");
+            Require(File.ReadAllBytes(project).SequenceEqual(projectBytes), "Rejected export changed the project bytes");
+
+            string png = Path.Combine(folder, "composition.PNG");
+            AwaitWithPump(board.ExportToPngAsync(png));
+            board.ExportToPng(png);
+            using (var image = new Bitmap(png)) Require(image.Width == 1200 && image.Height == 800, "Protected export broke valid PNG output");
+            AwaitWithPump(board.SaveToFileAsync(project));
+            var reopened = new MoodboardWorkspace();
+            reopened.LoadFromFile(project);
+            VerifyProtected(reopened);
+            GetBoard<ListBox>(reopened, "layerList").SelectedIndex = 0;
+            GetBoard<Button>(reopened, "deleteButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Require(GetBoard<ListBox>(reopened, "layerList").Items.Count == 0, "Source-protection check did not remove its layer");
+            Reject(() => reopened.ExportToPng(source));
+
+            string renamedProject = Path.Combine(folder, "renamed-project.png");
+            File.Copy(project, renamedProject);
+            byte[] renamedBytes = File.ReadAllBytes(renamedProject);
+            reopened.LoadFromFile(renamedProject);
+            Reject(() => AwaitWithPump(reopened.ExportToPngAsync(renamedProject)));
+            Require(File.ReadAllBytes(renamedProject).SequenceEqual(renamedBytes), "PNG-named project was overwritten by PNG export");
+
+            string olderProject = Path.Combine(folder, "older-v2.tboard");
+            File.Copy(project, olderProject);
+            using (var archive = ZipFile.Open(olderProject, ZipArchiveMode.Update))
+            {
+                var entry = archive.GetEntry("board.json")!;
+                System.Text.Json.Nodes.JsonNode manifest;
+                using (var stream = entry.Open()) manifest = System.Text.Json.Nodes.JsonNode.Parse(stream)!;
+                manifest.AsObject().Remove("SourcePaths");
+                entry.Delete();
+                using var output = archive.CreateEntry("board.json").Open();
+                JsonSerializer.Serialize(output, manifest);
+            }
+            reopened.LoadFromFile(olderProject);
+            Require(GetBoard<ListBox>(reopened, "layerList").Items.Count == 1, "Existing v2 project without source metadata no longer opens");
+            Reject(() => reopened.ExportToPng(source));
+            Reject(() => AwaitWithPump(reopened.ExportToPngAsync(source)));
+            string legacyProject = Path.Combine(folder, "older-v1.tboard");
+            File.WriteAllText(legacyProject, JsonSerializer.Serialize(new { Version = 1, Width = 1200, Height = 800,
+                Layers = new[] { new { Name = "source.png", Png = sourceBytes, Width = 24, Height = 16,
+                    X = 0, Y = 0, Angle = 0, Scale = 1 } } }));
+            reopened.LoadFromFile(legacyProject);
+            Reject(() => reopened.ExportToPng(source));
+            Require(File.ReadAllBytes(source).SequenceEqual(sourceBytes), "Protected source bytes changed");
+            Require(!Directory.EnumerateFiles(folder, "*.tmp").Any(), "Rejected write left temporary files");
+            Console.WriteLine("  Board protection: source/project bytes preserved, sync/async paths rejected, dirty state intact, reopen and old formats passed.");
+        }
+        finally
+        {
+            typeof(MoodboardWorkspace).GetField("_dirty", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(board, false);
+            window.Close();
+        }
+
+        void VerifyProtected(MoodboardWorkspace target)
+        {
+            Reject(() => target.ExportToPng(source));
+            Reject(() => AwaitWithPump(target.ExportToPngAsync(Path.GetRelativePath(Environment.CurrentDirectory, source))));
+            Reject(() => target.ExportToPng(source.ToUpperInvariant()));
+            Reject(() => target.SaveToFile(source));
+            Reject(() => AwaitWithPump(target.SaveToFileAsync(source)));
+            Reject(() => target.ExportToPng(project));
+            Reject(() => AwaitWithPump(target.ExportToPngAsync(Path.Combine(folder, ".", "board.tboard"))));
+            Reject(() => target.ExportToPng(Path.Combine(folder, "other.tboard")));
+            Reject(() => target.SaveToFile(Path.Combine(folder, "other.png")));
+            Require(File.ReadAllBytes(source).SequenceEqual(sourceBytes), "A rejected write replaced its source");
+        }
+    }
+
+    private static void Reject(Action action)
+    {
+        try { action(); }
+        catch (InvalidOperationException) { return; }
+        throw new Exception("Unsafe board output path was accepted");
     }
 
     private static T GetBoard<T>(MoodboardWorkspace board, string name) =>

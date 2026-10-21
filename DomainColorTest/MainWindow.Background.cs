@@ -6,6 +6,7 @@ public partial class MainWindow
 {
     private void InitializeBackground()
     {
+        backgroundWorkspace.ValidateExportPath = EnsureExportPathAllowed;
         backgroundWorkspace.BackRequested += (_, _) => ShowHome();
         backgroundWorkspace.MaterialRequested += UseEditorMaterialForBackground;
         backgroundWorkspace.StatusChanged += message => statusLabel.Text = message;

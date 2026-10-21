@@ -64,6 +64,7 @@ public partial class MoodboardWorkspace : UserControl
         public int Width { get; set; }
         public int Height { get; set; }
         public string BackgroundColor { get; set; } = "#FFFFFF";
+        public string[] SourcePaths { get; set; } = [];
         public List<ManifestLayer> Layers { get; set; } = [];
     }
 
@@ -80,6 +81,7 @@ public partial class MoodboardWorkspace : UserControl
     }
 
     private readonly List<Layer> _layers = [];
+    private readonly HashSet<string> _sourcePaths = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<Layer> _selection = [];
     private readonly Dictionary<Layer, LayerPose> _dragStart = [];
     private Layer? _selected;
@@ -100,6 +102,8 @@ public partial class MoodboardWorkspace : UserControl
     public event EventHandler? BusyChanged;
     public event Action<string>? StatusChanged;
     public bool HasBoard => editorPanel.Visibility == Visibility.Visible;
+    public Action<string>? ValidateExportPath { get; set; }
+    public IReadOnlyCollection<string> SourcePaths => _sourcePaths;
     public bool IsBusy { get; private set; }
     public Color BackgroundColor => _backgroundColor;
 
@@ -190,6 +194,7 @@ public partial class MoodboardWorkspace : UserControl
     private void ShowStart()
     {
         _layers.Clear();
+        _sourcePaths.Clear();
         _selection.Clear();
         _selected = null;
         _projectPath = null;
@@ -209,6 +214,7 @@ public partial class MoodboardWorkspace : UserControl
     private void ResetBoard(int width, int height)
     {
         _layers.Clear();
+        _sourcePaths.Clear();
         _selection.Clear();
         _selected = null;
         _projectPath = null;
@@ -319,9 +325,9 @@ public partial class MoodboardWorkspace : UserControl
         finally { SetBusy(false); }
     }
 
-    private static (List<(string Name, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) PrepareImages(IEnumerable<string> paths)
+    private static (List<(string Name, string SourcePath, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) PrepareImages(IEnumerable<string> paths)
     {
-        var images = new List<(string, byte[], BitmapSource, int, int)>();
+        var images = new List<(string, string, byte[], BitmapSource, int, int)>();
         var errors = new List<string>();
         foreach (string path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
         {
@@ -330,14 +336,14 @@ public partial class MoodboardWorkspace : UserControl
             {
                 byte[] bytes = ReadImageData(path, out int sourceWidth, out int sourceHeight);
                 BitmapSource preview = DecodePreview(bytes, PreviewPixelLimit);
-                images.Add((Path.GetFileName(path), bytes, preview, sourceWidth, sourceHeight));
+                images.Add((Path.GetFileName(path), Path.GetFullPath(path), bytes, preview, sourceWidth, sourceHeight));
             }
             catch (Exception ex) { errors.Add($"{Path.GetFileName(path)}: {ex.Message}"); }
         }
         return (images, errors);
     }
 
-    private void AddPreparedImages((List<(string Name, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) prepared)
+    private void AddPreparedImages((List<(string Name, string SourcePath, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) prepared)
     {
         int added = 0;
         Layer? lastAdded = null;
@@ -355,6 +361,7 @@ public partial class MoodboardWorkspace : UserControl
                 };
                 _layers.Add(layer);
                 CreateLayerElement(layer);
+                _sourcePaths.Add(item.SourcePath);
                 added++;
                 lastAdded = layer;
             }
@@ -755,6 +762,7 @@ public partial class MoodboardWorkspace : UserControl
     public async Task SaveToFileAsync(string path)
     {
         if (!HasBoard || IsBusy) throw new InvalidOperationException(Localization.Text("Доска сейчас недоступна."));
+        path = ValidateOutputPath(path, project: true);
         var board = CaptureManifest(out var images);
         SetBusy(true);
         StatusChanged?.Invoke(Localization.Text("Сохранение доски…"));
@@ -769,6 +777,7 @@ public partial class MoodboardWorkspace : UserControl
     public void SaveToFile(string path)
     {
         if (!HasBoard) throw new InvalidOperationException(Localization.Text("Сначала создайте полотно."));
+        path = ValidateOutputPath(path, project: true);
         var board = CaptureManifest(out var images);
         WriteProject(path, board, images);
         MarkSaved(path);
@@ -777,7 +786,8 @@ public partial class MoodboardWorkspace : UserControl
     private BoardManifest CaptureManifest(out byte[][] images)
     {
         var board = new BoardManifest { Width = (int)boardSurface.Width, Height = (int)boardSurface.Height,
-            BackgroundColor = $"#{_backgroundColor.R:X2}{_backgroundColor.G:X2}{_backgroundColor.B:X2}" };
+            BackgroundColor = $"#{_backgroundColor.R:X2}{_backgroundColor.G:X2}{_backgroundColor.B:X2}",
+            SourcePaths = _sourcePaths.Order(StringComparer.OrdinalIgnoreCase).ToArray() };
         images = new byte[_layers.Count][];
         for (int q = 0; q < _layers.Count; q++)
         {
@@ -832,23 +842,25 @@ public partial class MoodboardWorkspace : UserControl
     public async Task LoadFromFileAsync(string path)
     {
         if (IsBusy) throw new InvalidOperationException(Localization.Text("Дождитесь завершения операции."));
+        path = Path.GetFullPath(path);
         SetBusy(true);
         StatusChanged?.Invoke(Localization.Text("Открытие доски…"));
         try
         {
             var loaded = await Task.Run(() => ReadProject(path));
-            ApplyLoadedBoard(loaded.Width, loaded.Height, loaded.Background, loaded.Layers, path);
+            ApplyLoadedBoard(loaded.Width, loaded.Height, loaded.Background, loaded.Layers, loaded.SourcePaths, path);
         }
         finally { SetBusy(false); }
     }
 
     public void LoadFromFile(string path)
     {
+        path = Path.GetFullPath(path);
         var loaded = ReadProject(path);
-        ApplyLoadedBoard(loaded.Width, loaded.Height, loaded.Background, loaded.Layers, path);
+        ApplyLoadedBoard(loaded.Width, loaded.Height, loaded.Background, loaded.Layers, loaded.SourcePaths, path);
     }
 
-    private static (int Width, int Height, Color Background, List<Layer> Layers) ReadProject(string path)
+    private static (int Width, int Height, Color Background, List<Layer> Layers, string[] SourcePaths) ReadProject(string path)
     {
         using var file = File.OpenRead(path);
         bool zipped = file.ReadByte() == 'P' && file.ReadByte() == 'K';
@@ -856,6 +868,7 @@ public partial class MoodboardWorkspace : UserControl
         int width, height;
         Color background = Colors.White;
         var layers = new List<Layer>();
+        string[] sourcePaths = [];
         if (zipped)
         {
             using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
@@ -863,6 +876,7 @@ public partial class MoodboardWorkspace : UserControl
             var board = JsonSerializer.Deserialize<BoardManifest>(manifestStream) ?? throw new InvalidDataException(Localization.Text("Пустой файл доски."));
             ValidateBoard(board.Version, board.Width, board.Height, board.Layers?.Count ?? -1, 2);
             background = ParseBackgroundColor(board.BackgroundColor);
+            sourcePaths = (board.SourcePaths ?? []).Select(source => Path.GetFullPath(source)).ToArray();
             var items = board.Layers ?? throw new InvalidDataException(Localization.Text("Нет слоёв доски."));
             width = board.Width; height = board.Height;
             foreach (var item in items)
@@ -892,7 +906,7 @@ public partial class MoodboardWorkspace : UserControl
                     Width = item.Width, Height = item.Height, X = item.X, Y = item.Y, Angle = item.Angle, Scale = item.Scale });
             }
         }
-        return (width, height, background, layers);
+        return (width, height, background, layers, sourcePaths);
     }
 
     private static Color ParseBackgroundColor(string? hex)
@@ -904,11 +918,12 @@ public partial class MoodboardWorkspace : UserControl
         return Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
     }
 
-    private void ApplyLoadedBoard(int width, int height, Color background, List<Layer> layers, string path)
+    private void ApplyLoadedBoard(int width, int height, Color background, List<Layer> layers, string[] sourcePaths, string path)
     {
         ResetBoard(width, height);
         SetBackgroundColor(background);
         _layers.AddRange(layers);
+        _sourcePaths.UnionWith(sourcePaths);
         _projectPath = path;
         _dirty = false;
         RebuildLayers();
@@ -940,6 +955,7 @@ public partial class MoodboardWorkspace : UserControl
     public async Task ExportToPngAsync(string path)
     {
         if (!HasBoard || IsBusy) throw new InvalidOperationException(Localization.Text("Доска сейчас недоступна."));
+        path = ValidateOutputPath(path, project: false);
         var layers = CaptureRenderLayers();
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         SetBusy(true);
@@ -956,9 +972,49 @@ public partial class MoodboardWorkspace : UserControl
     public void ExportToPng(string path)
     {
         if (!HasBoard) throw new InvalidOperationException(Localization.Text("Сначала создайте полотно."));
+        path = ValidateOutputPath(path, project: false);
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         MoodboardPngExporter.Export(path, width, height, _backgroundColor, CaptureRenderLayers());
         StatusChanged?.Invoke(Localization.Format("PNG сохранён: {0}", path));
+    }
+
+    private string ValidateOutputPath(string path, bool project)
+    {
+        string output = Path.GetFullPath(path);
+        if (!project || WorkspaceSavePath is null || !string.Equals(output, Path.GetFullPath(WorkspaceSavePath), StringComparison.OrdinalIgnoreCase))
+            ValidateExportPath?.Invoke(output);
+        if (_sourcePaths.Contains(output) || (!project && MatchesEmbeddedSource(output)))
+            throw new InvalidOperationException(Localization.Text("Выберите другое имя: исходные изображения не перезаписываются."));
+        if (!project && string.Equals(output, _projectPath, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(Localization.Text("Выберите другое имя: PNG не может заменить проект доски."));
+        string extension = project ? ".tboard" : ".png";
+        if (!string.Equals(Path.GetExtension(output), extension, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(project ? Localization.Text("Сохраните доску в формате .tboard.") : Localization.Text("Сохраните изображение в формате PNG."));
+        return output;
+    }
+
+    private bool MatchesEmbeddedSource(string path)
+    {
+        if (!File.Exists(path)) return false;
+        long length = new FileInfo(path).Length;
+        var candidates = _layers.Where(layer => layer.ImageData.LongLength == length).ToArray();
+        if (candidates.Length == 0) return false;
+        // Старые проекты содержат изображения, но ещё не содержат путей исходников.
+        using var input = File.OpenRead(path);
+        var buffer = new byte[65536];
+        foreach (var layer in candidates)
+        {
+            input.Position = 0;
+            int offset = 0;
+            while (offset < layer.ImageData.Length)
+            {
+                int read = input.Read(buffer, 0, Math.Min(buffer.Length, layer.ImageData.Length - offset));
+                if (read == 0 || !layer.ImageData.AsSpan(offset, read).SequenceEqual(buffer.AsSpan(0, read))) break;
+                offset += read;
+            }
+            if (offset == layer.ImageData.Length) return true;
+        }
+        return false;
     }
 
     private MoodboardRenderLayer[] CaptureRenderLayers() => _layers.Select(item =>

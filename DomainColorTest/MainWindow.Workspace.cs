@@ -282,7 +282,7 @@ public partial class MainWindow
         var dialog = new SaveFileDialog { Title = Localization.Text("Экспортировать изображение"), Filter = Localization.Text("PNG с прозрачностью|*.png"), DefaultExt = ".png", FileName = Path.GetFileNameWithoutExtension(_workspaceActive?.Name ?? "image") + ".png" };
         if (dialog.ShowDialog(this) != true) return;
         string path = Path.GetFullPath(dialog.FileName);
-        if (_sources.Any(s => string.Equals(Path.GetFullPath(s.OriginalPath), path, StringComparison.OrdinalIgnoreCase)) || path.StartsWith(_library.DirectoryPath + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)) throw new IOException(Localization.Text("Выберите файл вне библиотеки и исходников."));
+        EnsureExportPathAllowed(path);
         WorkspaceBasis().Save(path, System.Drawing.Imaging.ImageFormat.Png); statusLabel.Text = Localization.Text("Экспортировано: ") + path;
     }
 
@@ -471,6 +471,7 @@ public partial class MainWindow
     }
     private void CloseDockedWorkspaceTool()
     {
+        if (_workspaceGroups.Contains(infoToolGroup)) ResetInfoSnapshot();
         foreach (var group in _workspaceGroups)
         {
             if (group.Parent is Panel panel) panel.Children.Remove(group); else if (group.Parent is Expander expander) expander.Content = null;

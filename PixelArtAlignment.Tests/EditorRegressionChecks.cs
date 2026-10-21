@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using DomainColorTest;
 using PixelArtAlignment;
@@ -29,6 +30,7 @@ internal static class EditorRegressionChecks
         Check("tool-state", VerifyTools);
         Check("aspect-lock", VerifyAspectLock);
         Check("grid-basis", VerifyGridBasis);
+        Check("export-protection", VerifyExportProtection);
         Require(failures.Count == 0, string.Join(Environment.NewLine, failures));
 
         void Check(string name, Action verify)
@@ -74,6 +76,17 @@ internal static class EditorRegressionChecks
                 }
             Get<IntegerInput>("widthInput").Value++;
             Require(Get<bool>("_resultStale"), "A real size edit did not mark the result stale");
+
+            foreach (var pair in new[] { ("sizeMenuItem", "scaleOnlyButton"), ("gridMenuItem", "alignButton"), ("filtersMenuItem", "monochromeButton") })
+                for (int q = 0; q < 2; q++)
+                {
+                    Click(pair.Item1); Pump();
+                    var button = Get<Button>(pair.Item2);
+                    button.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+                    Window.GetWindow(button)!.Close();
+                    button.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+                    Pump();
+                }
 
             void VerifyUnchanged(string action)
             {
@@ -128,6 +141,54 @@ internal static class EditorRegressionChecks
             using (var expected = new PixelGridAligner().Align(source, new GridAlignmentOptions()))
                 EqualPixels(expected.Aligned, Get<Bitmap>("_downscaledResult"), "Automatic alignment of source");
             Require(document.SelectedGeneration!.ParentGenerationId is null, "Source alignment retained an unrelated parent");
+        }
+
+        void VerifyExportProtection()
+        {
+            string second = Path.Combine(folder, "second-source.png");
+            File.Copy(input, second);
+            Invoke("LoadImage", second); Invoke("LoadImage", input);
+            Click("scaleOnlyButton"); Wait();
+            var sources = Get<ListBox>("sourceStrip").Items.Cast<SourceEntry>().ToArray();
+            var library = Get<ImageLibrary>("_library");
+            var protectedFiles = sources.Select(item => item.OriginalPath).Concat(sources.Select(library.SourcePath)).Concat(
+                sources.SelectMany(item => item.Generations.Select(generation => library.ResultPath(item, generation)))).ToArray();
+            foreach (string path in protectedFiles)
+            {
+                byte[] before = File.ReadAllBytes(path);
+                Reject(() => Invoke("SaveResult", path.ToUpperInvariant()));
+                Reject(() => Invoke("SaveResult", Path.GetRelativePath(Environment.CurrentDirectory, path)));
+                Require(File.ReadAllBytes(path).SequenceEqual(before), "Export changed protected file " + path);
+            }
+            Reject(() => Invoke("SaveResult", Path.Combine(library.DirectoryPath, "new.png")));
+            string output = Path.Combine(folder, "safe-result.PNG");
+            Invoke("SaveResult", output); Invoke("SaveResult", output);
+            using (var actual = new Bitmap(output)) EqualPixels(Get<Bitmap>("_downscaledResult"), actual, "Repeated PNG export");
+
+            Reject(() => WaitTask((Task)Invoke("SaveAsciiTextAsync", input)!));
+            Reject(() => WaitTask((Task)Invoke("SaveAsciiTextAsync", Path.Combine(library.DirectoryPath, "output.txt"))!));
+            string text = Path.Combine(folder, "safe-ascii.TXT");
+            WaitTask((Task)Invoke("SaveAsciiTextAsync", text)!);
+            string expected = PixelArtDownscale.ImageFilters.ToAscii(Get<Bitmap>("_sourceImage"), Get<TextBox>("asciiCharactersInput").Text, Get<CheckBox>("asciiInvertSourceInput").IsChecked == true);
+            Require(File.ReadAllText(text) == expected, "ASCII export did not write expected text");
+            WaitTask((Task)Invoke("SaveAsciiTextAsync", text)!);
+            Require(!Directory.EnumerateFiles(folder, "*.tmp", SearchOption.AllDirectories).Any(), "Rejected export left temporary files");
+            Require(!Get<bool>("_processing"), "ASCII export left editor busy");
+        }
+
+        void Reject(Action action)
+        {
+            try { action(); }
+            catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException) { return; }
+            catch (InvalidOperationException) { return; }
+            throw new Exception("Export accepted a protected path");
+        }
+
+        void WaitTask(Task task)
+        {
+            var until = DateTime.UtcNow.AddSeconds(20);
+            while (!task.IsCompleted && DateTime.UtcNow < until) { Pump(); Thread.Sleep(5); }
+            Require(task.IsCompleted, "Export timed out"); task.GetAwaiter().GetResult(); Pump();
         }
 
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;

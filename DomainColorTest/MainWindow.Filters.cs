@@ -107,6 +107,18 @@ public partial class MainWindow
         };
         if (dialog.ShowDialog(Window.GetWindow(asciiSaveTextButton) ?? this) != true) return;
 
+        try { await SaveAsciiTextAsync(dialog.FileName); }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось сохранить ASCII-текст: {0}", ex.Message); }
+    }
+
+    private async Task SaveAsciiTextAsync(string path)
+    {
+        Bitmap? basis = GetFilterBasis();
+        if (_processing || basis is null) return;
+        string output = Path.GetFullPath(path);
+        if (!string.Equals(Path.GetExtension(output), ".txt", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(Localization.Text("Сохраните ASCII-текст в файле TXT."));
+        EnsureExportPathAllowed(output);
         string characters = asciiCharactersInput.Text;
         bool keepSourceSize = asciiKeepSourceSizeInput.IsChecked == true;
         bool invertSource = asciiInvertSourceInput.IsChecked == true;
@@ -118,7 +130,6 @@ public partial class MainWindow
             string text = await Task.Run(() => keepSourceSize
                 ? ImageFilters.ToAscii(input, characters, invertSource)
                 : ImageFilters.ToAsciiPerPixel(input, characters, invertSource));
-            string output = Path.GetFullPath(dialog.FileName);
             string temporary = Path.Combine(Path.GetDirectoryName(output)!, $".{Path.GetFileName(output)}.{Guid.NewGuid():N}.tmp");
             try
             {
@@ -127,10 +138,6 @@ public partial class MainWindow
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             statusLabel.Text = Localization.Format("ASCII-текст сохранён: {0}", output);
-        }
-        catch (Exception ex)
-        {
-            statusLabel.Text = Localization.Format("Не удалось сохранить ASCII-текст: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }

@@ -465,10 +465,7 @@ public partial class MainWindow : Window
                 ? Localization.Text("Сохраните этот результат в PNG, чтобы сохранить прозрачность.")
                 : Localization.Text("Выберите формат PNG, JPEG или BMP."));
         }
-        if (string.Equals(outputPath, _selectedFilePath, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(Localization.Text("Выберите другое имя: исходное изображение нужно сохранить."));
-        }
+        EnsureExportPathAllowed(outputPath);
         string temporaryPath = Path.Combine(Path.GetDirectoryName(outputPath)!, $".{Path.GetFileName(outputPath)}.{Guid.NewGuid():N}.tmp");
         try
         {
@@ -483,6 +480,21 @@ public partial class MainWindow : Window
             statusLabel.Text = Localization.Format("Сохранено: {0}", outputPath) + (_resultStale ? Localization.Text(" · результат предыдущих настроек") : "");
         }
         finally { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
+    }
+
+    private void EnsureExportPathAllowed(string path)
+    {
+        string output = Path.GetFullPath(path);
+        string library = Path.TrimEndingDirectorySeparator(Path.GetFullPath(_library.DirectoryPath));
+        if (string.Equals(output, library, StringComparison.OrdinalIgnoreCase) ||
+            output.StartsWith(library + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException(Localization.Text("Выберите файл вне внутренней библиотеки Tessera."));
+        var sources = _sources.Select(source => source.OriginalPath).Concat(iconWorkspace.SourcePaths)
+            .Concat(backgroundWorkspace.SourcePaths).Concat(moodboardWorkspace.SourcePaths)
+            .Concat(_tileInspector?.SourcePaths ?? []).Concat(_closedTileSourcePaths);
+        if (sources.Any(source => !string.IsNullOrWhiteSpace(source) &&
+            string.Equals(output, Path.GetFullPath(source), StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException(Localization.Text("Выберите другое имя: исходные изображения нужно сохранить."));
     }
 
     private void AlignmentSettingsChanged()

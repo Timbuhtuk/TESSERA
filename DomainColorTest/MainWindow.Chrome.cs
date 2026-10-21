@@ -46,17 +46,14 @@ public partial class MainWindow
         Dispatcher.BeginInvoke(new Action(UpdateWindowFrame));
     }
 
-    private void MinimizeWindow(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+    private void MinimizeWindow(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
     private void ToggleMaximizeWindow(object sender, RoutedEventArgs e)
     {
-        if (WindowState == WindowState.Maximized)
-            SystemCommands.RestoreWindow(this);
-        else
-            SystemCommands.MaximizeWindow(this);
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
     }
 
-    private void CloseWindow(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
+    private void CloseWindow(object sender, RoutedEventArgs e) => Close();
 
     [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct MonitorInfo { public int Size; public NativeRect Monitor, Work; public uint Flags; }
