@@ -2,18 +2,255 @@
   "releases": [
     {
       "version": "next",
-      "title": { "ru": "Патчноуты всегда под рукой", "en": "Release notes inside Tessera" },
+      "title": {
+        "ru": "Патчноуты",
+        "en": "Patch notes"
+      },
       "notes": {
-        "ru": "- При первом запуске новой версии открывается окно с её изменениями.\n- В настройках появилась отдельная вкладка «Патчноуты» с историей релизов.\n- Заметки встроены в приложение и доступны без интернета.\n- Релизная сборка использует один текст изменений для приложения и страницы GitHub.",
-        "en": "- See what changed when you first launch a new version.\n- Read the release history in the new Settings > Patch notes tab.\n- Release notes are bundled with the app and remain available offline.\n- Release builds use the same change notes inside the app and on GitHub."
+        "ru": "- Патчноуты: описания показывают, какие инструменты изменились и что пользователь может ожидать от их работы.\n- История релизов: убраны служебные подробности; изменения сгруппированы по затронутым инструментам.",
+        "en": "- Patch notes: descriptions explain which tools changed and what users can expect them to do.\n- Release history: entries focus on affected tools and their behavior."
+      }
+    },
+    {
+      "version": "1.0.43",
+      "title": {
+        "ru": "Патчноуты",
+        "en": "Patch notes"
+      },
+      "notes": {
+        "ru": "- Патчноуты: при первом запуске новой версии открывается окно с её изменениями. Повторные запуски той же версии его не открывают.\n- Настройки: добавлена вкладка «Патчноуты», где можно выбрать версию и прочитать её изменения без интернета.",
+        "en": "- Patch notes: the first launch of a new version opens its change notes. Later launches of the same version do not reopen them.\n- Settings: the new Patch notes tab lets you select a version and read its changes offline."
       }
     },
     {
       "version": "1.0.41",
-      "title": { "ru": "Инструменты обработки и предпросмотр", "en": "Image tools and previews" },
+      "title": {
+        "ru": "Обработка изображений и предпросмотр",
+        "en": "Image processing and previews"
+      },
       "notes": {
-        "ru": "- Фотографические примеры палитр и квантования учитывают параметры обработки; исправлен дизеринг фиксированных палитр.\n- Добавлены выбор точного RGB-цвета, подсветка замены, свой цвет фона, пипетка и ластик с отменой.\n- Улучшены очистка цветов, ASCII и связь тайлов с материалами проекта и историей.\n- Добавлены контур обрезки, четыре фона предпросмотра и сравнение с оригиналом по Alt.\n- Проверка обновлений перенесена в настройки.\n- Исправлено сохранение PNG в библиотеке с длинными путями.",
-        "en": "- Parameter-aware photographic palette and quantizer previews, with corrected fixed-palette dithering.\n- Exact RGB picking and replacement highlighting, custom background colors, a pipette and an undoable eraser.\n- Better color cleanup, ASCII rendering and project-linked tile histories.\n- Crop outlines, four preview backgrounds and whole-result comparison with Alt.\n- Update checking moved to Settings.\n- Fixed library PNG writes on long workspace paths."
+        "ru": "- Палитры: примеры показывают результат с выбранными параметрами; исправлено смешение цветов при дизеринге готовых палитр.\n- Замена цвета: пипетка выбирает точный цвет, а подсветка показывает пиксели для замены.\n- Удаление фона: можно выбрать свой цвет, взять его пипеткой и исправить края ластиком с отменой действий.\n- Очистка цветов: можно регулировать силу очистки и защиту мелких деталей и краёв. ASCII лучше сохраняет тон исходного изображения.\n- Тайлы: инструмент открывает материалы текущего проекта и сохраняет связь исправлений с историей изображения.\n- Предпросмотр: видны границы обрезки; доступны четыре фона и просмотр результата на всю область с исходником по Alt.\n- Настройки: сюда перенесена проверка обновлений. Библиотека сохраняет результаты и при размещении в глубоко вложенных папках.",
+        "en": "- Palettes: examples reflect the selected settings; fixed-palette dithering now mixes colors correctly.\n- Color replacement: pick an exact color and highlight the pixels that will be replaced.\n- Background removal: choose a custom color, sample it with the pipette and correct edges with an undoable eraser.\n- Color cleanup: adjust cleanup strength and protection for small details and edges. ASCII better preserves the source image's tones.\n- Tiles: open materials from the current project and keep corrections connected to the image history.\n- Preview: inspect crop boundaries, choose four backgrounds and view the result across the whole area, holding Alt for the original.\n- Settings: update checking is now here. The library also saves results when placed in deeply nested folders."
+      }
+    },
+    {
+      "version": "1.0.38",
+      "title": {
+        "ru": "Информация об изображении и замена цвета",
+        "en": "Image information and color replacement"
+      },
+      "notes": {
+        "ru": "- Информация: снова доступна в боковой панели и отдельных окнах инструментов; показывает размеры, число пикселей, цветов и прозрачных участков.\n- Замена цвета: команда открывает нужную панель, если она закрыта; замена сохраняет прозрачность.\n- Информация и замена цвета: следуют за выбранным исходником или результатом. При смене изображения старое окно выбора цвета закрывается.",
+        "en": "- Image information: available again in the side panel and floating tools, with dimensions, pixel and color counts, and transparency details.\n- Color replacement: the command opens its panel when needed and preserves transparency.\n- Information and replacement follow the selected source or result. Changing the image closes an outdated color picker."
+      }
+    },
+    {
+      "version": "1.0.37",
+      "title": {
+        "ru": "Сохранение и работа инструментов",
+        "en": "Saving and tool behavior"
+      },
+      "notes": {
+        "ru": "- Экспорт: сохранение результата не заменяет исходное изображение или другой проект.\n- Рисование: кисть сохраняет выбранную прозрачность цвета. Aseprite: отмена обработки не удаляет уже готовые результаты.\n- Выбор материала: исправлены переходы мышью и клавиатурой. Кнопки окна корректно сворачивают, разворачивают и закрывают приложение.\n- Обновление: отмена закрытия оставляет приложение открытым и не начинает установку.\n- Интерфейс: исправлено закрытие приложения при наведении на некоторые элементы управления.",
+        "en": "- Export: saving a result does not overwrite an original image or another project.\n- Painting: the brush keeps the selected color's transparency. Aseprite: cancelling processing keeps results that are already ready.\n- Material selection: mouse and keyboard navigation work correctly. Window buttons minimize, maximize and close the app correctly.\n- Updates: cancelling closure keeps the app open and does not begin installation.\n- Interface: fixed crashes when hovering some controls."
+      }
+    },
+    {
+      "version": "1.0.36",
+      "title": {
+        "ru": "Библиотека и проекты",
+        "en": "Library and projects"
+      },
+      "notes": {
+        "ru": "- Библиотека: изображения, анимации, доски и коллекции тайлов доступны вместе; добавлены проекты, вложенные папки, теги и поиск.\n- Материалы: можно использовать один материал в нескольких проектах или создать независимую копию.\n- Навигация: команды собраны в меню «Файл», «Изображение», «Инструменты» и «Вид»; в узком окне доступны через дополнительное меню.\n- Настройки: можно выбрать тему и русский или английский язык.\n- Библиотека: историю можно перенести вместе с приложением, сохранив рядом папку WorkspaceData; прежняя история переносится при первом запуске.",
+        "en": "- Library: images, animations, boards and tile collections are available together, with projects, nested folders, tags and search.\n- Materials: share a material across projects or create an independent copy.\n- Navigation: commands are grouped under File, Image, Tools and View, with an overflow menu in narrow windows.\n- Settings: choose a theme and Russian or English.\n- Library: keep WorkspaceData beside the app when moving it to retain history; existing history is copied on first launch."
+      }
+    },
+    {
+      "version": "1.0.34",
+      "title": {
+        "ru": "Масштаб и выбор соседних тайлов",
+        "en": "Tile zoom and neighbor selection"
+      },
+      "notes": {
+        "ru": "- Тайлы: Ctrl + колёсико меняет масштаб вокруг курсора; обычное колёсико прокручивает изображение.\n- Тайлы: доступны масштабы от 6,25% до 6400%; первый шаг после «Вписать» начинается с видимого масштаба.\n- Соседний тайл: выбор по миниатюре; имя видно в подсказке. Миниатюры обновляются после рисования.\n- Коллекции тайлов: выбранный масштаб сохраняется; прежние проекты открываются с привычным масштабом.",
+        "en": "- Tiles: Ctrl + wheel zooms around the cursor; the plain wheel scrolls.\n- Tiles: zoom from 6.25% to 6400%; the first step after Fit starts from the displayed scale.\n- Neighbor tiles: select by thumbnail and hover for the name. Thumbnails update after painting.\n- Tile collections: the selected zoom is saved; older projects retain their expected zoom."
+      }
+    },
+    {
+      "version": "1.0.26",
+      "title": {
+        "ru": "Карта швов по Alt",
+        "en": "Seam heatmap with Alt"
+      },
+      "notes": {
+        "ru": "- Тайлы: удерживайте Alt для временного показа карты швов. Отпускание клавиши или переход в другое окно возвращает выбранный вид.\n- Тайлы: показатели швов перенесены под предпросмотр, а рисование и сглаживание остаются над ним, в том числе в небольшом окне.",
+        "en": "- Tiles: hold Alt to temporarily show the seam heatmap. Releasing Alt or switching windows restores the selected view.\n- Tiles: seam statistics are below the preview, with painting and smoothing controls above it, including in small windows."
+      }
+    },
+    {
+      "version": "1.0.23",
+      "title": {
+        "ru": "Импорт тайлсетов",
+        "en": "Tileset import"
+      },
+      "notes": {
+        "ru": "- Импорт тайлсета: разделите атлас по размеру тайла или числу строк и столбцов; настройте отступы, промежутки и пропуск пустых ячеек.\n- Импорт тайлсета: предложенную сетку можно увидеть и изменить до импорта. Каждый тайл доступен для отдельного редактирования.\n- Тайлы: сохраняются исходные цвета и прозрачность; изменение атласа не заменяет уже импортированные тайлы.",
+        "en": "- Tileset import: slice an atlas by tile size or row and column counts, with margins, gaps and optional empty-cell skipping.\n- Tileset import: preview and adjust the suggested grid before importing. Each tile can be edited separately.\n- Tiles: original colors and transparency are preserved; changes to the atlas do not replace tiles already imported."
+      }
+    },
+    {
+      "version": "1.0.20",
+      "title": {
+        "ru": "Инспектор тайлов",
+        "en": "Tile inspector"
+      },
+      "notes": {
+        "ru": "- Добавлен инспектор тайлов: смотрите повторение по горизонтали и вертикали, сравнивайте соседние тайлы и замечайте различия на карте швов.\n- Тайлы: рисуйте карандашом и ластиком, берите цвет пипеткой, меняйте размер кисти, отменяйте и повторяйте действия.\n- Тайлы: сглаживайте всё изображение или только края; результат можно сохранить как PNG.\n- Коллекции тайлов: сохраняйте изображения и правки в проекте; внешние изменения исходников не заменяют локальные правки.",
+        "en": "- Added the tile inspector: preview horizontal and vertical repetition, compare neighbors and spot differences with the seam heatmap.\n- Tiles: paint with a pencil or eraser, sample colors, change brush size, and undo or redo edits.\n- Tiles: smooth the whole image or just its edges, then export PNG.\n- Tile collections: save images and edits in a project; external source changes do not overwrite local edits."
+      }
+    },
+    {
+      "version": "1.0.17",
+      "title": {
+        "ru": "Доска изображений",
+        "en": "Image board"
+      },
+      "notes": {
+        "ru": "- Добавлена доска изображений: задайте размер холста и цвет фона, разместите несколько изображений.\n- Доска: перемещайте, поворачивайте, масштабируйте и меняйте порядок отдельных слоёв или выделенной группы.\n- Доска: сохраните редактируемый проект .tboard или готовую композицию как PNG.",
+        "en": "- Added image boards: choose a canvas size and background color and arrange multiple images.\n- Boards: move, rotate, scale and reorder individual layers or a selection.\n- Boards: save an editable .tboard project or export the composition as PNG."
+      }
+    },
+    {
+      "version": "1.0.16",
+      "title": {
+        "ru": "Элементы управления и диалоги",
+        "en": "Controls and dialogs"
+      },
+      "notes": {
+        "ru": "- Интерфейс: обновлён вид переключателей и ползунков.\n- Диалоги: тень стала чётче; убрана тёмная подложка вокруг окна.\n- Справка Aseprite: уточнено, какие видимые слои попадут в результат, а какие останутся скрытыми.",
+        "en": "- Interface: refreshed checkboxes and sliders.\n- Dialogs: a sharper shadow replaces the dark rectangular backdrop.\n- Aseprite help: clarified which visible layers appear in the result and which layers remain hidden."
+      }
+    },
+    {
+      "version": "1.0.15",
+      "title": {
+        "ru": "Сообщения и выбор цвета",
+        "en": "Messages and color selection"
+      },
+      "notes": {
+        "ru": "- Диалоги: сообщения об обработке, сохранении и обновлении оформлены в общем стиле приложения.\n- Замена цвета: обновлён вид окна; выбор оттенка, палитры и ввод HEX остаются доступны.",
+        "en": "- Dialogs: processing, saving and update messages match the app's appearance.\n- Color replacement: the refreshed window retains hue, palette and HEX controls."
+      }
+    },
+    {
+      "version": "1.0.14",
+      "title": {
+        "ru": "Слои Aseprite и фоны предпросмотра",
+        "en": "Aseprite layers and preview backgrounds"
+      },
+      "notes": {
+        "ru": "- Aseprite: видимые слои объединяются в результат в правильном порядке, скрытые слои и группы не показываются.\n- Aseprite: полупрозрачные участки сохраняют ожидаемый цвет. Для неподдерживаемых режимов появляется понятная ошибка.\n- Предпросмотр: снова доступны шахматный, тёмный и светлый фоны для прозрачных изображений.\n- Интерфейс: обновлены оформление и шрифты.",
+        "en": "- Aseprite: visible layers appear in the correct order; hidden layers and groups remain hidden.\n- Aseprite: translucent areas retain their expected color. Unsupported modes show an error.\n- Preview: checkerboard, dark and light backgrounds are available again for transparent images.\n- Interface: refreshed appearance and fonts."
+      }
+    },
+    {
+      "version": "1.0.13",
+      "title": {
+        "ru": "Рабочие экраны инструментов",
+        "en": "Tool workspaces"
+      },
+      "notes": {
+        "ru": "- Иконки, удаление фона и Aseprite: настройки расположены рядом с предпросмотром в широком окне и над ним с прокруткой в узком.\n- Размер изображения: можно вводить значения больше 4K; доступный размер зависит от памяти компьютера и формата изображения.\n- Интерфейс: обновлены шрифты и заголовки.",
+        "en": "- Icons, background removal and Aseprite: settings sit beside the preview in wide windows and above it with scrolling in narrow windows.\n- Image size: enter dimensions above 4K; available size depends on the computer's memory and image format.\n- Interface: refreshed fonts and headings."
+      }
+    },
+    {
+      "version": "1.0.12",
+      "title": {
+        "ru": "Фильтры и ASCII",
+        "en": "Filters and ASCII"
+      },
+      "notes": {
+        "ru": "- Добавлены фильтры: откройте их из редактора или компактного меню обработки и примените к исходнику или выбранному результату.\n- Монохром: преобразуйте изображение с сохранением размера и прозрачности; результат остаётся в истории.\n- ASCII: сохраните текст или чёрно-белое изображение, выберите готовый набор символов или свой.\n- ASCII: сохраните размер исходника или используйте один символ на пиксель; яркость исходника и цвета результата инвертируются отдельно.",
+        "en": "- Added filters: open them from the editor or compact Processing menu and apply them to the source or selected result.\n- Monochrome: convert an image while preserving size and transparency; the result is saved in history.\n- ASCII: save text or a black-and-white image using a preset or custom character set.\n- ASCII: keep the source size or use one character per pixel; invert source brightness and result colors independently."
+      }
+    },
+    {
+      "version": "1.0.11",
+      "title": {
+        "ru": "Обновление приложения",
+        "en": "App updates"
+      },
+      "notes": {
+        "ru": "- Обновление: приложение проверяет наличие новой версии при запуске; проверку можно запустить вручную.\n- Обновление: после подтверждения приложение скачивает новую версию и перезапускается, сохраняя библиотеку.\n- Обновление: если интернет недоступен, можно продолжать работу.",
+        "en": "- Updates: the app checks for a new version at startup; you can also check manually.\n- Updates: confirm to download the new version and restart while keeping the library.\n- Updates: continue working when the internet is unavailable."
+      }
+    },
+    {
+      "version": "1.0.10",
+      "title": {
+        "ru": "Очистка и замена цветов",
+        "en": "Color cleanup and replacement"
+      },
+      "notes": {
+        "ru": "- Редактор: инструменты открываются отдельно, а выбранные настройки сохраняются при закрытии их окон.\n- Очистка цветов: убирайте локальный цветовой шум отдельно от изменения размера и палитры.\n- Информация и замена цвета: посмотрите размеры и цвета изображения; нажмите цвет палитры, чтобы выбрать замену пипеткой, полем цвета или HEX. Исходник и прозрачность сохраняются.\n- Палитра: выбирайте уменьшение по числу цветов или готовой палитре; неактивные настройки не влияют на выбранное действие.",
+        "en": "- Editor: open tools separately and keep their selected settings when closing them.\n- Color cleanup: remove local color noise independently of resizing and palette changes.\n- Information and color replacement: inspect dimensions and colors, then click a palette color to choose a replacement using a swatch, color field or HEX. The original and transparency are preserved.\n- Palettes: reduce by color count or a preset palette; inactive settings do not affect the selected action."
+      }
+    },
+    {
+      "version": "1.0.9",
+      "title": {
+        "ru": "Инструменты редактора",
+        "en": "Editor tools"
+      },
+      "notes": {
+        "ru": "- Редактор: размер, сетка, цвет и режим открываются в отдельных окнах инструментов.\n- Изменение размера: увеличение сохраняет чёткие пиксели и прозрачность.\n- Экспорт: можно сохранить все результаты текущего изображения из меню «Файл».",
+        "en": "- Editor: size, grid, color and mode controls open in separate tool windows.\n- Resize: enlargement keeps pixels crisp and preserves transparency.\n- Export: save every result of the current image from the File menu."
+      }
+    },
+    {
+      "version": "1.0.6",
+      "title": {
+        "ru": "Независимая обработка изображений",
+        "en": "Independent image tools"
+      },
+      "notes": {
+        "ru": "- Редактор: размер и цвета можно менять отдельно или вместе, применяя действие к исходнику или выбранному результату.\n- Удаление фона: добавлен отдельный экран с предпросмотром и сохранением прозрачного PNG.\n- Материал из редактора: для иконок и удаления фона можно выбрать любой исходник или сохранённый результат.",
+        "en": "- Editor: change size and colors independently or together, using the source or selected result.\n- Background removal: a separate workspace provides a preview and transparent PNG export.\n- From editor: use any source or saved result for icons and background removal."
+      }
+    },
+    {
+      "version": "1.0.4",
+      "title": {
+        "ru": "Aseprite и удаление фона",
+        "en": "Aseprite and background removal"
+      },
+      "notes": {
+        "ru": "- Добавлен Aseprite: обработайте несколько анимаций и сохраните листы кадров вместе с их длительностями.\n- Удаление фона: можно удалять выбранный цвет только от краёв изображения, сохраняя похожие участки внутри.",
+        "en": "- Added Aseprite: process multiple animations and save sprite sheets with frame timings.\n- Background removal: remove the selected color only from connected image edges, keeping similar areas inside."
+      }
+    },
+    {
+      "version": "1.0.3",
+      "title": {
+        "ru": "Название и значок приложения",
+        "en": "App name and icon"
+      },
+      "notes": {
+        "ru": "- Приложение переименовано из Pixelizator в Tessera; обновлены название окна и значок.",
+        "en": "- The app is now named Tessera instead of Pixelizator, with an updated window title and icon."
+      }
+    },
+    {
+      "version": "1.0.2",
+      "title": {
+        "ru": "Редактор пиксельных изображений",
+        "en": "Pixel image editor"
+      },
+      "notes": {
+        "ru": "- Редактор: уменьшайте изображения, выбирайте палитру, выравнивайте сетку и просматривайте историю результатов.\n- Иконки: сохраняйте несколько размеров с прозрачностью в одном ICO.\n- Библиотека: открывайте изображения, возвращайтесь к исходникам и сохраняйте выбранные результаты.",
+        "en": "- Editor: downscale images, choose palettes, align grids and browse result history.\n- Icons: save multiple sizes with transparency in one ICO.\n- Library: open images, return to their sources and export selected results."
       }
     }
   ]
