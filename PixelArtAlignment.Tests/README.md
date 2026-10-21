@@ -1,5 +1,7 @@
 # Pixel art alignment evaluation
 
+Release-note regression checks: `dotnet run --project PixelArtAlignment.Tests -c Release -- --release-notes`. These render the startup reader and Settings history tab, check once-per-version persistence, offline version selection, RU/EN, three themes, minimum layouts and write failures. Build-time note preparation is checked separately with `pwsh -File tests/ReleaseNotes.Checks.ps1`. Both run in the release pipeline.
+
 Alignment is implemented in the separate `PixelArtAlignment` library. It does not invoke the downscaler, quantizer or palettes. The evaluator in `AlignmentQuality.cs` was written before the algorithm and does not reuse its grid, detector or color selection.
 
 ## What the percentage means

@@ -992,5 +992,11 @@
   "Изображения · {0}": "Images · {0}",
   "Не удалось обновить ассеты проекта: ": "Could not refresh project assets: ",
   "У этого ассета ещё нет выбранного результата в истории.": "This asset does not have a selected history result yet.",
-  "Показывает выбранный результат во всей области предпросмотра. Удерживайте Alt для просмотра исходника. Если выключить, исходник и результат отображаются в отдельных областях.": "Shows the selected result across the preview area. Hold Alt to view the source. When disabled, the source and result use separate preview areas."
+  "Показывает выбранный результат во всей области предпросмотра. Удерживайте Alt для просмотра исходника. Если выключить, исходник и результат отображаются в отдельных областях.": "Shows the selected result across the preview area. Hold Alt to view the source. When disabled, the source and result use separate preview areas.",
+  "Версия релиза": "Release version",
+  "Патчноуты": "Patch notes",
+  "Основные": "General",
+  "Что нового в Tessera": "What's new in Tessera",
+  "Продолжить": "Continue",
+  "Не удалось запомнить просмотр. При следующем запуске заметки появятся снова.": "Could not save that these notes were shown. They will appear again on the next launch."
 }

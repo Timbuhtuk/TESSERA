@@ -23,6 +23,9 @@ public partial class AppearanceWindow : Window
         languageSavedHint.Visibility = language == Localization.Language ? Visibility.Collapsed : Visibility.Visible;
         SelectTheme(theme);
         updatesHeading.Text = Localization.Text("Обновления");
+        generalTab.Header = Localization.Text("Основные");
+        patchNotesTab.Header = Localization.Text("Патчноуты");
+        releaseNotesView.Bind(ReleaseNotesCatalog.Bundled);
     }
 
     public void SetUpdateButton(Button button)
