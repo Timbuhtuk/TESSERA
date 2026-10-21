@@ -47,7 +47,7 @@
                             <TextBlock Text="{local:Translate Text575D5055D734}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
                             <WrapPanel x:Name="iconSizes" Margin="0,0,0,2"/>
                             <DockPanel Margin="0,0,0,16">
-                                <CheckBox x:Name="iconCustomCheck" Content="{local:Translate TextB5311F8310FC}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="iconCustomCheck" Content="{local:Translate TextB5311F8310FC}" VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="{local:Translate Text21FEA92126B8}" />
                                 <local:IntegerInput x:Name="iconCustomSize" Minimum="1" Maximum="256" Value="96" Width="78" IsEnabled="False" AutomationProperties.Name="{local:Translate TextB74101A9928D}"/>
                             </DockPanel>
                             <TextBlock Text="{local:Translate Text91377953A789}" Margin="0,0,0,6"/>
@@ -58,7 +58,7 @@
                             <ComboBox x:Name="iconFitMode" SelectedIndex="0" Margin="0,0,0,12">
                                 <ComboBoxItem Content="{local:Translate Text8196B8163A31}"/><ComboBoxItem Content="{local:Translate Text129593A4C4E0}"/><ComboBoxItem Content="{local:Translate Text647AA759250F}"/>
                             </ComboBox>
-                            <CheckBox x:Name="iconRemoveBackground" Content="{local:Translate TextE0139DC77000}" ToolTip="{local:Translate TextED3C4D64FF9A}"/>
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="iconRemoveBackground" Content="{local:Translate TextE0139DC77000}" ToolTip="{local:Translate TextDDAD5B449354}"/>
                             <WrapPanel x:Name="iconBackgroundSettings" Visibility="Collapsed" Margin="0,8,0,0">
                                 <StackPanel Width="220">
                                     <TextBlock Text="{local:Translate TextC058D95FDDDA}" Margin="0,0,0,6"/>

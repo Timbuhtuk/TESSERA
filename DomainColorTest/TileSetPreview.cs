@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PixelArtDownscale;
+using Tessera.WpfStyles.Themes;
 
 namespace DomainColorTest;
 
@@ -19,6 +20,7 @@ public sealed class TileSetPreview : FrameworkElement
         ClipToBounds = true;
         RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
         MouseMove += Hover;
+        _ = new PreviewThemeSubscription(this, InvalidateVisual);
     }
 
     public void SetImage(BitmapSource? image) { Source = image; InvalidateVisual(); }
@@ -27,21 +29,13 @@ public sealed class TileSetPreview : FrameworkElement
     protected override void OnRender(DrawingContext drawing)
     {
         base.OnRender(drawing);
-        drawing.DrawRectangle(new SolidColorBrush(Color.FromRgb(24, 24, 24)), null, new Rect(RenderSize));
+        drawing.DrawRectangle(PreviewBackgroundBrushes.Resource(this, "Ts.Canvas"), null, new Rect(RenderSize));
         if (Source is null || ActualWidth < 1 || ActualHeight < 1) return;
         _scale = Math.Min(Math.Max(1, ActualWidth - 20) / Source.PixelWidth, Math.Max(1, ActualHeight - 20) / Source.PixelHeight);
         if (_scale >= 1) _scale = Math.Floor(_scale);
         double width = Source.PixelWidth * _scale, height = Source.PixelHeight * _scale;
         _imageRect = new Rect((ActualWidth - width) / 2, (ActualHeight - height) / 2, width, height);
-        var checker = new DrawingGroup();
-        using (var cell = checker.Open())
-        {
-            cell.DrawRectangle(Brushes.DimGray, null, new Rect(0, 0, 16, 16));
-            cell.DrawRectangle(Brushes.Gray, null, new Rect(0, 0, 8, 8));
-            cell.DrawRectangle(Brushes.Gray, null, new Rect(8, 8, 8, 8));
-        }
-        var brush = new DrawingBrush(checker) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 16, 16) };
-        drawing.DrawRectangle(brush, null, _imageRect);
+        drawing.DrawRectangle(PreviewBackgroundBrushes.Create(this, ThemeManager.Current == TesseraTheme.Light ? 3 : 0), null, _imageRect);
         drawing.DrawImage(Source, _imageRect);
         if (Layout is null) return;
         var outer = new Pen(Brushes.Black, 2);

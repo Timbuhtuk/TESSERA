@@ -50,6 +50,7 @@ dotnet run --project PixelArtAlignment.Tests -c Release
 dotnet run --project PixelArtAlignment.Tests -c Release -- --benchmark --holdout
 dotnet run --project PixelArtAlignment.Tests -c Release -- --benchmark --fresh
 dotnet run --project PixelArtAlignment.Tests -c Release -- --invariants --ui
+dotnet run --project PixelArtAlignment.Tests -c Release -- --tool-improvements
 dotnet run --project PixelArtAlignment.Tests -c Release -- --tiles
 dotnet run --project Pixelizator.Cli.Tests -c Release
 ```
@@ -65,3 +66,5 @@ Without a reference, grid regularity can be measured, but not an honest percenta
 ## Workspace prototype
 
 Run `--workspace` for project/folder membership, shared assets, independent copies with remapped history IDs, catalog persistence, combined search and the new WPF browser. It also covers direct background/tile results, editable boards and retained Aseprite source/layout with PNG/JSON export. Use `--invariants --ui` for the existing tools. The prototype build and launch are described in [WORKSPACE_PROTOTYPE.md](../docs/WORKSPACE_PROTOTYPE.md).
+
+Run `--tool-improvements` for palette dithering and diagonal comparison examples, checkbox hints, crop outlines, theme backgrounds, proportional comparison, color-selection masks, background picking/eraser export, cleanup/ASCII quality and project-scoped tile history. Logs and output images belong under `artifacts/dictated-qa`; native desktop interaction is a separate verification step and must be reported separately from in-process WPF tests.

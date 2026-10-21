@@ -12,7 +12,7 @@ internal static class IndependentImageProcessorChecks
         check("Color-only operation keeps dimensions and alpha", ColorsKeepCanvasAndAlpha);
         check("Color reduction modes apply quantization or palette exclusively", ColorModesAreExclusive);
         check("Neighbor colors merge local shades without palette or scaling", NeighborColorsKeepSourcePaletteAndAlpha);
-        check("Neighbor color passes extend a local change", NeighborColorPasses);
+        check("Neighbor color passes denoise speckles and retain coherent patch boundaries", NeighborColorPasses);
         check("Neighbor color brightness setting changes transition direction", NeighborColorBrightness);
         check("Neighbor colors use their own criteria independently of size settings", NeighborColorsUseOwnCriteria);
         check("Neighbor colors do not exchange equal-support pixels", NeighborColorsDoNotSwap);
@@ -159,8 +159,18 @@ internal static class IndependentImageProcessorChecks
         source.SetPixel(2, 2, Color.FromArgb(110, 110, 110));
         using var once = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions { LocalColorPasses = 1 });
         using var three = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions { LocalColorPasses = 3 });
-        if (once.GetPixel(2, 2).R != 105 || three.GetPixel(2, 2).R != 100)
-            throw new Exception($"Three passes should carry the surrounding color to the center: {once.GetPixel(2, 2).R}, {three.GetPixel(2, 2).R}.");
+        // Cleanup now protects coherent surfaces: remove the isolated 110 speckle, retain the 3x3 105 patch.
+        for (int y = 0; y < 5; y++)
+            for (int x = 0; x < 5; x++)
+            {
+                int expected = x is >= 1 and <= 3 && y is >= 1 and <= 3 ? 105 : 100;
+                if (once.GetPixel(x, y).R != expected || three.GetPixel(x, y).R != expected)
+                    throw new Exception($"Cleanup must denoise the speckle and preserve the coherent patch at {x},{y}.");
+            }
+        Directory.CreateDirectory(ToolImprovementsChecks.ArtifactRoot);
+        source.Save(Path.Combine(ToolImprovementsChecks.ArtifactRoot, "cleanup-protected-patch-source.png"));
+        once.Save(Path.Combine(ToolImprovementsChecks.ArtifactRoot, "cleanup-protected-patch-pass1.png"));
+        three.Save(Path.Combine(ToolImprovementsChecks.ArtifactRoot, "cleanup-protected-patch-pass3.png"));
     }
 
     private static void NeighborColorBrightness()

@@ -18,6 +18,10 @@ public partial class MainWindow
         asciiRenderButton.Click += (_, _) => RenderAsciiImage();
         asciiRampPresetInput.SelectionChanged += (_, _) => ApplyAsciiRampPreset();
         asciiCharactersInput.TextChanged += (_, _) => MarkAsciiRampCustom();
+        asciiDescription.Text = Localization.Text("Яркость и форма участков подбирают символы с учётом их плотности. Рендер сохраняет тон исходника; TXT рассчитан на тёмные символы на светлом фоне.");
+        asciiKeepSourceSizeInput.ToolTip = Localization.Text("Подбирает сетку по пропорциям символов и сохраняет размер исходника. Если выключить, каждый пиксель становится отдельным символом и изображение увеличивается.");
+        asciiInvertSourceInput.ToolTip = Localization.Text("Инвертирует яркость перед подбором символов. Прозрачные участки остаются пустыми.");
+        asciiInvertRenderInput.ToolTip = Localization.Text("Меняет цвета готового рендера: чёрные символы на белом фоне. Для TXT не применяется.");
         ApplyAsciiRampPreset();
         RefreshFilterState();
     }
@@ -150,12 +154,7 @@ public partial class MainWindow
         {
             var created = await Task.Run(() =>
             {
-                string text = keepSourceSize
-                    ? ImageFilters.ToAscii(input, characters, invertSource)
-                    : ImageFilters.ToAsciiPerPixel(input, characters, invertSource);
-                using var output = keepSourceSize
-                    ? ImageFilters.RenderAscii(text, input.Width, input.Height, invertRender)
-                    : ImageFilters.RenderAscii(text, ImageFilters.DefaultAsciiFontSize, invertRender);
+                using var output = ImageFilters.RenderAscii(input, keepSourceSize, characters, invertSource, invertRender);
                 var generation = _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,

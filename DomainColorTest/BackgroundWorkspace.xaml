@@ -33,15 +33,42 @@
                             <ComboBoxItem Content="{local:Translate TextEED43C5404C3}"/><ComboBoxItem Content="{local:Translate TextE649FA322395}"/>
                         </ComboBox>
                         <TextBlock Text="{local:Translate Text03449D9A17C3}" Margin="0,0,0,6"/>
-                        <ComboBox x:Name="backgroundColorInput" SelectedIndex="0" Margin="0,0,0,16">
+                        <ComboBox x:Name="backgroundColorInput" SelectedIndex="0" Margin="0,0,0,8">
                             <ComboBoxItem Content="{local:Translate Text2BC89F591254}"/><ComboBoxItem Content="{local:Translate TextA024A93D4E0C}"/><ComboBoxItem Content="{local:Translate Text1CA9B6B05DFC}"/>
+                            <ComboBoxItem x:Name="backgroundCustomColorOption"/>
                         </ComboBox>
+                        <Button x:Name="backgroundChooseColorButton" HorizontalContentAlignment="Stretch" Margin="0,0,0,6">
+                            <DockPanel>
+                                <Border x:Name="backgroundSelectedSwatch" Width="22" Height="18" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Margin="0,0,8,0"/>
+                                <TextBlock x:Name="backgroundSelectedColorText" VerticalAlignment="Center"/>
+                            </DockPanel>
+                        </Button>
+                        <CheckBox x:Name="backgroundPickColorToggle" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,14"/>
                         <DockPanel Margin="0,0,0,6">
                             <TextBlock Text="{local:Translate TextC6F992FFD17B}"/>
                             <TextBlock Text="{Binding Value, ElementName=backgroundToleranceInput, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
                         </DockPanel>
                         <Slider x:Name="backgroundToleranceInput" Minimum="0" Maximum="100" Value="8" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" AutomationProperties.Name="{local:Translate Text0C4B88F7B78A}"/>
                         <TextBlock Text="{local:Translate TextD5EB20A84E74}" Style="{StaticResource Hint}"/>
+                        <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,12"/>
+                        <TextBlock x:Name="backgroundManualTitle" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
+                        <CheckBox x:Name="backgroundEraserToggle" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,10"/>
+                        <DockPanel Margin="0,0,0,6">
+                            <TextBlock x:Name="backgroundBrushSizeTitle"/>
+                            <TextBlock Text="{Binding Value, ElementName=backgroundBrushSizeInput, StringFormat={}{0} px}" HorizontalAlignment="Right"/>
+                        </DockPanel>
+                        <Slider x:Name="backgroundBrushSizeInput" Minimum="1" Maximum="127" Value="9" TickFrequency="2" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft"/>
+                        <WrapPanel Margin="0,8,0,10">
+                            <Button x:Name="backgroundUndoEraseButton" Margin="0,0,6,6"/>
+                            <Button x:Name="backgroundResetEraseButton" Margin="0,0,0,6"/>
+                        </WrapPanel>
+                        <TextBlock x:Name="backgroundManualHint" Style="{StaticResource Hint}"/>
+                        <TextBlock x:Name="backgroundZoomTitle" Margin="0,14,0,6"/>
+                        <ComboBox x:Name="backgroundZoomInput" SelectedIndex="0" Margin="0,0,0,8">
+                            <ComboBoxItem x:Name="backgroundFitZoomOption"/>
+                            <ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/>
+                            <ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/>
+                        </ComboBox>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,12"/>
                         <TextBlock x:Name="backgroundFileLabel" Foreground="{DynamicResource Ts.TextMuted}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
                     </StackPanel>

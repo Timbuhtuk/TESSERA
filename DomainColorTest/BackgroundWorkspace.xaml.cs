@@ -40,6 +40,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         backgroundModeInput.SelectionChanged += (_, _) => SchedulePreview();
         backgroundColorInput.SelectionChanged += (_, _) => SchedulePreview();
         backgroundToleranceInput.ValueChanged += (_, _) => SchedulePreview();
+        InitializeEditing();
         _previewTimer.Tick += async (_, _) => { _previewTimer.Stop(); await RefreshPreviewAsync(); };
         SizeChanged += (_, _) => UpdateLayoutForWidth();
     }
@@ -73,13 +74,18 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     {
         if (_disposed) return;
         var copy = (Bitmap)source.Clone();
+        FinishEraseStroke();
+        ResetManualEdits();
+        backgroundPickColorToggle.IsChecked = false;
         _previewCancellation?.Cancel();
         ++_revision;
         backgroundSourcePreview.Image = backgroundResultPreview.Image = null;
         _source?.Dispose();
         _result?.Dispose();
+        _processedResult?.Dispose();
         _source = copy;
         _result = null;
+        _processedResult = null;
         _inputPath = inputPath is null ? null : Path.GetFullPath(inputPath);
         backgroundFileLabel.Text = label;
         backgroundFileLabel.ToolTip = label;
@@ -90,17 +96,21 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     public (BackgroundRemovalMode Mode, int Tolerance, Color? Color) GetOptions() =>
         (backgroundModeInput.SelectedIndex == 1 ? BackgroundRemovalMode.EdgeConnected : BackgroundRemovalMode.GlobalColor,
         (int)backgroundToleranceInput.Value,
-        backgroundColorInput.SelectedIndex switch { 1 => Color.White, 2 => Color.Black, _ => (Color?)null });
+        backgroundColorInput.SelectedIndex switch { 1 => Color.White, 2 => Color.Black, 3 => _customBackgroundColor, _ => (Color?)null });
 
     private void SchedulePreview()
     {
         if (_disposed) return;
+        FinishEraseStroke();
         ++_revision;
         _previewCancellation?.Cancel();
         backgroundResultPreview.Image = null;
         _result?.Dispose();
         _result = null;
+        _processedResult?.Dispose();
+        _processedResult = null;
         IsRendering = _source is not null;
+        UpdateBackgroundColorDisplay();
         UpdateSaveState();
         _previewTimer.Stop();
         if (_source is not null) _previewTimer.Start();
@@ -108,6 +118,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
 
     public async Task RefreshPreviewAsync()
     {
+        FinishEraseStroke();
         _previewTimer.Stop();
         _previewCancellation?.Cancel();
         int revision = ++_revision;
@@ -122,10 +133,9 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         {
             var result = await Task.Run(() => BackgroundRemover.Remove(source, options.Mode, options.Tolerance, options.Color, cancellation.Token));
             if (_disposed || revision != _revision) { result.Dispose(); return; }
-            backgroundResultPreview.Image = null;
-            _result?.Dispose();
-            _result = result;
-            backgroundResultPreview.Image = result;
+            _processedResult?.Dispose();
+            _processedResult = result;
+            RecomposeManualResult();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -188,6 +198,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     {
         backgroundSaveButton.IsEnabled = !_busy && !IsRendering && _result is not null;
         if (_workspaceApplyButton is not null) _workspaceApplyButton.IsEnabled = backgroundSaveButton.IsEnabled;
+        UpdateEditingState();
     }
 
     private void UpdateLayoutForWidth()
@@ -199,7 +210,6 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         backgroundContent.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
         backgroundContent.RowDefinitions[0].Height = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
         backgroundContent.RowDefinitions[0].MaxHeight = compact ? 220 : double.PositiveInfinity;
-        backgroundSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
         backgroundSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
         backgroundContent.RowDefinitions[1].Height = new GridLength(compact ? 1 : 0, compact ? GridUnitType.Star : GridUnitType.Pixel);
 
@@ -223,8 +233,11 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         ++_revision;
         _previewTimer.Stop();
         _previewCancellation?.Cancel();
+        FinishEraseStroke();
+        ResetManualEdits();
         backgroundSourcePreview.Image = backgroundResultPreview.Image = null;
         _source?.Dispose(); _source = null;
         _result?.Dispose(); _result = null;
+        _processedResult?.Dispose(); _processedResult = null;
     }
 }

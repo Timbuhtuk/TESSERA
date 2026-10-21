@@ -48,6 +48,8 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     public AsepriteWorkspace()
     {
         InitializeComponent();
+        ((ComboBoxItem)sheetBackground.Items[0]).Content = Localization.Text("Тёмная шахматка");
+        sheetBackground.Items.Add(new ComboBoxItem { Content = Localization.Text("Светлая шахматка") });
         sheetStrip.ItemsSource = _entries;
         sheetOpenButton.Click += async (_, _) => await OpenAsync();
         sheetBackButton.Click += (_, _) => { if (!IsBusy) BackRequested?.Invoke(this, EventArgs.Empty); };

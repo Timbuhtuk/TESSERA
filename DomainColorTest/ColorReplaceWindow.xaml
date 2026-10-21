@@ -63,6 +63,8 @@
                                     BorderThickness="1" Margin="0,0,8,0"/>
                             <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate TextF2B1EEC11E15}"/>
                         </DockPanel>
+                        <Button x:Name="sourcePickerButton" Margin="0,8,0,0" Click="PickSourceColor"
+                                HorizontalContentAlignment="Left" />
                         <TextBlock x:Name="newColorLabel" Text="{local:Translate TextF2E966D64488}" FontWeight="SemiBold" Margin="0,18,0,10"/>
                         <Grid x:Name="colorField" Width="320" Height="290" HorizontalAlignment="Center"
                               ClipToBounds="True" Cursor="Cross"

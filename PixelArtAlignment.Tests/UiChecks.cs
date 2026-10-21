@@ -323,11 +323,11 @@ internal static class UiChecks
             Get<Slider>("localEdgeInput").Value = 60;
             options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
             Require(options.LocalColorPasses == 3 && options.ManualCriteria?.TargetBrightness == .73 &&
-                options.LocalColorCriteria?.TargetBrightness == .2 &&
-                options.LocalColorCriteria?.TargetContrast == .3 &&
-                options.LocalColorCriteria?.TargetSaturation == .4 &&
-                options.LocalColorCriteria?.TargetEdge == .6,
-                "Local color sliders were not independent from size-tool criteria");
+                options.Cleanup?.ColorTolerance == 8 &&
+                options.Cleanup?.Strength == .3 &&
+                options.Cleanup?.DetailProtection == .4 &&
+                options.Cleanup?.EdgeProtection == .6,
+                "Cleanup controls were not independent from size-tool criteria");
             Get<Slider>("brightnessInput").Value = 81;
             Require(Get<Slider>("localBrightnessInput").Value == 20,
                 "Size-tool brightness changed the local 3×3 slider");
@@ -339,7 +339,10 @@ internal static class UiChecks
             Require(neighborSourceGeneration.ParentGenerationId is null &&
                 neighborSourceGeneration.Settings.Downscale.LocalColorPasses == 3 &&
                 neighborSourceGeneration.Settings.Downscale.ManualCriteria?.TargetBrightness == .73 &&
-                neighborSourceGeneration.Settings.Downscale.LocalColorCriteria?.TargetBrightness == .2 &&
+                neighborSourceGeneration.Settings.Downscale.Cleanup?.ColorTolerance == 8 &&
+                neighborSourceGeneration.Settings.Downscale.Cleanup?.Strength == .3 &&
+                neighborSourceGeneration.Settings.Downscale.Cleanup?.DetailProtection == .4 &&
+                neighborSourceGeneration.Settings.Downscale.Cleanup?.EdgeProtection == .6 &&
                 neighborSourceResult.Size == source.Size,
                 "Local colors on the source lost the basis, dimensions or manual settings");
             for (int y = 0; y < neighborSourceResult.Height; y++) for (int x = 0; x < neighborSourceResult.Width; x++)
@@ -387,7 +390,9 @@ internal static class UiChecks
                 "Restoring Details exposed an unavailable no-palette option");
             Require(Get<SourceEntry>("_activeSource").SelectedGeneration?.ParentGenerationId == selectedParent.Id,
                 "Mode processing ignored the selected result");
-            Require(!Get<CheckBox>("ditheringInput").IsEnabled, "Sprite mode permits dithering");
+            Require(Get<CheckBox>("ditheringInput").IsEnabled == Get<StackPanel>("paletteColorControls").IsEnabled,
+                "Independent fixed-palette dithering is still gated by size-tool sprite mode");
+            Require(!options.EnableDithering, "Full sprite processing captured unsupported palette dithering");
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
             Get<CheckBox>("aspectLock").IsChecked = true;
             Get<IntegerInput>("widthInput").Value = 24;
@@ -571,8 +576,7 @@ internal static class UiChecks
         var previewScroll = (ScrollViewer)preview.Children[0];
         Require(previewScroll.Background is SolidColorBrush { Color.A: 0 }, "Pixel preview scroll layer hides the selected background");
         preview.PreviewBackground = 0; Require(preview.Background is DrawingBrush, "Checker preview background is missing");
-        preview.PreviewBackground = 1; Require(preview.Background is SolidColorBrush dark && dark.Color == System.Windows.Media.Color.FromRgb(17, 17, 17), "Dark preview background is missing");
-        preview.PreviewBackground = 2; Require(preview.Background is SolidColorBrush light && light.Color == System.Windows.Media.Color.FromRgb(224, 224, 224), "Light preview background is missing");
+        ToolImprovementsChecks.VerifyPreviewBackgrounds(preview);
         preview.PreviewBackground = 1;
         preview.Measure(new System.Windows.Size(80, 40)); preview.Arrange(new Rect(0, 0, 80, 40)); preview.UpdateLayout();
         var rendered = new RenderTargetBitmap(80, 40, 96, 96, PixelFormats.Pbgra32); rendered.Render(preview);

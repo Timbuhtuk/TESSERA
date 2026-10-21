@@ -40,7 +40,7 @@ public partial class MainWindow
     public int PreviewBackground
     {
         get => _previewBackground;
-        set { _previewBackground = Math.Clamp(value, 0, 2); UpdatePreviewSettings(); UpdateNavigationChecks(); }
+        set { _previewBackground = Math.Clamp(value, 0, 3); UpdatePreviewSettings(); UpdateNavigationChecks(); }
     }
 
     private void InitializeNavigation()
@@ -64,7 +64,7 @@ public partial class MainWindow
         AddNavigation(exportMenu, "exportIcoMenuItem", "ICO…", () => NavigationImageActionAsync("ico"));
         fileMenu.Items.Add(new Separator());
         returnMenuItem = AddNavigation(fileMenu, "returnMenuItem", "Вернуться в библиотеку", () => { GoToLibrary(this, new()); return Task.CompletedTask; });
-        checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", "Проверить обновления"); fileMenu.Items.Add(checkUpdatesMenuItem);
+        checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", "Проверить обновления");
 
         var basisMenu = NavigationItem("basisMenu", "Обрабатывать"); imageMenu.Items.Add(basisMenu);
         sourceBasisMenuItem = AddNavigation(basisMenu, "sourceBasisMenuItem", "Исходник", () => { ProcessingBasis = 0; return Task.CompletedTask; });
@@ -94,13 +94,17 @@ public partial class MainWindow
             item.IsCheckable = true; _zoomChoices.Add(item);
         }
         backgroundMenu = NavigationItem("backgroundMenu", "Фон предпросмотра"); viewMenu.Items.Add(backgroundMenu);
-        string[] backgrounds = ["Шахматка", "Тёмный", "Светлый"];
+        string[] backgrounds = ["Тёмная шахматка", "Тёмный", "Светлый", "Светлая шахматка"];
         for (int q = 0; q < backgrounds.Length; q++)
         {
             int index = q;
             var item = AddNavigation(backgroundMenu, "backgroundChoice" + q, backgrounds[q], () => { PreviewBackground = index; return Task.CompletedTask; });
             item.IsCheckable = true; _backgroundChoices.Add(item);
         }
+        _alternativePreviewItem = AddNavigation(viewMenu, "alternativePreviewMenuItem", "Альтернативный просмотр · удерживайте Alt для исходника", () => { AlternativePreview = !AlternativePreview; return Task.CompletedTask; });
+        _alternativePreviewItem.IsCheckable = true;
+        _alternativePreviewItem.ToolTip = Localization.Text("Показывает выбранный результат во всей области предпросмотра. Удерживайте Alt для просмотра исходника. Если выключить, исходник и результат отображаются в отдельных областях.");
+        ToolTipService.SetShowOnDisabled(_alternativePreviewItem, true);
         SizeChanged += (_, _) => UpdateNavigationLayout();
         Loaded += (_, _) => { UpdateNavigationLayout(); UpdateNavigationState(); };
         _navigationReady = true;
@@ -173,6 +177,8 @@ public partial class MainWindow
         sourceBasisMenuItem.IsChecked = ProcessingBasis == 0; resultBasisMenuItem.IsChecked = ProcessingBasis == 1;
         for (int q = 0; q < _zoomChoices.Count; q++) _zoomChoices[q].IsChecked = PreviewZoom == q;
         for (int q = 0; q < _backgroundChoices.Count; q++) _backgroundChoices[q].IsChecked = PreviewBackground == q;
+        _alternativePreviewItem.IsChecked = AlternativePreview;
+        zoomMenu.IsEnabled = !AlternativePreview;
     }
     private void UpdateNavigationLayout()
     {

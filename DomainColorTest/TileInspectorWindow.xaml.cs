@@ -40,6 +40,9 @@ public partial class TileInspectorWindow : Window
     public TileInspectorWindow()
     {
         InitializeComponent();
+        ((ComboBoxItem)backgroundInput.Items[0]).Content = Localization.Text("Тёмная шахматка");
+        ((ComboBoxItem)backgroundInput.Items[1]).Content = Localization.Text("Светлый");
+        backgroundInput.Items.Add(new ComboBoxItem { Content = Localization.Text("Светлая шахматка") });
         assetList.ItemsSource = _assets;
         _ready = true;
         preview.PixelHovered += text => pixelLabel.Text = text.Length == 0
@@ -71,7 +74,7 @@ public partial class TileInspectorWindow : Window
         }
     }
 
-    public async Task LoadFileAsync(string path, bool automatic = false, bool discardEdits = false)
+    public async Task LoadFileAsync(string path, bool automatic = false, bool discardEdits = false, string? displayName = null)
     {
         if (_busy || _strokeAsset is not null) return;
         if (!automatic && string.Equals(Path.GetExtension(path), ".ttiles", StringComparison.OrdinalIgnoreCase))
@@ -103,7 +106,7 @@ public partial class TileInspectorWindow : Window
             }
             else
             {
-                asset = new TileAsset(image) { Id = existing?.Id ?? Guid.NewGuid(), Name = Path.GetFileName(fullPath), SourcePath = fullPath };
+                asset = new TileAsset(image) { Id = existing?.Id ?? Guid.NewGuid(), Name = existing?.Name ?? displayName ?? Path.GetFileName(fullPath), SourcePath = fullPath };
                 if (existing is not null) _assets[_assets.IndexOf(existing)] = asset;
                 else _assets.Add(asset);
             }
@@ -382,8 +385,16 @@ public partial class TileInspectorWindow : Window
         _compactLayout = compact;
         if (compact) inspectorTitle.FontSize = 20;
         else inspectorTitle.ClearValue(TextBlock.FontSizeProperty);
+        inspectorLayout.Margin = new Thickness(compact ? 12 : 18);
+        inspectorHeader.Margin = new Thickness(0, 0, 0, compact ? 10 : 16);
         editTools.IsExpanded = !compact;
-        editScroll.MaxHeight = compact ? 80 : double.PositiveInfinity;
-        summaryScroll.MaxHeight = compact ? 100 : 125;
+        // Keep the image usable even when the compact editor is expanded and the toolbar wraps.
+        // Both auxiliary sections keep their complete content available through scrolling.
+        editScroll.MaxHeight = compact ? 48 : double.PositiveInfinity;
+        summaryScroll.MaxHeight = compact ? 40 : 125;
+        summaryPanel.Padding = new Thickness(compact ? 8 : 12);
+        pixelLabel.MinHeight = compact ? 24 : 36;
+        pixelLabel.Margin = new Thickness(0, compact ? 6 : 10, 0, 0);
+        previewPanel.MinHeight = compact ? 140 : 0;
     }
 }

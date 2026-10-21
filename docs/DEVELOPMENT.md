@@ -104,3 +104,9 @@ See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 # Workspace experiment
 
 `WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
+
+The tool-improvement checks run with `PixelArtAlignment.Tests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
+
+## Deferred ideas
+
+- ⭐ Generate a reusable processing macro from a selected result: recover the ordered tools and their settings, then apply the same recipe to other source images. Recorded for consideration; implementation has not been approved.

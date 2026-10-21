@@ -105,12 +105,13 @@ internal static class AppearanceChecks
                     "An already open dialog retained the previous theme");
                 Require(ReferenceEquals(preview.Image, source) && source.GetPixel(60, 40) == originalPixel,
                     "Theme switching changed source image pixels");
-                foreach (int background in new[] { 0, 1, 2 })
+                foreach (int background in new[] { 0, 1, 2, 3 })
                 {
                     NavigationTest.Select(window, "PreviewBackground").SelectedIndex = background; Pump();
-                    Require(background == 0 ? preview.Background is DrawingBrush : ColorOf(preview.Background) ==
-                        (background == 1 ? MediaColor.FromRgb(17, 17, 17) : MediaColor.FromRgb(224, 224, 224)),
-                        "Appearance theme overrides explicit preview backgrounds");
+                    string solidKey = background == 1 ? theme == TesseraTheme.Light ? "Ts.Text" : "Ts.Canvas"
+                        : theme == TesseraTheme.Light ? "Ts.Raised" : "Ts.Text";
+                    Require(background is 0 or 3 ? preview.Background is DrawingBrush : ColorOf(preview.Background) ==
+                        ColorOf((Brush)preview.FindResource(solidKey)), "Preview background does not follow the selected current-theme mode");
                 }
                 NavigationTest.Select(window, "PreviewBackground").SelectedIndex = 0;
                 Capture(window, Path.Combine(directory, $"{theme}-editor.png"));
