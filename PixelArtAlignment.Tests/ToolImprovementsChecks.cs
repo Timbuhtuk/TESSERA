@@ -136,7 +136,9 @@ internal static class ToolImprovementsChecks
         var window = new MainWindow(Path.Combine(run, "library")) { ShowActivated = false };
         try
         {
+            Console.WriteLine("  Tool editor: showing window");
             window.Show(); Pump();
+            Console.WriteLine("  Tool editor: opening Settings");
             var updateButton = Get<Button>(window, "updateButton");
             Require(!updateButton.IsVisible, "Update action is still visible outside Settings");
             Call(window, "OpenAppearance", null, new RoutedEventArgs()); Pump();
@@ -144,13 +146,17 @@ internal static class ToolImprovementsChecks
             Require(ReferenceEquals(Get<Button>(settings, "updateButton"), updateButton) && updateButton.IsVisible,
                 "Settings does not expose the actual update action");
             settings.Close(); Pump();
+            Console.WriteLine("  Tool editor: reopening Settings");
             Call(window, "OpenAppearance", null, new RoutedEventArgs()); Pump();
             settings = window.OwnedWindows.OfType<AppearanceWindow>().Single();
             Require(Get<Button>(settings, "updateButton").IsVisible, "Reopening Settings lost the update action");
             settings.Close(); Pump();
+            Console.WriteLine("  Tool editor: loading source");
             Call(window, "LoadImage", input); Pump();
             var sourcePreview = Get<PixelPreview>(window, "sourcePreview");
+            Console.WriteLine("  Tool editor: checking theme backgrounds");
             VerifyPreviewBackgrounds(sourcePreview);
+            Console.WriteLine("  Tool editor: checking crop outlines");
             Get<CheckBox>(window, "spriteInput").IsChecked = false;
             Get<IntegerInput>(window, "widthInput").Value = 5;
             Get<IntegerInput>(window, "heightInput").Value = 4;
@@ -176,6 +182,7 @@ internal static class ToolImprovementsChecks
             Call(window, "UpdateSizeHint");
             Require(sourcePreview.SelectedRegion is null, "Whole-frame mode retained a crop border");
             Call(window, "ScaleOnlyImage", null, EventArgs.Empty);
+            Console.WriteLine("  Tool editor: waiting for size processing");
             var processingTimeout = System.Diagnostics.Stopwatch.StartNew();
             while ((bool)Field(window, "_processing")!)
             {
@@ -183,6 +190,7 @@ internal static class ToolImprovementsChecks
                 Require(processingTimeout.Elapsed < TimeSpan.FromSeconds(30), "Independent size operation did not finish");
             }
             window.AlternativePreview = true; Pump();
+            Console.WriteLine("  Tool editor: checking comparison keys");
             Require(Get<FrameworkElement>(window, "previewPair").Visibility == Visibility.Collapsed &&
                 Get<PixelPreview>(window, "comparisonPreview").Visibility == Visibility.Visible, "Alternative view did not occupy the preview");
             var comparison = Get<PixelPreview>(window, "comparisonPreview");
@@ -233,7 +241,8 @@ internal static class ToolImprovementsChecks
             window.Width = window.MinWidth; window.Height = window.MinHeight; Pump();
             Capture(window, Path.Combine(run, "editor-minimum.png"));
         }
-        finally { window.Close(); Pump(); }
+        catch (Exception ex) { Console.WriteLine("  Tool editor failed: " + ex); throw; }
+        finally { Console.WriteLine("  Tool editor: closing window"); window.Close(); Pump(); }
     }
 
     internal static void VerifyPreviewBackgrounds(PixelPreview preview)

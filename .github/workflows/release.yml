@@ -98,11 +98,12 @@ jobs:
           Convert supported Aseprite animations in batches to PNG sprite sheets with JSON frame timings. All processing runs locally.
 
           What's new:
-          - Organize images, animations, boards and tile collections in one workspace with projects, nested folders, tags and search.
-          - Use the title-bar File, Image, Tools and View menus, with responsive overflow and no duplicate opening/creation buttons on the home screen.
-          - Share assets across projects or make independent copies, and keep image histories connected to background removal, tile editing and boards.
-          - Select interface themes and Russian or English in Settings. The tile inspector retains Ctrl-wheel zoom, the Alt heatmap and neighbor thumbnails.
-          - Keep workspace data beside the executable in WorkspaceData/Library. Existing Tessera image histories are copied on first launch; move WorkspaceData with the app.
+          - Preview palettes and quantizers with parameter-aware photographic examples and use corrected fixed-palette dithering.
+          - Pick and highlight exact RGB colors for replacement; remove backgrounds with a custom color, pipette and undoable eraser.
+          - Improve color cleanup and ASCII rendering, and keep tile corrections linked to project assets and their source/result history.
+          - Inspect crop outlines and theme-derived preview backgrounds, or use the whole-result comparison view with held Alt for the original.
+          - Find updates in Settings and explanatory hints on processing switches.
+          - Save library source, result and crop PNGs through streams so long workspace paths do not fail in GDI+.
 
           Users of v1.0.11 or later can install this release through the app's update button. The image library stays in place.
 

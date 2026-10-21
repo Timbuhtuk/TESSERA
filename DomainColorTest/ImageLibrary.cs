@@ -147,7 +147,7 @@ public sealed class ImageLibrary(string directory)
         source.Width = bitmap.Width;
         source.Height = bitmap.Height;
         Directory.CreateDirectory(SourceDirectory(source));
-        bitmap.Save(SourcePath(source), System.Drawing.Imaging.ImageFormat.Png);
+        SavePng(bitmap, SourcePath(source));
         source.Thumbnail = ReadThumbnail(SourcePath(source));
         WriteRecord(Path.Combine(SourceDirectory(source), "source.json"), source);
         return source;
@@ -156,8 +156,8 @@ public sealed class ImageLibrary(string directory)
     public GenerationEntry SaveGeneration(SourceEntry source, Bitmap result, Bitmap? crop, GenerationEntry entry)
     {
         Directory.CreateDirectory(GenerationDirectory(source, entry));
-        result.Save(ResultPath(source, entry), System.Drawing.Imaging.ImageFormat.Png);
-        if (crop is not null) crop.Save(CropPath(source, entry), System.Drawing.Imaging.ImageFormat.Png);
+        SavePng(result, ResultPath(source, entry));
+        if (crop is not null) SavePng(crop, CropPath(source, entry));
         entry.Width = result.Width;
         entry.Height = result.Height;
         entry.HasCrop = crop is not null;
@@ -256,6 +256,13 @@ public sealed class ImageLibrary(string directory)
         }
         catch { copy.Dispose(); throw; }
     }
+    private static void SavePng(Bitmap bitmap, string path)
+    {
+        // GDI+ filename saves fail beyond MAX_PATH even when .NET can open the file.
+        using var stream = File.Create(path);
+        bitmap.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
+    }
+
     private static BitmapSource ReadThumbnail(string path)
     {
         using var stream = File.OpenRead(path);

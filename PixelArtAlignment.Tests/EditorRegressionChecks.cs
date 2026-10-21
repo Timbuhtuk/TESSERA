@@ -35,11 +35,26 @@ internal static class EditorRegressionChecks
 
         void Check(string name, Action verify)
         {
+            Console.WriteLine($"  Editor regression: {name} starting");
             window = new MainWindow(Path.Combine(folder, name)) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+            string? dialogFailure = null;
+            var dialogWatch = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            dialogWatch.Tick += (_, _) =>
+            {
+                foreach (var dialog in window.OwnedWindows.OfType<TesseraDialog>().ToArray())
+                {
+                    dialogFailure = ((TextBlock)dialog.FindName("dialogMessage")).Text;
+                    Console.WriteLine($"  Editor regression: unexpected dialog: {dialogFailure}");
+                    dialog.Close();
+                }
+            };
+            dialogWatch.Start();
             try
             {
                 window.Show(); Pump();
+                Console.WriteLine($"  Editor regression: {name} window ready");
                 Invoke("LoadImage", input);
+                Console.WriteLine($"  Editor regression: {name} source loaded");
                 Get<CheckBox>("aspectLock").IsChecked = false;
                 Get<IntegerInput>("widthInput").Value = 128;
                 Get<IntegerInput>("heightInput").Value = 259;
@@ -47,13 +62,17 @@ internal static class EditorRegressionChecks
                 Get<Slider>("brightnessInput").Value = 82;
                 Get<Slider>("contrastInput").Value = 23;
                 Get<Slider>("localBrightnessInput").Value = 74;
+                Console.WriteLine($"  Editor regression: {name} starting fixture resize");
                 Click("scaleOnlyButton"); Wait();
+                Require(dialogFailure is null, "Unexpected editor dialog: " + dialogFailure);
+                Console.WriteLine($"  Editor regression: {name} fixture ready");
                 Require(Get<Bitmap>("_downscaledResult").Size == new System.Drawing.Size(128, 259), "Fixture resize failed");
                 verify();
+                Require(dialogFailure is null, "Unexpected editor dialog: " + dialogFailure);
                 Console.WriteLine($"  Editor regression: {name} passed.");
             }
-            catch (Exception ex) { failures.Add(name + ": " + ex.Message); }
-            finally { window.Close(); Pump(); }
+            catch (Exception ex) { Console.WriteLine($"  Editor regression: {name} failed: {ex}"); failures.Add(name + ": " + ex.Message); }
+            finally { dialogWatch.Stop(); window.Close(); Pump(); }
         }
 
         void VerifyTools()
@@ -145,10 +164,12 @@ internal static class EditorRegressionChecks
 
         void VerifyExportProtection()
         {
+            Console.WriteLine("  Export regression: loading sources");
             string second = Path.Combine(folder, "second-source.png");
             File.Copy(input, second);
             Invoke("LoadImage", second); Invoke("LoadImage", input);
             Click("scaleOnlyButton"); Wait();
+            Console.WriteLine("  Export regression: checking protected image paths");
             var sources = Get<ListBox>("sourceStrip").Items.Cast<SourceEntry>().ToArray();
             var library = Get<ImageLibrary>("_library");
             var protectedFiles = sources.Select(item => item.OriginalPath).Concat(sources.Select(library.SourcePath)).Concat(
@@ -163,12 +184,14 @@ internal static class EditorRegressionChecks
             Reject(() => Invoke("SaveResult", Path.Combine(library.DirectoryPath, "new.png")));
             string output = Path.Combine(folder, "safe-result.PNG");
             Invoke("SaveResult", output); Invoke("SaveResult", output);
+            Console.WriteLine("  Export regression: checking ASCII paths");
             using (var actual = new Bitmap(output)) EqualPixels(Get<Bitmap>("_downscaledResult"), actual, "Repeated PNG export");
 
             Reject(() => WaitTask((Task)Invoke("SaveAsciiTextAsync", input)!));
             Reject(() => WaitTask((Task)Invoke("SaveAsciiTextAsync", Path.Combine(library.DirectoryPath, "output.txt"))!));
             string text = Path.Combine(folder, "safe-ascii.TXT");
             WaitTask((Task)Invoke("SaveAsciiTextAsync", text)!);
+            Console.WriteLine("  Export regression: ASCII export completed");
             string expected = PixelArtDownscale.ImageFilters.ToAscii(Get<Bitmap>("_sourceImage"), Get<TextBox>("asciiCharactersInput").Text, Get<CheckBox>("asciiInvertSourceInput").IsChecked == true);
             Require(File.ReadAllText(text) == expected, "ASCII export did not write expected text");
             WaitTask((Task)Invoke("SaveAsciiTextAsync", text)!);

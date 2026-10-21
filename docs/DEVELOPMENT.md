@@ -53,6 +53,8 @@ The editable Tessera mark and its generation script are documented in the [asset
 
 ## Tile seam inspector
 
+Library PNG writes use .NET file streams rather than GDI+ filename APIs, which fail at legacy MAX_PATH lengths. The UI suite includes source/result/crop pixel and alpha round trips plus history reopening in a library whose root exceeds 270 characters. Editor regression tests fail on unexpected owned error dialogs instead of waiting invisibly for user input.
+
 `TileInspectorWindow.Zoom.cs` handles Ctrl+wheel with the main editor's 6.25–6400% scale steps, using the current fitted scale for the first wheel step. The deferred scroll adjustment retains the source point under the cursor and ignores stale zoom requests. Unmodified wheel input remains available for scrolling. Collection settings use an optional `ZoomScale` value and retain the original `Zoom` index for compatibility; old projects keep their original Fit/100–3200% zoom. WPF checks cover cursor anchoring, limits, multi-notch/small deltas, Fit transitions and old/new project zoom round trips.
 
 Holding either Alt key temporarily enables the heatmap without changing the saved checkbox state or marking the project dirty. Preview key-up and window deactivation restore the selected mode; only the preview is invalidated, so holding Alt does not rerun edge analysis. Seam statistics are below the preview, while drawing/smoothing stays above it. The WPF checks exercise rendered press/release behavior, repeated keydown, both Alt keys, focus loss, persistent visibility, project settings and panel order at normal/minimum sizes.
