@@ -1,0 +1,20 @@
+{
+  "releases": [
+    {
+      "version": "next",
+      "title": { "ru": "Патчноуты всегда под рукой", "en": "Release notes inside Tessera" },
+      "notes": {
+        "ru": "- При первом запуске новой версии открывается окно с её изменениями.\n- В настройках появилась отдельная вкладка «Патчноуты» с историей релизов.\n- Заметки встроены в приложение и доступны без интернета.\n- Релизная сборка использует один текст изменений для приложения и страницы GitHub.",
+        "en": "- See what changed when you first launch a new version.\n- Read the release history in the new Settings > Patch notes tab.\n- Release notes are bundled with the app and remain available offline.\n- Release builds use the same change notes inside the app and on GitHub."
+      }
+    },
+    {
+      "version": "1.0.41",
+      "title": { "ru": "Инструменты обработки и предпросмотр", "en": "Image tools and previews" },
+      "notes": {
+        "ru": "- Фотографические примеры палитр и квантования учитывают параметры обработки; исправлен дизеринг фиксированных палитр.\n- Добавлены выбор точного RGB-цвета, подсветка замены, свой цвет фона, пипетка и ластик с отменой.\n- Улучшены очистка цветов, ASCII и связь тайлов с материалами проекта и историей.\n- Добавлены контур обрезки, четыре фона предпросмотра и сравнение с оригиналом по Alt.\n- Проверка обновлений перенесена в настройки.\n- Исправлено сохранение PNG в библиотеке с длинными путями.",
+        "en": "- Parameter-aware photographic palette and quantizer previews, with corrected fixed-palette dithering.\n- Exact RGB picking and replacement highlighting, custom background colors, a pipette and an undoable eraser.\n- Better color cleanup, ASCII rendering and project-linked tile histories.\n- Crop outlines, four preview backgrounds and whole-result comparison with Alt.\n- Update checking moved to Settings.\n- Fixed library PNG writes on long workspace paths."
+      }
+    }
+  ]
+}

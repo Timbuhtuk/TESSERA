@@ -19,6 +19,8 @@ public partial class App : Application
         if (e.Args.Length >= 1 && e.Args[0] == "--tiles")
         {
             var inspector = new TileInspectorWindow();
+            ReleaseNotesStartup.Attach(inspector, new ReleaseNotesState(System.IO.Path.Combine(AppContext.BaseDirectory,
+                "WorkspaceData", "Library", "release-notes-state.json")));
             MainWindow = inspector;
             inspector.Show();
             if (e.Args.Length >= 2) _ = inspector.LoadFileAsync(e.Args[1]);
@@ -28,6 +30,7 @@ public partial class App : Application
         string prototypeLibrary = e.Args is ["--workspace-library", var requestedLibrary] ? System.IO.Path.GetFullPath(requestedLibrary) : WorkspacePrototypeLocation.Prepare();
         var prototype = new MainWindow(prototypeLibrary);
         prototype.EnableWorkspacePrototype(enableUpdates: true);
+        prototype.EnableReleaseNotes();
         MainWindow = prototype;
         MainWindow.Show();
     }

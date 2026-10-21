@@ -6,6 +6,10 @@ Download `Tessera.exe` or `Tessera-win-x64.zip` from [GitHub Releases](https://g
 
 Choose Russian or English in Settings. This guide describes the actions in English.
 
+Each new version opens **What's new in Tessera** on its first launch. Close it with **Continue**, the close button or Escape. The app remembers versions whose notes have been displayed, so the same version does not reopen them on later launches. **Settings → Patch notes** always offers the current notes and a version selector for earlier releases. The notes are bundled with the executable and work offline, including after skipping several updates. Older releases that predate translated notes retain their original English descriptions. Theme, language and update controls are under **Settings → General**.
+
+The viewed-version record is `WorkspaceData/Library/release-notes-state.json`. Keep `WorkspaceData` when moving the portable app to preserve this record and your library. A failed state write does not block startup; the notes show a warning and may reappear next time.
+
 The interface includes Cascadia Code and Science Gothic fonts. Icon, background-removal and Aseprite workspaces place settings beside the preview on wide windows; narrow windows place scrollable settings above the preview.
 
 Image size fields accept dimensions above 4K. Available memory and image codec support determine the practical maximum, in both the desktop editor and CLI.

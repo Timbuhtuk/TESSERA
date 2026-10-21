@@ -11,6 +11,7 @@
     <AssemblyTitle>Tessera</AssemblyTitle>
     <Description>Tessera — 2D graphics workspace</Description>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ReleaseNotesFile Condition="'$(ReleaseNotesFile)' == ''">$(MSBuildProjectDirectory)\..\release-notes\catalog.json</ReleaseNotesFile>
   </PropertyGroup>
 
 
@@ -30,6 +31,7 @@
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\settings.svg" />
     <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
+    <EmbeddedResource Include="$(ReleaseNotesFile)" LogicalName="Tessera.ReleaseNotes.json" />
     <Resource Include="Assets\app-icon.png" />
     <Resource Include="Assets\landscape.png" />
     <Resource Include="Assets\palette-preview-photo.png" />

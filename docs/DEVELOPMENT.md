@@ -87,14 +87,25 @@ Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are
 
 The [Build and release workflow](../.github/workflows/release.yml) runs on pushes to `main`, including merged pull requests. Pull requests targeting `main` run the build and checks without publishing a release.
 
-The Windows job builds and tests the solution, publishes both executables, packages them and smoke-tests the standalone CLI. A separate job with `contents: write` publishes the four release assets:
+The Windows job builds and tests the solution, publishes both executables, packages them and smoke-tests the standalone CLI. A separate job with `contents: write` publishes the five release assets:
 
 - `Tessera.exe`
 - `Tessera-win-x64.zip`
 - `Tessera-cli-win-x64.zip`
 - `SHA256SUMS.txt`
+- `ReleaseNotes.json` (the versioned, bilingual archive embedded in the desktop executable)
 
-Versions follow `v1.0.N`, where `N` is the workflow run number; the same version is embedded in the executables. Pull request runs can leave gaps in the sequence. Release descriptions are in English and include GitHub-generated change notes.
+Versions follow `v1.0.N`, where `N` is the workflow run number; the same version is embedded in the executables. Pull request runs can leave gaps in the sequence. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
+
+### Patch notes for every release
+
+Update the `next` entry in `release-notes/catalog.json` with a short title and change list in Russian and English whenever preparing a release. Do not replace the version with a workflow run number or copy the previous release's changes. `Prepare-ReleaseNotes.ps1` stamps the actual version at build time and emits `ReleaseNotes.json` and `ReleaseNotes.md`. `Build-Standalone.ps1 -ReleaseRepository Timbuhtuk/TESSERA` retrieves the published history, preserving translated entries from the latest release's `ReleaseNotes.json` asset; older releases are imported from their original GitHub descriptions. This requires full Git history and tags, which the workflow checks out. Local builds without `-ReleaseRepository` work offline with the checked-in baseline history.
+
+If the source catalog has not changed since the latest published tag, preparation generates notes from the actual non-merge commits since that tag instead of repeating stale text. Russian readers see an explicit original-language label for this fallback. A same-commit rebuild states that it is a rebuild. The generated Markdown is passed to `gh release create --notes-file`; it is not regenerated independently by the publishing job. Missing current notes, a mismatched archive or a failed history fetch stops publication. `ReleaseNotesFile` supplies the generated catalog as an embedded resource in both the tested desktop assembly and the published executable. The app does not fetch notes or require an API token at runtime.
+
+`ReleaseNotesStartup` opens the owned, non-modal notes window after the main window or direct tile inspector first renders. It records the version only after the notes themselves render. `ReleaseNotesState` atomically preserves all seen versions beside the appearance settings, tolerates corrupt state, and reports failed writes without blocking the app. The Settings patch-notes tab uses the same `ReleaseNotesView` and catalog as the startup window. Release text is rendered as plain text with simple headings and bullets; no HTML, scripts or external content is loaded.
+
+Run `PixelArtAlignment.Tests --release-notes` for first-launch/restart state, upgrades/downgrades, offline history selection, RU/EN, three themes, minimum layouts and failed writes. `tests/ReleaseNotes.Checks.ps1` checks curated notes, commit fallback, rebuilds, API arrays, translated archives and GitHub/bundle text parity with isolated fixtures. Both are mandatory in `Build-Standalone.ps1`. Rendered WPF captures are written under `artifacts/wpf/patch-notes`; physical mouse/keyboard desktop interaction remains a separate check.
 
 The release stays a draft until all assets are uploaded. Rerunning a completed publication preserves the existing release; an interrupted draft can resume. An old build is skipped if `main` already points to a newer commit.
 

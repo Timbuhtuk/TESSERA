@@ -3,7 +3,8 @@ param(
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string]$Version = '1.0.0',
     [ValidateNotNullOrEmpty()]
-    [string]$OutputDirectory = 'artifacts'
+    [string]$OutputDirectory = 'artifacts',
+    [string]$ReleaseRepository
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,13 +21,16 @@ function Invoke-Dotnet {
 
 Push-Location -LiteralPath $projectRoot
 try {
-    Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" --nologo
+    & (Join-Path $projectRoot 'Prepare-ReleaseNotes.ps1') -Version $Version -OutputDirectory $artifactsRoot -Repository $ReleaseRepository
+    $notesFile = Join-Path $artifactsRoot 'ReleaseNotes.json'
+    Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" --nologo
     if (!$SkipChecks) {
+        & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
         Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --tool-improvements --navigation --workspace --localization --ui --invariants
+        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --navigation --workspace --localization --ui --invariants
         Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
     }
-    Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$output/" --nologo
+    Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
     Invoke-Dotnet publish Pixelizator.Cli -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$cliOutput/" --nologo
     $guide = @'
 TESSERA / WINDOWS x64
@@ -103,9 +107,12 @@ On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
 are copied there. The original library stays intact. Keep WorkspaceData
 when moving the app to another folder or computer.
 
-Tessera checks GitHub Releases for updates at startup. Use Settings > Updates
+Tessera checks GitHub Releases for updates at startup. Use Settings > General > Updates
 to check manually and install a newer version. Your library remains in place.
 Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
+
+Each new version shows its patch notes on first launch. Read the bundled
+release history offline in Settings > Patch notes.
 '@
     [IO.File]::WriteAllText((Join-Path $output 'README.txt'), $guide, [Text.UTF8Encoding]::new($true))
     $archive = Join-Path $artifactsRoot 'Tessera-win-x64.zip'
