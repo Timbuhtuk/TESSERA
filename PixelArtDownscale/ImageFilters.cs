@@ -61,6 +61,15 @@ public static class ImageFilters
         return ToAscii(source, source.Width, source.Height, characters, invertSource);
     }
 
+    public static Bitmap RenderAscii(Bitmap source, bool keepSourceSize = true, string characters = DefaultAsciiRamp,
+        bool invertSource = false, bool invertColors = false)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (string.IsNullOrEmpty(characters) || characters.Contains('\r') || characters.Contains('\n'))
+            throw new ArgumentException("Набор ASCII должен содержать символы яркости в одной строке.", nameof(characters));
+        return AsciiRenderer.Render(source, ReadArgb(source), keepSourceSize, characters, invertSource, invertColors);
+    }
+
     public static Bitmap RenderAscii(string text, int fontSize = 14, bool invertColors = false)
     {
         ArgumentNullException.ThrowIfNull(text);

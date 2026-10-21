@@ -32,7 +32,7 @@ public sealed class TilePreview : FrameworkElement
     }
     private double _opacity = .7, _stripe = 1;
     private Brush _background = Brushes.Transparent;
-    private static readonly Brush Checker = MakeChecker();
+    private int _backgroundIndex;
 
     public TilePreview()
     {
@@ -53,6 +53,7 @@ public sealed class TilePreview : FrameworkElement
         };
         MouseLeftButtonUp += (_, e) => { if (_drawing) { EndStroke(); e.Handled = true; } };
         LostMouseCapture += (_, _) => EndStroke();
+        _ = new PreviewThemeSubscription(this, RefreshBackground);
     }
 
     public void SetSource(BitmapSource source, TileSeamAnalysis analysis)
@@ -98,7 +99,8 @@ public sealed class TilePreview : FrameworkElement
         _repeatX = repeatX; _repeatY = repeatY; _heat = heat; _guides = guides;
         Columns = repeatX ? copies : 1; Rows = repeatY ? copies : 1;
         PixelScale = scale; _opacity = opacity; _stripe = stripe;
-        _background = background == 1 ? Brushes.White : background == 2 ? new SolidColorBrush(Color.FromRgb(24, 24, 24)) : Checker;
+        _backgroundIndex = background;
+        RefreshBackground();
         if (Source is null || Analysis is null) return;
         Width = Source.PixelWidth * Columns * scale;
         Height = Source.PixelHeight * Rows * scale;
@@ -180,18 +182,11 @@ public sealed class TilePreview : FrameworkElement
         return bitmap;
     }
 
-    private static Brush MakeChecker()
+    private void RefreshBackground()
     {
-        var group = new DrawingGroup();
-        using (var drawing = group.Open())
-        {
-            drawing.DrawRectangle(new SolidColorBrush(Color.FromRgb(62, 62, 62)), null, new Rect(0, 0, 16, 16));
-            var dark = new SolidColorBrush(Color.FromRgb(46, 46, 46));
-            drawing.DrawRectangle(dark, null, new Rect(0, 0, 8, 8));
-            drawing.DrawRectangle(dark, null, new Rect(8, 8, 8, 8));
-        }
-        var brush = new DrawingBrush(group) { TileMode = TileMode.Tile, ViewportUnits = BrushMappingMode.Absolute, Viewport = new Rect(0, 0, 16, 16) };
-        brush.Freeze();
-        return brush;
+        int background = _backgroundIndex switch { 1 => 2, 2 => 1, 3 => 3, _ => 0 };
+        _background = PreviewBackgroundBrushes.Create(this, background);
+        InvalidateVisual();
     }
+
 }

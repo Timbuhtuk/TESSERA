@@ -80,17 +80,26 @@ public partial class TileInspectorWindow
     public void ExportDialog() => ExportClicked(this, new());
     public string? WorkspaceSavePath { get; set; }
     public event Action? WorkspaceSaved;
-    public void EnableWorkspaceApply(Action<TileAsset> apply)
+    private Button? _tileWorkspaceApplyButton;
+    private Func<TileAsset, bool>? _tileWorkspaceCanApply;
+    public void EnableWorkspaceApply(Action<TileAsset> apply, Func<TileAsset, bool>? canApply = null)
     {
-        var original = ActiveAsset;
+        _tileWorkspaceCanApply = canApply;
         var button = new Button { Content = Localization.Text("В историю ассета"), Margin = new Thickness(6, 0, 0, 6), ToolTip = Localization.Text("Сохранить правки исходного тайла новым результатом в библиотеке") };
+        _tileWorkspaceApplyButton = button;
+        System.Windows.Automation.AutomationProperties.SetName(button, Localization.Text("В историю ассета"));
         workspaceTileToolbar.Children.Add(button);
         button.Click += (_, _) =>
         {
-            if (_busy || original is null || original != ActiveAsset) return;
-            try { FinishStroke(); apply(original); } catch (Exception ex) { TesseraDialog.Show(this, ex.Message, "Tessera"); }
+            if (_busy || ActiveAsset is not { } active || canApply?.Invoke(active) == false) return;
+            try { FinishStroke(); apply(active); RefreshWorkspaceMaterials(); } catch (Exception ex) { TesseraDialog.Show(this, ex.Message, "Tessera"); }
         };
-        LayoutUpdated += (_, _) => button.IsEnabled = !_busy && original is not null && original == ActiveAsset;
+        UpdateWorkspaceApplyControls();
+    }
+    private void UpdateWorkspaceApplyControls()
+    {
+        if (_tileWorkspaceApplyButton is not null)
+            _tileWorkspaceApplyButton.IsEnabled = !_busy && ActiveAsset is { } active && _tileWorkspaceCanApply?.Invoke(active) != false;
     }
     public void MarkWorkspaceApplied() { _projectDirty = false; UpdateProjectTitle(); }
 }

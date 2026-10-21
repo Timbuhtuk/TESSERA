@@ -22,6 +22,19 @@ public partial class AppearanceWindow : Window
         _updating = true; languageInput.SelectedIndex = language == "en" ? 1 : 0; _updating = false;
         languageSavedHint.Visibility = language == Localization.Language ? Visibility.Collapsed : Visibility.Visible;
         SelectTheme(theme);
+        updatesHeading.Text = Localization.Text("Обновления");
+    }
+
+    public void SetUpdateButton(Button button)
+    {
+        if (button.Parent is Panel parent) parent.Children.Remove(button);
+        button.Visibility = Visibility.Visible;
+        button.Margin = new Thickness(0, 0, 0, 8);
+        button.Padding = new Thickness(12, 7, 12, 7);
+        button.HorizontalAlignment = HorizontalAlignment.Left;
+        updatesHost.Children.Add(button);
+        RegisterName("updateButton", button);
+        Closed += (_, _) => { updatesHost.Children.Remove(button); UnregisterName("updateButton"); };
     }
 
     private void LanguageSelected(object sender, SelectionChangedEventArgs e)

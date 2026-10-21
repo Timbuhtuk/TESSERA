@@ -4,14 +4,6 @@ using System.Drawing.Imaging;
 
 public sealed class PixelArtDownscaler
 {
-    private static readonly int[,] Bayer4x4 =
-    {
-        { 0, 8, 2, 10 },
-        { 12, 4, 14, 6 },
-        { 3, 11, 1, 9 },
-        { 15, 7, 13, 5 }
-    };
-
     public DownscaleResult Process(Bitmap source, DownscaleOptions options)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -51,18 +43,18 @@ public sealed class PixelArtDownscaler
             var downscaled = ProcessBlocks(quantized, options);
             timings["blocks"] = (DateTime.UtcNow - blockStart).TotalSeconds;
 
-            var snapStart = DateTime.UtcNow;
-            var snapped = ApplyPaletteSnap(downscaled, options);
-            timings["paletteSnap"] = (DateTime.UtcNow - snapStart).TotalSeconds;
-
-            Bitmap finalBitmap = snapped;
+            Bitmap finalBitmap;
             if (options.EnableDithering && options.Palette is not PaletteKind.None and not PaletteKind.Step)
             {
                 var ditherStart = DateTime.UtcNow;
-                finalBitmap = ApplyOrderedDithering(snapped, options.Palette, options.ThreadCount);
-                if (!ReferenceEquals(finalBitmap, snapped))
-                    snapped.Dispose();
+                finalBitmap = ApplyPaletteDithering(downscaled, options.Palette);
                 timings["dither"] = (DateTime.UtcNow - ditherStart).TotalSeconds;
+            }
+            else
+            {
+                var snapStart = DateTime.UtcNow;
+                finalBitmap = ApplyPaletteSnap(downscaled, options);
+                timings["paletteSnap"] = (DateTime.UtcNow - snapStart).TotalSeconds;
             }
 
             quantized.Dispose();
@@ -192,50 +184,20 @@ public sealed class PixelArtDownscaler
         return result;
     }
 
-    private static Bitmap ApplyOrderedDithering(Bitmap source, PaletteKind paletteKind, int threadCount)
+    private static Bitmap ApplyPaletteDithering(Bitmap source, PaletteKind paletteKind)
     {
         var palette = Palettes.GetPalette(paletteKind);
-        if (palette.Count == 0)
-            return (Bitmap)source.Clone();
-
-        var result = BitmapFactory.Create24Bpp(source.Width, source.Height);
         using var readBuffer = BitmapBuffer.FromBitmap(source);
+        var input = new int[checked(source.Width * source.Height)];
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+                input[y * source.Width + x] = unchecked((int)0xFF000000) | readBuffer.GetPackedColor(x, y);
+        int[] output = PaletteDithering.Apply(input, source.Width, source.Height, palette);
+        var result = BitmapFactory.Create24Bpp(source.Width, source.Height);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
-
-        ParallelImageHelper.ForEachRowChunk(readBuffer.Height, threadCount, (startY, endY) =>
-        {
-            for (int y = startY; y < endY; y++)
-            {
-                for (int x = 0; x < readBuffer.Width; x++)
-                {
-                    int packed = readBuffer.GetPackedColor(x, y);
-                    var lab = ColorSpace.RgbToLab(packed);
-
-                    int nearest = ColorSpace.NearestPacked(palette, packed);
-                    var nearestLab = ColorSpace.RgbToLab(nearest);
-
-                    int nearestIndex = 0;
-                    for (int i = 0; i < palette.Count; i++)
-                    {
-                        if (palette[i] == nearest)
-                        {
-                            nearestIndex = i;
-                            break;
-                        }
-                    }
-
-                    double threshold = Bayer4x4[y % 4, x % 4] / 16.0;
-                    double error = Math.Abs(lab.L - nearestLab.L) / 100.0;
-                    int output = error > threshold && palette.Count > 1
-                        ? palette[(nearestIndex + 1) % palette.Count]
-                        : nearest;
-
-                    writeBuffer.SetPackedColor(x, y, output);
-                }
-            }
-        });
-
-        writeBuffer.Flush();
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+                writeBuffer.SetPackedColor(x, y, output[y * source.Width + x] & 0xFFFFFF);
         return result;
     }
 

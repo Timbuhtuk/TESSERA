@@ -349,10 +349,13 @@ public partial class MainWindow
                 options.IndependentColorMode == IndependentColorMode.Combined && options.Palette != PaletteKind.None;
             quantizationColorModeInput.IsChecked = paletteColorModeInput.IsChecked != true;
             localColorPassesInput.Value = options.LocalColorPasses;
-            localBrightnessInput.Value = (options.LocalColorCriteria?.TargetBrightness ?? .5) * 100;
-            localContrastInput.Value = (options.LocalColorCriteria?.TargetContrast ?? .5) * 100;
-            localSaturationInput.Value = (options.LocalColorCriteria?.TargetSaturation ?? .5) * 100;
-            localEdgeInput.Value = (options.LocalColorCriteria?.TargetEdge ?? .5) * 100;
+            // Older histories store target brightness/contrast rather than cleanup parameters.
+            // They open with safe cleanup defaults; their old values are never reinterpreted as tolerances.
+            var cleanup = options.Cleanup ?? new ColorCleanupOptions();
+            localBrightnessInput.Value = cleanup.ColorTolerance / .4;
+            localContrastInput.Value = cleanup.Strength * 100;
+            localSaturationInput.Value = cleanup.DetailProtection * 100;
+            localEdgeInput.Value = cleanup.EdgeProtection * 100;
             colorWeightsInput.IsChecked = options.UseColorWeights;
             threadsInput.Value = options.ThreadCount;
             automaticInput.IsChecked = options.BlockMode != BlockSelectionMode.Manual;
@@ -364,7 +367,7 @@ public partial class MainWindow
             aspectLock.IsChecked = settings.AspectLock;
             gridCellInput.Value = settings.CellSize; detectGridInput.IsChecked = settings.DetectGrid;
             UpdateDependentControls();
-            ditheringInput.IsChecked = !options.SpriteMode && options.Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && options.EnableDithering;
+            ditheringInput.IsChecked = options.Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && options.EnableDithering;
             profileState.Text = Localization.Text("Параметры выбранного результата");
         }
         finally { _restoringHistory = false; }

@@ -19,6 +19,7 @@ public partial class MainWindow
         }
 
         _appearanceWindow = new AppearanceWindow(_appearanceSettings.Theme, ApplyAppearance, _appearanceSettings.Language, ApplyLanguage) { Owner = this };
+        _appearanceWindow.SetUpdateButton(updateButton);
         _appearanceWindow.Closed += (_, _) => _appearanceWindow = null;
         _appearanceWindow.Show();
     }

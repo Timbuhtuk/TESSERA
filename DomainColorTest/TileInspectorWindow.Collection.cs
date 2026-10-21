@@ -35,6 +35,7 @@ public partial class TileInspectorWindow
             SmoothEdgesOnly = smoothEdgesInput.IsChecked == true
         };
         TileCollectionFile.Save(path, _assets, settings, _protectedSourcePaths);
+        if (WorkspaceSavePath is { } workspacePath && !string.Equals(Path.GetFullPath(workspacePath), Path.GetFullPath(path), StringComparison.OrdinalIgnoreCase)) WorkspaceSavePath = null;
         _projectPath = Path.GetFullPath(path); _projectDirty = false;
         UpdateProjectTitle(); statusLabel.Text = Localization.Text("Коллекция и правки сохранены · ") + Path.GetFileName(path);
         WorkspaceSaved?.Invoke();
@@ -45,6 +46,7 @@ public partial class TileInspectorWindow
         if (_busy) throw new InvalidOperationException(Localization.Text("Дождитесь сглаживания."));
         // Read the complete project before changing the current session.
         var loaded = TileCollectionFile.LoadWithSourcePaths(path);
+        WorkspaceSavePath = null;
         FinishStroke(); _loadVersion++;
         _reloadTimer.Stop(); _changedPaths.Clear();
         _settingCollection = true;
@@ -60,7 +62,7 @@ public partial class TileInspectorWindow
             int zoomIndex = s.ZoomScale is { } scale ? Array.IndexOf(TileZoomFactors, scale) : -1;
             // Version-1 projects originally stored indexes for Fit and 100–3200% only.
             zoomInput.SelectedIndex = zoomIndex >= 0 ? zoomIndex : s.Zoom > 0 ? Math.Clamp(s.Zoom, 1, 6) + 4 : 0;
-            backgroundInput.SelectedIndex = Math.Clamp(s.Background, 0, 2);
+            backgroundInput.SelectedIndex = Math.Clamp(s.Background, 0, 3);
             heatInput.IsChecked = s.Heat; guidesInput.IsChecked = s.Guides;
             thresholdInput.Value = Finite(s.Threshold, 0, 30, 5);
             opacityInput.Value = Finite(s.Opacity, 0, 100, 70);

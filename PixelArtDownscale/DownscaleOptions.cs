@@ -75,6 +75,7 @@ public sealed class DownscaleOptions
     public IndependentColorMode IndependentColorMode { get; init; } = IndependentColorMode.Combined;
     public int LocalColorPasses { get; init; } = 1;
     public ManualBlockCriteria? LocalColorCriteria { get; init; }
+    public ColorCleanupOptions? Cleanup { get; init; }
     public bool UseColorWeights { get; init; }
     public QuantizationMethod Quantization { get; init; } = QuantizationMethod.KMeansLab;
     public int ThreadCount { get; init; } = Environment.ProcessorCount;

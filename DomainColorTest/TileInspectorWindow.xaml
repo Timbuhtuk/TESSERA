@@ -12,14 +12,14 @@
         <ResourceDictionary.MergedDictionaries><local:TileInspectorResources/></ResourceDictionary.MergedDictionaries>
         <DrawingBrush x:Key="NeighborChecker" TileMode="Tile" ViewportUnits="Absolute" Viewport="0,0,16,16">
             <DrawingBrush.Drawing><DrawingGroup>
-                <GeometryDrawing Brush="#3E3E3E" Geometry="M0,0 H16 V16 H0 Z"/>
-                <GeometryDrawing Brush="#2E2E2E" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z"/>
+                <GeometryDrawing Brush="{DynamicResource Ts.Panel}" Geometry="M0,0 H16 V16 H0 Z"/>
+                <GeometryDrawing Brush="{DynamicResource Ts.Canvas}" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z"/>
             </DrawingGroup></DrawingBrush.Drawing>
         </DrawingBrush>
     </ResourceDictionary></Window.Resources>
-    <Grid Margin="18">
+    <Grid x:Name="inspectorLayout" Margin="18">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-        <Grid Margin="0,0,0,16">
+        <Grid x:Name="inspectorHeader" Margin="0,0,0,16">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock x:Name="inspectorTitle" Text="{local:Translate Text93D68B96996E}" Style="{StaticResource SectionTitle}" TextWrapping="Wrap"/>
@@ -36,6 +36,37 @@
             <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Panel}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
                     <StackPanel>
+                        <Expander x:Name="workspaceMaterialsPanel" Visibility="Collapsed" IsExpanded="True" Margin="0,0,0,14">
+                            <Expander.Header><TextBlock x:Name="workspaceMaterialsTitle" TextWrapping="Wrap" MaxWidth="185"/></Expander.Header>
+                            <StackPanel Margin="0,8,0,0">
+                                <ListBox x:Name="workspaceMaterialList" Height="142" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="WorkspaceMaterialSelected">
+                                    <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem">
+                                        <Setter Property="AutomationProperties.Name" Value="{Binding Label}"/><Setter Property="ToolTip" Value="{Binding Label}"/>
+                                        <Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{DynamicResource Ts.Text}"/>
+                                        <Setter Property="BorderBrush" Value="Transparent"/><Setter Property="Padding" Value="4"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border></ControlTemplate></Setter.Value></Setter>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{DynamicResource Ts.Hover}"/></Trigger>
+                                            <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="{DynamicResource Ts.Raised}"/><Setter Property="BorderBrush" Value="{DynamicResource Ts.BorderStrong}"/></Trigger>
+                                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter Property="BorderBrush" Value="{DynamicResource Ts.Text}"/></Trigger>
+                                        </Style.Triggers>
+                                    </Style></ListBox.ItemContainerStyle>
+                                    <ListBox.ItemTemplate><DataTemplate>
+                                        <DockPanel Margin="0,3">
+                                            <Border Width="42" Height="42" Background="{StaticResource NeighborChecker}" Margin="0,0,8,0">
+                                                <Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+                                            </Border>
+                                            <StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Name}" TextWrapping="Wrap"/><TextBlock Text="{Binding Location}" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="11" TextWrapping="Wrap"/></StackPanel>
+                                        </DockPanel>
+                                    </DataTemplate></ListBox.ItemTemplate>
+                                </ListBox>
+                                <UniformGrid Columns="2" Margin="0,8,0,0">
+                                    <Button x:Name="workspaceSourceButton" Click="AddWorkspaceSourceClicked" IsEnabled="False" Margin="0,0,4,0" Padding="4,8"/>
+                                    <Button x:Name="workspaceResultButton" Click="AddWorkspaceResultClicked" IsEnabled="False" Margin="4,0,0,0" Padding="4,8" ToolTipService.ShowOnDisabled="True"/>
+                                </UniformGrid>
+                                <TextBlock x:Name="workspaceMaterialsHint" Style="{StaticResource Hint}"/>
+                            </StackPanel>
+                        </Expander>
                         <TextBlock Text="{local:Translate Text694F0FFED92F}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                         <ListBox x:Name="assetList" Height="146" HorizontalContentAlignment="Stretch" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectionChanged="AssetSelected" AutomationProperties.Name="{local:Translate TextBC36A742FAE5}">
                             <ListBox.ItemTemplate><DataTemplate>
@@ -64,8 +95,8 @@
                         <TextBlock x:Name="pairLabel" Text="{local:Translate Text70033FB0F84C}" Style="{StaticResource Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,14"/>
                         <TextBlock Text="{local:Translate Text3472342D6716}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <CheckBox x:Name="repeatXInput" Content="{local:Translate Text933FF8867862}" IsChecked="True" Click="OptionsChanged"/>
-                        <CheckBox x:Name="repeatYInput" Content="{local:Translate Text245019C819B6}" IsChecked="True" Click="OptionsChanged"/>
+                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="repeatXInput" Content="{local:Translate Text933FF8867862}" IsChecked="True" Click="OptionsChanged" ToolTip="{local:Translate TextB1778617E43F}" />
+                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="repeatYInput" Content="{local:Translate Text245019C819B6}" IsChecked="True" Click="OptionsChanged" ToolTip="{local:Translate Text08F3552DFCBC}" />
                         <TextBlock Text="{local:Translate TextFBDC92AE6CF8}" Margin="0,12,0,5"/>
                         <ComboBox x:Name="copiesInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate Text4FEA157588CE}">
                             <ComboBoxItem Content="3"/><ComboBoxItem Content="5"/><ComboBoxItem Content="7"/>
@@ -81,10 +112,10 @@
                         <ComboBox x:Name="backgroundInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate Text9D6D5197FC22}">
                             <ComboBoxItem Content="{local:Translate Text5E7EC04C97C5}"/><ComboBoxItem Content="{local:Translate TextA024A93D4E0C}"/><ComboBoxItem Content="{local:Translate Text21943A44634E}"/>
                         </ComboBox>
-                        <CheckBox x:Name="guidesInput" Content="{local:Translate Text059662D5BABD}" Click="OptionsChanged" Margin="0,12,0,0"/>
+                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="guidesInput" Content="{local:Translate Text059662D5BABD}" Click="OptionsChanged" Margin="0,12,0,0" ToolTip="{local:Translate TextA1B9DDBCD48C}" />
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,16,0,14"/>
-                        <CheckBox x:Name="heatInput" Content="{local:Translate TextFE52793B403A}" IsChecked="True" Click="OptionsChanged"
-                                  ToolTip="{local:Translate TextF24E0112C0E7}"/>
+                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="heatInput" Content="{local:Translate TextFE52793B403A}" IsChecked="True" Click="OptionsChanged"
+                                  ToolTip="{local:Translate Text0CBFBFFA4686}"/>
                         <TextBlock Text="{local:Translate TextD8E51B7BDD60}" Style="{StaticResource Hint}"/>
                         <TextBlock x:Name="thresholdLabel" Text="{local:Translate TextDC31C6BFE35D}" Margin="0,12,0,0"/>
                         <Slider x:Name="thresholdInput" Minimum="0" Maximum="30" Value="5" TickFrequency="0.5" ValueChanged="ValueChanged" AutomationProperties.Name="{local:Translate TextE99A389E686A}"/>
@@ -95,7 +126,7 @@
                         <Border Height="8" Margin="0,4,0,6"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#30D250" Offset="0"/><GradientStop Color="#FFD750" Offset="0.5"/><GradientStop Color="#FF3232" Offset="1"/></LinearGradientBrush></Border.Background></Border>
                         <TextBlock Text="{local:Translate TextC60F395A1648}" Style="{StaticResource Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,14"/>
-                        <CheckBox x:Name="watchInput" Content="{local:Translate Text9E95D6C39340}" IsChecked="True" Click="WatchChanged" ToolTip="{local:Translate TextA4E257CF4A0A}"/>
+                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="watchInput" Content="{local:Translate Text9E95D6C39340}" IsChecked="True" Click="WatchChanged" ToolTip="{local:Translate TextA4E257CF4A0A}"/>
                         <Button x:Name="reloadButton" Content="{local:Translate Text3B479F67775A}" Click="ReloadClicked" IsEnabled="False" Margin="0,8,0,0"/>
                         <TextBlock Text="{local:Translate Text19D51F0CAA2E}" Style="{StaticResource Hint}" Margin="0,14,0,0"/>
                         <TextBlock Text="{local:Translate TextBB15EEE4CBC7}" Style="{StaticResource Hint}"/>
@@ -128,7 +159,7 @@
                         <WrapPanel>
                             <TextBlock Text="{local:Translate Text32E3B1F59D75}" VerticalAlignment="Center" Margin="0,0,8,4"/>
                             <TextBox x:Name="smoothPassesInput" Text="1" Width="60" Padding="6,4" Margin="0,0,8,4" AutomationProperties.Name="{local:Translate Text4B7147AD8DFE}"/>
-                            <CheckBox x:Name="smoothEdgesInput" Content="{local:Translate TextC3D3E9C503B9}" Click="OptionsChanged" VerticalAlignment="Center" Margin="0,0,8,4" ToolTip="{local:Translate Text6C2CEB0A4321}"/>
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="smoothEdgesInput" Content="{local:Translate TextC3D3E9C503B9}" Click="OptionsChanged" VerticalAlignment="Center" Margin="0,0,8,4" ToolTip="{local:Translate Text8213C3BAC982}"/>
                             <Button x:Name="smoothButton" Content="{local:Translate TextC75D41147BEF}" Click="SmoothClicked" IsEnabled="False" Margin="0,0,0,4"/>
                         </WrapPanel>
                         <TextBlock x:Name="editHint" Text="{local:Translate Text27DD5D2DFFB2}" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" FontSize="11"/>

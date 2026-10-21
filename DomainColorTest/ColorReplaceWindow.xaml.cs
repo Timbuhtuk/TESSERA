@@ -38,11 +38,14 @@ public partial class ColorReplaceWindow : Window
     private double _value;
 
     public event Action<DrawingColor, DrawingColor>? ReplaceRequested;
+    public event Action? PickSourceRequested;
+    public event Action<DrawingColor?>? SourceColorChanged;
     public DrawingColor? SelectedColor { get; private set; }
 
     public ColorReplaceWindow(DrawingColor initialColor) : this(initialColor, [], false)
     {
         _choosingColor = true;
+        sourcePickerButton.Visibility = Visibility.Collapsed;
         Title = Localization.Text("Цвет фона · TESSERA");
         dialogTitle.Text = Localization.Text("Цвет фона");
         oldColorLabel.Visibility = oldColorPanel.Visibility = Visibility.Collapsed;
@@ -56,6 +59,8 @@ public partial class ColorReplaceWindow : Window
     public ColorReplaceWindow(DrawingColor oldColor, IReadOnlyList<PaletteColorEntry> colors, bool allowOldColorEdit)
     {
         InitializeComponent();
+        sourcePickerButton.Content = Localization.Text("Пипетка: выбрать заменяемый цвет");
+        sourcePickerButton.ToolTip = Localization.Text("Нажмите, затем выберите пиксель на изображении основы в редакторе. Esc отменяет пипетку.");
         _colors = colors;
         oldHexInput.IsReadOnly = !allowOldColorEdit;
         oldHexInput.Text = PaletteColorEntry.FormatHex(oldColor);
@@ -101,6 +106,7 @@ public partial class ColorReplaceWindow : Window
     {
         bool oldValid = TryReadColor(oldHexInput.Text, out DrawingColor oldColor);
         bool newValid = TryReadColor(newHexInput.Text, out DrawingColor newColor);
+        if (!_choosingColor) SourceColorChanged?.Invoke(oldValid ? oldColor : null);
         oldPreview.Background = oldValid
             ? new SolidColorBrush(MediaColor.FromRgb(oldColor.R, oldColor.G, oldColor.B))
             : System.Windows.Media.Brushes.Transparent;
@@ -262,4 +268,8 @@ public partial class ColorReplaceWindow : Window
     }
 
     private void CloseWindow(object sender, RoutedEventArgs e) => Close();
+
+    public void SetSourceColor(DrawingColor color) => oldHexInput.Text = PaletteColorEntry.FormatHex(color);
+
+    private void PickSourceColor(object sender, RoutedEventArgs e) => PickSourceRequested?.Invoke();
 }

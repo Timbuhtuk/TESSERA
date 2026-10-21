@@ -31,12 +31,13 @@
     </ResourceDictionary></Window.Resources>
     <Border BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1">
         <Grid>
-            <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="*" /></Grid.RowDefinitions>
             <DockPanel Background="{DynamicResource Ts.Raised}">
                 <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource CloseCaptionButton}" Click="CloseAppearance" ToolTip="{local:Translate TextA7A4033657E8}" AutomationProperties.Name="{local:Translate TextEA4361602090}" shell:WindowChrome.IsHitTestVisibleInChrome="True" />
                 <TextBlock Text="{local:Translate Text985B5E0F2CCF}" FontFamily="{DynamicResource Ts.DisplayFont}" FontWeight="SemiBold" Margin="16,0,0,0" VerticalAlignment="Center" />
             </DockPanel>
-            <StackPanel Grid.Row="1" Margin="20,20,20,12">
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="20,20,20,12">
                 <TextBlock Text="{local:Translate Text9089A73112CC}" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <ComboBox x:Name="languageInput" SelectionChanged="LanguageSelected" AutomationProperties.Name="{local:Translate Text9089A73112CC}" Margin="0,0,0,8">
                     <ComboBoxItem Tag="ru" Content="{local:Translate Text6DA140FDD4BE}" />
@@ -77,7 +78,11 @@
                     </Grid>
                 </RadioButton>
                 <TextBlock Text="{local:Translate TextFE0134C91109}" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,6" />
+                <Separator Margin="0,10,0,16" />
+                <TextBlock x:Name="updatesHeading" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <StackPanel x:Name="updatesHost" />
             </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Border>
 </Window>

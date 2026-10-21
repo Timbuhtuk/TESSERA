@@ -16,6 +16,26 @@ internal static class LibraryChecks
     {
         string folder = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "history-" + Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(folder);
+        string deepLibrary = Path.Combine(folder, "long-library");
+        while (deepLibrary.Length < 270) deepLibrary = Path.Combine(deepLibrary, new string('p', 40));
+        using (var fixture = new Bitmap(4, 3, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+        {
+            fixture.SetPixel(1, 1, Color.FromArgb(73, 25, 135, 245));
+            string original = Path.Combine(folder, "long-source.png");
+            fixture.Save(original);
+            var deep = new ImageLibrary(deepLibrary);
+            var entry = deep.Import(original, []);
+            var generation = deep.SaveGeneration(entry, fixture, fixture, new GenerationEntry());
+            Require(deep.ResultPath(entry, generation).Length > 260, "Long-path fixture did not exceed GDI+ filename limits");
+            foreach (string path in new[] { deep.SourcePath(entry), deep.ResultPath(entry, generation), deep.CropPath(entry, generation) })
+            {
+                using var stored = ImageLibrary.ReadBitmap(path);
+                EqualPixels(fixture, stored);
+            }
+            Require(deep.Load().Single().Generations.Count == 1 && deep.LoadWarnings.Count == 0,
+                "Long-path source/history/crop did not reopen cleanly");
+            Console.WriteLine("  Library long paths: source, result, crop, alpha, thumbnails and history reopen passed.");
+        }
         string libraryPath = Path.Combine(folder, "library");
         string firstPath = Path.Combine(folder, "first.png"), secondPath = Path.Combine(folder, "second.png");
         using var logical = Fixtures.Logical(3, 172);

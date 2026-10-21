@@ -5,8 +5,6 @@ namespace PixelArtDownscale;
 
 public static class IndependentImageProcessor
 {
-    private static readonly int[,] Bayer4x4 = { { 0, 8, 2, 10 }, { 12, 4, 14, 6 }, { 3, 11, 1, 9 }, { 15, 7, 13, 5 } };
-
     public static Bitmap Scale(Bitmap source, DownscaleOptions options)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -100,6 +98,16 @@ public static class IndependentImageProcessor
             lookup = ColorQuantizer.BuildLookup(unique, options.QuantizationColors, options.Quantization, weights);
         }
         var palette = Palettes.GetPalette(options.Palette);
+        bool dither = usePalette && options.EnableDithering && palette.Count > 1;
+        if (dither)
+        {
+            // Dither the unsnapped colors: after snapping the quantization error is already zero.
+            if (lookup is not null)
+                for (int q = 0; q < input.Length; q++)
+                    if ((uint)input[q] >> 24 != 0)
+                        input[q] = (input[q] & unchecked((int)0xFF000000)) | lookup[input[q] & 0xFFFFFF];
+            return WriteArgb(PaletteDithering.Apply(input, source.Width, source.Height, palette), source.Width, source.Height);
+        }
         int[] output = new int[input.Length];
         for (int y = 0; y < source.Height; y++)
             for (int x = 0; x < source.Width; x++)
@@ -115,119 +123,13 @@ public static class IndependentImageProcessor
                         PaletteKind.Step => ColorSpace.RoundToStep(rgb, options.PaletteStep),
                         _ => ColorSpace.NearestPacked(palette, rgb)
                     };
-                if (usePalette && options.EnableDithering && options.Palette is not PaletteKind.None and not PaletteKind.Step && palette.Count > 1)
-                {
-                    var lab = ColorSpace.RgbToLab(rgb);
-                    int nearestIndex = 0;
-                    for (int i = 0; i < palette.Count; i++) if (palette[i] == rgb) { nearestIndex = i; break; }
-                    double error = Math.Abs(ColorSpace.RgbToLab(argb & 0xFFFFFF).L - lab.L) / 100.0;
-                    if (error > Bayer4x4[y % 4, x % 4] / 16.0) rgb = palette[(nearestIndex + 1) % palette.Count];
-                }
                 output[q] = (argb & unchecked((int)0xFF000000)) | rgb;
             }
         return WriteArgb(output, source.Width, source.Height);
     }
 
     public static Bitmap ApplyNeighborColors(Bitmap source, DownscaleOptions options)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(options);
-        if (options.LocalColorPasses is < 1 or > DownscaleOptions.MaxLocalColorPasses)
-            throw new ArgumentOutOfRangeException(nameof(options),
-                $"Число проходов должно быть от 1 до {DownscaleOptions.MaxLocalColorPasses}.");
-        ManualBlockCriteria? localCriteria = options.LocalColorCriteria;
-
-        int width = source.Width, height = source.Height;
-        int[] input = ReadArgb(source);
-        var features = new Dictionary<int, NeighborColorFeatures>();
-        Span<int> colors = stackalloc int[9];
-        Span<int> counts = stackalloc int[9];
-        for (int pass = 0; pass < options.LocalColorPasses; pass++)
-        {
-            int[] output = new int[input.Length];
-            int changed = 0;
-            for (int y = 0; y < height; y++)
-                for (int x = 0; x < width; x++)
-                {
-                    int q = y * width + x;
-                    int argb = input[q];
-                    if ((uint)argb >> 24 == 0) { output[q] = argb; continue; }
-
-                    int current = argb & 0xFFFFFF;
-                    counts.Clear();
-                    int colorCount = 0;
-                    int visible = 0;
-                    for (int e = Math.Max(0, y - 1); e <= Math.Min(height - 1, y + 1); e++)
-                        for (int f = Math.Max(0, x - 1); f <= Math.Min(width - 1, x + 1); f++)
-                        {
-                            int neighbor = input[e * width + f];
-                            if ((uint)neighbor >> 24 == 0) continue;
-                            int color = neighbor & 0xFFFFFF;
-                            int index = 0;
-                            while (index < colorCount && colors[index] != color) index++;
-                            if (index == colorCount) colors[colorCount++] = color;
-                            counts[index]++;
-                            visible++;
-                        }
-
-                    int selected = current;
-                    double bestCost = 0;
-                    NeighborColorFeatures original = GetFeatures(current, features);
-                    int currentCount = 0;
-                    for (int e = 0; e < colorCount; e++)
-                        if (colors[e] == current) { currentCount = counts[e]; break; }
-                    for (int e = 0; e < colorCount; e++)
-                    {
-                        int color = colors[e], count = counts[e];
-                        if (color == current) continue;
-                        NeighborColorFeatures candidate = GetFeatures(color, features);
-                        double dl = original.L - candidate.L;
-                        double da = original.A - candidate.A;
-                        double db = original.B - candidate.B;
-                        double cost = Math.Sqrt(dl * dl + da * da + db * db) / 100.0;
-                        cost -= 0.5 * (count - currentCount) / visible;
-
-                        if (localCriteria is { } criteria)
-                        {
-                            cost += 4.0 * criteria.BrightnessImportance *
-                                (Math.Abs(candidate.Brightness - criteria.TargetBrightness) -
-                                 Math.Abs(original.Brightness - criteria.TargetBrightness));
-                            cost += 0.5 * criteria.ContrastImportance *
-                                (Math.Abs(candidate.Contrast - criteria.TargetContrast) -
-                                 Math.Abs(original.Contrast - criteria.TargetContrast));
-                            cost += 0.5 * criteria.SaturationImportance *
-                                (Math.Abs(candidate.Saturation - criteria.TargetSaturation) -
-                                 Math.Abs(original.Saturation - criteria.TargetSaturation));
-                            cost += 0.5 * criteria.EdgeImportance * criteria.TargetEdge *
-                                Math.Abs(candidate.Brightness - original.Brightness);
-                        }
-
-                        if (cost >= bestCost - 1e-9) continue;
-                        bestCost = cost;
-                        selected = color;
-                    }
-                    output[q] = (argb & unchecked((int)0xFF000000)) | selected;
-                    if (selected != current) changed++;
-                }
-            input = output;
-            if (changed == 0) break;
-        }
-        return WriteArgb(input, width, height);
-    }
-
-    private static NeighborColorFeatures GetFeatures(int color, Dictionary<int, NeighborColorFeatures> cache)
-    {
-        if (cache.TryGetValue(color, out NeighborColorFeatures found)) return found;
-        var (l, a, b) = ColorSpace.RgbToLab(color);
-        var features = new NeighborColorFeatures(l, a, b,
-            ColorWeights.GetNormalizedBrightness(color), ColorWeights.GetContrastWeight(color),
-            ColorWeights.GetSaturationWeight(color));
-        cache[color] = features;
-        return features;
-    }
-
-    private readonly record struct NeighborColorFeatures(double L, double A, double B,
-        double Brightness, double Contrast, double Saturation);
+        => ColorCleanup.Apply(source, options);
 
     private static Bitmap CopyArgb(Bitmap source)
         => source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);

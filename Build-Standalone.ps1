@@ -23,7 +23,7 @@ try {
     Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" --nologo
     if (!$SkipChecks) {
         Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --navigation --workspace --localization --ui --invariants
+        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --tool-improvements --navigation --workspace --localization --ui --invariants
         Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
     }
     Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$output/" --nologo
@@ -103,7 +103,7 @@ On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
 are copied there. The original library stays intact. Keep WorkspaceData
 when moving the app to another folder or computer.
 
-Tessera checks GitHub Releases for updates at startup. Use the bottom-bar button
+Tessera checks GitHub Releases for updates at startup. Use Settings > Updates
 to check manually and install a newer version. Your library remains in place.
 Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
 '@

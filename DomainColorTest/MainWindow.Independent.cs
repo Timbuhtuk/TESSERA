@@ -12,6 +12,28 @@ public partial class MainWindow
     private void ApplyColorsOnly(object? sender, EventArgs e) => RunIndependentOperation(IndependentOperation.Colors);
     private void ApplyNeighborColorsOnly(object? sender, EventArgs e) => RunIndependentOperation(IndependentOperation.NeighborColors);
 
+    private void InitializeCleanupControls()
+    {
+        var defaults = new ColorCleanupOptions();
+        localBrightnessInput.Value = defaults.ColorTolerance / .4;
+        localContrastInput.Value = defaults.Strength * 100;
+        localSaturationInput.Value = defaults.DetailProtection * 100;
+        localEdgeInput.Value = defaults.EdgeProtection * 100;
+        cleanupDescription.Text = Localization.Text("Объединяет близкие оттенки по соседним пикселям, сохраняя линии, границы и прозрачность. Новые цвета не создаются.");
+        neighborColorsButton.Content = Localization.Text("Очистить цвета");
+        neighborColorsButton.ToolTip = Localization.Text("Убирает цветовой шум и объединяет близкие оттенки без изменения размера и прозрачности.");
+        localColorPassesInput.ToolTip = Localization.Text("Повторяет очистку до указанного числа проходов. Обработка останавливается раньше, если цвета перестали меняться.");
+        localBrightnessInput.ToolTip = Localization.Text("Максимальная разница близких оттенков. Больше значение — больше цветов объединяется; 0 сохраняет исходник.");
+        localContrastInput.ToolTip = Localization.Text("Насколько сильно соседние пиксели влияют на выбор цвета. При 0 очистка выключена.");
+        localSaturationInput.ToolTip = Localization.Text("Сохраняет тонкие линии и их окончания. Уменьшите, чтобы удалять больше мелкого цветового шума.");
+        localEdgeInput.ToolTip = Localization.Text("Защищает границы устойчивых цветовых областей от размывания близкими оттенками.");
+        System.Windows.Automation.AutomationProperties.SetName(localBrightnessInput, Localization.Text("Сходство цветов"));
+        System.Windows.Automation.AutomationProperties.SetName(localContrastInput, Localization.Text("Сила очистки"));
+        System.Windows.Automation.AutomationProperties.SetName(localSaturationInput, Localization.Text("Защита деталей"));
+        System.Windows.Automation.AutomationProperties.SetName(localEdgeInput, Localization.Text("Защита границ"));
+        UpdateDependentControls();
+    }
+
     private async void RunIndependentOperation(IndependentOperation operation)
     {
         if (_sourceImage is null || _activeSource is null || _processing) return;
@@ -31,7 +53,7 @@ public partial class MainWindow
         statusLabel.Text = operation switch
         {
             IndependentOperation.Size => enlarged ? Localization.Text("Увеличение изображения…") : Localization.Text("Изменение размера…"),
-            IndependentOperation.NeighborColors => Localization.Text("Локальная обработка цветов 3×3…"),
+            IndependentOperation.NeighborColors => Localization.Text("Очистка близких оттенков с защитой деталей…"),
             _ => Localization.Text("Обработка цветов…")
         };
         try
@@ -51,19 +73,21 @@ public partial class MainWindow
                     _ => Localization.Text("Цвет")
                 };
                 string label = changeSize ? enlarged ? Localization.Text("УВЕЛИЧЕНИЕ") : Localization.Text("РАЗМЕР") :
-                    neighborColors ? Localization.Text("ЛОКАЛЬНЫЙ ЦВЕТ") : colorOperation.ToUpperInvariant();
+                    neighborColors ? Localization.Text("ОЧИСТКА ЦВЕТОВ") : colorOperation.ToUpperInvariant();
                 return _library.SaveGeneration(document, result, null, new GenerationEntry
                 {
                     Settings = settings,
                     Operation = changeSize ? enlarged ? Localization.Text("Увеличение") : Localization.Text("Размер") :
-                        neighborColors ? Localization.Text("Локальные цвета") : colorOperation,
+                        neighborColors ? Localization.Text("Очистка цветов") : colorOperation,
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = $"{label} · {result.Width} × {result.Height}",
                     Log = changeSize
                         ? Localization.Format("Изменён размер {0} × {1} → {2} × {3}. Цвета не преобразованы.", source.Width, source.Height, result.Width, result.Height) + (enlarged ? Localization.Text(" Увеличение без сглаживания.") : "")
                         : neighborColors
-                            ? Localization.Format("Локальная обработка 3×3: проходов {0}. Размер и прозрачность сохранены.", options.LocalColorPasses)
+                            ? Localization.Format("Очистка близких оттенков: {0:0.#} ΔE; сила {1:0}%; защита деталей {2:0}%; защита границ {3:0}%; проходов {4}. Размер и прозрачность сохранены.",
+                                options.Cleanup!.ColorTolerance, options.Cleanup.Strength * 100, options.Cleanup.DetailProtection * 100,
+                                options.Cleanup.EdgeProtection * 100, options.LocalColorPasses)
                             : Localization.Format("{0}: размер {1} × {2} сохранён.", colorOperation, result.Width, result.Height)
                 });
             });

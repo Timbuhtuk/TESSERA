@@ -42,6 +42,7 @@ public partial class MainWindow : Window
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
         InitializeNavigation();
+        InitializePreviewMode();
         InitializeWindowFrame();
         threadsInput.Maximum = threadsInput.Value = Math.Max(1, Environment.ProcessorCount);
         foreach (var mode in new[] { backgroundMode, sceneMode, detailsMode })
@@ -80,6 +81,7 @@ public partial class MainWindow : Window
             _downscaledResult?.Dispose(); _downscaledResult = null;
         };
         sceneMode.IsChecked = true;
+        InitializeCleanupControls();
         InitializeLibrary();
         InitializeImageActions();
         InitializeHome();
@@ -88,6 +90,7 @@ public partial class MainWindow : Window
         InitializeBackground();
         InitializeMoodboard();
         InitializeInfo();
+        InitializePalettePreviews();
         InitializeFilters();
         InitializeUpdates();
         UpdatePreviewSettings();
@@ -145,25 +148,27 @@ public partial class MainWindow : Window
 
     private void UpdateDependentControls()
     {
-        quantizationColorControls.IsEnabled = quantizationColorModeInput.IsChecked == true;
-        paletteColorControls.IsEnabled = paletteColorModeInput.IsChecked == true;
-        quantizationColorControls.Opacity = quantizationColorControls.IsEnabled ? 1 : .55;
-        paletteColorControls.Opacity = paletteColorControls.IsEnabled ? 1 : .55;
+        bool quantizationSelected = quantizationColorModeInput.IsChecked == true;
+        bool paletteSelected = paletteColorModeInput.IsChecked == true;
+        quantizationColorControls.IsEnabled = quantizationSelected;
+        paletteColorControls.IsEnabled = paletteSelected;
+        quantizationColorControls.Opacity = quantizationSelected ? 1 : .55;
+        paletteColorControls.Opacity = paletteSelected ? 1 : .55;
         SetVisible(stepControls, paletteInput.SelectedIndex == 4);
         SetVisible(cropControls, spriteInput.IsChecked != true);
         SetVisible(alphaControls, spriteInput.IsChecked == true);
-        bool ditheringAllowed = spriteInput.IsChecked != true && paletteInput.SelectedIndex is >= 0 and <= 3;
-        ditheringInput.IsEnabled = paletteColorControls.IsEnabled && ditheringAllowed;
+        bool ditheringAllowed = paletteInput.SelectedIndex is >= 0 and <= 3;
+        ditheringInput.IsEnabled = paletteSelected && ditheringAllowed;
         if (!ditheringAllowed) ditheringInput.IsChecked = false;
         SetVisible(manualControls, manualInput.IsChecked == true);
         brightnessLabel.Text = Localization.Format("Яркость · {0}", brightnessInput.Value);
         contrastLabel.Text = Localization.Format("Контраст · {0}", contrastInput.Value);
         saturationLabel.Text = Localization.Format("Насыщенность · {0}", saturationInput.Value);
         edgeLabel.Text = Localization.Format("Контур · {0}", edgeInput.Value);
-        localBrightnessLabel.Text = Localization.Format("Яркость · {0}", localBrightnessInput.Value);
-        localContrastLabel.Text = Localization.Format("Контраст · {0}", localContrastInput.Value);
-        localSaturationLabel.Text = Localization.Format("Насыщенность · {0}", localSaturationInput.Value);
-        localEdgeLabel.Text = Localization.Format("Контур · {0}", localEdgeInput.Value);
+        localBrightnessLabel.Text = Localization.Format("Сходство цветов · {0:0.#} ΔE", localBrightnessInput.Value * .4);
+        localContrastLabel.Text = Localization.Format("Сила очистки · {0:0}%", localContrastInput.Value);
+        localSaturationLabel.Text = Localization.Format("Защита деталей · {0:0}%", localSaturationInput.Value);
+        localEdgeLabel.Text = Localization.Format("Защита границ · {0:0}%", localEdgeInput.Value);
     }
 
     private void SizeChangedByUser(bool widthChanged)
@@ -189,6 +194,7 @@ public partial class MainWindow : Window
 
     private void UpdateSizeHint()
     {
+        UpdateCropPreview();
         var sizeSource = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
         if (sizeSource is null)
         {
@@ -228,6 +234,7 @@ public partial class MainWindow : Window
             preview.Zoom = zoom;
             preview.PreviewBackground = PreviewBackground;
         }
+        UpdateComparisonPreview();
     }
 
     private void UpdateSourcePreview()
@@ -235,6 +242,7 @@ public partial class MainWindow : Window
         sourcePreview.Image = _sourceImage;
         sourceCaption.Text = _sourceImage is null ? Localization.Text("ИСХОДНИК") :
             Localization.Format("ИСХОДНИК · {0} × {1}", _sourceImage.Width, _sourceImage.Height);
+        UpdateComparisonPreview();
     }
 
     private async void OpenImage(object? sender, EventArgs e)
@@ -339,16 +347,16 @@ public partial class MainWindow : Window
         IndependentColorMode = paletteColorModeInput.IsChecked == true
             ? IndependentColorMode.Palette : IndependentColorMode.Quantization,
         LocalColorPasses = (int)localColorPassesInput.Value,
-        LocalColorCriteria = new ManualBlockCriteria
+        Cleanup = new ColorCleanupOptions
         {
-            TargetBrightness = localBrightnessInput.Value / 100.0,
-            TargetContrast = localContrastInput.Value / 100.0,
-            TargetSaturation = localSaturationInput.Value / 100.0,
-            TargetEdge = localEdgeInput.Value / 100.0
+            ColorTolerance = localBrightnessInput.Value * .4,
+            Strength = localContrastInput.Value / 100.0,
+            DetailProtection = localSaturationInput.Value / 100.0,
+            EdgeProtection = localEdgeInput.Value / 100.0
         },
         UseColorWeights = colorWeightsInput.IsChecked == true,
         ThreadCount = (int)threadsInput.Value,
-        EnableDithering = spriteInput.IsChecked != true && paletteInput.SelectedIndex is >= 0 and <= 3 && ditheringInput.IsChecked == true,
+        EnableDithering = (!_capturingReadyMode || spriteInput.IsChecked != true) && paletteInput.SelectedIndex is >= 0 and <= 3 && ditheringInput.IsChecked == true,
         BlockMode = manualInput.IsChecked == true ? BlockSelectionMode.Manual : BlockSelectionMode.Automatic,
         ManualCriteria = manualInput.IsChecked == true ? new ManualBlockCriteria
         {

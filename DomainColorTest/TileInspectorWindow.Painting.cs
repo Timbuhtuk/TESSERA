@@ -72,6 +72,7 @@ public partial class TileInspectorWindow
     private void UpdateEditControls()
     {
         if (!_ready) return;
+        UpdateWorkspaceMaterialControls();
         var history = _historyAsset is not null && _assets.Contains(_historyAsset) ? _historyAsset : ActiveAsset;
         undoButton.IsEnabled = !_busy && history?.CanUndo == true;
         redoButton.IsEnabled = !_busy && history?.CanRedo == true;
@@ -134,7 +135,7 @@ public partial class TileInspectorWindow
             if (asset.ReplacePixels(output)) { SetProjectDirty(); UpdateAnalysis(); statusLabel.Text = Localization.Text("Цвета сглажены · можно отменить правку."); }
             else statusLabel.Text = Localization.Text("Сглаживание завершено · подходящих изменений нет.");
         }
-        finally { _busy = false; UpdateEditControls(); }
+        finally { _busy = false; RefreshWorkspaceMaterials(); UpdateEditControls(); }
     }
     private async void SmoothClicked(object sender, RoutedEventArgs e)
     {

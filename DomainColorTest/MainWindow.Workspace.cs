@@ -170,7 +170,7 @@ public partial class MainWindow
                 if (asset.Draft is { } draft) RestoreSettings(draft);
                 ProcessingBasis = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
                 PreviewZoom = Math.Clamp(asset.Zoom, 0, ZoomFactors.Length - 1);
-                PreviewBackground = Math.Clamp(asset.Background, 0, 2);
+                PreviewBackground = Math.Clamp(asset.Background, 0, 3);
                 OpenDockedWorkspaceTool(Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
             }
             else if (asset.Kind == WorkspaceAssetKind.Animation)
@@ -236,10 +236,12 @@ public partial class MainWindow
         if (action == "background")
         {
             var targetSource = _activeSource;
+            Guid? parentId = ProcessingBasis == 1 && _downscaledResult is not null ? targetSource.SelectedGeneration?.Id : null;
+            var settings = CaptureSettings();
             ShowBackgroundWorkspace(); backgroundWorkspace.SetImage(WorkspaceBasis(), asset.Name, WorkspaceBasisPath());
             backgroundWorkspace.EnableWorkspaceApply(async image =>
             {
-                using (image) SaveWorkspaceImageResult(image, Localization.Text("Удаление фона"), targetSource);
+                using (image) SaveWorkspaceImageResult(image, Localization.Text("Удаление фона"), targetSource, parentId, settings);
                 ShowEditor(); await Task.CompletedTask;
             });
         }
@@ -266,10 +268,10 @@ public partial class MainWindow
 
     private Bitmap WorkspaceBasis() => ProcessingBasis == 1 && _downscaledResult is not null ? _downscaledResult : _sourceImage!;
     private string WorkspaceBasisPath() => ProcessingBasis == 1 && _activeSource!.SelectedGeneration is { } selected ? _library.ResultPath(_activeSource, selected) : _library.SourcePath(_activeSource!);
-    private void SaveWorkspaceImageResult(Bitmap result, string operation, SourceEntry? target = null)
+    private void SaveWorkspaceImageResult(Bitmap result, string operation, SourceEntry target, Guid? parentId, EditorSettings settings)
     {
-        target ??= _activeSource; if (target is null || !_sources.Contains(target)) throw new InvalidOperationException(Localization.Text("Исходный ассет больше не доступен."));
-        var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = target.SelectedGeneration?.Id, PreservesTransparency = true, Settings = target == _activeSource ? CaptureSettings() : target.DraftSettings ?? new() });
+        if (!_sources.Contains(target)) throw new InvalidOperationException(Localization.Text("Исходный ассет больше не доступен."));
+        var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = parentId, PreservesTransparency = true, Settings = settings });
         target.Generations.Add(entry); target.SelectedGeneration = entry;
         if (target == _activeSource) { SelectGeneration(entry); ProcessingBasis = 1; }
         SynchronizeWorkspace();
@@ -286,30 +288,17 @@ public partial class MainWindow
 
     private async Task OpenWorkspaceTilesAsync(WorkspaceAsset asset)
     {
-        if (_tileInspector is not null) { _tileInspector.Activate(); statusLabel.Text = Localization.Text("Закройте текущую проверку тайлов перед открытием другого материала."); return; }
-        var inspector = new TileInspectorWindow { Owner = this, ValidateExportPath = EnsureExportPathAllowed }; _tileInspector = inspector;
-        inspector.Closed += (_, _) =>
-        {
-            foreach (string source in inspector.SourcePaths) _closedTileSourcePaths.Add(source);
-            _tileInspector = null; SynchronizeWorkspace();
-        };
+        var inspector = GetTileInspector();
+        if (!inspector.RefreshWorkspaceMaterials()) return;
         if (asset.Kind == WorkspaceAssetKind.Tiles)
         {
-            string path = _workspaceCatalog!.ContentPath(asset); inspector.LoadCollectionFromFile(path); inspector.WorkspaceSavePath = path;
-            inspector.WorkspaceSaved += () => { asset.ModifiedAt = DateTimeOffset.Now; UpdateDocumentPreview(asset); _workspaceCatalog.Save(); };
+            if (!inspector.OpenWorkspaceCollection(_workspaceCatalog!.ContentPath(asset))) return;
         }
         else
         {
-            var targetSource = _activeSource;
-            await inspector.LoadFileAsync(WorkspaceBasisPath());
-            inspector.EnableWorkspaceApply(tile =>
-            {
-                using var memory = new MemoryStream(); tile.WritePng(memory); memory.Position = 0;
-                using var bitmap = new Bitmap(memory); using var copy = new Bitmap(bitmap);
-                SaveWorkspaceImageResult(copy, Localization.Text("Исправление тайла"), targetSource); inspector.MarkWorkspaceApplied();
-            });
+            await inspector.AddWorkspaceMaterialAsync(asset.Id, ProcessingBasis == 1 && _activeSource?.SelectedGeneration is not null);
         }
-        inspector.Show();
+        ShowTileInspector(inspector);
     }
 
     private void SynchronizeWorkspace()
@@ -459,7 +448,7 @@ public partial class MainWindow
         if (source.DraftSettings is { } draft) RestoreSettings(draft);
         ProcessingBasis = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
         PreviewZoom = Math.Clamp(asset.Zoom, 0, ZoomFactors.Length - 1);
-        PreviewBackground = Math.Clamp(asset.Background, 0, 2);
+        PreviewBackground = Math.Clamp(asset.Background, 0, 3);
         if (_workspaceDock?.Visibility != Visibility.Visible) OpenDockedWorkspaceTool(Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
     }
 

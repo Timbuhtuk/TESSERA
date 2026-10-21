@@ -120,13 +120,13 @@
 
                             <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,14,0,12" />
                             <TextBlock Text="{local:Translate Text219DD8B02710}" FontWeight="SemiBold" />
-                            <TextBlock Text="{local:Translate TextA0C44944E204}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,4,0,7" />
+                            <TextBlock x:Name="asciiDescription" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,4,0,7" />
                             <DockPanel Margin="0,7,0,3"><TextBlock Text="{local:Translate Text3B94BE00A0E8}" Width="150" /><ComboBox x:Name="asciiRampPresetInput" SelectedIndex="0" AutomationProperties.Name="{local:Translate Text3FEBE7C4A2CD}"><ComboBoxItem Content="Standard" /><ComboBoxItem Content="Detailed" /><ComboBoxItem Content="Minimal" /><ComboBoxItem Content="Blocks" /><ComboBoxItem Content="{local:Translate TextF23CE7058E1A}" /></ComboBox></DockPanel>
                             <TextBlock Text="{local:Translate TextC2187A38AD46}" Margin="0,5,0,4" />
                             <TextBox x:Name="asciiCharactersInput" Text="@#S08Xx+=-;:, ." FontFamily="{StaticResource UiFont}" Padding="7,5" AutomationProperties.Name="{local:Translate Text852C21C28B86}" />
-                            <CheckBox x:Name="asciiKeepSourceSizeInput" Content="{local:Translate Text2BCDB160A6C3}" IsChecked="True" ToolTip="{local:Translate Text23A2D315A11C}" />
-                            <CheckBox x:Name="asciiInvertSourceInput" Content="{local:Translate TextC3E9D9E23A80}" ToolTip="{local:Translate TextAC973FF3D49E}" />
-                            <CheckBox x:Name="asciiInvertRenderInput" Content="{local:Translate TextC52297B9CBB7}" ToolTip="{local:Translate Text99720CFB9622}" />
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="asciiKeepSourceSizeInput" Content="{local:Translate Text2BCDB160A6C3}" IsChecked="True" ToolTip="{local:Translate Text23A2D315A11C}" />
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="asciiInvertSourceInput" Content="{local:Translate TextC3E9D9E23A80}" ToolTip="{local:Translate TextAC973FF3D49E}" />
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="asciiInvertRenderInput" Content="{local:Translate TextC52297B9CBB7}" ToolTip="{local:Translate Text99720CFB9622}" />
                             <UniformGrid Columns="2" Margin="0,8,0,0">
                                 <Button x:Name="asciiSaveTextButton" Content="{local:Translate Text35BA06413D61}" IsEnabled="False" Margin="0,0,4,0" />
                                 <Button x:Name="asciiRenderButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate TextE3D5A345CFE0}" IsEnabled="False" Margin="4,0,0,0" />
@@ -167,7 +167,7 @@
                         <StackPanel>
 
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text7F066E3E2030}" Width="132" /><local:IntegerInput x:Name="gridCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="{local:Translate Text878E11FA1C5A}" /></DockPanel>
-                            <CheckBox x:Name="detectGridInput" Content="{local:Translate TextEFE1F0641A20}" />
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="detectGridInput" Content="{local:Translate TextEFE1F0641A20}" ToolTip="{local:Translate Text984A44FAC7F2}" />
                             <Button x:Name="alignButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text63C3AF9FEBD8}" IsEnabled="False" Margin="0,4,0,0" />
                             <Button x:Name="compactGridButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text1CE891F45A92}" IsEnabled="False" Margin="0,6,0,0" ToolTip="{local:Translate Text144EE6BDCC8B}" />
                         </StackPanel>
@@ -189,7 +189,7 @@
                         <StackPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text45B5E94DDEA8}" Width="132" /><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate Text44191BDBA86A}" /></DockPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text47DCC74F054D}" Width="132" /><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate Text4F1F111D65A8}" /></DockPanel>
-                            <CheckBox x:Name="aspectLock" Content="{local:Translate Text650D2C0CB70B}" />
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="aspectLock" Content="{local:Translate Text650D2C0CB70B}" ToolTip="{local:Translate TextA67C95BAA6B1}" />
                             <TextBlock x:Name="sizeHint" Visibility="Collapsed" />
                             <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text3837BA14575C}" IsEnabled="False" Margin="0,7,0,0" ToolTip="{local:Translate Text7FAF700157C0}" />
                         </StackPanel>
@@ -203,13 +203,13 @@
                             <StackPanel x:Name="quantizationColorControls">
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text5FCCA1576AB8}" Width="132" /><ComboBox x:Name="quantizationInput" SelectedIndex="1"><ComboBoxItem Content="Median Cut" /><ComboBoxItem Content="K-Means LAB" /><ComboBoxItem Content="K-Means Linear" /></ComboBox></DockPanel>
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text89A26A950DB0}" Width="132" /><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="{local:Translate Text89A26A950DB0}" /></DockPanel>
-                            <CheckBox x:Name="colorWeightsInput" Content="{local:Translate Text8DB358014F1C}" />
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="colorWeightsInput" Content="{local:Translate Text8DB358014F1C}" ToolTip="{local:Translate TextA44ED03E8314}" />
 
                             </StackPanel>
                             <StackPanel x:Name="paletteColorControls" Margin="0,10,0,0">
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextC5F0893AFD67}" Width="132" /><ComboBox x:Name="paletteInput" SelectedIndex="4"><ComboBoxItem Content="DB16" /><ComboBoxItem Content="DB32" /><ComboBoxItem Content="NES" /><ComboBoxItem Content="GameBoy" /><ComboBoxItem Content="{local:Translate TextDCBA3F392011}" /></ComboBox></DockPanel>
                             <DockPanel x:Name="stepControls" Margin="0,3"><TextBlock Text="{local:Translate TextDCBA3F392011}" Width="132" /><local:IntegerInput x:Name="paletteStepInput" Minimum="1" Maximum="255" Value="16" AutomationProperties.Name="{local:Translate TextDCBA3F392011}" /></DockPanel>
-                            <CheckBox x:Name="ditheringInput"><TextBlock Text="{local:Translate Text8439F21C2F1A}" /></CheckBox>
+                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="ditheringInput" ToolTip="{local:Translate TextCA880E093528}"><TextBlock Text="{local:Translate Text8439F21C2F1A}" TextWrapping="Wrap" MaxWidth="220" /></CheckBox>
                             </StackPanel>
 
                             <Button x:Name="colorOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text1D197AED7DF5}" IsEnabled="False" Margin="0,7,0,0" />
@@ -217,9 +217,9 @@
                         </StackPanel>
                     </GroupBox>
                     <GroupBox x:Name="smoothingToolGroup" Header="{local:Translate Text60B95C88C072}">
-                        <StackPanel ToolTip="{local:Translate TextEFB05578EADE}">
+                        <StackPanel>
+                            <TextBlock x:Name="cleanupDescription" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,7" />
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text35036581CDC8}" Width="132" /><local:IntegerInput x:Name="localColorPassesInput" Minimum="1" Maximum="100" Value="1" AutomationProperties.Name="{local:Translate TextF308383155C1}" /></DockPanel>
-                            <TextBlock Text="{local:Translate Text5F876B8ED767}" FontWeight="SemiBold" Margin="0,8,0,7" ToolTip="{local:Translate Text8F755E71D59D}" />
                             <TextBlock x:Name="localBrightnessLabel" /><Slider x:Name="localBrightnessInput" AutomationProperties.Name="{local:Translate Text359DE8997417}" />
                             <TextBlock x:Name="localContrastLabel" /><Slider x:Name="localContrastInput" AutomationProperties.Name="{local:Translate Text44C83D44AA7D}" />
                             <TextBlock x:Name="localSaturationLabel" /><Slider x:Name="localSaturationInput" AutomationProperties.Name="{local:Translate Text4011A13B3D0C}" />
@@ -229,7 +229,7 @@
                     </GroupBox>
                         <GroupBox x:Name="frameToolGroup" Header="{local:Translate TextCD38DB4CAD42}">
                             <StackPanel>
-                                <CheckBox x:Name="spriteInput" Content="{local:Translate Text62E13E7E8F70}" />
+                                <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="spriteInput" Content="{local:Translate Text62E13E7E8F70}" ToolTip="{local:Translate Text1DB20DD6B5E7}" />
                                 <StackPanel x:Name="alphaControls">
                                     <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text5A8B94F5EBB2}" Width="132" /><local:IntegerInput x:Name="alphaInput" Minimum="1" Maximum="100" Value="50" AutomationProperties.Name="{local:Translate Text7A8F8E4CEBAC}" /></DockPanel>
 
@@ -392,7 +392,7 @@
         <Border Grid.Row="2" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Padding="18,8">
             <DockPanel LastChildFill="True">
                 <ProgressBar x:Name="busyIndicator" Width="90" Height="5" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="{DynamicResource Ts.Text}" Background="{DynamicResource Ts.Pressed}" IsIndeterminate="True" Visibility="Collapsed" />
-                <Button x:Name="updateButton" DockPanel.Dock="Right" Content="{local:Translate Text93B08F7B1465}" Margin="12,0,0,0" Padding="9,2" VerticalAlignment="Center" />
+                <Button x:Name="updateButton" DockPanel.Dock="Right" Content="{local:Translate Text93B08F7B1465}" Margin="12,0,0,0" Padding="9,2" VerticalAlignment="Center" Visibility="Collapsed" />
                 <TextBlock x:Name="statusLabel" Text="{local:Translate Text3F42086426E9}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
             </DockPanel>
         </Border>

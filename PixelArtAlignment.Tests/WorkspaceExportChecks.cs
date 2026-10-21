@@ -57,6 +57,12 @@ internal static class WorkspaceExportChecks
 
             Invoke(window, "OpenTileInspector", window, new RoutedEventArgs()); Pump();
             tiles = Get<TileInspectorWindow>(window, "_tileInspector");
+            WaitUntil(() => !Get<bool>(tiles, "_loadingWorkspaceMaterial"));
+            // The project-aware inspector now starts with the editor's active material.
+            // This export/removal fixture needs an explicit empty collection before adding its pair.
+            string emptyCollection = Path.Combine(folder, "empty.ttiles");
+            TileCollectionFile.Save(emptyCollection, [], new TileCollectionSettings());
+            tiles.LoadCollectionFromFile(emptyCollection);
             string fourth = Path.Combine(folder, "tile-only.png"); image.Save(fourth);
             originals.Add(fourth, File.ReadAllBytes(fourth));
             Await(tiles.LoadFileAsync(first)); Await(tiles.LoadFileAsync(second));
