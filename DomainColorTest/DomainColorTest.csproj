@@ -16,10 +16,7 @@
 
 
   <ItemGroup>
-    <Reference Include="Tessera.WpfStyles">
-      <HintPath>Lib\Tessera.WpfStyles.dll</HintPath>
-      <Private>true</Private>
-    </Reference>
+    <PackageReference Include="Tessera.WpfStyles" Version="0.1.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PixelArtDownscale\PixelArtDownscale.csproj" />
