@@ -13,6 +13,8 @@ $artifactsRoot = [IO.Path]::GetFullPath($OutputDirectory, $projectRoot)
 $output = Join-Path $artifactsRoot 'standalone'
 $cliOutput = Join-Path $artifactsRoot 'cli'
 $dotnet = (Get-Command dotnet -ErrorAction Stop).Source
+$python = (Get-Command python -ErrorAction Stop).Source
+$pluginOutput = Join-Path $artifactsRoot 'chatgpt-plugin'
 
 function Invoke-Dotnet {
     & $script:dotnet @args
@@ -102,6 +104,12 @@ cells. Each slice becomes an editable asset with its original pixels and
 alpha. Save slices in a .ttiles collection. Atlas imports are snapshots;
 later changes to the source atlas do not reload imported tiles.
 
+Open Height / Normal / AO maps from Tools while editing an image. Generate
+maps from the selected source or result, paint on each map and inspect the
+lighting by moving the preview light. Height edits update Normal and AO
+while retaining their manual edits. Save editable .tmaps projects or export
+the maps as transparent PNGs; Normal supports DirectX and OpenGL.
+
 Your library is in WorkspaceData/Library beside Tessera.exe.
 On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
 are copied there. The original library stays intact. Keep WorkspaceData
@@ -119,9 +127,17 @@ release history offline in Settings > Patch notes.
     Compress-Archive -LiteralPath (Join-Path $output 'Tessera.exe'),(Join-Path $output 'README.txt'),(Join-Path $output 'Assets/Fonts/Cascadia-Code-OFL.txt'),(Join-Path $output 'Assets/Fonts/Science-Gothic-OFL.txt') -DestinationPath $archive -Force
     $cliArchive = Join-Path $artifactsRoot 'Tessera-cli-win-x64.zip'
     Compress-Archive -LiteralPath (Join-Path $cliOutput 'tessera.exe') -DestinationPath $cliArchive -Force
+    & $python (Join-Path $projectRoot 'plugins/package_tessera.py') --output-directory $pluginOutput
+    if ($LASTEXITCODE -ne 0) { throw 'Tessera plugin packaging failed' }
+    if (!$SkipChecks) {
+        & $python (Join-Path $projectRoot 'plugins/test_tessera.py') --cli (Join-Path $cliOutput 'tessera.exe') --gui (Join-Path $output 'Tessera.exe') --packages $pluginOutput
+        if ($LASTEXITCODE -ne 0) { throw 'Tessera plugin integration checks failed' }
+    }
     $hash = Get-FileHash -LiteralPath (Join-Path $output 'Tessera.exe') -Algorithm SHA256
     [IO.File]::WriteAllText((Join-Path $artifactsRoot 'Tessera-win-x64.sha256'), "$($hash.Hash)  Tessera.exe`n")
-    $checksums = foreach ($file in @((Join-Path $output 'Tessera.exe'), $archive, $cliArchive)) {
+    $pluginArchive = Join-Path $pluginOutput 'Tessera-chatgpt-plugin.zip'
+    $skillArchive = Join-Path $pluginOutput 'Tessera-skill.zip'
+    $checksums = foreach ($file in @((Join-Path $output 'Tessera.exe'), $archive, $cliArchive, $pluginArchive, $skillArchive)) {
         $checksum = Get-FileHash -LiteralPath $file -Algorithm SHA256
         "$($checksum.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($file))"
     }
@@ -130,5 +146,7 @@ release history offline in Settings > Patch notes.
     Write-Output "CLI: $(Join-Path $cliOutput 'tessera.exe')"
     Write-Output "ZIP: $archive"
     Write-Output "CLI ZIP: $cliArchive"
+    Write-Output "PLUGIN: $pluginArchive"
+    Write-Output "SKILL: $skillArchive"
 }
 finally { Pop-Location }

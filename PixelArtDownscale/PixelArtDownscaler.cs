@@ -22,9 +22,9 @@ public sealed class PixelArtDownscaler
         var timings = new Dictionary<string, double>();
 
         Bitmap? convertedSource = null;
-        if (source.PixelFormat != PixelFormat.Format24bppRgb)
+        if (source.PixelFormat is not (PixelFormat.Format24bppRgb or PixelFormat.Format32bppArgb))
         {
-            convertedSource = BitmapFactory.Ensure24Bpp(source);
+            convertedSource = source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);
             source = convertedSource;
         }
 
@@ -98,7 +98,7 @@ public sealed class PixelArtDownscaler
         using var buffer = BitmapBuffer.FromBitmap(source);
         float[] edgeMap = ColorWeights.BuildEdgeMap(buffer, options.ThreadCount);
 
-        var result = BitmapFactory.Create24Bpp(options.TargetWidth, options.TargetHeight);
+        var result = BitmapFactory.CreateLike(source, options.TargetWidth, options.TargetHeight);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
 
         ParallelImageHelper.ForEachRowChunk(options.TargetHeight, options.ThreadCount, (startOy, endOy) =>
@@ -116,13 +116,17 @@ public sealed class PixelArtDownscaler
                         for (int x = startX; x < startX + blockWidth; x++)
                         {
                             int packed = buffer.GetPackedColor(x, y);
+                            byte alpha = buffer.GetAlpha(x, y);
+                            if (alpha == 0) continue;
                             float edge = edgeMap[y * buffer.Width + x];
-                            blockPixels.Add(new BlockPixel(packed, edge));
+                            blockPixels.Add(new BlockPixel((alpha << 24) | packed, edge));
                         }
                     }
 
-                    int representative = BlockAnalyzer.SelectRepresentative(blockPixels, options);
+                    int representative = blockPixels.Count * 2 < blockWidth * blockHeight ? 0
+                        : BlockAnalyzer.SelectRepresentative(blockPixels, options);
                     writeBuffer.SetPackedColor(ox, oy, representative);
+                    writeBuffer.SetAlpha(ox, oy, (byte)((uint)representative >> 24));
                 }
             }
         });
@@ -140,7 +144,7 @@ public sealed class PixelArtDownscaler
             return ApplyStepRounding(source, options);
 
         var palette = Palettes.GetPalette(options.Palette);
-        var result = BitmapFactory.Create24Bpp(source.Width, source.Height);
+        var result = BitmapFactory.CreateLike(source, source.Width, source.Height);
 
         using var readBuffer = BitmapBuffer.FromBitmap(source);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
@@ -153,6 +157,7 @@ public sealed class PixelArtDownscaler
                 {
                     int packed = readBuffer.GetPackedColor(x, y);
                     writeBuffer.SetPackedColor(x, y, ColorSpace.NearestPacked(palette, packed));
+                    writeBuffer.SetAlpha(x, y, readBuffer.GetAlpha(x, y));
                 }
             }
         });
@@ -163,7 +168,7 @@ public sealed class PixelArtDownscaler
 
     private static Bitmap ApplyStepRounding(Bitmap source, DownscaleOptions options)
     {
-        var result = BitmapFactory.Create24Bpp(source.Width, source.Height);
+        var result = BitmapFactory.CreateLike(source, source.Width, source.Height);
 
         using var readBuffer = BitmapBuffer.FromBitmap(source);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
@@ -176,6 +181,7 @@ public sealed class PixelArtDownscaler
                 {
                     int packed = readBuffer.GetPackedColor(x, y);
                     writeBuffer.SetPackedColor(x, y, ColorSpace.RoundToStep(packed, options.PaletteStep));
+                    writeBuffer.SetAlpha(x, y, readBuffer.GetAlpha(x, y));
                 }
             }
         });
@@ -191,13 +197,17 @@ public sealed class PixelArtDownscaler
         var input = new int[checked(source.Width * source.Height)];
         for (int y = 0; y < source.Height; y++)
             for (int x = 0; x < source.Width; x++)
-                input[y * source.Width + x] = unchecked((int)0xFF000000) | readBuffer.GetPackedColor(x, y);
+                input[y * source.Width + x] = (readBuffer.GetAlpha(x, y) << 24) | readBuffer.GetPackedColor(x, y);
         int[] output = PaletteDithering.Apply(input, source.Width, source.Height, palette);
-        var result = BitmapFactory.Create24Bpp(source.Width, source.Height);
+        var result = BitmapFactory.CreateLike(source, source.Width, source.Height);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
         for (int y = 0; y < source.Height; y++)
             for (int x = 0; x < source.Width; x++)
-                writeBuffer.SetPackedColor(x, y, output[y * source.Width + x] & 0xFFFFFF);
+            {
+                int argb = output[y * source.Width + x];
+                writeBuffer.SetPackedColor(x, y, argb & 0xFFFFFF);
+                writeBuffer.SetAlpha(x, y, (byte)((uint)argb >> 24));
+            }
         return result;
     }
 
@@ -213,8 +223,10 @@ public sealed class PixelArtDownscaler
             {
                 for (int x = 0; x < buffer.Width; x++)
                 {
-                    int packed = buffer.GetPackedColor(x, y);
-                    local[packed] = local.GetValueOrDefault(packed) + 1;
+                    byte alpha = buffer.GetAlpha(x, y);
+                    if (alpha == 0) continue;
+                    int argb = (alpha << 24) | buffer.GetPackedColor(x, y);
+                    local[argb] = local.GetValueOrDefault(argb) + 1;
                 }
             }
 
@@ -222,7 +234,7 @@ public sealed class PixelArtDownscaler
                 frequency.AddOrUpdate(packed, count, (_, existing) => existing + count);
         });
 
-        int dominantPacked = frequency.OrderByDescending(pair => pair.Value).First().Key;
-        return ColorSpace.ToColor(dominantPacked);
+        int dominantArgb = frequency.OrderByDescending(pair => pair.Value).Select(pair => pair.Key).FirstOrDefault();
+        return Color.FromArgb(dominantArgb);
     }
 }

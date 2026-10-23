@@ -57,7 +57,6 @@ public static class IndependentImageProcessor
                 double x1 = cropX + (ox + 1) * (double)cropWidth / width;
                 double coverage = 0;
                 var pixels = new List<BlockPixel>();
-                var originalColors = new Dictionary<int, int>();
                 for (int y = (int)y0; y < Math.Min(source.Height, (int)Math.Ceiling(y1)); y++)
                     for (int x = (int)x0; x < Math.Min(source.Width, (int)Math.Ceiling(x1)); x++)
                     {
@@ -65,17 +64,14 @@ public static class IndependentImageProcessor
                         if (area <= 0) continue;
                         int argb = input[y * source.Width + x];
                         int alpha = (int)((uint)argb >> 24);
-                        coverage += area * alpha / 255;
                         if (alpha == 0) continue;
-                        int rgb = argb & 0xFFFFFF;
-                        pixels.Add(new BlockPixel(rgb, 0));
-                        if (!originalColors.TryGetValue(rgb, out int previous) || (uint)argb >> 24 > (uint)previous >> 24)
-                            originalColors[rgb] = argb;
+                        // Coverage measures occupied area, independently of pixel opacity.
+                        coverage += area;
+                        pixels.Add(new BlockPixel(argb, 0));
                     }
                 double threshold = options.SpriteMode ? options.AlphaThreshold / 100.0 : 0.5;
                 if (pixels.Count == 0 || coverage + 1e-9 < (x1 - x0) * (y1 - y0) * threshold) continue;
-                int selected = BlockAnalyzer.SelectRepresentative(pixels, options);
-                output[oy * width + ox] = originalColors[selected];
+                output[oy * width + ox] = BlockAnalyzer.SelectRepresentative(pixels, options);
             }
         }
         return WriteArgb(output, width, height);

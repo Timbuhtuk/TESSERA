@@ -30,6 +30,9 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: 8.0.x
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.13'
       - name: Build, test and package desktop and CLI
         env:
           GH_TOKEN: ${{ github.token }}
@@ -52,6 +55,8 @@ jobs:
             artifacts/SHA256SUMS.txt
             artifacts/ReleaseNotes.json
             artifacts/ReleaseNotes.md
+            artifacts/chatgpt-plugin/Tessera-chatgpt-plugin.zip
+            artifacts/chatgpt-plugin/Tessera-skill.zip
 
   release:
     name: Publish GitHub release
@@ -100,7 +105,7 @@ jobs:
           }
 
           $files = @(Get-ChildItem release-files -Recurse -File | Where-Object Name -ne 'ReleaseNotes.md')
-          if ($files.Count -ne 5) { throw 'Expected five release assets, including ReleaseNotes.json' }
+          if ($files.Count -ne 7) { throw 'Expected seven release assets, including notes, plugin and skill' }
           Invoke-Gh release upload $tag @($files.FullName) --clobber
           Invoke-Gh release edit $tag --draft=false --latest
           "Published [$tag](https://github.com/$env:GH_REPO/releases/tag/$tag)." >> $env:GITHUB_STEP_SUMMARY

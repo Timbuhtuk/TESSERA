@@ -1,4 +1,3 @@
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.Text.Json;
@@ -20,12 +19,20 @@ internal static class CliApplication
                        tessera remove-background <изображение> -o <результат.png>
                        tessera resize <изображение> -o <результат.png>
                        tessera colors <изображение> -o <результат.png>
+                       tessera smooth-colors <изображение> -o <результат.png>
+                       tessera monochrome <изображение> -o <результат.png>
+                       tessera ascii <изображение> -o <результат.txt>
+                       tessera palette-info <изображение> --json
+                       tessera replace-color <изображение> --from #000000 --to #FFFFFF
                        tessera aseprite <анимация.aseprite> --output-dir <папка>
         Отдельное выравнивание сетки без даунскейла: tessera align --help.
         Сжатие выровненной сетки: tessera reduce-grid --help.
         Создание многоразмерной иконки Windows: tessera ico --help.
         Удаление однотонного фона: tessera remove-background --help.
         Отдельные размер и цвета: tessera resize --help; tessera colors --help.
+        Сглаживание, монохром и ASCII: tessera smooth-colors --help;
+        tessera monochrome --help; tessera ascii --help.
+        Палитра и замена цвета: tessera palette-info --help; tessera replace-color --help.
         Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
         Файлы:
@@ -41,7 +48,7 @@ internal static class CliApplication
           --width N                  Ширина: положительное целое число (48).
           --height N                 Высота: положительное целое число (48).
           --sprite                   Весь кадр без обрезки; прозрачный фон,
-                                     чёткая альфа 0/255. Результаты только PNG.
+                                     сохраняется полупрозрачность. Результаты только PNG.
           --alpha-threshold N        Покрытие блока: 1–100% (50), только --sprite.
                                      Меньше — толще силуэт; больше — тоньше.
           --crop-horizontal VALUE    center, left, right (center).
@@ -95,6 +102,16 @@ internal static class CliApplication
             return IndependentCommand.Run(args[1..], true, output, error);
         if (args.Length > 0 && args[0] == "colors")
             return IndependentCommand.Run(args[1..], false, output, error);
+        if (args.Length > 0 && args[0] is "smooth-colors" or "smooth")
+            return ImageToolsCommand.RunSmooth(args[1..], output, error);
+        if (args.Length > 0 && args[0] is "monochrome" or "mono")
+            return ImageToolsCommand.RunMonochrome(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "ascii")
+            return ImageToolsCommand.RunAscii(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "palette-info")
+            return ImageToolsCommand.RunPalette(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "replace-color")
+            return ImageToolsCommand.RunReplace(args[1..], output, error);
         if (args.Length > 0 && args[0] == "aseprite")
             return AsepriteCommand.Run(args[1..], output, error);
         if (args.Length == 0 || args is ["--help"] or ["-h"])
@@ -235,20 +252,10 @@ internal static class CliApplication
 
     private static Bitmap CreatePreview(Bitmap source, int scale)
     {
-        var preview = new Bitmap(checked(source.Width * scale), checked(source.Height * scale));
-        try
+        return IndependentImageProcessor.Scale(source, new DownscaleOptions
         {
-            using var graphics = Graphics.FromImage(preview);
-            graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-            graphics.PixelOffsetMode = PixelOffsetMode.Half;
-            graphics.DrawImage(source, new Rectangle(0, 0, preview.Width, preview.Height));
-            return preview;
-        }
-        catch
-        {
-            preview.Dispose();
-            throw;
-        }
+            TargetWidth = checked(source.Width * scale), TargetHeight = checked(source.Height * scale)
+        });
     }
 
     private static int CountOutputColors(Bitmap bitmap)

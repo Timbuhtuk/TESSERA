@@ -2,6 +2,12 @@
 
 Branch: `codex/material-maps`, based on `origin/main` at `d13a6da`. The original dirty checkout is preserved; implementation and validation use `artifacts/material-maps`.
 
+## Release integration — 2026-10-23
+
+Release preparation uses `codex/release-material-maps-2026-10-23` in the same isolated checkout. It merges `main` at `81d8ad3`, retaining the released CLI/plugin packages and partial-alpha fixes. The two conflicts were in test argument registration and the next release notes; both material-map and alpha test routes remain registered, and the next notes describe the material-map editor.
+
+A fresh restore from NuGet.org into an isolated package cache and a Release solution build passed with **0 warnings, 0 errors**. The integrated `--material-maps --alpha` run passed **13 checks**, including all seven material-map checks, source/result Tools dispatch, independent layers, PNG alpha, project roundtrips, compact layout and editor alpha/export/history checks. New rendered captures come from this integrated source; the physical desktop checks and screenshots below record the earlier feature-branch verification and were not repeated during this preparation. The actual release commit, complete CI and publication are verified separately by the release task.
+
 ## Implemented behavior
 
 - Access from the active image asset editor through **Tools → Height / Normal / AO maps…**; source/result selection is respected. Each source/result retains its own open session.

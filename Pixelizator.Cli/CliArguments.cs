@@ -20,7 +20,7 @@ internal sealed record CliArguments(
         "--input", "--output", "--width", "--height", "--crop-horizontal", "--crop-vertical",
         "--palette", "--palette-step", "--quantization", "--threads", "--block-mode",
         "--brightness", "--contrast", "--saturation", "--edge", "--cropped-output",
-        "--preview-output", "--preview-scale", "--alpha-threshold", "--quantization-colors"
+        "--preview-output", "--preview-scale", "--alpha-threshold", "--quantization-colors", "--color-mode"
     };
 
     private static readonly HashSet<string> FlagOptions = new(StringComparer.Ordinal)
@@ -28,7 +28,7 @@ internal sealed record CliArguments(
         "--dithering", "--overwrite", "--json", "--sprite", "--color-weights"
     };
 
-    public static CliArguments Parse(string[] args)
+    public static CliArguments Parse(string[] args, bool independentColors = false)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         bool positionalOnly = false;
@@ -80,9 +80,20 @@ internal sealed record CliArguments(
         var palette = Choice("--palette", defaults.Palette,
             ("none", PaletteKind.None), ("db16", PaletteKind.DB16), ("db32", PaletteKind.DB32),
             ("nes", PaletteKind.NES), ("gameboy", PaletteKind.GameBoy), ("step", PaletteKind.Step));
+        var colorMode = Choice("--color-mode", defaults.IndependentColorMode,
+            ("combined", IndependentColorMode.Combined), ("quantization", IndependentColorMode.Quantization),
+            ("palette", IndependentColorMode.Palette));
         var blockMode = Choice("--block-mode", defaults.BlockMode,
             ("automatic", BlockSelectionMode.Automatic), ("manual", BlockSelectionMode.Manual));
 
+        if (values.ContainsKey("--color-mode") && !independentColors)
+            throw new CliUsageException("--color-mode доступен только для команды colors.");
+        if (independentColors && colorMode == IndependentColorMode.Quantization &&
+            new[] { "--palette", "--palette-step", "--dithering" }.Any(values.ContainsKey))
+            throw new CliUsageException("Режим quantization не принимает настройки палитры и дизеринга.");
+        if (independentColors && colorMode == IndependentColorMode.Palette &&
+            new[] { "--quantization", "--quantization-colors", "--color-weights" }.Any(values.ContainsKey))
+            throw new CliUsageException("Режим palette не принимает настройки квантования.");
         if (values.ContainsKey("--dithering") && palette is PaletteKind.None or PaletteKind.Step)
             throw new CliUsageException("--dithering доступен только для DB16, DB32, NES и GameBoy.");
         if (values.ContainsKey("--palette-step") && palette != PaletteKind.Step)
@@ -115,6 +126,7 @@ internal sealed record CliArguments(
             PaletteStep = Integer("--palette-step", defaults.PaletteStep, 1, 255),
             EnableDithering = values.ContainsKey("--dithering"),
             QuantizationColors = Integer("--quantization-colors", defaults.QuantizationColors, 1, DownscaleOptions.MaxQuantizationColors),
+            IndependentColorMode = colorMode,
             UseColorWeights = values.ContainsKey("--color-weights"),
             Quantization = Choice("--quantization", defaults.Quantization,
                 ("median-cut", QuantizationMethod.MedianCut), ("kmeans-lab", QuantizationMethod.KMeansLab),

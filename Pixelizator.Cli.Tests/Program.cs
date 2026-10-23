@@ -217,6 +217,141 @@ try
         Require(Run(["resize", "--help"]).Code == 0 && Run(["colors", "--help"]).Code == 0, "Independent help missing");
     });
 
+    Check("Current editor image tools are exposed by CLI", () =>
+    {
+        string sourcePath = Path.Combine(directory, "current-tools.png");
+        using (var fixture = new Bitmap(6, 4, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < fixture.Height; y++)
+                for (int x = 0; x < fixture.Width; x++)
+                    fixture.SetPixel(x, y, x == 0 && y == 0 ? Color.Transparent :
+                        (x + y) % 3 == 0 ? Color.FromArgb(180, 0, 0, 0) :
+                        (x + y) % 3 == 1 ? Color.FromArgb(220, 255, 0, 0) : Color.FromArgb(255, 0, 255, 0));
+            fixture.Save(sourcePath, ImageFormat.Png);
+        }
+
+        string monochromePath = Path.Combine(directory, "current-monochrome.png");
+        ExpectSuccess(["monochrome", sourcePath, "-o", monochromePath, "--json"]);
+        using (var source = new Bitmap(sourcePath))
+        using (var expected = ImageFilters.Monochrome(source))
+        using (var actual = new Bitmap(monochromePath))
+            EqualPixels(expected, actual);
+
+        string smoothPath = Path.Combine(directory, "current-smooth.png");
+        ExpectSuccess(["smooth", sourcePath, "-o", smoothPath, "--passes", "2", "--color-tolerance", "18.5",
+            "--strength", "70", "--detail-protection", "60", "--edge-protection", "50", "--json"]);
+        using (var source = new Bitmap(sourcePath))
+        using (var expected = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
+        {
+            LocalColorPasses = 2,
+            Cleanup = new ColorCleanupOptions
+            {
+                ColorTolerance = 18.5, Strength = 0.7, DetailProtection = 0.6, EdgeProtection = 0.5
+            }
+        }))
+        using (var actual = new Bitmap(smoothPath))
+            EqualPixels(expected, actual);
+
+        string replacePath = Path.Combine(directory, "current-replace.png");
+        ExpectSuccess(["replace-color", sourcePath, "-o", replacePath, "--from", "#FF0000", "--to", "#123456", "--json"]);
+        using (var replaced = new Bitmap(replacePath))
+        {
+            Require(replaced.GetPixel(1, 0).ToArgb() == Color.FromArgb(220, 0x12, 0x34, 0x56).ToArgb(), "Color replacement changed alpha or RGB");
+            Require(replaced.GetPixel(0, 0).A == 0, "Color replacement changed transparent pixels");
+        }
+
+        var palette = Run(["palette-info", sourcePath, "--json"]);
+        Require(palette.Code == 0 && palette.Error.Length == 0, palette.Error);
+        using (var report = JsonDocument.Parse(palette.Output))
+        {
+            Require(report.RootElement.GetProperty("count").GetInt32() == 3, "Palette count differs from editor");
+            Require(report.RootElement.GetProperty("colors").GetArrayLength() == 3, "Palette list missing");
+        }
+
+        string asciiText = Path.Combine(directory, "current-ascii.txt");
+        string asciiImage = Path.Combine(directory, "current-ascii.png");
+        ExpectSuccess(["ascii", sourcePath, "--text-output", asciiText, "--image-output", asciiImage,
+            "--preset", "minimal", "--invert-source", "--invert-render", "--json"]);
+        using (var source = new Bitmap(sourcePath))
+            Require(File.ReadAllText(asciiText) == ImageFilters.ToAscii(source,
+                ImageFilters.AsciiRampPresets[2].Characters, true), "ASCII text differs from editor processor");
+        using (var source = new Bitmap(sourcePath))
+        using (var expected = ImageFilters.RenderAscii(source, true, ImageFilters.AsciiRampPresets[2].Characters, true, true))
+        using (var rendered = new Bitmap(asciiImage))
+            EqualPixels(expected, rendered);
+        string perPixelPath = Path.Combine(directory, "current-ascii-per-pixel.png");
+        ExpectSuccess(["ascii", sourcePath, "-o", perPixelPath, "--mode", "per-pixel", "--preset", "blocks"]);
+        using (var source = new Bitmap(sourcePath))
+        using (var expected = ImageFilters.RenderAscii(source, false, ImageFilters.AsciiRampPresets[3].Characters))
+        using (var rendered = new Bitmap(perPixelPath))
+            EqualPixels(expected, rendered);
+
+        foreach (string command in new[] { "monochrome", "mono", "smooth-colors", "smooth", "replace-color", "palette-info", "ascii" })
+            Require(Run([command, "--help"]).Code == 0, $"Help missing for {command}");
+        Require(Run(["replace-color", sourcePath, "--from", "red", "--to", "#FFFFFF"]).Code == 2,
+            "Invalid replacement color accepted");
+        Require(Run(["ascii", sourcePath, "--preset", "minimal", "--characters", "@."]).Code == 2,
+            "Conflicting ASCII ramp accepted");
+    });
+
+    Check("Color cleanup controls merge close shades and preserve pixels at zero strength", () =>
+    {
+        string sourcePath = Path.Combine(directory, "cleanup-controls.png");
+        using (var fixture = new Bitmap(9, 9, PixelFormat.Format32bppArgb))
+        {
+            using (var graphics = Graphics.FromImage(fixture)) graphics.Clear(Color.FromArgb(100, 100, 100));
+            fixture.SetPixel(4, 4, Color.FromArgb(128, 104, 104, 104));
+            fixture.Save(sourcePath, ImageFormat.Png);
+        }
+        string cleanedPath = Path.Combine(directory, "cleanup-controls-result.png");
+        ExpectSuccess(["smooth", sourcePath, "-o", cleanedPath, "--strength", "100", "--detail-protection", "0", "--edge-protection", "0"]);
+        using (var cleaned = new Bitmap(cleanedPath))
+            Require(cleaned.GetPixel(4, 4).ToArgb() == Color.FromArgb(128, 100, 100, 100).ToArgb(), "Cleanup controls did not merge the shade while retaining alpha");
+        string unchangedPath = Path.Combine(directory, "cleanup-controls-zero.png");
+        ExpectSuccess(["smooth", sourcePath, "-o", unchangedPath, "--strength", "0"]);
+        using (var source = new Bitmap(sourcePath))
+        using (var unchanged = new Bitmap(unchangedPath)) EqualPixels(source, unchanged);
+        foreach (string value in new[] { "NaN", "Infinity", "-1", "41" })
+            Require(Run(["smooth", sourcePath, "--color-tolerance", value]).Code == 2, "Invalid tolerance accepted: " + value);
+        Require(Run(["smooth", sourcePath, "--strength", "101"]).Code == 2, "Invalid cleanup strength accepted");
+    });
+
+    Check("Colors command exposes current quantization and palette modes", () =>
+    {
+        string quantizedPath = Path.Combine(directory, "mode-quantization.png");
+        ExpectSuccess(["colors", input, "-o", quantizedPath, "--color-mode", "quantization",
+            "--quantization", "median-cut", "--quantization-colors", "8"]);
+        using (var source = new Bitmap(input))
+        using (var expected = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
+        {
+            IndependentColorMode = IndependentColorMode.Quantization,
+            Quantization = QuantizationMethod.MedianCut,
+            QuantizationColors = 8
+        }))
+        using (var actual = new Bitmap(quantizedPath))
+            EqualPixels(expected, actual);
+
+        string palettePath = Path.Combine(directory, "mode-palette.png");
+        ExpectSuccess(["colors", input, "-o", palettePath, "--color-mode", "palette",
+            "--palette", "step", "--palette-step", "32"]);
+        using (var source = new Bitmap(input))
+        using (var expected = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
+        {
+            IndependentColorMode = IndependentColorMode.Palette,
+            Palette = PaletteKind.Step,
+            PaletteStep = 32
+        }))
+        using (var actual = new Bitmap(palettePath))
+            EqualPixels(expected, actual);
+
+        Require(Run(["colors", input, "--color-mode", "quantization", "--palette", "db16"]).Code == 2,
+            "Quantization-only mode accepted palette settings");
+        Require(Run(["colors", input, "--color-mode", "palette", "--quantization-colors", "8"]).Code == 2,
+            "Palette-only mode accepted quantization settings");
+        Require(Run([input, "--color-mode", "palette"]).Code == 2,
+            "Combined downscale accepted independent color mode");
+    });
+
     Check("Resize command enlarges without changing source pixels or alpha", () =>
     {
         string enlargedPath = Path.Combine(directory, "independent-upscale.png");
@@ -503,7 +638,7 @@ try
         Require(CliArguments.Parse([input, "--quantization-colors", "4096"]).Options.QuantizationColors == 4096, "CLI upper bound");
     });
 
-    Check("Weighted sprite histogram excludes low-alpha pixels and handles empty images", () =>
+    Check("Weighted sprite histogram includes partial alpha and handles empty images", () =>
     {
         using var source = new Bitmap(100, 1, PixelFormat.Format32bppArgb);
         for (int x = 0; x < source.Width; x++)
@@ -514,12 +649,51 @@ try
                 QuantizationColors = 1, UseColorWeights = true, Quantization = method, Palette = PaletteKind.None };
             var result = new PixelArtDownscaler().Process(source, options);
             using var output = result.Downscaled; using var crop = result.CroppedSource;
-            Require(output.GetPixel(0, 0).ToArgb() == Color.Red.ToArgb(), "Low-alpha colors dominated the histogram");
-            Require(output.GetPixel(1, 0).A == 0, "Low-alpha color became a candidate");
+            Require((output.GetPixel(0, 0).ToArgb() & 0xFFFFFF) == (Color.Lime.ToArgb() & 0xFFFFFF), "Visible partial-alpha colors were excluded from the histogram");
+            Require(output.GetPixel(0, 0).A == 255 && output.GetPixel(1, 0).A == 127, "Sprite quantization changed alpha");
             using var empty = new Bitmap(100, 1, PixelFormat.Format32bppArgb);
             var blank = new PixelArtDownscaler().Process(empty, options);
             using var blankOutput = blank.Downscaled; using var blankCrop = blank.CroppedSource;
             Require(blank.DominantColor.A == 0 && blankOutput.GetPixel(0, 0).A == 0, "Empty weighted sprite failed");
+        }
+    });
+
+    Check("CLI resize, crop and preview PNG exports preserve every alpha value", () =>
+    {
+        string path = Path.Combine(directory, "alpha-ramp.png");
+        using var source = new Bitmap(512, 4, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+                source.SetPixel(x, y, Color.FromArgb(x / 2, 210, 70, 30));
+        source.Save(path, ImageFormat.Png);
+        for (int mode = 0; mode < 3; mode++)
+        {
+            string output = Path.Combine(directory, $"alpha-{mode}.png");
+            string preview = Path.Combine(directory, $"alpha-preview-{mode}.png");
+            string crop = Path.Combine(directory, $"alpha-crop-{mode}.png");
+            var arguments = new List<string> { path, "-o", output, "--width", "256", "--height", "2" };
+            if (mode == 0) arguments.Insert(0, "resize");
+            else
+            {
+                arguments.AddRange(["--palette", "none", "--quantization-colors", "1",
+                    "--preview-output", preview, "--preview-scale", "3", "--cropped-output", crop]);
+                if (mode == 2) arguments.Add("--sprite");
+            }
+            ExpectSuccess(arguments.ToArray());
+            using var actual = new Bitmap(output);
+            for (int y = 0; y < actual.Height; y++)
+                for (int x = 0; x < actual.Width; x++)
+                {
+                    var color = actual.GetPixel(x, y);
+                    Require(color.A == x, $"Mode {mode}: alpha {x} became {color.A}");
+                    if (x > 0) Require(color.R == 210 && color.G == 70 && color.B == 30, "PNG RGB was composited");
+                }
+            if (mode == 0) continue;
+            using var enlarged = new Bitmap(preview);
+            using var cropped = new Bitmap(crop);
+            EqualPixels(source, cropped);
+            for (int x = 0; x < enlarged.Width; x++)
+                Require(enlarged.GetPixel(x, 0).ToArgb() == actual.GetPixel(x / 3, 0).ToArgb(), "Preview changed RGBA");
         }
     });
 
