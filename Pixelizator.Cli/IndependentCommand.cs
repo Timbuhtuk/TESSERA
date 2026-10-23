@@ -39,6 +39,7 @@ internal static class IndependentCommand
 
           -i, --input PATH          Исходное изображение или ранее сохранённый результат.
           -o, --output PATH         PNG; по умолчанию <имя>_colors.png.
+          --color-mode V           combined, quantization, palette (combined).
           --palette V              none, db16, db32, nes, gameboy, step (db16).
           --palette-step N          1–255 (32), только --palette step.
           --quantization V          median-cut, kmeans-lab, kmeans-linear (kmeans-lab).
@@ -49,6 +50,8 @@ internal static class IndependentCommand
           --json                    Отчёт JSON.
           -h, --help                Эта справка.
 
+        combined последовательно применяет квантование и палитру. quantization и palette
+        выполняют только выбранный этап, как переключатель режима в редакторе.
         Для обработки уже готового результата передайте путь к нему как input.
         """;
 
@@ -61,7 +64,7 @@ internal static class IndependentCommand
 
     private static readonly HashSet<string> ColorOptions = new(StringComparer.Ordinal)
     {
-        "--input", "--output", "--palette", "--palette-step", "--quantization",
+        "--input", "--output", "--color-mode", "--palette", "--palette-step", "--quantization",
         "--quantization-colors", "--color-weights", "--dithering", "--overwrite", "--json"
     };
 
@@ -77,7 +80,7 @@ internal static class IndependentCommand
         {
             ValidateOptions(args, scale);
             CliArguments parsed;
-            try { parsed = CliArguments.Parse(args); }
+            try { parsed = CliArguments.Parse(args, independentColors: !scale); }
             catch (ArgumentException ex) { throw new CliUsageException(ex.Message); }
 
             bool explicitOutput = args.Any(a => a is "-o" or "--output" || a.StartsWith("--output=", StringComparison.Ordinal) ||

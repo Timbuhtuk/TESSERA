@@ -35,7 +35,7 @@ Ask ChatGPT normally, for example:
 - “Сделай ICO с размерами 16, 32, 48 и 256 без сглаживания.”
 - “Экспортируй эти Aseprite-файлы в PNG и JSON, раскладка grid, четыре столбца.”
 
-The skill supports the combined downscaler, `align`, `reduce-grid` / `compact-grid`, `resize`, `colors`, `remove-background` / `remove-bg`, `ico` / `icon`, and `aseprite`. Its launcher forwards all arguments, so additional CLI options do not require an adapter update. Read [CLI.md](CLI.md) or the installed command's `--help` for the complete option set.
+The skill supports the combined downscaler, `align`, `reduce-grid` / `compact-grid`, `resize`, `colors`, `smooth-colors` / `smooth`, `monochrome` / `mono`, `ascii`, `palette-info`, `replace-color`, `remove-background` / `remove-bg`, `ico` / `icon`, and `aseprite`. Its launcher forwards all arguments, so additional CLI options do not require an adapter update. Read [CLI.md](CLI.md) or the installed command's `--help` for the complete option set.
 
 Manual launcher calls put its own options before `--` and every Tessera argument after it:
 
@@ -52,6 +52,8 @@ Output, errors, and CLI exit codes are preserved. Code 3 indicates a launcher se
 
 - `artifacts/chatgpt-plugin/Tessera-chatgpt-plugin.zip`: portable plugin containing the skill.
 - `artifacts/chatgpt-plugin/Tessera-skill.zip`: standalone skill with a single `tessera/` folder.
+
+Both archives are also published with each [GitHub release](https://github.com/Timbuhtuk/TESSERA/releases/latest). The release pipeline runs the launcher against that release's CLI and includes the archive hashes in SHA256SUMS.txt. To package into another directory, pass `--output-directory PATH` to `package_tessera.py`; use `--packages PATH` when running the checks against those archives.
 
 These archives contain the instructions, reference, and launcher. Tessera CLI remains a separate local installation. After editing an installed plugin, refresh its local marketplace and restart the desktop app so it loads the updated package.
 

@@ -87,13 +87,15 @@ Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are
 
 The [Build and release workflow](../.github/workflows/release.yml) runs on pushes to `main`, including merged pull requests. Pull requests targeting `main` run the build and checks without publishing a release.
 
-The Windows job builds and tests the solution, publishes both executables, packages them and smoke-tests the standalone CLI. A separate job with `contents: write` publishes the five release assets:
+The Windows job sets up .NET 8 and Python 3.13, builds and tests the solution, publishes both executables, and packages the app, CLI, plugin and skill. Integration checks run all 18 command/alias helps and actual image operations through the plugin launcher, inspect the archives, and reject the desktop executable without starting it. SHA256SUMS.txt covers the desktop executable and all four distributable ZIPs. A separate job with `contents: write` publishes the seven release assets:
 
 - `Tessera.exe`
 - `Tessera-win-x64.zip`
 - `Tessera-cli-win-x64.zip`
 - `SHA256SUMS.txt`
 - `ReleaseNotes.json` (the versioned, bilingual archive embedded in the desktop executable)
+- `Tessera-chatgpt-plugin.zip` (local plugin)
+- `Tessera-skill.zip` (standalone skill)
 
 Versions follow `v1.0.N`, where `N` is the workflow run number; the same version is embedded in the executables. Pull request runs can leave gaps in the sequence. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
 
