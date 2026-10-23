@@ -20,8 +20,7 @@ internal static class SpriteDownscaler
         int width = source.Width, height = source.Height;
         using var rgba = source.Clone(new Rectangle(0, 0, width, height), PixelFormat.Format32bppArgb);
         int[] pixels = ReadArgb(rgba);
-        // Reject antialias fringes for color selection; alpha still contributes to coverage.
-        var visiblePixels = pixels.Where(p => (uint)p >> 24 >= 128).Select(p => p & 0xFFFFFF);
+        var visiblePixels = pixels.Where(p => (uint)p >> 24 > 0).Select(p => p & 0xFFFFFF);
         var visible = new HashSet<int>(visiblePixels);
         var weights = options.UseColorWeights ? ColorQuantizer.CountColors(visiblePixels) : null;
         var lookup = ColorQuantizer.BuildLookup(visible, options.QuantizationColors, options.Quantization, weights);
@@ -33,14 +32,14 @@ internal static class SpriteDownscaler
                 for (int x = 0; x < width; x++)
                 {
                     int i = y * width + x;
-                    if ((uint)pixels[i] >> 24 < 128) continue;
+                    if ((uint)pixels[i] >> 24 == 0) continue;
                     double edge = 0;
                     foreach (var (dx, dy) in Neighbors)
                     {
                         int nx = x + dx, ny = y + dy;
                         if (nx < 0 || nx >= width || ny < 0 || ny >= height) { edge = 1; continue; }
                         int neighbor = pixels[ny * width + nx];
-                        if ((uint)neighbor >> 24 < 128) { edge = 1; continue; }
+                        if ((uint)neighbor >> 24 == 0) { edge = 1; continue; }
                         edge = Math.Max(edge, Math.Abs(ColorWeights.GetLuminance(lookup[pixels[i] & 0xFFFFFF]) -
                             ColorWeights.GetLuminance(lookup[neighbor & 0xFFFFFF])) / 255);
                     }
@@ -68,20 +67,23 @@ internal static class SpriteDownscaler
                             double area = (Math.Min(x + 1, x1) - Math.Max(x, x0)) *
                                           (Math.Min(y + 1, y1) - Math.Max(y, y0));
                             uint alpha = (uint)pixels[i] >> 24;
-                            coverage += area * alpha / 255;
-                            if (alpha >= 128 && area > 0)
-                                block.Add(new BlockPixel(lookup[pixels[i] & 0xFFFFFF], edges[i]));
+                            if (alpha > 0 && area > 0)
+                            {
+                                coverage += area;
+                                block.Add(new BlockPixel((int)(alpha << 24) | lookup[pixels[i] & 0xFFFFFF], edges[i]));
+                            }
                         }
                     if (block.Count == 0 || coverage + 1e-9 < (x1 - x0) * (y1 - y0) * options.AlphaThreshold / 100)
                         continue;
-                    int color = BlockAnalyzer.SelectRepresentative(block, options);
+                    int selected = BlockAnalyzer.SelectRepresentative(block, options);
+                    int color = selected & 0xFFFFFF;
                     color = options.Palette switch
                     {
                         PaletteKind.None => color,
                         PaletteKind.Step => ColorSpace.RoundToStep(color, options.PaletteStep),
                         _ => ColorSpace.NearestPacked(palette, color)
                     };
-                    output[oy * tw + ox] = unchecked((int)0xFF000000) | color;
+                    output[oy * tw + ox] = (selected & unchecked((int)0xFF000000)) | color;
                 }
         });
         var result = new Bitmap(tw, th, PixelFormat.Format32bppArgb);

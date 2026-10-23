@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Инструменты CLI",
-        "en": "CLI image tools"
+        "ru": "Сохранение полупрозрачности",
+        "en": "Preserving partial transparency"
       },
       "notes": {
-        "ru": "- Очистка цветов в CLI: настраивайте сходство оттенков, силу обработки и защиту мелких деталей и краёв.\n- Монохром и замена цвета в CLI: переводите изображение в оттенки серого или заменяйте выбранный цвет, сохраняя размер и прозрачность.\n- ASCII в CLI: сохраняйте текст, изображение или оба результата; выбирайте набор символов, инверсию и сохранение исходного размера.\n- Палитра в CLI: уменьшайте число цветов, применяйте готовую палитру или объединяйте оба действия.\n- Информация о цветах в CLI: смотрите число видимых цветов и их список. Список доступен до 1024 цветов; общее число показывается всегда.\n- Tessera для чата: новые операции доступны через skill и plugin без открытия графического редактора.",
-        "en": "- CLI color cleanup: adjust shade similarity, cleanup strength, and protection for small details and edges.\n- CLI monochrome and color replacement: convert images to grayscale or replace a selected color while preserving size and transparency.\n- CLI ASCII: save text, an image, or both; choose character sets, inversion and whether to retain the source size.\n- CLI palettes: reduce the color count, apply a preset palette, or combine both operations.\n- CLI color information: inspect visible color counts and lists. Lists are available for up to 1024 colors; the total count is always shown.\n- Tessera in chat: use the new operations through the skill and plugin without opening the graphical editor."
+        "ru": "- Изменение размера и обрезка: полупрозрачные пиксели сохраняют свою прозрачность и больше не исчезают из-за низкой непрозрачности.\n- Обработка цветов: квантование, палитры и дизеринг сохраняют полупрозрачность.\n- PNG и история: сохранённые результаты и увеличенный предпросмотр сохраняют альфа-канал, в том числе после повторного открытия.",
+        "en": "- Resize and crop: partially transparent pixels retain their opacity instead of disappearing because of low opacity.\n- Color processing: quantization, palettes and dithering preserve partial transparency.\n- PNG and history: saved results and enlarged previews retain alpha, including after reopening."
       }
     },
     {

@@ -7,6 +7,7 @@ internal static class IndependentImageProcessorChecks
 {
     public static void Run(Action<string, Action> check)
     {
+        AlphaChannelChecks.Run(check);
         check("Size-only operation keeps source colors despite palette settings", ScaleKeepsColors);
         check("Size-only enlargement repeats exact source pixels and alpha", UpscaleRepeatsPixels);
         check("Color-only operation keeps dimensions and alpha", ColorsKeepCanvasAndAlpha);

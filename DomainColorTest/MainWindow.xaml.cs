@@ -284,7 +284,7 @@ public partial class MainWindow : Window
                     {
                         Settings = settings,
                         ParentGenerationId = parentId,
-                        PreservesTransparency = options.SpriteMode,
+                        PreservesTransparency = options.SpriteMode || System.Drawing.Image.IsAlphaPixelFormat(result.Downscaled.PixelFormat),
                         Caption = Localization.Format("РЕЗУЛЬТАТ · {0} × {1} · {2}", result.Downscaled.Width, result.Downscaled.Height, mode),
                         Log = string.Join(Environment.NewLine, result.StageTimingsSeconds.Select(stage => Localization.Format("{0}: {1:F3} с", stage.Key, stage.Value))) +
                             Localization.Format("{0}Основной цвет: {1}", Environment.NewLine, result.DominantColor)

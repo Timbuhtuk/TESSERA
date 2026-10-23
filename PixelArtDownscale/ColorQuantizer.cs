@@ -13,9 +13,9 @@ public static class ColorQuantizer
         if (uniqueColors.Count <= colorCount)
             return (Bitmap)source.Clone();
 
-        var weights = useColorWeights ? CountColors(pixels) : null;
+        var weights = useColorWeights ? CountColors(pixels.Where(p => (uint)p >> 24 > 0).Select(p => p & 0xFFFFFF)) : null;
         var lookup = BuildLookup(uniqueColors, colorCount, method, weights);
-        return ApplyLookup(width, height, pixels, lookup, threadCount);
+        return ApplyLookup(source, width, height, pixels, lookup, threadCount);
     }
 
     internal static void ValidateColorCount(int colorCount)
@@ -73,18 +73,18 @@ public static class ColorQuantizer
                 for (int y = startY; y < endY; y++)
                 {
                     for (int x = 0; x < width; x++)
-                        pixels[y * width + x] = buffer.GetPackedColor(x, y);
+                        pixels[y * width + x] = (buffer.GetAlpha(x, y) << 24) | buffer.GetPackedColor(x, y);
                 }
             });
         }
 
-        var uniqueColors = new HashSet<int>(pixels);
+        var uniqueColors = new HashSet<int>(pixels.Where(p => (uint)p >> 24 > 0).Select(p => p & 0xFFFFFF));
         return (width, height, pixels, uniqueColors);
     }
 
-    private static Bitmap ApplyLookup(int width, int height, int[] pixels, Dictionary<int, int> lookup, int threadCount)
+    private static Bitmap ApplyLookup(Bitmap source, int width, int height, int[] pixels, Dictionary<int, int> lookup, int threadCount)
     {
-        var result = BitmapFactory.Create24Bpp(width, height);
+        var result = BitmapFactory.CreateLike(source, width, height);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
 
         ParallelImageHelper.ForEachRowChunk(height, threadCount, (startY, endY) =>
@@ -93,8 +93,11 @@ public static class ColorQuantizer
             {
                 for (int x = 0; x < width; x++)
                 {
-                    int packed = pixels[y * width + x];
-                    writeBuffer.SetPackedColor(x, y, lookup[packed]);
+                    int argb = pixels[y * width + x];
+                    byte alpha = (byte)((uint)argb >> 24);
+                    int packed = argb & 0xFFFFFF;
+                    writeBuffer.SetPackedColor(x, y, alpha == 0 ? packed : lookup[packed]);
+                    writeBuffer.SetAlpha(x, y, alpha);
                 }
             }
         });

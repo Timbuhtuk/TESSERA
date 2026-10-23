@@ -49,6 +49,7 @@ public static class ColorWeights
     {
         x = Math.Clamp(x, 0, buffer.Width - 1);
         y = Math.Clamp(y, 0, buffer.Height - 1);
+        if (buffer.GetAlpha(x, y) == 0) return 0;
         return (float)GetLuminance(buffer.GetPackedColor(x, y));
     }
 }

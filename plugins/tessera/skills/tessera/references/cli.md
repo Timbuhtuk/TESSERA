@@ -33,7 +33,7 @@ Without `--output`, the result is placed next to the source with the suffix `_do
 | `-o`, `--output` | PNG, JPG/JPEG or BMP |
 | `--width` | Positive integer; **48**; practical size depends on available memory and the image codec |
 | `--height` | Positive integer; **48**; practical size depends on available memory and the image codec |
-| `--sprite` | Full image without cropping, transparent background, output alpha 0/255; PNG output only |
+| `--sprite` | Full image without cropping, preserves partial alpha; PNG output only |
 | `--alpha-threshold` | 1–100%; **50**; requires `--sprite` |
 | `--crop-horizontal` | **center**, left, right |
 | `--crop-vertical` | **center**, top, bottom |
@@ -61,13 +61,13 @@ The output must not be larger than the input. Cropping removes the remainder alo
 
 `--palette none` disables the final fixed-palette mapping, but initial quantization still runs. `--quantization-colors` limits that stage; the actual number of colors can be smaller. DB16, DB32, NES, GameBoy and RGB step mapping run later and may reduce it further.
 
-Without `--color-weights`, unique colors have equal weight. With it, K-Means averages use pixel counts, and Median Cut uses counts both when splitting groups and when averaging them. K-Means initialization and iteration counts remain unchanged. Sprite weights only include pixels with alpha at least 128. Weighting can help large color regions but lose rare accents; it is separate from block representative selection.
+Without `--color-weights`, unique colors have equal weight. With it, K-Means averages use pixel counts, and Median Cut uses counts both when splitting groups and when averaging them. K-Means initialization and iteration counts remain unchanged. Sprite weights include every pixel with nonzero alpha. Weighting can help large color regions but lose rare accents; it is separate from block representative selection.
 
 Manual-mode values describe the desired properties of the **color selected within each block**, rather than applying global brightness or contrast filters. The CLI divides 0–100 values by 100, matching the application's sliders.
 
 ## Transparent sprites
 
-`--sprite` divides the entire image into a target grid with fractional block boundaries and no cropping. Coverage includes source alpha. Color selection and quantization use pixels with alpha at least 128 without mixing in a black background. A result pixel becomes opaque when coverage meets `--alpha-threshold` and a source color is available.
+`--sprite` divides the entire image into a target grid with fractional block boundaries and no cropping. Coverage is the area occupied by pixels with nonzero alpha, independently of their opacity. Color selection and quantization include every visible pixel without mixing in a black background. When coverage meets `--alpha-threshold`, the result keeps the selected pixel's alpha instead of forcing it to 0 or 255. Resize, cropping, quantization, palette mapping and dithering preserve partial alpha; save as PNG to retain it in the output file.
 
 A 25% threshold keeps more of the edge; 75% narrows the silhouette. Sprite mode cannot be combined with cropping options or dithering. `--cropped-output` exports the full source. Set the target size manually; sprite downscaling does not automatically find the original pixel size or repack animation frames.
 

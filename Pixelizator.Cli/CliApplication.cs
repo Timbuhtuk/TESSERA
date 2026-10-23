@@ -1,4 +1,3 @@
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.Text.Json;
@@ -49,7 +48,7 @@ internal static class CliApplication
           --width N                  Ширина: положительное целое число (48).
           --height N                 Высота: положительное целое число (48).
           --sprite                   Весь кадр без обрезки; прозрачный фон,
-                                     чёткая альфа 0/255. Результаты только PNG.
+                                     сохраняется полупрозрачность. Результаты только PNG.
           --alpha-threshold N        Покрытие блока: 1–100% (50), только --sprite.
                                      Меньше — толще силуэт; больше — тоньше.
           --crop-horizontal VALUE    center, left, right (center).
@@ -253,20 +252,10 @@ internal static class CliApplication
 
     private static Bitmap CreatePreview(Bitmap source, int scale)
     {
-        var preview = new Bitmap(checked(source.Width * scale), checked(source.Height * scale));
-        try
+        return IndependentImageProcessor.Scale(source, new DownscaleOptions
         {
-            using var graphics = Graphics.FromImage(preview);
-            graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
-            graphics.PixelOffsetMode = PixelOffsetMode.Half;
-            graphics.DrawImage(source, new Rectangle(0, 0, preview.Width, preview.Height));
-            return preview;
-        }
-        catch
-        {
-            preview.Dispose();
-            throw;
-        }
+            TargetWidth = checked(source.Width * scale), TargetHeight = checked(source.Height * scale)
+        });
     }
 
     private static int CountOutputColors(Bitmap bitmap)

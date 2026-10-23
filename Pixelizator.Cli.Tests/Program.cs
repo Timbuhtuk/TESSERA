@@ -638,7 +638,7 @@ try
         Require(CliArguments.Parse([input, "--quantization-colors", "4096"]).Options.QuantizationColors == 4096, "CLI upper bound");
     });
 
-    Check("Weighted sprite histogram excludes low-alpha pixels and handles empty images", () =>
+    Check("Weighted sprite histogram includes partial alpha and handles empty images", () =>
     {
         using var source = new Bitmap(100, 1, PixelFormat.Format32bppArgb);
         for (int x = 0; x < source.Width; x++)
@@ -649,12 +649,51 @@ try
                 QuantizationColors = 1, UseColorWeights = true, Quantization = method, Palette = PaletteKind.None };
             var result = new PixelArtDownscaler().Process(source, options);
             using var output = result.Downscaled; using var crop = result.CroppedSource;
-            Require(output.GetPixel(0, 0).ToArgb() == Color.Red.ToArgb(), "Low-alpha colors dominated the histogram");
-            Require(output.GetPixel(1, 0).A == 0, "Low-alpha color became a candidate");
+            Require((output.GetPixel(0, 0).ToArgb() & 0xFFFFFF) == (Color.Lime.ToArgb() & 0xFFFFFF), "Visible partial-alpha colors were excluded from the histogram");
+            Require(output.GetPixel(0, 0).A == 255 && output.GetPixel(1, 0).A == 127, "Sprite quantization changed alpha");
             using var empty = new Bitmap(100, 1, PixelFormat.Format32bppArgb);
             var blank = new PixelArtDownscaler().Process(empty, options);
             using var blankOutput = blank.Downscaled; using var blankCrop = blank.CroppedSource;
             Require(blank.DominantColor.A == 0 && blankOutput.GetPixel(0, 0).A == 0, "Empty weighted sprite failed");
+        }
+    });
+
+    Check("CLI resize, crop and preview PNG exports preserve every alpha value", () =>
+    {
+        string path = Path.Combine(directory, "alpha-ramp.png");
+        using var source = new Bitmap(512, 4, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+                source.SetPixel(x, y, Color.FromArgb(x / 2, 210, 70, 30));
+        source.Save(path, ImageFormat.Png);
+        for (int mode = 0; mode < 3; mode++)
+        {
+            string output = Path.Combine(directory, $"alpha-{mode}.png");
+            string preview = Path.Combine(directory, $"alpha-preview-{mode}.png");
+            string crop = Path.Combine(directory, $"alpha-crop-{mode}.png");
+            var arguments = new List<string> { path, "-o", output, "--width", "256", "--height", "2" };
+            if (mode == 0) arguments.Insert(0, "resize");
+            else
+            {
+                arguments.AddRange(["--palette", "none", "--quantization-colors", "1",
+                    "--preview-output", preview, "--preview-scale", "3", "--cropped-output", crop]);
+                if (mode == 2) arguments.Add("--sprite");
+            }
+            ExpectSuccess(arguments.ToArray());
+            using var actual = new Bitmap(output);
+            for (int y = 0; y < actual.Height; y++)
+                for (int x = 0; x < actual.Width; x++)
+                {
+                    var color = actual.GetPixel(x, y);
+                    Require(color.A == x, $"Mode {mode}: alpha {x} became {color.A}");
+                    if (x > 0) Require(color.R == 210 && color.G == 70 && color.B == 30, "PNG RGB was composited");
+                }
+            if (mode == 0) continue;
+            using var enlarged = new Bitmap(preview);
+            using var cropped = new Bitmap(crop);
+            EqualPixels(source, cropped);
+            for (int x = 0; x < enlarged.Width; x++)
+                Require(enlarged.GetPixel(x, 0).ToArgb() == actual.GetPixel(x / 3, 0).ToArgb(), "Preview changed RGBA");
         }
     });
 
