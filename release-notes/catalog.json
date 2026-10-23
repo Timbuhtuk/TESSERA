@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Патчноуты",
-        "en": "Patch notes"
+        "ru": "Карты Height, Normal и AO",
+        "en": "Height, Normal and AO maps"
       },
       "notes": {
-        "ru": "- Патчноуты: описания показывают, какие инструменты изменились и что пользователь может ожидать от их работы.\n- История релизов: убраны служебные подробности; изменения сгруппированы по затронутым инструментам.",
-        "en": "- Patch notes: descriptions explain which tools changed and what users can expect them to do.\n- Release history: entries focus on affected tools and their behavior."
+        "ru": "- Карты материала: в меню «Инструменты» редактора ассета добавлен редактор Height, Normal и AO. Карты создаются автоматически при открытии изображения; на каждой можно рисовать кистью, пользоваться пипеткой, ластиком и отменой действий.\n- Height: изменение рельефа обновляет Normal и AO, сохраняя ручную доработку. Правки Normal и AO можно сбросить отдельно.\n- Предпросмотр карт: перемещайте свет мышью, включайте Normal и AO и сравнивайте с исходником. Доступны пиксельная сетка, масштаб и подложка исходного изображения.\n- Сохранение карт: экспортируйте PNG с исходной прозрачностью или сохраняйте редактируемый проект .tmaps. Для Normal доступны DirectX и OpenGL.",
+        "en": "- Material maps: the asset editor's Tools menu now opens a Height, Normal and AO editor. Maps are generated automatically when an image opens; paint on any map with a brush, eyedropper, eraser and undo.\n- Height: editing the relief updates Normal and AO while preserving manual work. Normal and AO edits can be reset separately.\n- Map preview: move the light with the mouse, toggle Normal and AO, and compare with the original. Pixel grid, zoom and source overlay are available.\n- Saving maps: export PNGs with source transparency or save an editable .tmaps project. Normal supports DirectX and OpenGL."
       }
     },
     {

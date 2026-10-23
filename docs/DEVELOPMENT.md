@@ -122,6 +122,14 @@ See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 
 The tool-improvement checks run with `PixelArtAlignment.Tests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
 
+## Material-map editor
+
+The material-map editor is available under the image editor's Tools menu. `PixelArtDownscale/MaterialMapDocument.cs` owns luminance Height initialization, central-difference normalized normals, eight-direction/four-distance horizon AO and independent normal/AO masks. Canonical normals use +Y up; DirectX export flips only green. Color preview lighting runs in linear light and AO modulates its ambient term. Transparent neighbors are excluded and image edges do not wrap. This is a 2D height-field approximation, not geometry baking or AI depth estimation.
+
+`MaterialMapFile` stores versioned `.tmaps` ZIP files with a JSON header and lossless binary source/layers, validates dimensions and finite layer values, and replaces saves atomically. Stroke/reset/settings history is capped at 30 snapshots or approximately 128 MiB, retaining at least one action. `MaterialMapsWindow` provides the three paint surfaces, per-map reset, throttled preview light, source overlay, PNG/project persistence and source-path protection. It snapshots the selected source/result and holds one session per source/result, so switching assets cannot redirect existing strokes.
+
+Run `dotnet run --project PixelArtAlignment.Tests -c Release -- --material-maps` for the focused checks; they also run with `--ui` in the existing release pipeline. They exercise flat/gradient/cavity fields, dimensions and alpha, normal conventions, independent masks and resets, history, soft/interpolated strokes, project roundtrips, Tools entry, PNG source protection and wide/minimum WPF renders. Physical pointer interaction remains a separate desktop verification.
+
 ## Deferred ideas
 
 - ⭐ Generate a reusable processing macro from a selected result: recover the ordered tools and their settings, then apply the same recipe to other source images. Recorded for consideration; implementation has not been approved.
