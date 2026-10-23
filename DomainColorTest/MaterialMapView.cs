@@ -15,6 +15,15 @@ public sealed class MaterialMapView : Grid
     private BitmapSource? _image;
     private double _zoom;
     private bool _drawing;
+    public Size LogicalSize { get; set; }
+    private double ImageWidth => LogicalSize.Width > 0 ? LogicalSize.Width : _image?.PixelWidth ?? 0;
+    private double ImageHeight => LogicalSize.Height > 0 ? LogicalSize.Height : _image?.PixelHeight ?? 0;
+    public double Scale => _surface.Scale;
+    public double FitScale => Math.Min(Math.Max(32, _scroll.ActualWidth - 20) / Math.Max(1, ImageWidth), Math.Max(32, _scroll.ActualHeight - 20) / Math.Max(1, ImageHeight));
+    public Point ViewCenter => new(_scroll.ExtentWidth <= _scroll.ViewportWidth ? ImageWidth / 2 : (_scroll.HorizontalOffset + _scroll.ViewportWidth / 2) / Scale,
+        _scroll.ExtentHeight <= _scroll.ViewportHeight ? ImageHeight / 2 : (_scroll.VerticalOffset + _scroll.ViewportHeight / 2) / Scale);
+    public event Action<MaterialMapView>? Scrolled;
+    public event Action? ViewportResized;
     public bool DrawingEnabled { get; set; } = true;
     public bool ShowGrid { get; set; }
     public double OverlayOpacity { get; set; }
@@ -32,7 +41,11 @@ public sealed class MaterialMapView : Grid
         _scroll = new ScrollViewer { Content = _surface, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto, CanContentScroll = false, Background = Brushes.Transparent };
         Children.Add(_scroll);
-        _scroll.SizeChanged += (_, _) => RefreshScale();
+        _scroll.SizeChanged += (_, _) => { RefreshScale(); ViewportResized?.Invoke(); };
+        _scroll.ScrollChanged += (_, e) =>
+        {
+            if (e.HorizontalChange != 0 || e.VerticalChange != 0) Scrolled?.Invoke(this);
+        };
         _surface.MouseLeftButtonDown += (_, e) =>
         {
             if (!DrawingEnabled || Hit(e.GetPosition(_surface)) is not { } hit) return;
@@ -71,13 +84,18 @@ public sealed class MaterialMapView : Grid
         return (Math.Min(_image.PixelWidth - 1, (int)(point.X / _surface.Scale)), Math.Min(_image.PixelHeight - 1, (int)(point.Y / _surface.Scale)));
     }
     public void Refresh() { _surface.Grid = ShowGrid; _surface.Overlay = Overlay; _surface.OpacityOverlay = OverlayOpacity; _surface.InvalidateVisual(); }
+    public void CenterOn(Point point)
+    {
+        _scroll.ScrollToHorizontalOffset(Math.Max(0, point.X * Scale - _scroll.ViewportWidth / 2));
+        _scroll.ScrollToVerticalOffset(Math.Max(0, point.Y * Scale - _scroll.ViewportHeight / 2));
+    }
     private void RefreshScale()
     {
         if (_image is null) return;
-        double fit = Math.Min(Math.Max(32, _scroll.ActualWidth - 20) / _image.PixelWidth, Math.Max(32, _scroll.ActualHeight - 20) / _image.PixelHeight);
+        double fit = FitScale;
         _surface.Scale = _zoom > 0 ? _zoom : fit >= 1 ? Math.Max(1, Math.Floor(fit)) : fit;
         _surface.Source = _image;
-        _surface.Width = _image.PixelWidth * _surface.Scale; _surface.Height = _image.PixelHeight * _surface.Scale;
+        _surface.Width = ImageWidth * _surface.Scale; _surface.Height = ImageHeight * _surface.Scale;
         Refresh();
     }
     private sealed class PaintSurface : FrameworkElement

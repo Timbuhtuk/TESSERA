@@ -63,7 +63,7 @@ public sealed class GenerationEntry
 }
 
 /// <summary>Immutable PNG snapshots; a JSON record is committed only after its images are saved.</summary>
-public sealed class ImageLibrary(string directory)
+public sealed partial class ImageLibrary(string directory)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     public string DirectoryPath { get; } = Path.GetFullPath(directory);

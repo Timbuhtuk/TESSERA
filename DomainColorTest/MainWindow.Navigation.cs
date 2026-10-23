@@ -154,11 +154,12 @@ public partial class MainWindow
         imageMenu.IsEnabled = toolsMenu.IsEnabled = image && !busy;
         foreach (var item in _imageCommands) item.IsEnabled = image && !busy;
         viewMenu.IsEnabled = image;
-        saveDocumentMenuItem.IsEnabled = !busy && (board || animation || tiles);
+        saveDocumentMenuItem.IsEnabled = !busy && (_workspaceReady || board || animation || tiles);
+        saveDocumentMenuItem.Header = Localization.Text(_workspaceReady ? "Сохранить проект" : "Сохранить документ");
         exportMenu.IsEnabled = !busy && canExport;
         saveMenuItem.Header = animation ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
         saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null);
-        saveMenuItem.InputGestureText = image ? "Ctrl+S" : "";
+        saveMenuItem.InputGestureText = image && !_workspaceReady ? "Ctrl+S" : "";
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;
         saveAllMenuItem.Visibility = image ? Visibility.Visible : Visibility.Collapsed;
         ((MenuItem)FindName("exportIcoMenuItem")).Visibility = image ? Visibility.Visible : Visibility.Collapsed;
@@ -230,11 +231,12 @@ public partial class MainWindow
         else if (action == "ico") { ShowIconWorkspace(); iconWorkspace.SetImage(ProcessingBasis == 1 ? _downscaledResult! : _sourceImage!, _activeSource!.Label); }
         else if (action == "tiles") OpenTileInspector(this, new());
     }
-    private Task SaveNavigationDocumentAsync()
+    private async Task SaveNavigationDocumentAsync()
     {
-        if (moodboardWorkspace.Visibility == Visibility.Visible) return moodboardWorkspace.SaveWorkspaceAsync();
-        if (_workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null) { _tileInspector.SaveWorkspaceDocument(); return Task.CompletedTask; }
-        PersistWorkspaceState(); statusLabel.Text = Localization.Text("Настройки анимации сохранены."); return Task.CompletedTask;
+        foreach (var window in _materialMapWindows.Values.ToArray()) window.SaveWorkspace();
+        if (moodboardWorkspace.Visibility == Visibility.Visible) await moodboardWorkspace.SaveWorkspaceAsync();
+        if (_workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.SaveWorkspaceDocument();
+        PersistWorkspaceState(); statusLabel.Text = Localization.Text("Проект сохранён.");
     }
     private async Task ExportNavigationAsync()
     {

@@ -62,6 +62,7 @@ public sealed class WorkspaceState
     public List<WorkspaceProject> Projects { get; set; } = [];
     public List<WorkspaceFolder> Folders { get; set; } = [];
     public List<WorkspaceLink> Links { get; set; } = [];
+    public List<WorkspaceMaterialSession> MaterialSessions { get; set; } = [];
     public string View { get; set; } = "all";
     public Guid? ProjectId { get; set; }
     public Guid? FolderId { get; set; }
@@ -75,7 +76,7 @@ public sealed class WorkspaceState
 }
 
 /// <summary>Projects contain references; document payloads and image histories belong to the library.</summary>
-public sealed class WorkspaceCatalog
+public sealed partial class WorkspaceCatalog
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     public string Root { get; }

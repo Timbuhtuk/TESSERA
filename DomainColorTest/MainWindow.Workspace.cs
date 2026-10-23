@@ -377,6 +377,7 @@ public partial class MainWindow
     private void PersistWorkspaceState()
     {
         if (!_workspaceReady || _workspaceCatalog is null) return;
+        foreach (var window in _materialMapWindows.Values.ToArray()) window.SaveWorkspace();
         if (_workspaceActive is { Kind: WorkspaceAssetKind.Animation } animation && asepriteWorkspace.Visibility == Visibility.Visible)
         {
             asepriteWorkspace.CaptureWorkspaceSettings(animation);

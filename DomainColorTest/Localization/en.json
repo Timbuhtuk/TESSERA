@@ -1046,5 +1046,10 @@
   "Заменить существующие карты?\n": "Replace existing maps?\n",
   "Сохранены Height, Normal и AO: ": "Height, Normal and AO saved: ",
   "Ошибка карт материала: ": "Material map error: ",
-  "Сохранить проект карт с ручными слоями перед закрытием?": "Save the map project with its manual layers before closing?"
+  "Сохранить проект карт с ручными слоями перед закрытием?": "Save the map project with its manual layers before closing?",
+  "Вернуться к ассету": "Return to asset",
+  "Дождитесь обновления карт.": "Wait for the maps to finish updating.",
+  "Карты и ручные слои сохранены в рабочем пространстве.": "Maps and manual layers saved to the workspace.",
+  "Сохранить проект": "Save project",
+  "Проект сохранён.": "Project saved."
 }

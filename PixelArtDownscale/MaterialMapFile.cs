@@ -8,7 +8,7 @@ public static class MaterialMapFile
 {
     private sealed record Header(int Version, int Width, int Height, float NormalStrength, float AoStrength, int AoRadius, bool DirectX);
 
-    public static void Save(MaterialMapDocument document, string path)
+    public static void Save(MaterialMapDocument document, string path, bool markSaved = true)
     {
         string fullPath = Path.GetFullPath(path);
         string temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
@@ -30,7 +30,7 @@ public static class MaterialMapFile
                 }
             }
             File.Move(temporary, fullPath, true);
-            document.MarkSaved();
+            if (markSaved) document.MarkSaved();
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }

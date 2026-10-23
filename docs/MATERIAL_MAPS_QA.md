@@ -63,3 +63,22 @@ These are native window captures, not mockups or in-process WPF renders. The blu
 ![Original-image comparison and independent layer reset controls](images/material-maps/03-source-comparison.jpg)
 
 ![800 percent zoom, pixel grid and scrollbars](images/material-maps/04-pixel-grid-zoom.jpg)
+
+## Follow-up: workspace assets and synchronized 2×2 layout
+
+Verified on Windows on 2026-10-24 in `codex/material-maps-workspace`, based on released `origin/main` at `6ea2561`. The earlier standalone-save workflow and screenshots above describe the original implementation; workspace integration now supersedes that workflow.
+
+- Height/Normal occupy the top row, AO/lighting the bottom row. Shared headers keep the image viewports equal at normal and 860×620 minimum sizes. The sampled lighting image retains full source coordinates, so fit, explicit zoom, horizontal and vertical scrolling stay aligned with all three full-resolution maps.
+- Completed edits autosave to the internal library after 800 ms of idle time. Return/close and the main **Save project / Ctrl+S** command flush pending generation settings. Three stable image assets appear alongside the source in its active project folder. Reopening Tools from the source or any map restores the editable layers; a processed result has its own session. Export PNG remains optional.
+- Release solution build: **0 warnings, 0 errors**. Final full processing/WPF/navigation/workspace/localization/release-note/invariant run: **86 PASS, 0 FAIL**. Focused material-map run: **13 PASS, 0 FAIL**. CLI regression: **71 passed, 0 failed**.
+- New acceptance coverage checks every scroll origin and actual WPF mouse-wheel event, fit/zoom, downsampled-preview coordinates, sibling placement without touching another project, stable asset IDs, idle/main-menu save, pending sliders, exact output PNG pixels, unchanged originals, locked-file failure/retry, and independent layers after restarting the library.
+- Native Computer Use verification launched a separate build copy with a synthetic 64×48 pixel-art fixture and an isolated library. The real Tools menu restored the session after an application restart. At 3200%, a real AO wheel scroll set all four vertical scrollbars to **678.5**; dragging Normal's horizontal thumb set all four horizontal scrollbars to **1029.2814207650274**. A real AO stroke, **Return to asset** and main-window **Ctrl+S** completed without a Save dialog. The stored library contains **4 assets, 1 map session and 4 painted AO pixels**.
+- Native wheel testing initially exposed stale offset reads during WPF layout, despite the initial programmatic-scroll checks passing. Synchronization now reads offsets after the layout pass; a wheel-event regression case and the repeated native check both pass. An earlier generated-record overwrite failure was also fixed and covered by repeated saves. No merge or release is performed by this follow-up.
+
+Logs and test libraries are under ignored `artifacts/`: `material-workspace-build-desktop.log`, `material-workspace-focused.log`, `material-workspace-regression-final.log`, `material-workspace-native-data.json` and `material-layout-preview/`.
+
+![Native 2 by 2 editor with workspace return](images/material-maps/05-workspace-grid.jpg)
+
+![Four synchronized viewports at 3200 percent after scrollbar dragging](images/material-maps/06-synchronized-scroll.jpg)
+
+![Generated Height, Normal and AO assets beside their source in the library](images/material-maps/07-generated-assets.jpg)
