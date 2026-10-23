@@ -1,0 +1,123 @@
+<Window x:Class="DomainColorTest.MaterialMapsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:DomainColorTest"
+        Title="Height · Normal · AO — TESSERA" Icon="Assets/app.ico"
+        Width="1460" Height="900" MinWidth="860" MinHeight="620" WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
+        FontFamily="{DynamicResource Ts.UiFont}" FontSize="13" UseLayoutRounding="True"
+        PreviewKeyDown="WindowKeyDown" Closing="WindowClosing">
+    <Window.Resources><ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries><local:TileInspectorResources/></ResourceDictionary.MergedDictionaries>
+        <Style x:Key="MapPanel" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Ts.Panel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Ts.Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="MapLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,13,0,5"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}"/>
+        </Style>
+    </ResourceDictionary></Window.Resources>
+    <Grid Margin="16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="HEIGHT / NORMAL / AO" FontSize="22" FontWeight="SemiBold"/>
+                <TextBlock x:Name="sourceLabel" Foreground="{DynamicResource Ts.TextSecondary}" TextTrimming="CharacterEllipsis" Margin="0,4,16,0"/>
+            </StackPanel>
+            <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                <Button x:Name="openProjectButton" Content="Открыть проект…" Click="OpenProjectClicked" Margin="0,0,6,0"/>
+                <Button x:Name="saveProjectButton" Content="Сохранить проект…" Click="SaveProjectClicked" Margin="0,0,6,0"/>
+                <Button x:Name="exportButton" Content="Экспорт карт…" Click="ExportClicked"/>
+            </WrapPanel>
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition x:Name="settingsColumn" Width="255"/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource MapPanel}" Margin="0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
+                    <StackPanel x:Name="settingsPanel">
+                        <TextBlock Text="КИСТЬ" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="brushInput" SelectedIndex="0" Margin="0,9,0,0" AutomationProperties.Name="Инструмент рисования">
+                            <ComboBoxItem Content="Кисть"/><ComboBoxItem Content="Ластик"/><ComboBoxItem Content="Пипетка"/>
+                        </ComboBox>
+                        <TextBlock Text="Размер, px" Style="{StaticResource MapLabel}"/>
+                        <local:IntegerInput x:Name="brushSizeInput" Minimum="1" Maximum="256" Value="1" AutomationProperties.Name="Размер кисти"/>
+                        <TextBlock Text="Сила кисти" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="brushStrengthInput" Minimum="0.01" Maximum="1" Value="1" AutomationProperties.Name="Сила кисти"/>
+                        <TextBlock Text="Мягкость · 0 = пиксельная кисть" Style="{StaticResource MapLabel}" TextWrapping="Wrap"/>
+                        <Slider x:Name="softnessInput" Minimum="0" Maximum="1" Value="0" AutomationProperties.Name="Мягкость кисти"/>
+                        <TextBlock Text="Значение Height / AO · 0–1" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="valueInput" Minimum="0" Maximum="1" Value="0.5" AutomationProperties.Name="Значение Height или AO"/>
+                        <TextBlock Text="Направление нормали" Style="{StaticResource MapLabel}"/>
+                        <local:NormalDirectionPicker x:Name="directionPicker" HorizontalAlignment="Center" AutomationProperties.Name="Направление и наклон нормали" ToolTip="Выберите направление на полусфере. Стрелки — точная настройка, Home — плоская поверхность."/>
+                        <TextBlock x:Name="directionLabel" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource Ts.TextSecondary}"/>
+                        <WrapPanel Margin="0,14,0,0">
+                            <Button x:Name="undoButton" Content="↶" Click="UndoClicked" ToolTip="Отменить · Ctrl+Z" AutomationProperties.Name="Отменить" Margin="0,0,6,0"/>
+                            <Button x:Name="redoButton" Content="↷" Click="RedoClicked" ToolTip="Повторить · Ctrl+Y" AutomationProperties.Name="Повторить"/>
+                        </WrapPanel>
+                        <Separator Margin="0,15,0,0"/>
+                        <TextBlock Text="ГЕНЕРАЦИЯ ИЗ HEIGHT" FontWeight="SemiBold" Margin="0,12,0,0"/>
+                        <TextBlock Text="Сила рельефа Normal" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="normalStrengthInput" Minimum="0" Maximum="16" Value="4" ValueChanged="GenerationChanged" AutomationProperties.Name="Сила рельефа Normal"/>
+                        <TextBlock Text="Сила AO" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="aoStrengthInput" Minimum="0" Maximum="8" Value="2" ValueChanged="GenerationChanged" AutomationProperties.Name="Сила AO"/>
+                        <TextBlock Text="Радиус AO, px" Style="{StaticResource MapLabel}"/>
+                        <local:IntegerInput x:Name="aoRadiusInput" Minimum="1" Maximum="64" Value="8" AutomationProperties.Name="Радиус AO"/>
+                        <ComboBox x:Name="conventionInput" SelectedIndex="0" Margin="0,12,0,0" SelectionChanged="ConventionChanged" AutomationProperties.Name="Формат нормалей">
+                            <ComboBoxItem Content="DirectX · −Y"/><ComboBoxItem Content="OpenGL · +Y"/>
+                        </ComboBox>
+                        <Button x:Name="resetNormalButton" Content="Сбросить правки Normal" Click="ResetNormalClicked" Margin="0,14,0,6"/>
+                        <Button x:Name="resetAoButton" Content="Сбросить правки AO" Click="ResetAoClicked"/>
+                        <TextBlock Text="Начальная Height строится по яркости. AO оценивается по рельефу Height. Прозрачность исходника сохраняется." TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <WrapPanel x:Name="viewSettings" Margin="0,0,0,10">
+                    <TextBlock Text="Масштаб" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="zoomInput" Width="100" SelectedIndex="0" SelectionChanged="ViewChanged" AutomationProperties.Name="Масштаб карт">
+                        <ComboBoxItem Content="Вписать"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/>
+                    </ComboBox>
+                    <CheckBox x:Name="gridInput" Content="Сетка" IsChecked="True" Checked="ViewChanged" Unchecked="ViewChanged" Margin="12,0" VerticalAlignment="Center" ToolTip="Показывать пиксельную сетку при увеличении от 600%. Экспорт не меняется."/>
+                    <TextBlock Text="Подложка" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Slider x:Name="overlayInput" Width="110" Minimum="0" Maximum="0.8" Value="0" ValueChanged="ViewChanged" AutomationProperties.Name="Прозрачность подложки исходника"/>
+                </WrapPanel>
+                <UniformGrid Grid.Row="1" Columns="3">
+                    <Border x:Name="heightBorder" Style="{StaticResource MapPanel}"><DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="10,6"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="HEIGHT" VerticalAlignment="Center" FontWeight="SemiBold"/><Button Content="PNG" Tag="Height" Click="ExportMapClicked" Grid.Column="1" AutomationProperties.Name="Экспорт Height PNG"/>
+                        </Grid>
+                        <local:MaterialMapView x:Name="heightView" AutomationProperties.Name="Холст Height"/>
+                    </DockPanel></Border>
+                    <Border x:Name="normalBorder" Style="{StaticResource MapPanel}"><DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="10,6"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="NORMAL" VerticalAlignment="Center" FontWeight="SemiBold"/><Button Content="PNG" Tag="Normal" Click="ExportMapClicked" Grid.Column="1" AutomationProperties.Name="Экспорт Normal PNG"/>
+                        </Grid>
+                        <local:MaterialMapView x:Name="normalView" AutomationProperties.Name="Холст Normal"/>
+                    </DockPanel></Border>
+                    <Border x:Name="aoBorder" Style="{StaticResource MapPanel}" Margin="0"><DockPanel>
+                        <Grid DockPanel.Dock="Top" Margin="10,6"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="AO" VerticalAlignment="Center" FontWeight="SemiBold"/><Button Content="PNG" Tag="AO" Click="ExportMapClicked" Grid.Column="1" AutomationProperties.Name="Экспорт AO PNG"/>
+                        </Grid>
+                        <local:MaterialMapView x:Name="aoView" AutomationProperties.Name="Холст AO"/>
+                    </DockPanel></Border>
+                </UniformGrid>
+                <Border Grid.Row="3" Style="{StaticResource MapPanel}" Margin="0"><DockPanel>
+                    <WrapPanel DockPanel.Dock="Top" Margin="12,8">
+                        <TextBlock Text="ПРЕДПРОСМОТР" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <CheckBox x:Name="useNormalInput" Content="Normal" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="Учитывать нормали при освещении предпросмотра. Данные карты не меняются."/>
+                        <CheckBox x:Name="useAoInput" Content="AO" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="Учитывать AO в рассеянном освещении предпросмотра. Данные карты не меняются."/>
+                        <CheckBox x:Name="compareInput" Content="Исходник" Checked="LightingChanged" Unchecked="LightingChanged" ToolTip="Показать исходное изображение без освещения для сравнения. Экспорт карт не меняется."/>
+                        <TextBlock Text="Двигайте мышь над изображением — перемещайте свет" Foreground="{DynamicResource Ts.TextSecondary}" Margin="16,0,0,0" TextWrapping="Wrap"/>
+                    </WrapPanel>
+                    <local:MaterialMapView x:Name="litView" DrawingEnabled="False" AutomationProperties.Name="Предпросмотр освещения"/>
+                </DockPanel></Border>
+            </Grid>
+        </Grid>
+        <TextBlock x:Name="statusLabel" Grid.Row="2" Margin="0,12,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}"/>
+    </Grid>
+</Window>

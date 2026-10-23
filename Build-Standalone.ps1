@@ -104,6 +104,12 @@ cells. Each slice becomes an editable asset with its original pixels and
 alpha. Save slices in a .ttiles collection. Atlas imports are snapshots;
 later changes to the source atlas do not reload imported tiles.
 
+Open Height / Normal / AO maps from Tools while editing an image. Generate
+maps from the selected source or result, paint on each map and inspect the
+lighting by moving the preview light. Height edits update Normal and AO
+while retaining their manual edits. Save editable .tmaps projects or export
+the maps as transparent PNGs; Normal supports DirectX and OpenGL.
+
 Your library is in WorkspaceData/Library beside Tessera.exe.
 On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
 are copied there. The original library stays intact. Keep WorkspaceData

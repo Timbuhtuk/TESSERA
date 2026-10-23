@@ -38,7 +38,7 @@ Checks generate their own images and temporary libraries. They do not use the us
 Historical project and namespace names are retained:
 
 - `DomainColorTest`: WPF desktop application, including its embedded assets.
-- `DomainColorTest/Lib/Tessera.WpfStyles.dll`: checked-in shared WPF theme and fonts. Desktop and UI checks reference this assembly; keep it in the repository so clean CI builds can resolve it. Font license texts remain under `DomainColorTest/Assets/Fonts` and ship in the desktop archive.
+- `Tessera.WpfStyles` **0.1.0**: shared WPF theme, controls and fonts restored from [NuGet.org](https://www.nuget.org/packages/Tessera.WpfStyles/0.1.0) through `PackageReference` in the desktop and UI-check projects. Run `dotnet restore Pixelizator.sln` before building; no local style project or copied DLL is required. Theme/font pack URIs retain the `Tessera.WpfStyles` assembly name. Font license texts remain under `DomainColorTest/Assets/Fonts` and ship in the desktop archive. See [package migration verification](WPF_STYLES_NUGET_QA.md).
 - `PixelArtDownscale`: downscaling, quantization, palettes, sprites and [ICO export](../PixelArtDownscale/ICO.md).
 - `PixelArtAlignment`: [grid alignment and cell reduction](../PixelArtAlignment/README.md).
 - `PixelArtAseprite`: offline [Aseprite decoding and sprite sheet export](../PixelArtAseprite/README.md).
@@ -123,6 +123,14 @@ See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 `WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
 
 The tool-improvement checks run with `PixelArtAlignment.Tests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
+
+## Material-map editor
+
+The material-map editor is available under the image editor's Tools menu. `PixelArtDownscale/MaterialMapDocument.cs` owns luminance Height initialization, central-difference normalized normals, eight-direction/four-distance horizon AO and independent normal/AO masks. Canonical normals use +Y up; DirectX export flips only green. Color preview lighting runs in linear light and AO modulates its ambient term. Transparent neighbors are excluded and image edges do not wrap. This is a 2D height-field approximation, not geometry baking or AI depth estimation.
+
+`MaterialMapFile` stores versioned `.tmaps` ZIP files with a JSON header and lossless binary source/layers, validates dimensions and finite layer values, and replaces saves atomically. Stroke/reset/settings history is capped at 30 snapshots or approximately 128 MiB, retaining at least one action. `MaterialMapsWindow` provides the three paint surfaces, per-map reset, throttled preview light, source overlay, PNG/project persistence and source-path protection. It snapshots the selected source/result and holds one session per source/result, so switching assets cannot redirect existing strokes.
+
+Run `dotnet run --project PixelArtAlignment.Tests -c Release -- --material-maps` for the focused checks; they also run with `--ui` in the existing release pipeline. They exercise flat/gradient/cavity fields, dimensions and alpha, normal conventions, independent masks and resets, history, soft/interpolated strokes, project roundtrips, Tools entry, PNG source protection and wide/minimum WPF renders. Physical pointer interaction remains a separate desktop verification.
 
 ## Deferred ideas
 

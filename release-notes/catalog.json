@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Сохранение полупрозрачности",
-        "en": "Preserving partial transparency"
+        "ru": "Карты Height, Normal и AO",
+        "en": "Height, Normal and AO maps"
       },
       "notes": {
-        "ru": "- Изменение размера и обрезка: полупрозрачные пиксели сохраняют свою прозрачность и больше не исчезают из-за низкой непрозрачности.\n- Обработка цветов: квантование, палитры и дизеринг сохраняют полупрозрачность.\n- PNG и история: сохранённые результаты и увеличенный предпросмотр сохраняют альфа-канал, в том числе после повторного открытия.",
-        "en": "- Resize and crop: partially transparent pixels retain their opacity instead of disappearing because of low opacity.\n- Color processing: quantization, palettes and dithering preserve partial transparency.\n- PNG and history: saved results and enlarged previews retain alpha, including after reopening."
+        "ru": "- Карты материала: в меню «Инструменты» редактора ассета добавлен редактор Height, Normal и AO. Карты создаются автоматически при открытии изображения; на каждой можно рисовать кистью, пользоваться пипеткой, ластиком и отменой действий.\n- Height: изменение рельефа обновляет Normal и AO, сохраняя ручную доработку. Правки Normal и AO можно сбросить отдельно.\n- Предпросмотр карт: перемещайте свет мышью, включайте Normal и AO и сравнивайте с исходником. Доступны пиксельная сетка, масштаб и подложка исходного изображения.\n- Сохранение карт: экспортируйте PNG с исходной прозрачностью или сохраняйте редактируемый проект .tmaps. Для Normal доступны DirectX и OpenGL.",
+        "en": "- Material maps: the asset editor's Tools menu now opens a Height, Normal and AO editor. Maps are generated automatically when an image opens; paint on any map with a brush, eyedropper, eraser and undo.\n- Height: editing the relief updates Normal and AO while preserving manual work. Normal and AO edits can be reset separately.\n- Map preview: move the light with the mouse, toggle Normal and AO, and compare with the original. Pixel grid, zoom and source overlay are available.\n- Saving maps: export PNGs with source transparency or save an editable .tmaps project. Normal supports DirectX and OpenGL."
       }
     },
     {
