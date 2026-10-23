@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tessera"
+  short_description: "Все CLI-команды Тессеры для обработки изображений"
+  default_prompt: "Используй $tessera для обработки моих изображений через Tessera CLI."

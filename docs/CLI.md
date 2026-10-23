@@ -1,6 +1,6 @@
 # Tessera CLI reference
 
-The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). It downscales images, applies size and color operations independently, aligns pixel grids, removes solid backgrounds, exports ICO files and converts Aseprite animations to PNG sprite sheets with JSON metadata. Raster commands accept PNG, JPEG, BMP, GIF and TIFF; the animation command accepts .ase and .aseprite.
+The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). It downscales images, applies size and color operations independently, smooths local colors, creates monochrome and ASCII output, inspects and replaces colors, aligns pixel grids, removes solid backgrounds, exports ICO files and converts Aseprite animations to PNG sprite sheets with JSON metadata. Raster commands accept PNG, JPEG, BMP, GIF and TIFF; the animation command accepts .ase and .aseprite.
 
 Run these examples from the repository root after building; replace the sample input paths with your own:
 
@@ -13,6 +13,11 @@ Run these examples from the repository root after building; replace the sample i
 .\artifacts\cli\tessera.exe remove-background input.png -o transparent.png --mode edges --tolerance 8
 .\artifacts\cli\tessera.exe resize input.png -o smaller.png --width 32 --height 32
 .\artifacts\cli\tessera.exe colors smaller.png -o colored.png --palette db16
+.\artifacts\cli\tessera.exe smooth-colors colored.png -o smoothed.png --passes 2
+.\artifacts\cli\tessera.exe monochrome colored.png -o monochrome.png
+.\artifacts\cli\tessera.exe ascii colored.png -o colored.txt
+.\artifacts\cli\tessera.exe palette-info colored.png --json
+.\artifacts\cli\tessera.exe replace-color colored.png -o recolored.png --from "#000000" --to "#FFFFFF"
 .\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4
 ```
 
@@ -86,6 +91,26 @@ Both commands take one image file, including a result saved by an earlier CLI or
 .\artifacts\cli\tessera.exe colors sprite-small.png -o sprite-colored.png --palette db32 --quantization-colors 32
 ```
 
+## Current editor image tools
+
+`tessera colors` additionally accepts `--color-mode combined|quantization|palette`. `combined` preserves the earlier CLI pipeline; `quantization` and `palette` run only the corresponding editor stage. Palette-only mode rejects quantization settings, and quantization-only mode rejects palette and dithering settings.
+
+`tessera smooth-colors` (alias `smooth`) runs the editor's local 3×3 color cleanup without changing dimensions or alpha. `--passes` accepts 1–100. `--color-tolerance` accepts 0–40 (default 12); `--strength`, `--detail-protection` and `--edge-protection` accept 0–100 (defaults 65, 80 and 80). These match the current editor controls and accept decimal values with a dot. Zero tolerance or strength leaves the image unchanged.
+
+`tessera monochrome` (alias `mono`) converts visible pixels to grayscale while preserving size and alpha. `tessera replace-color` replaces one exact visible RGB color with another using `--from #RRGGBB` and `--to #RRGGBB`; source alpha is retained. `tessera palette-info` counts visible RGB colors and lists them when the image contains at most 1024 colors.
+
+`tessera ascii` saves text, a rendered PNG, or both. `--mode fit` chooses a character grid for the source dimensions and keeps those dimensions in rendered PNG; `--mode per-pixel` creates one character per source pixel. Choose `--preset standard|detailed|minimal|blocks` or supply `--characters`. `--invert-source` reverses brightness mapping and `--invert-render` draws black text on white.
+
+```powershell
+.\artifacts\cli\tessera.exe colors input.png -o quantized.png --color-mode quantization --quantization-colors 32
+.\artifacts\cli\tessera.exe smooth-colors input.png -o smoothed.png --passes 2 --color-tolerance 18 --strength 70 --detail-protection 80 --edge-protection 80
+.\artifacts\cli\tessera.exe monochrome input.png -o monochrome.png
+.\artifacts\cli\tessera.exe replace-color input.png -o recolored.png --from "#112233" --to "#AABBCC"
+.\artifacts\cli\tessera.exe palette-info input.png --json
+.\artifacts\cli\tessera.exe ascii input.png --text-output image.txt --image-output image-ascii.png --preset detailed
+```
+
+All image-producing commands save PNG, reject source overwrite, require `--overwrite` for existing results and support `--json`. ASCII text uses UTF-8 without a byte-order mark.
 ## Grid alignment
 
 `tessera align` preserves the canvas and chooses colors and alpha from the source. Output must be PNG and defaults to `<name>_aligned.png`.

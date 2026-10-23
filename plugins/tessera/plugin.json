@@ -1,0 +1,24 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "tessera",
+  "version": "1.1.0",
+  "description": "Use the local Tessera CLI with every supported image-processing command and option.",
+  "author": {
+    "name": "Timbuhtuk"
+  },
+  "repository": "https://github.com/Timbuhtuk/TESSERA",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Tessera",
+        "shortDescription": "Все CLI-возможности Тессеры из чата",
+        "longDescription": "Обработка изображений локальной Тессерой: пиксельная сетка, размер, палитры, очистка и замена цветов, монохром, ASCII, прозрачный фон, ICO и Aseprite. Все команды и параметры CLI доступны напрямую. Нужен доступ к компьютеру с Windows.",
+        "developerName": "Timbuhtuk",
+        "category": "Productivity",
+        "defaultPrompt": [
+          "Используй Тессеру для обработки моих изображений."
+        ]
+      }
+    }
+  }
+}
