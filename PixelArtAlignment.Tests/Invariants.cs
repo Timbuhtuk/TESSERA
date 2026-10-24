@@ -62,6 +62,7 @@ internal static class Invariants
             }
         Console.WriteLine($"DETECTION perfect grids: {correct}/{total}");
         Require(correct == total, "Automatic detection changes a known regular grid");
+        GridPhaseChecks.Run();
     }
 
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
