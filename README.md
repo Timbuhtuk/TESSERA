@@ -17,6 +17,7 @@ Today, Tessera brings the rest of that workflow together:
 - Smooth local color noise using neighboring pixels, inspect image palettes and replace individual colors while keeping transparency.
 - Convert images to monochrome or ASCII art, with text export and black-and-white image rendering.
 - Keep source images and a history of results in a local library.
+- Follow branching result histories, navigate project folders in the source tray and replay saved processing macros. See the [history and macros guide](docs/HISTORY_MACROS.md).
 - Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
 - Create Windows ICO files containing several icon sizes.
 - Arrange images on a layered moodboard, save an editable project and export the composition as PNG.

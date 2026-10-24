@@ -102,7 +102,7 @@ internal static class LibraryChecks
             Require(Get<ListBox>("sourceStrip").Items.Count == 2 && sources[0].Generations.Count == 2, "Duplicate import lost or duplicated history");
             Capture("library.png");
             window.Width = window.MinWidth; window.Height = window.MinHeight; Capture("library-minimum.png");
-            Require(Get<ListBox>("sourceStrip").ActualWidth > 350 && Get<ListBox>("generationStrip").ActualWidth > 350 && Get<PixelPreview>("resultPreview").ActualHeight >= 50, "Filmstrips hide previews at minimum size");
+            Require(Get<ListBox>("sourceStrip").ActualWidth >= 140 && Get<ListBox>("generationStrip").ActualWidth >= 140 && Get<PixelPreview>("resultPreview").ActualHeight >= 50, "Filmstrips hide previews at minimum size");
             second.Save(firstPath);
             Invoke("LoadImage", firstPath);
             Require(Get<ListBox>("sourceStrip").Items.Count == 3 && sources[0].Generations.Count == 2 && Get<PixelPreview>("resultPreview").Image is null, "Changed file did not create a separate source");

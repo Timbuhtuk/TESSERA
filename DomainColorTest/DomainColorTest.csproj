@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\PixelArtDownscale\PixelArtDownscale.csproj" />
     <ProjectReference Include="..\PixelArtAlignment\PixelArtAlignment.csproj" />
+    <ProjectReference Include="..\PixelArtWorkflows\PixelArtWorkflows.csproj" />
     <ProjectReference Include="..\PixelArtAseprite\PixelArtAseprite.csproj" />
   </ItemGroup>
 

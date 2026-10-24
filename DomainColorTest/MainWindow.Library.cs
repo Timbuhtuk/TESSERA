@@ -15,7 +15,8 @@ public partial class MainWindow
 
     private void InitializeLibrary()
     {
-        sourceStrip.ItemsSource = _sources;
+        sourceStrip.ItemsSource = _traySources;
+        RefreshSourceTray();
         sourceStrip.SelectionChanged += (_, _) =>
         {
             if (_restoringHistory || _processing || sourceStrip.SelectedItem is not SourceEntry source) return;
@@ -67,6 +68,7 @@ public partial class MainWindow
                 e.Handled = true;
                 return;
             }
+            if (HistoryDrop(e, commit: false)) return;
             bool supported = e.Data.GetDataPresent(GenerationDragFormat)
                 ? TryGetDraggedGeneration(e.Data, out _, out _) && IsSourceDropTarget(e.OriginalSource as DependencyObject)
                 : DropPaths(e).Any(IsSupportedImage);
@@ -76,6 +78,7 @@ public partial class MainWindow
         PreviewDrop += async (_, e) =>
         {
             if (_workspaceBrowser?.Visibility == Visibility.Visible) return;
+            if (HistoryDrop(e, commit: true)) return;
             e.Handled = true;
             if (_workspaceReady && !IsMoodboardDropTarget(e.OriginalSource as DependencyObject) && e.Data.GetData(DataFormats.FileDrop) is string[] workspacePaths)
             {
@@ -160,6 +163,7 @@ public partial class MainWindow
     private void SelectSource(SourceEntry source)
     {
         AdoptWorkspaceSource(source);
+        ChooseSourceFolder(source);
         if (ReferenceEquals(_activeSource, source)) { ShowEditor(); return; }
         var bitmap = ImageLibrary.ReadBitmap(_library.SourcePath(source));
         ShowEditor();
@@ -176,6 +180,7 @@ public partial class MainWindow
             sourceStrip.SelectedItem = source;
             sourceStrip.ScrollIntoView(source);
             generationStrip.ItemsSource = source.Generations;
+            ConfigureHistorySource(source);
             fileLabel.Text = source.Label;
             fileLabel.ToolTip = source.OriginalPath;
         }
@@ -208,7 +213,7 @@ public partial class MainWindow
     {
         if (_activeSource is null || !_activeSource.Generations.Contains(generation)) return;
         var output = ImageLibrary.ReadBitmap(_library.ResultPath(_activeSource, generation));
-        RestoreSettings(generation.Settings);
+        if (generation.OperationId != ProcessingOperations.Macro) RestoreSettings(generation.Settings);
         _restoringHistory = true;
         try
         {
@@ -251,7 +256,7 @@ public partial class MainWindow
         int index = _sources.IndexOf(source);
         if (index < 0) return;
         bool selected = ReferenceEquals(_activeSource, source);
-        var visible = sourceStrip.Items.Cast<SourceEntry>().ToList();
+        var visible = (_workspaceReady ? _workspaceSources : _sources).ToList();
         int visibleIndex = visible.IndexOf(source);
         var next = visible.Count <= 1 || visibleIndex < 0 ? null : visible[visibleIndex + 1 < visible.Count ? visibleIndex + 1 : visibleIndex - 1];
         _library.RemoveSource(source);
@@ -268,6 +273,8 @@ public partial class MainWindow
                 _selectedFilePath = null;
                 sourceStrip.SelectedItem = null;
                 generationStrip.ItemsSource = null;
+                if (_trayHistorySource is not null) _trayHistorySource.Generations.CollectionChanged -= HistoryChanged;
+                _trayHistorySource = null; RefreshHistoryLayout();
                 fileLabel.Text = Localization.Text("Откройте изображение");
                 fileLabel.ToolTip = null;
                 UpdateSourcePreview();

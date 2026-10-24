@@ -23,6 +23,7 @@ public partial class MaterialMapsWindow : Window
     private bool _ready, _allowClose, _closed;
     private string _name = "material";
     private BitmapSource? _source;
+    private MaterialMapDocument? _boundDocument;
     private MaterialMapSnapshot? _strokeBefore;
     private MaterialMapKind _strokeKind;
     private (int X, int Y)? _lastPoint;
@@ -37,6 +38,12 @@ public partial class MaterialMapsWindow : Window
     {
         InitializeComponent();
         Wire(heightView, MaterialMapKind.Height); Wire(normalView, MaterialMapKind.Normal); Wire(aoView, MaterialMapKind.AO);
+        foreach (var view in AllViews)
+        {
+            view.ZoomRequested += delta => zoomInput.SelectedIndex = Math.Clamp(zoomInput.SelectedIndex + delta, 0, zoomInput.Items.Count - 1);
+            view.Scrolled += SynchronizeScroll;
+            view.ViewportResized += QueueViewport;
+        }
         directionPicker.Changed += _ => UpdateDirection(); UpdateDirection();
         aoRadiusInput.ValueChanged += (_, _) => ScheduleGeneration();
         _generationTimer.Tick += async (_, _) => { _generationTimer.Stop(); await ApplyGenerationAsync(); };
@@ -93,6 +100,9 @@ public partial class MaterialMapsWindow : Window
         if (Document is null) return;
         _ready = false;
         _source = ToImage(Document.Source, Document.Width, Document.Height);
+        litView.LogicalSize = new Size(Document.Width, Document.Height);
+        if (!ReferenceEquals(_boundDocument, Document)) _viewCenter = new Point(Document.Width / 2.0, Document.Height / 2.0);
+        _boundDocument = Document;
         normalStrengthInput.Value = Document.NormalStrength; aoStrengthInput.Value = Document.AoStrength;
         aoRadiusInput.Value = Document.AoRadius; conventionInput.SelectedIndex = Document.DirectX ? 0 : 1;
         sourceLabel.Text = $"{_name} · {Document.Width} × {Document.Height}";
@@ -106,7 +116,6 @@ public partial class MaterialMapsWindow : Window
     {
         view.PaintRequested += (x, y, begin) => Paint(kind, x, y, begin);
         view.StrokeEnded += async () => await FinishStrokeAsync();
-        view.ZoomRequested += delta => zoomInput.SelectedIndex = Math.Clamp(zoomInput.SelectedIndex + delta, 0, zoomInput.Items.Count - 1);
     }
 
     private void Paint(MaterialMapKind kind, int x, int y, bool begin)
@@ -185,6 +194,7 @@ public partial class MaterialMapsWindow : Window
         if (Document is null || _closed) return;
         foreach (var kind in Enum.GetValues<MaterialMapKind>()) RefreshMap(kind);
         ApplyView(); RefreshLighting(); UpdateHistory();
+        ScheduleWorkspaceSave();
     }
     private void RefreshMap(MaterialMapKind kind)
     {
@@ -210,9 +220,9 @@ public partial class MaterialMapsWindow : Window
     {
         foreach (var view in MapViews)
         {
-            view.Zoom = zoomInput.SelectedIndex <= 0 ? 0 : Math.Pow(2, zoomInput.SelectedIndex - 1);
             view.ShowGrid = gridInput.IsChecked == true; view.OverlayOpacity = overlayInput.Value; view.Refresh();
         }
+        QueueViewport();
     }
     private void LightingChanged(object sender, RoutedEventArgs e) { if (_ready) RefreshLighting(); }
     private void UpdateDirection() => directionLabel.Text = $"X {directionPicker.Normal.X:0.00} · Y {directionPicker.Normal.Y:0.00} · Z {directionPicker.Normal.Z:0.00}";
@@ -250,6 +260,7 @@ public partial class MaterialMapsWindow : Window
         if (Document is null || IsBusy) return;
         FlushGeneration();
         ValidateExportPath?.Invoke(path);
+        if (_saveWorkspace is not null) SaveWorkspace(true);
         MaterialMapFile.Save(Document, path); ProjectPath = Path.GetFullPath(path); UpdateHistory();
         statusLabel.Text = Localization.Text("Проект карт сохранён: ") + ProjectPath;
     }
@@ -319,6 +330,7 @@ public partial class MaterialMapsWindow : Window
         foreach (var view in MapViews) view.FinishStroke();
         if (IsBusy) return false;
         FlushGeneration();
+        if (_saveWorkspace is not null) { SaveWorkspace(); return true; }
         if (Document?.HasChanges != true) return true;
         var answer = TesseraDialog.Show(this, Localization.Text("Сохранить проект карт с ручными слоями перед закрытием?"), "Tessera",
             MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
@@ -350,7 +362,7 @@ public partial class MaterialMapsWindow : Window
         if (e.Key != Key.S && Keyboard.FocusedElement is TextBoxBase) return;
         if (e.Key == Key.Z) History(false);
         else if (e.Key == Key.Y) History(true);
-        else if (e.Key == Key.S) Safely(() => { Focus(); if (ProjectPath is null) SaveProjectDialog(); else SaveProject(ProjectPath); });
+        else if (e.Key == Key.S) Safely(() => { Focus(); if (_saveWorkspace is not null) SaveWorkspace(); else if (ProjectPath is null) SaveProjectDialog(); else SaveProject(ProjectPath); });
         else return;
         e.Handled = true;
     }

@@ -18,7 +18,7 @@ Image size fields accept dimensions above 4K. Available memory and image codec s
 
 ### Height, Normal and ambient occlusion maps
 
-Open an image asset, choose its source or selected result under **Image → Process**, then use **Tools → Height / Normal / AO maps…**. The tool accepts the entire image at its original dimensions, including sprites and atlases, and automatically generates initial maps locally. The three paint canvases appear together above a lighting preview. Reopening Tools for the same source/result returns to its existing editing session.
+Open an image asset, choose its source or selected result under **Image → Process**, then use **Tools → Height / Normal / AO maps…**. The tool accepts the entire image at its original dimensions, including sprites and atlases, and automatically generates initial maps locally. Height and Normal occupy the top row of a 2×2 grid; AO and the lighting preview occupy the bottom row. All four panes share zoom, fit scale and horizontal/vertical scrolling. Ctrl+mouse wheel works over any pane, including the lighting preview.
 
 Initial Height uses image luminance; Normal follows its gradient, and AO estimates occlusion from neighboring heights. These are editable starting points rather than recovered 3D geometry. An atlas is processed as one image; cell boundaries are not inferred. Transparent pixels are excluded from relief sampling, and every exported map retains the source alpha.
 
@@ -28,7 +28,9 @@ Brush controls include pixel size, strength and softness (zero is a hard square 
 
 Move the mouse over the preview image to move the light. **Normal** and **AO** toggle their contribution; **Source** shows the original colors for comparison. Normal/AO editing leaves Height unchanged. Normal convention can be **DirectX −Y** or **OpenGL +Y** and applies to PNG output; normals are normalized when composited. When importing exported maps into a material system, use its non-color/data texture setting for Normal, AO and Height (see the [Blender normal-map manual](https://docs.blender.org/manual/en/latest/render/shader_nodes/vector/normal_map.html)).
 
-**Save project…** stores the original pixels, editable Height, both independent manual layers and generation settings in a portable **`.tmaps`** file. Open it from this tool with **Open project…**; the original image file is not needed. Closing checks unsaved edits. Individual **PNG** buttons export one current map; **Export maps…** writes `_height.png`, `_normal.png` and `_ao.png`. PNGs contain the flattened result; keep the project to continue editing the layers. Exports cannot overwrite an imported source or the internal Tessera library.
+The workspace creates `_height.png`, `_normal.png` and `_ao.png` assets alongside the source in the current project folder (or leaves them unassigned when the source has no project). Completed edits are saved automatically after a short idle period. **Return to asset**, closing the tool, and **File → Save project / Ctrl+S** also save pending work without a file dialog. Original pixels, editable Height, independent Normal/AO layers and generation settings stay inside the library. Opening Tools again from the source or any generated map restores the same editing session, including after restarting Tessera. A processed result has its own separate map session. Repeated edits update existing map assets rather than creating duplicates; independent copies remain ordinary image copies.
+
+Individual **PNG** buttons export one current map; **Export maps…** writes all three maps to an external location. PNGs contain the flattened result. Export remains optional and cannot overwrite an imported source or the internal Tessera library.
 
 Open images from **File → Open**, with Ctrl+O or by drag and drop. The home screen shows your library, image dimensions and result counts. Open a card to edit its source. The back arrow returns to the library; the layout adapts to narrower windows.
 

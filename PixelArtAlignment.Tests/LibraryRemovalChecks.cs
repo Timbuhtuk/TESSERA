@@ -45,7 +45,7 @@ internal static class LibraryRemovalChecks
             VerifyScroll(previewScroll, Orientation.Vertical);
             VerifyScroll(previewScroll, Orientation.Horizontal);
             VerifyScroll(Descendants<ScrollViewer>(sources).First(), Orientation.Horizontal);
-            VerifyScroll(Descendants<ScrollViewer>(generations).First(), Orientation.Horizontal);
+            VerifyScroll(Descendants<ScrollViewer>(generations).First(), Orientation.Vertical);
 
             NavigationTest.Click(window, "profileMenuItem"); Pump();
             var log = Get<TextBox>("processingLog");

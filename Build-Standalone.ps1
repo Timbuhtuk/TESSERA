@@ -29,7 +29,7 @@ try {
     if (!$SkipChecks) {
         & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
         Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --navigation --workspace --localization --ui --invariants
+        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants
         Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
     }
     Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
@@ -60,6 +60,17 @@ Choose any new color with the hue strip and color field, an image swatch,
 or HEX. The original stays intact.
 Zoom and preview background affect viewing only.
 File > Save exports one result; Save all results exports the current history.
+
+Result history now shows branches. Drag a branch to rearrange it without
+changing its processing origin. Resize the trays with their shared lower
+divider, or double-click it to switch between compact and expanded views.
+The source tray follows the current project's folders.
+
+Right-click a result and choose Create macro to save its supported steps.
+Tools > Macros lists saved macros, shows their steps and applies them to
+the selected source or result, saving one final result. Right-click a macro
+to rename or delete it. Esc or Cancel stops a run without a partial result.
+Saved macros can also be listed and applied through the CLI and chat skill.
 
 Filters offers monochrome conversion and ASCII art. Save ASCII as UTF-8 TXT
 or render an opaque black-and-white image into the history. Choose a preset

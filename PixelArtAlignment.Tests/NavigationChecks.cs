@@ -47,7 +47,7 @@ internal static class NavigationChecks
                 var menu = Get<Menu>("mainMenu");
                 Require(menu.Items.Count == 4 && Get<Border>("titleBar").ActualHeight == 40, "Top navigation is not a single title-bar row");
                 Require(Get<MenuItem>("fileMenu").Header.ToString() == (language == "en" ? "_File" : "_Файл"), "Navigation language is wrong");
-                Require(!Get<MenuItem>("imageMenu").IsEnabled && !Get<MenuItem>("saveDocumentMenuItem").IsEnabled, "Library exposes image/document actions without a material");
+                Require(!Get<MenuItem>("imageMenu").IsEnabled && Get<MenuItem>("saveDocumentMenuItem").IsEnabled, "Library must allow workspace saving without exposing image actions");
                 foreach (string removed in new[] { "editorToolbar", "toolNavigation", "compactToolNavigation", "operationSourceInput", "zoomInput", "backgroundInput", "fileMenuPopup" })
                     Require(window.FindName(removed) is null, "Old toolbar control remains: " + removed);
                 window.Browser!.Navigate("project", project.Id, leaf.Id);

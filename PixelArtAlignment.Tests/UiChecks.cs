@@ -225,8 +225,8 @@ internal static class UiChecks
             Click("moreMenu"); Click("infoMenuItem"); Pump();
             Require(Window.GetWindow(Get<TextBlock>("infoSourceSummary")) is { IsVisible: true }, "Narrow menu did not open Info");
             Window.GetWindow(Get<TextBlock>("infoSourceSummary"))!.Close();
-            Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("previewArea")) &&
-                Grid.GetRow(Get<Border>("sourceTray")) == 2, "Narrow editor did not return source history below previews");
+            Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("historyRow")) &&
+                Grid.GetColumn(Get<Border>("sourceTray")) == 2, "Narrow editor did not keep both history trays above previews");
             Require(Get<PixelPreview>("sourcePreview").TranslatePoint(new System.Windows.Point(), window).Y >
                 Get<PixelPreview>("resultPreview").TranslatePoint(new System.Windows.Point(), window).Y + 100,
                 "Narrow editor previews were not stacked");

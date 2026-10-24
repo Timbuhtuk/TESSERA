@@ -75,6 +75,8 @@ public partial class MainWindow
                 {
                     Settings = settings,
                     Operation = Localization.Text("Монохром"),
+                    OperationId = ProcessingOperations.Monochrome,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Monochrome }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = Localization.Format("МОНОХРОМ · {0} × {1}", output.Width, output.Height),
@@ -166,6 +168,8 @@ public partial class MainWindow
                 {
                     Settings = settings,
                     Operation = "ASCII",
+                    OperationId = ProcessingOperations.Ascii,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = new AsciiSettings { Characters = characters, KeepSourceSize = keepSourceSize, InvertSource = invertSource, InvertColors = invertRender } }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = false,
                     Caption = $"ASCII · {output.Width} × {output.Height}",

@@ -41,6 +41,8 @@ public partial class MainWindow : Window
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
+        InitializeHistoryTrays();
+        InitializeMacros();
         InitializeNavigation();
         InitializePreviewMode();
         InitializeWindowFrame();
@@ -240,7 +242,9 @@ public partial class MainWindow : Window
     private void UpdateSourcePreview()
     {
         sourcePreview.Image = _sourceImage;
-        sourceCaption.Text = _sourceImage is null ? Localization.Text("ИСХОДНИК") :
+        if (_workspaceCatalog?.State.Projects.FirstOrDefault(p => p.Id == _workspaceSourceProject) is { } project)
+            BuildSourceBreadcrumb(project);
+        else sourceCaption.Text = _sourceImage is null ? Localization.Text("ИСХОДНИК") :
             Localization.Format("ИСХОДНИК · {0} × {1}", _sourceImage.Width, _sourceImage.Height);
         UpdateComparisonPreview();
     }
@@ -283,6 +287,8 @@ public partial class MainWindow : Window
                     return _library.SaveGeneration(document, result.Downscaled, result.CroppedSource, new GenerationEntry
                     {
                         Settings = settings,
+                        OperationId = ProcessingOperations.Profile,
+                        AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Profile, Downscale = options }),
                         ParentGenerationId = parentId,
                         PreservesTransparency = options.SpriteMode || System.Drawing.Image.IsAlphaPixelFormat(result.Downscaled.PixelFormat),
                         Caption = Localization.Format("РЕЗУЛЬТАТ · {0} × {1} · {2}", result.Downscaled.Width, result.Downscaled.Height, mode),
@@ -308,7 +314,7 @@ public partial class MainWindow : Window
         _processing = processing;
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
-        if (_workspaceToolContent is not null) _workspaceToolContent.IsEnabled = !processing;
+        if (_workspaceToolContent is not null) _workspaceToolContent.IsEnabled = !processing || _macroCancellation is not null;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
         homeContent.IsEnabled = !processing;
@@ -525,6 +531,8 @@ public partial class MainWindow : Window
                 using var result = new PixelGridAligner().Align(source, options);
                 return _library.SaveGeneration(document, result.Aligned, null, new GenerationEntry
                 {
+                    OperationId = ProcessingOperations.Align,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Align, CellSize = options.CellSize }),
                     Settings = settings, IsAlignment = true, PreservesTransparency = true, CellSize = result.CellSize,
                     ParentGenerationId = parentId,
                     Caption = Localization.Format("ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px", result.Aligned.Width, result.Aligned.Height, result.CellSize),

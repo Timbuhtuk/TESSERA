@@ -52,9 +52,10 @@ def main():
     parser.add_argument("--cli", required=True, type=Path)
     parser.add_argument("--gui", type=Path, help="Optional desktop EXE to verify it is rejected without launching")
     parser.add_argument("--packages", type=Path, help="Directory containing the plugin and skill release ZIPs")
+    parser.add_argument("--launcher", type=Path, help="Optional installed skill launcher to verify instead of the source copy")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    launcher = root / "plugins" / "tessera" / "skills" / "tessera" / "scripts" / "tessera.py"
+    launcher = args.launcher.resolve() if args.launcher else root / "plugins" / "tessera" / "skills" / "tessera" / "scripts" / "tessera.py"
     directory = root / "artifacts" / "chatgpt-plugin" / ("checks-" + uuid.uuid4().hex)
     directory.mkdir(parents=True)
     executable = args.cli.resolve()
@@ -78,20 +79,35 @@ def main():
         print("PASS " + label, flush=True)
 
     # Byte-for-byte forwarding covers every canonical command and alias.
-    for command in (None, "align", "reduce-grid", "compact-grid", "resize", "colors",
-                    "smooth-colors", "smooth", "monochrome", "mono", "ascii", "palette-info",
-                    "replace-color", "remove-background", "remove-bg", "ico", "icon", "aseprite"):
-        arguments = [command, "--help"] if command else ["--help"]
+    helps = [[], ["align"], ["reduce-grid"], ["compact-grid"], ["resize"], ["colors"],
+             ["smooth-colors"], ["smooth"], ["monochrome"], ["mono"], ["ascii"], ["palette-info"],
+             ["replace-color"], ["remove-background"], ["remove-bg"], ["ico"], ["icon"], ["aseprite"],
+             ["macro"], ["macro", "list"], ["macro", "apply"]]
+    for command in helps:
+        arguments = [*command, "--help"]
         direct = process([str(executable), *arguments])
         wrapped = run(*arguments)
         assert (direct.stdout, direct.stderr) == (wrapped.stdout, wrapped.stderr)
-    check("help output preserved for all 18 commands and aliases")
+    check(f"help output preserved for all {len(helps)} commands, aliases and macro subcommands")
 
     process([*base, "--configure", str(executable)])
     located = json.loads(process([*base, "--locate"]).stdout)
     assert Path(located["executable"]) == executable
     assert process([*base, "--", "--version"]).stdout == process([str(executable), "--version"]).stdout
     check("saved executable works from a different working directory")
+
+    profile = directory / "profile"
+    user_settings = profile / "AppData" / "Local" / "Tessera" / "chatgpt-cli.json"
+    redirected = directory / "redirected-local"
+    redirected_settings = redirected / "Tessera" / "chatgpt-cli.json"
+    process([sys.executable, str(launcher), "--config", str(user_settings), "--configure", str(executable)])
+    redirected_env = {**environment, "LOCALAPPDATA": str(redirected), "USERPROFILE": str(profile)}
+    located = json.loads(process([sys.executable, str(launcher), "--locate"], env=redirected_env).stdout)
+    assert Path(located["source"]) == user_settings and Path(located["executable"]) == executable
+    process([sys.executable, str(launcher), "--config", str(redirected_settings), "--configure", str(executable)])
+    located = json.loads(process([sys.executable, str(launcher), "--locate"], env=redirected_env).stdout)
+    assert Path(located["source"]) == redirected_settings
+    check("redirected LOCALAPPDATA finds saved user settings and preserves local settings precedence")
 
     located = json.loads(process([*base, "--config", str(directory / "unused.json"), "--locate"], cwd=root).stdout)
     assert located["source"] == "discovery"
@@ -138,6 +154,71 @@ def main():
     assert dimensions(smoothed) == dimensions(monochrome) == dimensions(ascii_image) == dimensions(replaced) == (16, 16)
     assert ascii_text.read_text(encoding="utf-8") and palette["count"] > 0
     check("smoothing, monochrome, ASCII, palette inspection and color replacement")
+
+    library = directory / "библиотека ; & макросов"
+    macros = library / "macros"
+    macros.mkdir(parents=True)
+    macro_id = uuid.uuid4()
+    macro = {
+        "version": 1,
+        "id": str(macro_id),
+        "name": "Маленький монохром ; &",
+        "steps": [
+            {"operationId": "image.resize", "downscale": {"targetWidth": 8, "targetHeight": 8, "spriteMode": True}},
+            {"operationId": "filter.monochrome"}
+        ]
+    }
+    macro_file = macros / (macro_id.hex + ".json")
+    macro_file.write_text(json.dumps(macro, ensure_ascii=False, indent=2), encoding="utf-8")
+    macro_digest = hashlib.sha256(macro_file.read_bytes()).hexdigest()
+    (macros / "invalid.json").write_text("{", encoding="utf-8")
+    listed = json.loads(run("macro", "list", "--library", library, "--json").stdout)
+    assert listed["process"] == "macro-list" and Path(listed["macroDirectory"]) == macros
+    assert listed["count"] == 1 and listed["macros"][0]["id"] == str(macro_id)
+    assert listed["macros"][0]["name"] == macro["name"]
+    assert listed["macros"][0]["operations"] == [step["operationId"] for step in macro["steps"]]
+    assert len(listed["warnings"]) == 1 and "invalid.json" in listed["warnings"][0]
+    absent_library = directory / "absent-library"
+    empty = json.loads(run("macro", "list", "--library", absent_library, "--json").stdout)
+    assert empty["count"] == 0 and not absent_library.exists()
+    check("macro listing preserves Unicode metadata, reports bad files and leaves missing libraries untouched")
+
+    macro_output = directory / "макро ; & результат.png"
+    applied = json.loads(run("macro", "apply", source, "--macro", macro_file, "-o", macro_output, "--json").stdout)
+    assert applied["process"] == "macro-apply" and Path(applied["output"]) == macro_output
+    assert applied["macro"]["id"] == str(macro_id) and applied["macro"]["stepCount"] == 2
+    assert applied["outputSize"] == {"width": 8, "height": 8} and dimensions(macro_output) == (8, 8)
+    ordinary_resize = directory / "macro-ordinary-resize.png"
+    ordinary_result = directory / "macro-ordinary-result.png"
+    run("resize", source, "-o", ordinary_resize, "--width", "8", "--height", "8", "--sprite", "--json")
+    run("monochrome", ordinary_resize, "-o", ordinary_result, "--json")
+    assert macro_output.read_bytes() == ordinary_result.read_bytes()
+    assert hashlib.sha256(macro_file.read_bytes()).hexdigest() == macro_digest
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == digest
+    check("macro apply matches the ordinary resize and monochrome pipeline and preserves source and recipe")
+
+    run("macro", "apply", source, "--macro", macro_file, "-o", macro_output, expected=1)
+    run("macro", "apply", source, "--macro", macro_file, "-o", source, "--overwrite", expected=2)
+    run("macro", "apply", source, "--macro", macro_file, expected=2)
+    run("macro", "apply", source, "--macro", directory / "missing-macro.json",
+        "-o", directory / "missing-macro-output.png", expected=1)
+    run("macro", "apply", source, "--macro", macro_file, "-o", macro_output, "--overwrite", "--json")
+    assert macro_output.read_bytes() == ordinary_result.read_bytes()
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == digest
+    check("macro launcher preserves invalid-argument and file exit codes and overwrite protection")
+
+    for label, invalid in (
+        ("version", {**macro, "version": 2}),
+        ("operation", {**macro, "steps": [{"operationId": "filter.monochrome"}, {"operationId": "macro.apply"}]})
+    ):
+        invalid_file = directory / ("invalid-macro-" + label + ".json")
+        invalid_output = directory / ("invalid-macro-" + label + ".png")
+        invalid_file.write_text(json.dumps(invalid), encoding="utf-8")
+        failed = run("macro", "apply", source, "--macro", invalid_file, "-o", invalid_output, expected=1)
+        assert not invalid_output.exists()
+        if label == "operation":
+            assert b"Step 2" in failed.stderr and b"macro.apply" in failed.stderr
+    check("unsupported macro versions and nested operations fail without partial output")
 
     aligned = directory / "aligned.png"
     report = json.loads(run("align", source, "-o", aligned, "--cell-size", "4", "--rigid", "--json").stdout)
@@ -197,8 +278,10 @@ def main():
                 assert command in reference, (name, command)
             if "plugin" in name:
                 assert json.loads(archive.read("plugin.json"))["version"] == json.loads((root / "plugins/tessera/plugin.json").read_text(encoding="utf-8"))["version"]
+            macro_reference = reference_name.replace("cli.md", "macros.md")
+            assert archive.read(macro_reference) == (root / "plugins/tessera/skills/tessera/references/macros.md").read_bytes()
     check("both distributable archives are valid and contain the skill")
-    (directory / "report.json").write_text(json.dumps({"passed": passed, "cli": str(executable)},
+    (directory / "report.json").write_text(json.dumps({"passed": passed, "cli": str(executable), "launcher": str(launcher)},
                                                      ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{len(passed)} checks passed; evidence: {directory}")
 

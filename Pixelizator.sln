@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PixelArtAseprite", "PixelAr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PixelArtAseprite.Tests", "PixelArtAseprite.Tests\PixelArtAseprite.Tests.csproj", "{32BDE8E9-88D7-471A-8FF5-DF6B490E97D2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PixelArtWorkflows", "PixelArtWorkflows\PixelArtWorkflows.csproj", "{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{32BDE8E9-88D7-471A-8FF5-DF6B490E97D2}.Release|x64.Build.0 = Release|Any CPU
 		{32BDE8E9-88D7-471A-8FF5-DF6B490E97D2}.Release|x86.ActiveCfg = Release|Any CPU
 		{32BDE8E9-88D7-471A-8FF5-DF6B490E97D2}.Release|x86.Build.0 = Release|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Debug|x64.Build.0 = Debug|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Debug|x86.Build.0 = Debug|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Release|x64.ActiveCfg = Release|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Release|x64.Build.0 = Release|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Release|x86.ActiveCfg = Release|Any CPU
+		{0E88E078-B337-4A67-9ED8-BE69E9FC4EE2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

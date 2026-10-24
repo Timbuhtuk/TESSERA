@@ -53,7 +53,7 @@ public partial class MainWindow
                 var source = _sources.First(s => s.Id == reference.SourceId);
                 var generation = source.Generations.First(g => g.Id == reference.GenerationId);
                 var data = CreateGenerationDragData(source, generation);
-                DragDrop.DoDragDrop(origin, data, DragDropEffects.Copy);
+                DragDrop.DoDragDrop(origin, data, DragDropEffects.Copy | DragDropEffects.Move);
                 e.Handled = true;
             };
         }
@@ -118,6 +118,8 @@ public partial class MainWindow
                 using var compact = PixelGridReducer.Reduce(source, cellSize);
                 return _library.SaveGeneration(document, compact, null, new GenerationEntry
                 {
+                    OperationId = ProcessingOperations.Reduce,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Reduce, CellSize = cellSize, UsePreviousAlignment = parent?.IsAlignment == true && parent.Settings.DetectGrid }),
                     Settings = settings, IsGridReduction = true, PreservesTransparency = true,
                     ParentGenerationId = parent?.Id, CellSize = cellSize,
                     Caption = Localization.Format("СЕТКА В 1 px · {0} × {1} · из ячейки {2} px", compact.Width, compact.Height, cellSize),

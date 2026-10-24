@@ -91,7 +91,7 @@ public partial class MainWindow
         };
         foreach (var document in _workspaceCatalog.State.Assets.Where(a => a.Kind != WorkspaceAssetKind.Image)) UpdateDocumentPreview(document);
         _restoringHistory = true;
-        try { sourceStrip.ItemsSource = _workspaceSources; }
+        try { sourceStrip.ItemsSource = _traySources; }
         finally { _restoringHistory = false; }
         _workspaceReady = true; SynchronizeWorkspace(); ShowHome();
     }
@@ -241,7 +241,7 @@ public partial class MainWindow
             ShowBackgroundWorkspace(); backgroundWorkspace.SetImage(WorkspaceBasis(), asset.Name, WorkspaceBasisPath());
             backgroundWorkspace.EnableWorkspaceApply(async image =>
             {
-                using (image) SaveWorkspaceImageResult(image, Localization.Text("Удаление фона"), targetSource, parentId, settings);
+                using (image) SaveWorkspaceImageResult(image, Localization.Text("Удаление фона"), targetSource, parentId, settings, backgroundWorkspace.AutomaticRecipeStep, backgroundWorkspace.HasManualErasure);
                 ShowEditor(); await Task.CompletedTask;
             });
         }
@@ -268,10 +268,12 @@ public partial class MainWindow
 
     private Bitmap WorkspaceBasis() => ProcessingBasis == 1 && _downscaledResult is not null ? _downscaledResult : _sourceImage!;
     private string WorkspaceBasisPath() => ProcessingBasis == 1 && _activeSource!.SelectedGeneration is { } selected ? _library.ResultPath(_activeSource, selected) : _library.SourcePath(_activeSource!);
-    private void SaveWorkspaceImageResult(Bitmap result, string operation, SourceEntry target, Guid? parentId, EditorSettings settings)
+    private void SaveWorkspaceImageResult(Bitmap result, string operation, SourceEntry target, Guid? parentId, EditorSettings settings, ProcessingStep? step = null, bool manual = false)
     {
         if (!_sources.Contains(target)) throw new InvalidOperationException(Localization.Text("Исходный ассет больше не доступен."));
-        var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = parentId, PreservesTransparency = true, Settings = settings });
+        var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = parentId, PreservesTransparency = true, Settings = settings,
+            OperationId = manual ? "manual.erase" : step?.OperationId, AppliedRecipe = step is null || manual ? null : HistoryRecipes.Single(step),
+            RecipeUnavailableReason = manual ? Localization.Text("Цепочка содержит ручной ластик. Этот шаг нельзя воспроизвести макросом.") : step is null ? Localization.Text("Параметры операции не сохранены.") : null });
         target.Generations.Add(entry); target.SelectedGeneration = entry;
         if (target == _activeSource) { SelectGeneration(entry); ProcessingBasis = 1; }
         SynchronizeWorkspace();
@@ -377,6 +379,7 @@ public partial class MainWindow
     private void PersistWorkspaceState()
     {
         if (!_workspaceReady || _workspaceCatalog is null) return;
+        foreach (var window in _materialMapWindows.Values.ToArray()) window.SaveWorkspace();
         if (_workspaceActive is { Kind: WorkspaceAssetKind.Animation } animation && asepriteWorkspace.Visibility == Visibility.Visible)
         {
             asepriteWorkspace.CaptureWorkspaceSettings(animation);
@@ -430,14 +433,14 @@ public partial class MainWindow
         var links = _workspaceCatalog.State.Links;
         var members = links.Where(l => _workspaceSourceProject is null || l.ProjectId == _workspaceSourceProject).Select(l => l.AssetId).ToHashSet();
         var sources = _sources.Where(s => _workspaceSourceProject is not null ? members.Contains(s.Id) : !_workspaceSourcesUnassigned || !members.Contains(s.Id)).ToArray();
-        if (_workspaceSources.SequenceEqual(sources)) return;
+        if (_workspaceSources.SequenceEqual(sources)) { RefreshSourceTray(); return; }
         bool restoring = _restoringHistory;
         _restoringHistory = true;
         try
         {
             _workspaceSources.Clear();
             foreach (var source in sources) _workspaceSources.Add(source);
-            sourceStrip.SelectedItem = _workspaceSources.Contains(_activeSource!) ? _activeSource : null;
+            RefreshSourceTray();
         }
         finally { _restoringHistory = restoring; }
     }

@@ -331,6 +331,8 @@ public partial class MainWindow
                 {
                     Settings = settings,
                     Operation = Localization.Text("Замена цвета"),
+                    OperationId = ProcessingOperations.ReplaceColor,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.ReplaceColor, ColorReplacement = new ColorReplacementSettings { FromArgb = oldColor.ToArgb(), ToArgb = newColor.ToArgb() } }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = Localization.Format("ЗАМЕНА ЦВЕТА · {0} × {1}", output.Width, output.Height),
