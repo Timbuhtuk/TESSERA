@@ -221,14 +221,44 @@ public sealed class PixelGridAligner
     private static double[] LocalPhases(double[] profile, double[] nominal, double phase, int pitch)
     {
         var result = (double[])nominal.Clone();
-        if (profile.Max() < .01) return result;
+        if (result.Length <= 2 || profile.Max() < .01) return result;
+        // Background noise must not seed a phase path before the actual contour.
+        // With no coherent periodic evidence, retain the preceding strip's geometry.
+        if (PhaseConfidence(profile, pitch) < .1) return result;
+        var measured = new double[result.Length - 2];
+        bool initial = true;
         for (int i = 1; i < result.Length - 1; i++)
         {
-            double reference = nominal[i] - i * pitch;
-            double measured = Phase(profile, pitch, nominal[i]);
-            double offset = Unwrap(measured, reference, pitch);
-            if (Math.Abs(offset - phase) > pitch * .7) offset = Unwrap(measured, phase, pitch);
-            result[i] = i * pitch + offset;
+            measured[i - 1] = Phase(profile, pitch, nominal[i]);
+            if (Math.Abs(nominal[i] - i * pitch - phase) >= 1e-8) initial = false;
+        }
+
+        // At half a period either branch is equally plausible. Bootstrap from the
+        // other end only near that ambiguity, before a local path has been established.
+        double left = nominal[1] - pitch, right = nominal[^2] - (result.Length - 2) * pitch;
+        double leftDistance = Math.Abs(Unwrap(measured[0], left, pitch) - left);
+        double rightDistance = Math.Abs(Unwrap(measured[^1], right, pitch) - right);
+        bool reverse = initial && leftDistance >= pitch * .49 && rightDistance < leftDistance;
+        int start = reverse ? result.Length - 2 : 1;
+        for (int pass = 0; pass < 2; pass++)
+        {
+            bool saturated = true;
+            double reference = pass == 0 ? nominal[start] - start * pitch : phase;
+            for (int q = 0; q < measured.Length; q++)
+            {
+                int i = reverse ? start - q : start + q;
+                // Unwrap against the adjacent boundary in this strip. Independent
+                // branches can turn a 5 px source cell into a 1 px or 10 px cell.
+                double offset = Unwrap(measured[i - 1], reference, pitch);
+                // Limit drift without wrapping back by a whole cell at the limit.
+                double clipped = Math.Clamp(offset, phase - pitch * .7, phase + pitch * .7);
+                if (offset == clipped) saturated = false;
+                result[i] = i * pitch + clipped;
+                reference = clipped;
+            }
+            // A completely saturated strip has no measured phase supporting its
+            // inherited branch. Retry from the global phase instead of locking there.
+            if (!saturated) break;
         }
         OrderBoundaries(result, pitch);
         return result;
