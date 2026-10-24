@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Сетка и сохранение контура",
-        "en": "Grid alignment and contour preservation"
+        "ru": "Уведомления об обновлениях",
+        "en": "Update notifications"
       },
       "notes": {
-        "ru": "- Сетка: исправлено смещение отдельных ячеек при выравнивании искажённого пиксель-арта. Тонкие тёмные контуры и мелкие детали лучше сохраняются, в том числе на изображениях с шумом. Изменение действует при автоматическом и ручном выборе размера ячейки.",
-        "en": "- Grid alignment: corrected shifts of individual cells when straightening distorted pixel art. Thin dark outlines and small details are better preserved, including in noisy images. This applies with both automatic and manually selected cell sizes."
+        "ru": "- Обновления: Tessera проверяет новые версии при запуске и раз в 6 часов. Если версия доступна, появляется окно с предложением обновиться или отложить обновление.\n- Уведомления: предложение ждёт окончания обработки и закрытия других окон. После «Позже» та же версия не предлагается повторно до перезапуска; отсутствие интернета не прерывает работу.",
+        "en": "- Updates: Tessera checks for new versions at startup and every 6 hours. When a version is available, a dialog offers to update or postpone it.\n- Notifications: the offer waits for processing to finish and other windows to close. Choosing Later suppresses the same version until restart; being offline does not interrupt your work."
       }
     },
     {

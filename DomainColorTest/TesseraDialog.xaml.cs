@@ -11,7 +11,7 @@ public partial class TesseraDialog : Window
     public MessageBoxResult Result { get; private set; } = MessageBoxResult.None;
 
     public TesseraDialog(string message, string title, MessageBoxButton buttons = MessageBoxButton.OK,
-        MessageBoxImage image = MessageBoxImage.None)
+        MessageBoxImage image = MessageBoxImage.None, string? affirmativeText = null, string? negativeText = null)
     {
         InitializeComponent();
         _buttons = buttons;
@@ -19,13 +19,14 @@ public partial class TesseraDialog : Window
         dialogTitle.Text = title;
         dialogMessage.Text = message;
         MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 40);
-        BuildButtons(buttons);
+        BuildButtons(buttons, affirmativeText, negativeText);
     }
 
     public static MessageBoxResult Show(Window? owner, string message, string title,
-        MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.None)
+        MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.None,
+        string? affirmativeText = null, string? negativeText = null)
     {
-        var dialog = new TesseraDialog(message, title, buttons, image);
+        var dialog = new TesseraDialog(message, title, buttons, image, affirmativeText, negativeText);
         if (owner is { IsVisible: true }) dialog.Owner = owner;
         dialog.ShowDialog();
         return dialog.Result;
@@ -35,11 +36,11 @@ public partial class TesseraDialog : Window
         MessageBoxButton buttons = MessageBoxButton.OK, MessageBoxImage image = MessageBoxImage.None) =>
         Show(Application.Current?.MainWindow, message, title, buttons, image);
 
-    private void BuildButtons(MessageBoxButton buttons)
+    private void BuildButtons(MessageBoxButton buttons, string? affirmativeText, string? negativeText)
     {
         if (buttons is MessageBoxButton.OK or MessageBoxButton.OKCancel) AddButton(Localization.Text("ОК"), MessageBoxResult.OK, true, false);
-        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton(Localization.Text("Да"), MessageBoxResult.Yes, true, false);
-        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton(Localization.Text("Нет"), MessageBoxResult.No, false, buttons == MessageBoxButton.YesNo);
+        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton(affirmativeText ?? Localization.Text("Да"), MessageBoxResult.Yes, true, false);
+        if (buttons is MessageBoxButton.YesNo or MessageBoxButton.YesNoCancel) AddButton(negativeText ?? Localization.Text("Нет"), MessageBoxResult.No, false, buttons == MessageBoxButton.YesNo);
         if (buttons is MessageBoxButton.OKCancel or MessageBoxButton.YesNoCancel) AddButton(Localization.Text("Отмена"), MessageBoxResult.Cancel, false, true);
     }
 

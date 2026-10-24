@@ -126,8 +126,10 @@ On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
 are copied there. The original library stays intact. Keep WorkspaceData
 when moving the app to another folder or computer.
 
-Tessera checks GitHub Releases for updates at startup. Use Settings > General > Updates
-to check manually and install a newer version. Your library remains in place.
+Tessera checks GitHub Releases at startup and every six hours. A newer version
+offers Update or Later after processing and other dialogs finish. Later hides
+that version until restart. Use Settings > General > Updates to check or retry
+manually. Downloads and installation require confirmation; your library stays.
 Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
 
 Each new version shows its patch notes on first launch. Read the bundled

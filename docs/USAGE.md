@@ -120,7 +120,9 @@ Open **Image board** from the home screen and choose a canvas size from 128 to 1
 
 The workspace library is saved automatically in `WorkspaceData/Library` beside `Tessera.exe`. On first launch, existing images and histories from `%LOCALAPPDATA%\Tessera\Library` are copied into it. The original library remains intact. Move the entire `WorkspaceData` directory with the executable to retain projects, tags, documents and histories.
 
-Tessera checks the latest GitHub release in the background at startup. Open the title-bar gear and use **Settings → Updates → Check for updates** to check manually. When a newer version is available, select **Update to v…** and confirm. Tessera downloads the standalone executable, verifies its SHA-256 digest, closes, replaces the executable and restarts. `WorkspaceData` stays in place. The automatic install is available when running the published `Tessera.exe` from a writable folder; development builds open the release page instead. If a check fails or you are offline, the current app keeps working.
+Tessera checks the latest GitHub release in the background at startup and every six hours while running. When a newer version is available, a modal offers **Update** or **Later**. It waits for processing/import to finish, other windows (including first-launch patch notes) to close, and the main window to become active. **Later**, Escape or closing the offer suppresses that version for the rest of the session; another newer version can still be offered. Offline checks and checks with no new release stay silent.
+
+Open the title-bar gear and use **Settings → General → Updates** to check or retry manually, including after choosing Later. Only after confirmation does Tessera download the standalone executable, verify its SHA-256 digest, close, replace the executable and restart. `WorkspaceData` stays in place. The install is available when running the published `Tessera.exe` from a writable folder; development builds offer to open the release page instead.
 
 For more detail, see [grid alignment](../PixelArtAlignment/README.md), [ICO export](../PixelArtDownscale/ICO.md) and the [CLI reference](CLI.md).
 

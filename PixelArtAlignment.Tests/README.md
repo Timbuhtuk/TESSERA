@@ -47,7 +47,7 @@ WPF checks run alignment and downscaling independently and compare the latter wi
 
 Export regressions protect imported files across workspaces and the internal library, reject incorrect extensions, and retain protection for removed tiles after reopening a collection. UI checks also cover tool closure during hover, mouse capture and keyboard navigation in the material picker, and retaining ready Aseprite results when a rebuild is canceled. Window-state checks wait for Windows state changes and layout to finish before checking the original dimensions.
 
-Update UI checks use a substitute helper to verify that processing and canceled close guards prevent installation, failed launches keep the window open, and an accepted close starts exactly one helper. They do not install a release.
+Update checks: `--updates` (also included in `--ui`) covers startup and the six-hour schedule, concurrent requests, offline/current-version silence, late responses after closure, deferred modal offers, decline, suppression of the same version, a newer version, manual retry and RU/EN labels. A substitute helper verifies that processing and canceled close guards prevent installation, failed launches keep the window open, and an accepted close starts exactly one helper. These checks do not download or install a release. Native preview scope is recorded in [automatic-update QA](../docs/AUTOMATIC_UPDATES_QA_2026-10-24.md).
 
 `--info` (also included in `--ui`) opens the real workspace editor and verifies docked source/result metadata, exact palette replacement with partial alpha, history parentage, direct replacement-menu entry, basis and asset switches, stale-dialog closure, grayscale details, English text, narrow layout and floating-tool compatibility.
 

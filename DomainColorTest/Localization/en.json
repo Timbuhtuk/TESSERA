@@ -1095,5 +1095,10 @@
   "Дождитесь обновления карт.": "Wait for the maps to finish updating.",
   "Карты и ручные слои сохранены в рабочем пространстве.": "Maps and manual layers saved to the workspace.",
   "Сохранить проект": "Save project",
-  "Проект сохранён.": "Project saved."
+  "Проект сохранён.": "Project saved.",
+  "Доступна Tessera {0}. Скачать обновление и перезапустить приложение? История изображений сохранится.": "Tessera {0} is available. Download the update and restart? Image history will be preserved.",
+  "Доступна Tessera {0}. Открыть страницу релиза для скачивания?": "Tessera {0} is available. Open the release page to download it?",
+  "Обновить": "Update",
+  "Открыть релиз": "Open release",
+  "Позже": "Later"
 }
