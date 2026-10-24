@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Карты Height, Normal и AO",
-        "en": "Height, Normal and AO maps"
+        "ru": "Заливка и полупрозрачная кисть для тайлов",
+        "en": "Tile fills and translucent painting"
       },
       "notes": {
-        "ru": "- Карты материала: в меню «Инструменты» редактора ассета добавлен редактор Height, Normal и AO. Карты создаются автоматически при открытии изображения; на каждой можно рисовать кистью, пользоваться пипеткой, ластиком и отменой действий.\n- Height: изменение рельефа обновляет Normal и AO, сохраняя ручную доработку. Правки Normal и AO можно сбросить отдельно.\n- Предпросмотр карт: перемещайте свет мышью, включайте Normal и AO и сравнивайте с исходником. Доступны пиксельная сетка, масштаб и подложка исходного изображения.\n- Сохранение карт: экспортируйте PNG с исходной прозрачностью или сохраняйте редактируемый проект .tmaps. Для Normal доступны DirectX и OpenGL.",
-        "en": "- Material maps: the asset editor's Tools menu now opens a Height, Normal and AO editor. Maps are generated automatically when an image opens; paint on any map with a brush, eyedropper, eraser and undo.\n- Height: editing the relief updates Normal and AO while preserving manual work. Normal and AO edits can be reset separately.\n- Map preview: move the light with the mouse, toggle Normal and AO, and compare with the original. Pixel grid, zoom and source overlay are available.\n- Saving maps: export PNGs with source transparency or save an editable .tmaps project. Normal supports DirectX and OpenGL."
+        "ru": "- Проверка тайлинга: добавлены заливка связанной области одного цвета и заливка всего выбранного тайла A или B.\n- Кисть и заливка: регулируйте непрозрачность от 0 до 100%, чтобы накладывать цвет поверх рисунка и сохранять различия тонов. Один мазок ложится равномерно, повторный усиливает цвет.\n- Проекты тайлов: непрозрачность краски сохраняется в .ttiles; заливка отменяется и повторяется одним действием.",
+        "en": "- Tile inspector: added flood fill for connected areas of the same color and whole-tile fill for the A or B tile you click.\n- Pencil and fills: adjust opacity from 0 to 100% to overlay color while retaining the image's tone differences. Each stroke applies evenly; another stroke strengthens the color.\n- Tile projects: paint opacity is saved in .ttiles; fills can be undone and redone in one step."
       }
     },
     {

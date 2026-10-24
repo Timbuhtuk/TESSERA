@@ -145,8 +145,9 @@
                     <Expander x:Name="editTools" Header="{local:Translate Text9F81FCFA59FF}" IsExpanded="True">
                     <ScrollViewer x:Name="editScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="0,8,0,0">
                         <WrapPanel>
-                            <ComboBox x:Name="paintToolInput" Width="140" SelectedIndex="0" SelectionChanged="PaintToolChanged" Margin="0,0,8,6" AutomationProperties.Name="{local:Translate Text24C8F471724E}">
+                            <ComboBox x:Name="paintToolInput" Width="155" SelectedIndex="0" SelectionChanged="PaintToolChanged" Margin="0,0,8,6" AutomationProperties.Name="{local:Translate Text24C8F471724E}" ToolTip="{local:Translate TextA8F185DCD915}">
                                 <ComboBoxItem Content="{local:Translate TextF1163738DEB5}"/><ComboBoxItem Content="{local:Translate TextB46D14555E56}"/><ComboBoxItem Content="{local:Translate Text04483A5A1D40}"/><ComboBoxItem Content="{local:Translate TextEB02CFD27F3C}"/>
+                                <ComboBoxItem Content="{local:Translate TextFA1B346D3CB4}"/><ComboBoxItem Content="{local:Translate Text4101A2371ECD}"/>
                             </ComboBox>
                             <TextBox x:Name="paintColorInput" Text="#FFFFFFFF" Width="105" MaxLength="9" Margin="0,0,6,6" AutomationProperties.Name="{local:Translate Text71C13BF9C31A}" ToolTip="{local:Translate Text172CD817B7D7}"/>
                             <Button Content="{local:Translate Text8B26B347A8C6}" Click="ChoosePaintColor" Margin="0,0,8,6"/>
@@ -155,6 +156,11 @@
                             </ComboBox>
                             <Button x:Name="undoButton" Content="↶" Click="UndoClicked" IsEnabled="False" ToolTip="{local:Translate Text0273B95E0EE7}" AutomationProperties.Name="{local:Translate TextDFC4A6452FC1}" Margin="0,0,4,6"/>
                             <Button x:Name="redoButton" Content="↷" Click="RedoClicked" IsEnabled="False" ToolTip="{local:Translate Text3A8599BD655F}" AutomationProperties.Name="{local:Translate Text12D5AB1441BA}" Margin="0,0,0,6"/>
+                        </WrapPanel>
+                        <WrapPanel>
+                            <TextBlock Text="{local:Translate Text2675EE6D8A44}" VerticalAlignment="Center" Margin="0,0,8,6"/>
+                            <Slider x:Name="paintOpacityInput" Minimum="0" Maximum="100" Value="100" TickFrequency="1" IsSnapToTickEnabled="True" SmallChange="1" LargeChange="10" Width="130" VerticalAlignment="Center" Margin="0,0,8,6" ValueChanged="PaintOpacityChanged" AutomationProperties.Name="{local:Translate Text2675EE6D8A44}" ToolTip="{local:Translate TextAAA8E5240BD0}"/>
+                            <TextBlock Text="{Binding Value, ElementName=paintOpacityInput, StringFormat={}{0:0}%}" MinWidth="42" VerticalAlignment="Center" Margin="0,0,0,6"/>
                         </WrapPanel>
                         <WrapPanel>
                             <TextBlock Text="{local:Translate Text32E3B1F59D75}" VerticalAlignment="Center" Margin="0,0,8,4"/>

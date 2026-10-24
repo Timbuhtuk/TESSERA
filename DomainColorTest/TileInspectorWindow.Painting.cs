@@ -13,6 +13,7 @@ public partial class TileInspectorWindow
     private TilePointer? _strokeStart, _lastPoint;
     private Color _strokeColor;
     private int _strokeSize;
+    private bool _strokeErase;
 
     private void InitializePainting()
     {
@@ -48,15 +49,25 @@ public partial class TileInspectorWindow
         if (begin)
         {
             FinishStroke();
-            if (paintToolInput.SelectedIndex == 2) _strokeColor = Colors.Transparent;
+            _strokeErase = paintToolInput.SelectedIndex == 2;
+            if (_strokeErase) _strokeColor = Colors.Transparent;
             else if (!TryColor(paintColorInput.Text, out _strokeColor)) { statusLabel.Text = Localization.Text("Введите цвет #RRGGBB или #AARRGGBB."); return; }
+            _strokeColor.A = (byte)Math.Round(_strokeColor.A * paintOpacityInput.Value / 100);
+            if (paintToolInput.SelectedIndex is 4 or 5)
+            {
+                if (target.Fill(point.X, point.Y, _strokeColor, paintToolInput.SelectedIndex == 5))
+                {
+                    _historyAsset = target; SetProjectDirty(); UpdateAnalysis(); UpdateEditControls();
+                }
+                return;
+            }
             _strokeAsset = target; _strokeBefore = target.Capture();
             _strokeStart = _lastPoint = point;
             _strokeSize = brushSizeInput.SelectedIndex == 1 ? 2 : brushSizeInput.SelectedIndex == 2 ? 4 : 1;
         }
         // A stroke stays on the copy where it began; crossing a seam cannot paint a different asset.
         if (_strokeAsset != target || _strokeStart is null || point.Column != _strokeStart.Column || point.Row != _strokeStart.Row) return;
-        target.PaintLine(_lastPoint!.X, _lastPoint.Y, point.X, point.Y, _strokeColor, _strokeSize);
+        target.PaintLine(_lastPoint!.X, _lastPoint.Y, point.X, point.Y, _strokeColor, _strokeSize, _strokeBefore, _strokeErase);
         _lastPoint = point; _historyAsset = target;
         UpdateAnalysis();
     }
@@ -81,6 +92,8 @@ public partial class TileInspectorWindow
         reloadButton.IsEnabled = !_busy && ActiveAsset?.SourcePath is not null;
         assetList.IsEnabled = companionInput.IsEnabled = !_busy;
         paintToolInput.IsEnabled = !_busy;
+        paintOpacityInput.IsEnabled = !_busy && paintToolInput.SelectedIndex is 1 or 4 or 5;
+        brushSizeInput.IsEnabled = !_busy && paintToolInput.SelectedIndex is 1 or 2;
         preview.EditingEnabled = !_busy && paintToolInput.SelectedIndex > 0;
         preview.Cursor = preview.EditingEnabled ? Cursors.Cross : Cursors.Arrow;
         undoButton.ToolTip = Localization.Format("Отменить: {0} (Ctrl+Z)", history?.Name ?? Localization.Text("тайл"));
@@ -107,6 +120,11 @@ public partial class TileInspectorWindow
     {
         if (!_ready) return;
         FinishStroke(); UpdateEditControls();
+    }
+    private void PaintOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_ready) return;
+        FinishStroke(); SetProjectDirty();
     }
     private void ChoosePaintColor(object sender, RoutedEventArgs e)
     {

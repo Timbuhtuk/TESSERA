@@ -111,10 +111,13 @@ public sealed class TileAsset : INotifyPropertyChanged
     }
 
     // Bresenham connects mouse samples without gaps; coordinates are source pixels.
-    public void PaintLine(int x0, int y0, int x1, int y1, Color color, int size)
+    public void PaintLine(int x0, int y0, int x1, int y1, Color color, int size, TileEditSnapshot? before = null, bool erase = false)
     {
         if (size is < 1 or > 32 || x0 < 0 || x0 >= Width || x1 < 0 || x1 >= Width || y0 < 0 || y0 >= Height || y1 < 0 || y1 >= Height)
             throw new ArgumentOutOfRangeException(nameof(size), Localization.Text("Координаты должны быть внутри тайла; размер кисти — 1–32."));
+        if (!erase && color.A == 0) return;
+        byte[] source = before?.Pixels ?? (byte[])Pixels.Clone();
+        if (source.Length != Pixels.Length) throw new ArgumentException("Snapshot dimensions do not match.", nameof(before));
         int dx = Math.Abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
         int dy = -Math.Abs(y1 - y0), sy = y0 < y1 ? 1 : -1, error = dx + dy;
         while (true)
@@ -126,7 +129,8 @@ public sealed class TileAsset : INotifyPropertyChanged
                     int x = x0 + f, y = y0 + e;
                     if (x < 0 || y < 0 || x >= Width || y >= Height) continue;
                     int q = (y * Width + x) * 4;
-                    Pixels[q] = color.B; Pixels[q + 1] = color.G; Pixels[q + 2] = color.R; Pixels[q + 3] = color.A;
+                    if (erase) Array.Clear(Pixels, q, 4);
+                    else BlendPixel(q, color, source);
                 }
             if (x0 == x1 && y0 == y1) break;
             int twice = error * 2;
@@ -134,6 +138,61 @@ public sealed class TileAsset : INotifyPropertyChanged
             if (twice <= dx) { error += dx; y0 += sy; }
         }
         Version++; UpdateImage();
+    }
+
+    public bool Fill(int x, int y, Color color, bool entireTile = false)
+    {
+        if (x < 0 || x >= Width || y < 0 || y >= Height) throw new ArgumentOutOfRangeException(nameof(x));
+        if (color.A == 0) return false;
+        var before = Capture();
+        if (entireTile)
+        {
+            for (int q = 0; q < Pixels.Length; q += 4) BlendPixel(q, color, before.Pixels);
+        }
+        else
+        {
+            int seed = (y * Width + x) * 4;
+            var visited = new System.Collections.BitArray(Width * Height);
+            var pending = new Stack<int>();
+            Add(x, y);
+            while (pending.Count > 0)
+            {
+                int pixel = pending.Pop();
+                BlendPixel(pixel * 4, color, before.Pixels);
+                int px = pixel % Width, py = pixel / Width;
+                Add(px - 1, py); Add(px + 1, py); Add(px, py - 1); Add(px, py + 1);
+            }
+
+            void Add(int px, int py)
+            {
+                if (px < 0 || px >= Width || py < 0 || py >= Height) return;
+                int pixel = py * Width + px, q = pixel * 4;
+                if (visited[pixel]) return;
+                visited[pixel] = true;
+                byte[] source = before.Pixels;
+                if (source[q + 3] != source[seed + 3]) return;
+                // Hidden RGB does not split a fully transparent area.
+                if (source[q + 3] != 0 && (source[q] != source[seed] || source[q + 1] != source[seed + 1] || source[q + 2] != source[seed + 2])) return;
+                pending.Push(pixel);
+            }
+        }
+        if (!FinishEdit(before)) return false;
+        Version++; UpdateImage();
+        return true;
+    }
+
+    private void BlendPixel(int q, Color color, byte[] source)
+    {
+        // Straight-alpha source-over. Pre-stroke pixels keep overlapping dabs even.
+        int remaining = source[q + 3] * (255 - color.A);
+        int alpha = color.A * 255 + remaining;
+        if (alpha == 0) return;
+        Pixels[q] = Channel(color.B, source[q]);
+        Pixels[q + 1] = Channel(color.G, source[q + 1]);
+        Pixels[q + 2] = Channel(color.R, source[q + 2]);
+        Pixels[q + 3] = (byte)((alpha + 127) / 255);
+
+        byte Channel(byte foreground, byte background) => (byte)((foreground * color.A * 255 + background * remaining + alpha / 2) / alpha);
     }
 
     public void UpdateImage() => Image.WritePixels(new Int32Rect(0, 0, Width, Height), Pixels, Width * 4, 0);

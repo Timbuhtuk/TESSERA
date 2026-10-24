@@ -11,6 +11,7 @@ using PixelArtDownscale;
 using Color = System.Drawing.Color;
 using Point = System.Windows.Point;
 using Image = System.Windows.Controls.Image;
+using Localization = DomainColorTest.Localization;
 
 namespace PixelArtAlignment.Tests;
 
@@ -59,7 +60,8 @@ internal static class TileInspectorChecks
             try { TileSeamAnalysis.Summarize([1], double.NaN); } catch (ArgumentOutOfRangeException) { rejected = true; }
             Require(rejected, "Invalid threshold accepted");
         });
-        check("Tile inspector WPF: entry, tiling axes, heatmap, zoom, reload and file watching", RunUi);
+        TilePaintChecks.Run(check);
+        check("Tile inspector WPF: entry, tiling axes, heatmap, zoom, reload, painting, fill and file watching", RunUi);
         TileSetChecks.Run(check);
     }
 
@@ -172,6 +174,7 @@ internal static class TileInspectorChecks
             Require(window.SourcePath == latestFile, "Watcher followed the previous source");
             VerifyCollection(window, folder);
             VerifyPaintColorAlpha(window);
+            VerifyFillOpacity(window, folder);
             Console.WriteLine($"  Tile inspector captures: {folder}");
         }
         finally { window?.DiscardAndClose(); home.Close(); }
@@ -323,6 +326,75 @@ internal static class TileInspectorChecks
         void Finish() => typeof(TileInspectorWindow).GetMethod("FinishStroke", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, null);
     }
 
+    private static void VerifyFillOpacity(TileInspectorWindow window, string folder)
+    {
+        string aPath = Path.Combine(folder, "paint-a.png"), bPath = Path.Combine(folder, "paint-b.png");
+        using (var a = new Bitmap(8, 6))
+        using (var b = new Bitmap(8, 6))
+        {
+            using (var graphics = Graphics.FromImage(a)) { graphics.Clear(Color.White); graphics.FillRectangle(System.Drawing.Brushes.Black, 4, 0, 4, 6); }
+            using (var graphics = Graphics.FromImage(b)) graphics.Clear(Color.Blue);
+            a.Save(aPath); b.Save(bPath);
+        }
+        Await(window.AddFilesAsync([aPath, bPath]));
+        var aAsset = window.Assets.Single(a => a.SourcePath == aPath);
+        var bAsset = window.Assets.Single(a => a.SourcePath == bPath);
+        window.SelectAsset(aAsset.Id); window.SelectCompanion(bAsset.Id);
+        var tool = Get<ComboBox>(window, "paintToolInput");
+        var opacity = Get<Slider>(window, "paintOpacityInput");
+        var color = Get<TextBox>(window, "paintColorInput");
+        tool.SelectedIndex = 1; opacity.Value = 50; color.Text = "#000000";
+        Get<ComboBox>(window, "brushSizeInput").SelectedIndex = 1;
+        Paint(new(false, 1, 1, 0, 0), true); Paint(new(false, 1, 2, 0, 0), false); Paint(new(false, 1, 1, 0, 0), false); Finish();
+        Require(aAsset.GetPixel(1, 1) == System.Windows.Media.Color.FromRgb(127, 127, 127), "UI opacity or overlapping samples failed");
+        Button("undoButton"); Require(aAsset.GetPixel(1, 1) == System.Windows.Media.Colors.White, "UI stroke undo failed");
+        Button("redoButton"); Require(aAsset.GetPixel(1, 1).R == 127, "UI stroke redo failed"); Button("undoButton");
+        tool.SelectedIndex = 4; color.Text = "#FF0000";
+        Paint(new(true, 1, 1, 1, 0), true); Paint(new(false, 1, 1, 0, 0), false); Finish();
+        Require(bAsset.GetPixel(7, 5) == System.Windows.Media.Color.FromRgb(128, 0, 127) && aAsset.GetPixel(1, 1) == System.Windows.Media.Colors.White,
+            "Flood fill missed B or dragging filled A");
+        Button("undoButton"); Require(bAsset.GetPixel(7, 5) == System.Windows.Media.Colors.Blue, "Fill undo targeted A instead of B");
+        Button("redoButton"); Require(bAsset.GetPixel(7, 5).R == 128, "Fill redo failed");
+        tool.SelectedIndex = 5;
+        Paint(new(false, 1, 1, 0, 0), true); Finish();
+        Require(aAsset.GetPixel(0, 0) == System.Windows.Media.Color.FromRgb(255, 127, 127) && aAsset.GetPixel(7, 5) == System.Windows.Media.Color.FromRgb(128, 0, 0), "Whole-tile UI fill lost tone differences");
+        byte[] filled = (byte[])aAsset.Pixels.Clone();
+        opacity.Value = 0; Paint(new(false, 0, 0, 0, 0), true); Finish();
+        Require(aAsset.Pixels.SequenceEqual(filled), "Zero-percent UI fill changed the tile");
+        opacity.Value = 25; color.Text = "#80FF0000";
+        string project = Path.Combine(folder, "paint-opacity.ttiles"); window.SaveCollectionToFile(project);
+        opacity.Value = 100; window.LoadCollectionFromFile(project);
+        Require(opacity.Value == 25 && color.Text == "#80FF0000" && window.ActiveAsset!.Pixels.SequenceEqual(filled), "Project lost paint opacity, color alpha or filled pixels");
+        Require(System.Text.Json.JsonSerializer.Deserialize<TileCollectionSettings>("{\"Opacity\":42}")!.PaintOpacity == 100, "Older projects lost the fully opaque default");
+        tool.SelectedIndex = 1;
+        Paint(new(false, 7, 5, 0, 0), true); Finish();
+        Require(window.ActiveAsset!.GetPixel(7, 5) == System.Windows.Media.Color.FromRgb(144, 0, 0), "Slider opacity was not multiplied by color alpha");
+        Button("undoButton");
+        tool.SelectedIndex = 2;
+        Require(!opacity.IsEnabled, "Paint opacity should be disabled for erasing");
+        Paint(new(false, 7, 5, 0, 0), true); Finish();
+        Require(window.ActiveAsset.GetPixel(7, 5).A == 0, "Eraser stopped clearing pixels"); Button("undoButton");
+        tool.SelectedIndex = 5; Click(window, "heatInput", false); Pump();
+        Capture(window, Path.Combine(folder, "paint-opacity-wide.png"));
+        window.Width = 720; window.Height = 560; Pump();
+        Get<Expander>(window, "editTools").IsExpanded = true; Pump(); opacity.BringIntoView(); Pump();
+        Capture(window, Path.Combine(folder, "paint-opacity-minimum.png"));
+        window.Width = 1180; window.Height = 800; Pump();
+        Localization.Initialize("en");
+        try
+        {
+            Require(((ComboBoxItem)tool.Items[4]).Content.Equals("Flood fill") && ((ComboBoxItem)tool.Items[5]).Content.Equals("Fill tile"), "Fill labels did not translate");
+            Require(System.Windows.Automation.AutomationProperties.GetName(opacity) == "Paint opacity", "Opacity accessibility name did not translate");
+            Capture(window, Path.Combine(folder, "paint-opacity-english.png"));
+        }
+        finally { Localization.Initialize("ru"); }
+        Console.WriteLine("  Tile paint WPF: brush/fill A/B, opacity, alpha, undo/redo, project round-trip and RU/EN passed.");
+
+        void Paint(TilePointer point, bool begin) => typeof(TileInspectorWindow).GetMethod("HandlePaint", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, [point, begin]);
+        void Finish() => typeof(TileInspectorWindow).GetMethod("FinishStroke", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, null);
+        void Button(string name) => Get<Button>(window, name).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+    }
+
     private static void VerifyPaintColorAlpha(TileInspectorWindow window)
     {
         foreach (string color in new[] { "#8044CC66", "#0044CC66", "#FF44CC66", "#44CC66" })
@@ -340,7 +412,10 @@ internal static class TileInspectorChecks
         typeof(TileInspectorWindow).GetMethod("HandlePaint", BindingFlags.Instance | BindingFlags.NonPublic)!
             .Invoke(window, [new TilePointer(false, 0, 0, 0, 0), true]);
         typeof(TileInspectorWindow).GetMethod("FinishStroke", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
-        Require(asset.GetPixel(0, 0) == System.Windows.Media.Color.FromArgb(128, 17, 34, 51), "Painting ignored the selected translucent color");
+        Require(original.A == 255 && asset.GetPixel(0, 0) == System.Windows.Media.Color.FromRgb(
+            (byte)((17 * 128 + original.R * 127 + 127) / 255),
+            (byte)((34 * 128 + original.G * 127 + 127) / 255),
+            (byte)((51 * 128 + original.B * 127 + 127) / 255)), "Painting did not blend the selected translucent color");
         asset.Undo();
         Require(asset.GetPixel(0, 0) == original, "Undo did not restore the painted pixel");
         Console.WriteLine("  Brush color: alpha 0/128/255, RGB input, cancel, painted pixels and undo passed.");

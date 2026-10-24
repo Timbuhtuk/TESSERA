@@ -21,6 +21,7 @@ public sealed class TileCollectionSettings
     public double Stripe { get; set; } = 1;
     public string Color { get; set; } = "#FFFFFFFF";
     public int BrushSize { get; set; }
+    public double PaintOpacity { get; set; } = 100;
     public int Passes { get; set; } = 1;
     public bool SmoothEdgesOnly { get; set; }
 }

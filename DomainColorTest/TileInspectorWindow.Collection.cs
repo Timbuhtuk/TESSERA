@@ -30,7 +30,7 @@ public partial class TileInspectorWindow
             ZoomScale = TileZoomFactors[Math.Max(0, zoomInput.SelectedIndex)], Background = backgroundInput.SelectedIndex,
             Heat = heatInput.IsChecked == true, Guides = guidesInput.IsChecked == true,
             Threshold = thresholdInput.Value, Opacity = opacityInput.Value, Stripe = stripeInput.Value,
-            Color = paintColorInput.Text, BrushSize = brushSizeInput.SelectedIndex,
+            Color = paintColorInput.Text, BrushSize = brushSizeInput.SelectedIndex, PaintOpacity = paintOpacityInput.Value,
             Passes = int.TryParse(smoothPassesInput.Text, out int passes) ? Math.Clamp(passes, 1, 100) : 1,
             SmoothEdgesOnly = smoothEdgesInput.IsChecked == true
         };
@@ -69,6 +69,7 @@ public partial class TileInspectorWindow
             stripeInput.Value = Finite(s.Stripe, 1, 8, 1);
             paintColorInput.Text = s.Color ?? "#FFFFFFFF";
             brushSizeInput.SelectedIndex = Math.Clamp(s.BrushSize, 0, 2);
+            paintOpacityInput.Value = Finite(s.PaintOpacity, 0, 100, 100);
             smoothPassesInput.Text = Math.Clamp(s.Passes, 1, 100).ToString();
             smoothEdgesInput.IsChecked = s.SmoothEdgesOnly;
             paintToolInput.SelectedIndex = 0;

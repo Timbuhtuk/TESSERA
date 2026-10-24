@@ -1,4 +1,9 @@
 {
+  "Заливка области": "Flood fill",
+  "Заливка тайла": "Fill tile",
+  "Непрозрачность краски": "Paint opacity",
+  "Смешивает цвет с рисунком. Альфа цвета дополнительно уменьшает непрозрачность.": "Blends the color with the image. Color alpha further reduces opacity.",
+  "Заливка области — соседние пиксели одного цвета. Заливка тайла — весь тайл A или B, по которому вы щёлкнули.": "Flood fill affects connected pixels of the same color. Fill tile affects the entire A or B tile you click.",
   "Показывать пиксельную сетку при увеличении от 600%. Экспорт не меняется.": "Show the pixel grid at 600% zoom or higher. Export is unchanged.",
   "Учитывать нормали при освещении предпросмотра. Данные карты не меняются.": "Use normals in the lighting preview. Map data is unchanged.",
   "Учитывать AO в рассеянном освещении предпросмотра. Данные карты не меняются.": "Use AO in the preview ambient lighting. Map data is unchanged.",
