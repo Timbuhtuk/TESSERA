@@ -29,7 +29,7 @@ public partial class MainWindow
             if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control &&
                 (workspaceHost.Visibility == Visibility.Visible && saveMenuItem.IsEnabled || saveDocumentMenuItem.IsEnabled))
             {
-                var command = workspaceHost.Visibility == Visibility.Visible ? saveMenuItem : saveDocumentMenuItem;
+                var command = _workspaceReady || workspaceHost.Visibility != Visibility.Visible ? saveDocumentMenuItem : saveMenuItem;
                 command.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, command));
                 e.Handled = true;
             }

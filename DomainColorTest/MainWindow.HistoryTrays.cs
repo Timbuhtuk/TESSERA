@@ -72,6 +72,7 @@ public partial class MainWindow
         };
         previewArea.SizeChanged += (_, _) =>
         {
+            if (!previewArea.IsVisible || previewArea.ActualHeight <= 246) return;
             double maximum = MaximumTrayHeight();
             if (trayHeight.Height.Value > maximum) { trayHeight.Height = new GridLength(maximum); CommitTrayHeight(); }
         };
@@ -89,13 +90,15 @@ public partial class MainWindow
         generationStrip.PreviewKeyDown += (_, e) =>
         {
             if (_processing || generationStrip.SelectedItem is not GenerationEntry selected) return;
-            if (e.Key == Key.Apps || e.Key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)
+            Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+            if (key == Key.Apps || key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)
             { OpenHistoryContextMenu(selected, generationStrip); e.Handled = true; }
         };
         generationStrip.DragLeave += (_, _) => generationStrip.InsertionY = null;
         Closing += (_, e) => { if (!e.Cancel) { RememberTrayScroll(); SaveTrayState(); } };
         Loaded += (_, _) =>
         {
+            if (!previewArea.IsVisible || previewArea.ActualHeight <= 246) return;
             trayHeight.Height = new GridLength(Math.Min(_trayState.Height, MaximumTrayHeight()));
             CommitTrayHeight(); RestoreTrayScroll();
         };

@@ -11,7 +11,7 @@ public partial class MainWindow
 {
     private readonly GroupBox _macrosGroup = new();
     private readonly ListBox _macroList = new() { DisplayMemberPath = "Name", MinHeight = 84, MaxHeight = 220 };
-    private readonly ListBox _macroSteps = new() { MinHeight = 80, MaxHeight = 260, IsHitTestVisible = false, Focusable = false };
+    private readonly ListBox _macroSteps = new() { MinHeight = 80, MaxHeight = 260 };
     private readonly ObservableCollection<MacroDefinition> _macros = [];
     private readonly Button _macroApply = new(), _macroCancel = new();
     private MacroStore _macroStore = null!;

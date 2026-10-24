@@ -161,6 +161,8 @@ internal static class HistoryMacroChecks
             Require(strip.CardBounds[4].X == strip.CardBounds[0].X && selected.ParentGenerationId is not null, "Editor promotion lost real parent.");
             var row = Get<RowDefinition>(window, "trayHeight"); row.Height = new GridLength(300); Invoke(window, "CommitTrayHeight"); Pump();
             var splitter = Get<GridSplitter>(window, "trayHeightSplitter"); double beforeDrag = row.ActualHeight;
+            Require(splitter.ActualWidth >= Get<Grid>(window, "historyRow").ActualWidth - 2,
+                "Shared height divider inherited a narrow hit area instead of spanning both trays.");
             splitter.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
             splitter.RaiseEvent(new DragDeltaEventArgs(0, 30) { RoutedEvent = Thumb.DragDeltaEvent });
             splitter.RaiseEvent(new DragCompletedEventArgs(0, 30, false) { RoutedEvent = Thumb.DragCompletedEvent }); Pump();
@@ -190,6 +192,8 @@ internal static class HistoryMacroChecks
             Require(visibleSources < 100, "Large source catalog realized all thumbnails.");
             sources.ItemsSource = originalItems; sources.SetLayout(originalBounds); Pump();
             window.ProcessingBasis = 0; Get<ListBox>(window, "_macroList").SelectedItem = Get<ObservableCollection<MacroDefinition>>(window, "_macros").Single(m => m.Id == macro.Id);
+            Require(Get<ListBox>(window, "_macroSteps").IsHitTestVisible && Get<ListBox>(window, "_macroSteps").Focusable,
+                "Macro step list must support real scrolling and keyboard inspection.");
             int before = active.Generations.Count;
             Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!); Pump();
             Require(active.Generations.Count == before + 1 && active.Generations[^1].RecipeSnapshot?.Steps.Count == 2 && active.Generations[^1].ParentGenerationId is null, "Macro published intermediates or wrong parent.");
@@ -217,6 +221,9 @@ internal static class HistoryMacroChecks
                 var stateAfterRestart = Get<HistoryTrayState>(reopened, "_trayState");
                 Require(stateAfterRestart.Branches[source.Id].Detached.Contains(selected.Id), "Branch order was lost after editor restart.");
                 var afterRestart = Get<VirtualizingTray>(reopened, "generationStrip").ScrollPosition;
+                double expectedHeight = Math.Min(restored.Height, Math.Max(120, Get<Grid>(reopened, "previewArea").ActualHeight - 246));
+                Require(Math.Abs(Get<RowDefinition>(reopened, "trayHeight").ActualHeight - expectedHeight) < 2,
+                    "Opening through the library reset the saved expanded tray height.");
                 Require(Math.Abs(savedPosition.X - afterRestart.X) < 2 && Math.Abs(savedPosition.Y - afterRestart.Y) < 2,
                     $"Tray scroll did not restore: {savedPosition} -> {afterRestart}.");
             }
