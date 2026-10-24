@@ -77,6 +77,8 @@ public partial class MainWindow
                 return _library.SaveGeneration(document, result, null, new GenerationEntry
                 {
                     Settings = settings,
+                    OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors, Downscale = options }),
                     Operation = changeSize ? enlarged ? Localization.Text("Увеличение") : Localization.Text("Размер") :
                         neighborColors ? Localization.Text("Очистка цветов") : colorOperation,
                     ParentGenerationId = parentId,

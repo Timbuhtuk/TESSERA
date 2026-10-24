@@ -1,5 +1,7 @@
 # Pixel art alignment evaluation
 
+History and macro checks: `dotnet run --project PixelArtAlignment.Tests -c Release -- --history-macros`. Covers branch ancestry and presentation, cycles/missing parents, 30,000-node layout, complete independent recipes, legacy rejection, exact replay/alpha, one final editor result, project folders/shared links, 20,000-item source virtualization, splitters, scroll/state restoration and dark/light WPF renders. Native mouse and keyboard acceptance is separate; see [history and macros](../docs/HISTORY_MACROS.md).
+
 Material-map checks: `dotnet run --project PixelArtAlignment.Tests -c Release -- --material-maps` (also included in `--ui`). Covers generated flat/gradient/cavity behavior, arbitrary aspect ratios, source alpha, independent Normal/AO paint layers across Height regeneration, per-layer reset and history, interpolated/soft brushes and erasure, `.tmaps` roundtrip/corrupt-file rejection, Tools entry, all canvases, PNG export/source protection and wide/minimum WPF layout renders. Desktop mouse/keyboard interaction is checked separately.
 
 Release-note regression checks: `dotnet run --project PixelArtAlignment.Tests -c Release -- --release-notes`. These render the startup reader and Settings history tab, check once-per-version persistence, offline version selection, RU/EN, three themes, minimum layouts and write failures. Build-time note preparation is checked separately with `pwsh -File tests/ReleaseNotes.Checks.ps1`. Both run in the release pipeline.

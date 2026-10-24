@@ -35,7 +35,7 @@ public partial class MainWindow
         _comparisonPreview.EmptyText = Localization.Text("Выберите результат для сравнения. Удерживайте Alt, чтобы показать исходник.");
         _comparisonPreview.ToolTip = Localization.Text("Результат занимает всё поле. Удерживайте Alt для исходника; отпустите для результата. Изображения вписываются по пропорциям.");
         AutomationProperties.SetName(_comparisonPreview, Localization.Text("Сравнение исходника и результата"));
-        Grid.SetRow(_comparisonPreview, 1);
+        Grid.SetRow(_comparisonPreview, 2);
         previewArea.Children.Add(_comparisonPreview);
         _comparisonPreview.MouseLeftButtonDown += (_, _) => _comparisonPreview.Focus();
         PreviewKeyDown += ComparisonKeyDown;

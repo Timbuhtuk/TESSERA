@@ -145,29 +145,6 @@ public partial class MainWindow
         bool wide = ActualWidth >= 1200;
         if ((Grid.GetColumn(sourcePane) == 2) == wide) return;
 
-        if (wide)
-        {
-            previewArea.Children.Remove(sourceTray);
-            historyRow.Children.Add(sourceTray);
-            Grid.SetRow(sourceTray, 0);
-            Grid.SetColumn(sourceTray, 2);
-            Grid.SetColumnSpan(resultTray, 1);
-            sourceTray.Margin = new Thickness(0);
-            sourceTray.Padding = new Thickness(0);
-            sourceTray.BorderThickness = new Thickness(0);
-        }
-        else
-        {
-            historyRow.Children.Remove(sourceTray);
-            previewArea.Children.Add(sourceTray);
-            Grid.SetRow(sourceTray, 2);
-            Grid.SetColumn(sourceTray, 0);
-            Grid.SetColumnSpan(resultTray, 3);
-            sourceTray.Margin = new Thickness(0, 8, 0, 0);
-            sourceTray.Padding = new Thickness(0, 5, 0, 0);
-            sourceTray.BorderThickness = new Thickness(0, 1, 0, 0);
-        }
-
         previewPair.RowDefinitions[0].Height = new GridLength(1, GridUnitType.Star);
         previewPair.RowDefinitions[1].Height = new GridLength(wide ? 0 : 6);
         previewPair.RowDefinitions[2].Height = wide ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
@@ -187,7 +164,7 @@ public partial class MainWindow
 
     private void UpdatePreviewHeight()
     {
-        double minimum = ActualWidth < 940 ? 700 : 0;
+        double minimum = 366;
         workspaceGrid.MinHeight = Math.Max(minimum, workspaceHost.ActualHeight);
     }
 

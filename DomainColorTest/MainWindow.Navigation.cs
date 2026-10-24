@@ -78,6 +78,7 @@ public partial class MainWindow
         AddNavigation(imageMenu, "removeBackgroundMenuItem", "Удалить фон…", () => NavigationImageActionAsync("background"));
         filtersMenuItem = AddTool(imageMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
         profileMenuItem = AddTool(toolsMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
+        AddTool(toolsMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
         gridMenuItem = AddTool(toolsMenu, "gridMenuItem", "Сетка…", "grid", 280, gridToolGroup);
         AddNavigation(toolsMenu, "materialMapsMenuItem", "Карты Height / Normal / AO…", OpenMaterialMapsAsync);
         AddNavigation(toolsMenu, "inspectTilesMenuItem", "Проверить тайлы…", () => NavigationImageActionAsync("tiles"));

@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Imaging;
 using PixelArtDownscale;
+using PixelArtWorkflows;
 using Bitmap = System.Drawing.Bitmap;
 
 namespace DomainColorTest;
@@ -31,6 +33,7 @@ public sealed class SourceEntry
     public Guid? OriginSourceId { get; set; }
     public Guid? OriginGenerationId { get; set; }
     [JsonIgnore] public string Label => DisplayName ?? Path.GetFileName(OriginalPath);
+    [JsonIgnore] public bool IsHeader => false;
     [JsonIgnore] public string Description => $"{Label}\n{Width} × {Height}\n{OriginalPath}";
     [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить исходник «{0}» и его результаты из программы", Label);
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
@@ -39,7 +42,7 @@ public sealed class SourceEntry
     [JsonIgnore] public EditorSettings? DraftSettings { get; set; }
 }
 
-public sealed class GenerationEntry
+public sealed class GenerationEntry : INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;
@@ -55,9 +58,21 @@ public sealed class GenerationEntry
     public int Height { get; set; }
     public int CellSize { get; set; }
     public EditorSettings Settings { get; set; } = new();
+    public string? OperationId { get; set; }
+    public ProcessingRecipe? AppliedRecipe { get; set; }
+    public ProcessingRecipe? RecipeSnapshot { get; set; }
+    public string? RecipeUnavailableReason { get; set; }
+    private string _presentationHint = "";
+    [JsonIgnore] public string PresentationHint
+    {
+        get => _presentationHint;
+        set { if (_presentationHint == value) return; _presentationHint = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Description))); }
+    }
+    public event PropertyChangedEventHandler? PropertyChanged;
+    [JsonIgnore] public bool IsHeader => false;
     [JsonIgnore] public string Label => IsAlignment ? Localization.Format("Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
-        : $"{(Operation.Length > 0 ? Localization.StoredText(Operation) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
-    [JsonIgnore] public string Description => $"{Localization.StoredText(Caption)}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{Localization.StoredText(Log)}";
+        : $"{(Operation.Length > 0 ? (OperationId == ProcessingOperations.Macro ? Operation : Localization.StoredText(Operation)) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
+    [JsonIgnore] public string Description => $"{(OperationId == ProcessingOperations.Macro ? Caption : Localization.StoredText(Caption))}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{PresentationHint}\n{Localization.StoredText(Log)}";
     [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить результат «{0}» из истории", Label);
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
 }
@@ -65,7 +80,20 @@ public sealed class GenerationEntry
 /// <summary>Immutable PNG snapshots; a JSON record is committed only after its images are saved.</summary>
 public sealed class ImageLibrary(string directory)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions { WriteIndented = true, PropertyNameCaseInsensitive = true };
+        options.Converters.Add(new RecipeRecordConverter());
+        return options;
+    }
+    private sealed class RecipeRecordConverter : JsonConverter<ProcessingRecipe>
+    {
+        public override ProcessingRecipe? Read(ref Utf8JsonReader reader, Type type, JsonSerializerOptions options)
+            => JsonSerializer.Deserialize<ProcessingRecipe>(ref reader, WorkflowJson.Options);
+        public override void Write(Utf8JsonWriter writer, ProcessingRecipe recipe, JsonSerializerOptions options)
+            => JsonSerializer.Serialize(writer, recipe, WorkflowJson.Options);
+    }
     public string DirectoryPath { get; } = Path.GetFullPath(directory);
     public List<string> LoadWarnings { get; } = [];
     public string SourcePath(SourceEntry source) => Path.Combine(SourceDirectory(source), "source.png");
@@ -102,6 +130,7 @@ public sealed class ImageLibrary(string directory)
                         {
                             var generation = Read<GenerationEntry>(record);
                             if (generation.Id != generationId || generation.Settings?.Downscale is null) throw new InvalidDataException(Localization.Text("Повреждены параметры результата."));
+                            HistoryRecipes.ValidateLegacyRecord(generation, record);
                             generation.Thumbnail = ReadThumbnail(ResultPath(source, generation));
                             if (generation.HasCrop && !File.Exists(CropPath(source, generation))) throw new InvalidDataException(Localization.Text("Отсутствует область обработки."));
                             results.Add(generation);
@@ -155,6 +184,7 @@ public sealed class ImageLibrary(string directory)
 
     public GenerationEntry SaveGeneration(SourceEntry source, Bitmap result, Bitmap? crop, GenerationEntry entry)
     {
+        HistoryRecipes.Capture(source, entry);
         Directory.CreateDirectory(GenerationDirectory(source, entry));
         SavePng(result, ResultPath(source, entry));
         if (crop is not null) SavePng(crop, CropPath(source, entry));
@@ -198,6 +228,12 @@ public sealed class ImageLibrary(string directory)
     public void RemoveGeneration(SourceEntry source, GenerationEntry generation)
     {
         if (!source.Generations.Contains(generation)) throw new ArgumentException(Localization.Text("Результат не принадлежит исходнику."));
+        // Preserve any recoverable legacy chain before its only parent record disappears.
+        foreach (var child in source.Generations.Where(g => g.ParentGenerationId == generation.Id && g != generation))
+        {
+            HistoryRecipes.Capture(source, child);
+            WriteRecord(Path.Combine(GenerationDirectory(source, child), "generation.json"), child, overwrite: true);
+        }
         RemoveEntryDirectory(GenerationDirectory(source, generation));
     }
 
@@ -280,7 +316,7 @@ public sealed class ImageLibrary(string directory)
         return image;
     }
     private static T Read<T>(string path) => JsonSerializer.Deserialize<T>(File.ReadAllText(path), JsonOptions) ?? throw new InvalidDataException(Localization.Text("Пустая запись истории."));
-    private static void WriteRecord<T>(string path, T entry)
+    private static void WriteRecord<T>(string path, T entry, bool overwrite = false)
     {
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -290,7 +326,7 @@ public sealed class ImageLibrary(string directory)
                 JsonSerializer.Serialize(stream, entry, JsonOptions);
                 stream.Flush(flushToDisk: true);
             }
-            File.Move(temporary, path);
+            File.Move(temporary, path, overwrite);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }

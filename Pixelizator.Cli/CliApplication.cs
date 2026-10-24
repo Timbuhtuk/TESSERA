@@ -24,6 +24,8 @@ internal static class CliApplication
                        tessera ascii <изображение> -o <результат.txt>
                        tessera palette-info <изображение> --json
                        tessera replace-color <изображение> --from #000000 --to #FFFFFF
+                       tessera macro list --library <папка> --json
+                       tessera macro apply <изображение> --macro <macro.json> -o <результат.png>
                        tessera aseprite <анимация.aseprite> --output-dir <папка>
         Отдельное выравнивание сетки без даунскейла: tessera align --help.
         Сжатие выровненной сетки: tessera reduce-grid --help.
@@ -33,6 +35,7 @@ internal static class CliApplication
         Сглаживание, монохром и ASCII: tessera smooth-colors --help;
         tessera monochrome --help; tessera ascii --help.
         Палитра и замена цвета: tessera palette-info --help; tessera replace-color --help.
+        Многошаговые макросы: tessera macro --help.
         Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
         Файлы:
@@ -112,6 +115,8 @@ internal static class CliApplication
             return ImageToolsCommand.RunPalette(args[1..], output, error);
         if (args.Length > 0 && args[0] == "replace-color")
             return ImageToolsCommand.RunReplace(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "macro")
+            return MacroCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "aseprite")
             return AsepriteCommand.Run(args[1..], output, error);
         if (args.Length == 0 || args is ["--help"] or ["-h"])

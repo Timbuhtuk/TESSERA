@@ -97,7 +97,8 @@ public partial class MainWindow
         string operation = Localization.Text("Исправление тайла");
         var entry = _library.SaveGeneration(origin.Source, result, null, new GenerationEntry
         {
-            Operation = operation, Caption = operation, ParentGenerationId = origin.Generation?.Id,
+            Operation = operation, Caption = operation,
+            OperationId = "manual.tile", RecipeUnavailableReason = Localization.Text("Цепочка содержит ручное исправление тайла. Этот шаг нельзя воспроизвести макросом."), ParentGenerationId = origin.Generation?.Id,
             PreservesTransparency = true, Settings = origin.Generation?.Settings ?? origin.Source.DraftSettings ?? new()
         });
         origin.Source.Generations.Add(entry); origin.Source.SelectedGeneration = entry;

@@ -4,8 +4,18 @@
     </shell:WindowChrome.WindowChrome>
     <Window.Resources><ResourceDictionary>
         <ResourceDictionary.MergedDictionaries><local:AppearanceResources /></ResourceDictionary.MergedDictionaries>
+        <DataTemplate x:Key="TrayCardTemplate">
+                <Grid Width="112" ToolTip="{Binding Description}">
+                    <StackPanel>
+                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
+                    <TextBlock Text="{Binding Label}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
+                </Grid>
+            </DataTemplate>
+        <DataTemplate x:Key="TrayFolderTemplate"><Button Content="{Binding Label}" Tag="{Binding}" Click="TrayFolderClicked" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Padding="4,2" FontSize="12" /></DataTemplate>
         <Style x:Key="FilmstripItem" TargetType="ListBoxItem">
-            <Setter Property="Margin" Value="0,0,6,0" /><Setter Property="Padding" Value="5" />
+            <Setter Property="Margin" Value="0" /><Setter Property="Padding" Value="5" />
             <Setter Property="Foreground" Value="{DynamicResource Ts.Text}" />
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
                 <Border x:Name="Frame" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" CornerRadius="0" Background="{DynamicResource Ts.Panel}" Padding="{TemplateBinding Padding}"><ContentPresenter /></Border>
@@ -15,10 +25,16 @@
                     <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Focus}" /></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                    <Setter Property="Padding" Value="0" /><Setter Property="Focusable" Value="False" />
+                    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter>
+                </DataTrigger>
+            </Style.Triggers>
         </Style>
         <Style x:Key="Filmstrip" TargetType="ListBox">
             <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Height" Value="84" /><Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="78" /><Setter Property="Padding" Value="0" />
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox">
                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
                     <ScrollViewer x:Name="PART_ScrollViewer" Focusable="False" CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}" HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
@@ -26,20 +42,12 @@
                     </ScrollViewer>
                 </Border>
             </ControlTemplate></Setter.Value></Setter>
-            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" /><Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" /><Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
             <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" /><Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
             <Setter Property="ItemContainerStyle" Value="{StaticResource FilmstripItem}" />
-            <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><VirtualizingStackPanel Orientation="Horizontal" /></ItemsPanelTemplate></Setter.Value></Setter>
-            <Setter Property="ItemTemplate"><Setter.Value><DataTemplate>
-                <Grid Width="112" ToolTip="{Binding Description}">
-                    <StackPanel>
-                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
-                    <TextBlock Text="{Binding Label}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
-                    </StackPanel>
-                    <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
-                </Grid>
-            </DataTemplate></Setter.Value></Setter>
+            <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><local:TrayPanel /></ItemsPanelTemplate></Setter.Value></Setter>
+            <Setter Property="ItemTemplateSelector"><Setter.Value><local:TrayTemplateSelector /></Setter.Value></Setter>
         </Style>
     </ResourceDictionary></Window.Resources>
     <Grid x:Name="rootLayout" Background="{DynamicResource Ts.Canvas}">
@@ -79,21 +87,27 @@
         <ScrollViewer x:Name="workspaceHost" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid x:Name="workspaceGrid">
             <Grid x:Name="previewArea" Margin="18,0,18,12">
-                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" MinHeight="280" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition x:Name="trayHeight" Height="120" MinHeight="120" /><RowDefinition Height="6" /><RowDefinition Height="*" MinHeight="240" /></Grid.RowDefinitions>
                 <Grid x:Name="historyRow" Grid.Row="0">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="6" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                    <StackPanel x:Name="resultTray" Grid.ColumnSpan="3">
-                        <TextBlock x:Name="resultCaption" Text="{local:Translate Text5839549C1984}" Style="{StaticResource Caption}" />
-                    <ListBox x:Name="generationStrip" AutomationProperties.Name="{local:Translate Text0ABF4F397ACF}">
-                        <ListBox.Style><Style TargetType="ListBox" BasedOn="{StaticResource Filmstrip}">
-                            <Style.Triggers>
-                                <Trigger Property="HasItems" Value="False"><Setter Property="Visibility" Value="Collapsed" /></Trigger>
-                            </Style.Triggers>
-                        </Style></ListBox.Style>
-                    </ListBox>
-                    </StackPanel>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="140" /><ColumnDefinition Width="6" /><ColumnDefinition Width="*" MinWidth="140" /></Grid.ColumnDefinitions>
+                    <DockPanel x:Name="resultTray">
+                        <TextBlock x:Name="resultCaption" DockPanel.Dock="Top" Text="{local:Translate Text5839549C1984}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                        <local:VirtualizingTray x:Name="generationStrip" AutomationProperties.Name="{local:Translate Text0ABF4F397ACF}">
+                            <local:VirtualizingTray.Style><Style TargetType="ListBox" BasedOn="{StaticResource Filmstrip}">
+                                <Style.Triggers><Trigger Property="HasItems" Value="False"><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers>
+                            </Style></local:VirtualizingTray.Style>
+                        </local:VirtualizingTray>
+                    </DockPanel>
+                    <GridSplitter x:Name="trayWidthSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" />
+                    <Border x:Name="sourceTray" Grid.Column="2" Background="Transparent">
+                        <DockPanel>
+                            <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="{local:Translate TextE44D7C43D79A}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                            <local:VirtualizingTray x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="{local:Translate Text174D6695EF84}" />
+                        </DockPanel>
+                    </Border>
                 </Grid>
-                <Grid x:Name="previewPair" Grid.Row="1">
+                <GridSplitter x:Name="trayHeightSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" />
+                <Grid x:Name="previewPair" Grid.Row="2">
                     <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="0" /><ColumnDefinition Width="0" /></Grid.ColumnDefinitions>
                     <local:PixelPreview x:Name="resultPreview" EmptyText="{local:Translate Text11A406D5B891}" ToolTip="{local:Translate TextA4E2F652337E}" />
@@ -102,12 +116,7 @@
                         <local:PixelPreview x:Name="sourcePreview" EmptyText="{local:Translate TextFB3F56EF34F4}" />
                     </DockPanel>
                 </Grid>
-                <Border x:Name="sourceTray" Grid.Row="2" Background="Transparent" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,5,0,0">
-                    <DockPanel>
-                        <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="{local:Translate TextE44D7C43D79A}" Style="{StaticResource Caption}" />
-                        <ListBox x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="{local:Translate Text174D6695EF84}" />
-                    </DockPanel>
-                </Border>
+
             </Grid>
         </Grid>
         </ScrollViewer>

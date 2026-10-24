@@ -12,7 +12,12 @@ import sys
 
 def config_path():
     local = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-    return local / "Tessera" / "chatgpt-cli.json"
+    settings = local / "Tessera" / "chatgpt-cli.json"
+    if settings.is_file():
+        return settings
+    # Local execution sandboxes can redirect LOCALAPPDATA away from saved host settings.
+    user_settings = Path.home() / "AppData" / "Local" / "Tessera" / "chatgpt-cli.json"
+    return user_settings if user_settings.is_file() else settings
 
 
 def console_executable(value):
@@ -81,7 +86,9 @@ def locate(explicit, settings, cwd):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False)
+    parser = argparse.ArgumentParser(description=__doc__, allow_abbrev=False,
+                                     epilog="Examples: -- macro list --library PATH --json; "
+                                            "-- macro apply INPUT --macro FILE -o OUTPUT --json")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--cli", help="Tessera CLI executable for this call")
     mode.add_argument("--configure", metavar="PATH", help="Save the local CLI path and exit")

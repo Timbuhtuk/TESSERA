@@ -134,15 +134,17 @@ internal static class WorkspaceChecks
             browser.Navigate("project", projectA.Id, grass.Id); Wait(Open(asset.Id));
             var stone = window.Workspace.State.Assets.Single(a => a.Name == Path.GetFileName(second));
             window.Workspace.Link(stone.Id, projectA.Id, null); Wait(Open(asset.Id));
-            Require(SourceIds().SetEquals([asset.Id, stone.Id]), "Opening a nested folder includes images from the whole project");
-            sources.SelectedItem = sources.Items.Cast<SourceEntry>().Single(s => s.Id == stone.Id); Pump();
-            Require(SourceIds().SetEquals([asset.Id, stone.Id]), "Switching filmstrip images preserves the project scope");
+            Require(SourceIds().SetEquals([asset.Id]), "Compact source tray leaked images from another logical folder");
+            typeof(MainWindow).GetMethod("NavigateSourceFolder", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, [null, false]); Pump();
+            Require(SourceIds().SetEquals([stone.Id]), "Project root navigation did not show root images");
+            sources.SelectedItem = sources.Items.OfType<SourceEntry>().Single(s => s.Id == stone.Id); Pump();
+            Require(SourceIds().SetEquals([stone.Id]), "Switching filmstrip images did not preserve project-root scope");
             Wait(Open(asset.Id));
             string scopedInput = Path.Combine(root, "scoped.png");
             using (var image = new Bitmap(12, 12)) { using var draw = Graphics.FromImage(image); draw.Clear(Color.Gold); image.Save(scopedInput); }
             Wait((Task)typeof(MainWindow).GetMethod("AddImagesAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [new[] { scopedInput }])!);
             var scoped = window.Workspace.State.Assets.Single(a => a.Name == Path.GetFileName(scopedInput));
-            Require(SourceIds().SetEquals([asset.Id, stone.Id, scoped.Id]), "Project import refreshes the scoped filmstrip after linking");
+            Require(SourceIds().SetEquals([asset.Id, scoped.Id]), "Project import refreshes the scoped filmstrip after linking");
             Wait(Open(scoped.Id)); Remove(scoped.Id);
             Require(sources.SelectedItem is SourceEntry neighbor && SourceIds().Contains(neighbor.Id), "Deleting a source selects a neighbor inside the project");
             Wait(Open(stone.Id)); Remove(stone.Id);
@@ -181,7 +183,7 @@ internal static class WorkspaceChecks
             Require(stateCopy.SelectedResult == stateCopySource.Generations[0].Id, "Independent UI copy preserves an older selected result rather than jumping to the latest");
             Require(SourceIds().SetEquals([stateCopy.Id]), "Independent copy replaces the source in the current project filmstrip");
             Wait(Open(stateCopy.Id)); Remove(stateCopy.Id);
-            Require(browser.Visibility == Visibility.Visible && images.Load().Count == 2 && sources.Items.Count == 0, "Deleting the last project image returns to its browser instead of opening another project");
+            Require(browser.Visibility == Visibility.Visible && images.Load().Count == 2 && SourceIds().Count == 0, "Deleting the last project image returns to its browser instead of opening another project");
 
             string boardPath = Path.Combine(root, "references.tboard");
             var boardFixture = new MoodboardWorkspace(); boardFixture.CreateWorkspaceBoard(256, 128); Wait(boardFixture.AddFilesAsync([input])); boardFixture.SaveToFile(boardPath);
@@ -215,10 +217,10 @@ internal static class WorkspaceChecks
 
             Task Action(string name, WorkspaceAsset selectedAsset) => (Task)typeof(MainWindow).GetMethod("WorkspaceActionAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [name, selectedAsset])!;
             Task Open(Guid id) => window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == id));
-            HashSet<Guid> SourceIds() => sources.Items.Cast<SourceEntry>().Select(s => s.Id).ToHashSet();
+            HashSet<Guid> SourceIds() => sources.Items.OfType<SourceEntry>().Select(s => s.Id).ToHashSet();
             void Remove(Guid id)
             {
-                var selected = sources.Items.Cast<SourceEntry>().Single(s => s.Id == id);
+                var selected = sources.Items.OfType<SourceEntry>().Single(s => s.Id == id);
                 typeof(MainWindow).GetMethod("RemoveSource", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [selected]); Pump();
             }
         }

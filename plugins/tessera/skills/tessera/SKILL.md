@@ -1,6 +1,6 @@
 ---
 name: tessera
-description: Use the local Tessera CLI to process images with any supported command and option, including pixel art downscaling, grid alignment and reduction, resizing, palettes, local color smoothing, monochrome and ASCII filters, palette inspection, color replacement, solid background removal, ICO export, and Aseprite sprite sheets. Use when the user asks to use Tessera or its CLI. Does not cover developing Tessera or operations available only in its desktop UI.
+description: Process images and run saved Tessera macros through the local Tessera CLI. Use when the user asks to use Tessera, its image-processing commands, or its saved processing recipes. Does not cover developing Tessera or operations available only in its desktop UI.
 ---
 
 # Tessera
@@ -30,6 +30,8 @@ python "<skill>/scripts/tessera.py" --cli "C:/Tools/Tessera-cli/tessera.exe" -- 
 
 `--configure` stores only the executable path in `%LOCALAPPDATA%/Tessera/chatgpt-cli.json`. `--config PATH` selects alternate settings for isolated setups. If the executable is absent, the Windows x64 CLI is available from [Tessera releases](https://github.com/Timbuhtuk/TESSERA/releases/latest); a source checkout can also publish `Pixelizator.Cli`. Do not substitute the desktop Tessera.exe.
 
+When local execution redirects `LOCALAPPDATA` and that location has no settings, the launcher also checks the existing `~/AppData/Local/Tessera/chatgpt-cli.json`. Settings in the current `LOCALAPPDATA` take precedence; an explicit `--config` selects only that file.
+
 ## Choose and run the operation
 
 Read the installed command's help before choosing unfamiliar flags. The bundled [CLI reference](references/cli.md) explains algorithms, options, constraints, and examples; live `--help` takes precedence if versions differ.
@@ -49,6 +51,8 @@ Read the installed command's help before choosing unfamiliar flags. The bundled 
 | Remove a solid background | `remove-background` or `remove-bg` |
 | Export a multi-size Windows icon | `ico` or `icon` |
 | Export Aseprite animations to PNG and JSON | `aseprite` |
+| List saved processing macros in a library | `macro list --library PATH` |
+| Apply a saved macro to an image | `macro apply INPUT --macro FILE -o OUTPUT` |
 
 Always place launcher options before the first `--` and pass every Tessera argument after it, as a separate argument. This also supports future CLI commands and options. Preserve filenames containing spaces, Cyrillic, or shell metacharacters; do not build or evaluate a shell command from a filename.
 
@@ -62,6 +66,19 @@ python "<skill>/scripts/tessera.py" -- aseprite "C:/Images/walk.aseprite" "C:/Im
 Use absolute input and output paths, or `--cwd DIR` before the separator for a known working directory. Prefer explicit output paths and `--json` when supported. Keep the user's requested settings; choose ordinary defaults for unspecified details. Preserve sources and use a fresh output name when an existing result is not meant to be replaced. Use `--overwrite` when replacement is requested; Aseprite reports existing outputs instead of overwriting them.
 
 For an alignment-and-reduction request, run `align` first, read its reported `cellSize`, then pass that value to `reduce-grid`. `resize` changes geometry without quantization; `colors` keeps dimensions. Solid-background removal is color/tolerance based. For capability requests beyond the table, consult current help and use the CLI if it supports them; do not infer UI-only capability from this skill.
+
+## Saved macros
+
+Read [the macro reference](references/macros.md) when listing, choosing, applying, or preparing a saved recipe. Check `macro --help` on the selected CLI first: an older executable can support ordinary commands while lacking macros. Use a current build if macro help is unavailable; refreshing the skill alone does not update the executable.
+
+Pass the library root to `macro list`, then use the actual JSON file for the selected macro in `macro apply`. Inspect listing `warnings` as well as `macros`; invalid files can be skipped while the command succeeds. Listing is read-only, and an empty or missing macro directory returns an empty list. Do not invent a macro or replace the user's requested steps when no match exists.
+
+```powershell
+python "<skill>/scripts/tessera.py" -- macro list --library "C:/Images/TesseraLibrary" --json
+python "<skill>/scripts/tessera.py" -- macro apply "C:/Images/source.png" --macro "C:/Images/TesseraLibrary/macros/recipe.json" -o "C:/Images/result.png" --json
+```
+
+The CLI and editor use the same version-1 workflow executor. A macro is a flattened sequence of image operations, validated before processing, with intermediate images kept in memory and only the final image saved. Keep the selected recipe intact. Prefer PNG for transparency and pixel fidelity. This CLI does not create macros, edit the editor's history trays, or save intermediate history entries.
 
 ## Return the result
 

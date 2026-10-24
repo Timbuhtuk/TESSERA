@@ -12,6 +12,9 @@ namespace DomainColorTest;
 
 public partial class BackgroundWorkspace : UserControl, IDisposable
 {
+    private BackgroundSettings? _renderedRecipe;
+    public bool HasManualErasure => _erasedCount > 0;
+    public ProcessingStep? AutomaticRecipeStep => _renderedRecipe is null ? null : new ProcessingStep { OperationId = ProcessingOperations.RemoveBackground, Background = _renderedRecipe };
     private Bitmap? _source;
     private Bitmap? _result;
     private string? _inputPath;
@@ -139,6 +142,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
             if (_disposed || revision != _revision) { result.Dispose(); return; }
             _processedResult?.Dispose();
             _processedResult = result;
+            _renderedRecipe = new BackgroundSettings { Mode = options.Mode, Tolerance = options.Tolerance, ColorArgb = options.Color?.ToArgb() };
             RecomposeManualResult();
         }
         catch (OperationCanceledException) { }

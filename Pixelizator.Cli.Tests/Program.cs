@@ -1,6 +1,8 @@
 using System.Drawing.Imaging;
 using System.Text.Json;
+using PixelArtAlignment;
 using PixelArtDownscale;
+using PixelArtWorkflows;
 using Pixelizator.Cli;
 
 // Standalone integration checks: no test runner or NuGet packages required.
@@ -292,6 +294,260 @@ try
             "Invalid replacement color accepted");
         Require(Run(["ascii", sourcePath, "--preset", "minimal", "--characters", "@."]).Code == 2,
             "Conflicting ASCII ramp accepted");
+    });
+
+    Check("Workflow executor matches the ordinary processors and owns its bitmap", () =>
+    {
+        string sourcePath = Path.Combine(directory, "workflow-source.png");
+        using (var fixture = new Bitmap(12, 8, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < fixture.Height; y++)
+                for (int x = 0; x < fixture.Width; x++)
+                    fixture.SetPixel(x, y, x < 4 ? Color.Black : x < 8 ? Color.FromArgb(255, 110, 120, 130) : Color.White);
+            fixture.Save(sourcePath, ImageFormat.Png);
+        }
+
+        var resize = new DownscaleOptions { TargetWidth = 6, TargetHeight = 4 };
+        var colors = new DownscaleOptions
+        {
+            IndependentColorMode = IndependentColorMode.Palette,
+            Palette = PaletteKind.Step,
+            PaletteStep = 51
+        };
+        var cleanup = new DownscaleOptions
+        {
+            LocalColorPasses = 2,
+            Cleanup = new ColorCleanupOptions { Strength = 0, ColorTolerance = 12, DetailProtection = .8, EdgeProtection = .8 }
+        };
+        var recipe = new ProcessingRecipe
+        {
+            Steps =
+            [
+                new ProcessingStep { OperationId = ProcessingOperations.Resize, Downscale = resize },
+                new ProcessingStep { OperationId = ProcessingOperations.Colors, Downscale = colors },
+                new ProcessingStep { OperationId = ProcessingOperations.Cleanup, Downscale = cleanup },
+                new ProcessingStep { OperationId = ProcessingOperations.Monochrome },
+                new ProcessingStep
+                {
+                    OperationId = ProcessingOperations.ReplaceColor,
+                    ColorReplacement = new ColorReplacementSettings
+                    {
+                        FromArgb = Color.Black.ToArgb(),
+                        ToArgb = Color.Magenta.ToArgb()
+                    }
+                },
+                new ProcessingStep
+                {
+                    OperationId = ProcessingOperations.RemoveBackground,
+                    Background = new BackgroundSettings
+                    {
+                        Mode = BackgroundRemovalMode.GlobalColor,
+                        Tolerance = 0,
+                        ColorArgb = Color.White.ToArgb()
+                    }
+                }
+            ]
+        };
+        var updates = new List<WorkflowProgress>();
+        using var source = new Bitmap(sourcePath);
+        int[] original = Enumerable.Range(0, source.Width * source.Height)
+            .Select(q => source.GetPixel(q % source.Width, q / source.Width).ToArgb()).ToArray();
+        using var actual = new WorkflowExecutor().Execute(source, recipe, progress: new InlineProgress<WorkflowProgress>(updates.Add));
+        using var scaled = IndependentImageProcessor.Scale(source, resize);
+        using var colored = IndependentImageProcessor.ApplyColors(scaled, colors);
+        using var cleaned = IndependentImageProcessor.ApplyNeighborColors(colored, cleanup);
+        using var monochrome = ImageFilters.Monochrome(cleaned);
+        using var replaced = ImageColorTools.ReplaceColor(monochrome, Color.Black, Color.Magenta);
+        using var expected = BackgroundRemover.Remove(replaced, BackgroundRemovalMode.GlobalColor, 0, Color.White);
+        EqualPixels(expected, actual);
+        Require(updates.Select(update => update.Index).SequenceEqual(Enumerable.Range(1, recipe.Steps.Count)),
+            "Workflow progress is not one-based or skipped a completed step");
+        Require(updates.All(update => update.Count == recipe.Steps.Count), "Workflow progress count changed");
+        for (int q = 0; q < original.Length; q++)
+            Require(source.GetPixel(q % source.Width, q / source.Width).ToArgb() == original[q], "Workflow changed its input");
+    });
+
+    Check("Workflow alignment state, validation and cancellation are deterministic", () =>
+    {
+        using var source = new Bitmap(8, 6, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+                source.SetPixel(x, y, Color.FromArgb(255, x / 2 * 40, y / 2 * 60, (x / 2 + y / 2) * 30));
+        var recipe = new ProcessingRecipe
+        {
+            Steps =
+            [
+                new ProcessingStep { OperationId = ProcessingOperations.Align },
+                new ProcessingStep { OperationId = ProcessingOperations.Reduce, UsePreviousAlignment = true }
+            ]
+        };
+        using var actual = new WorkflowExecutor().Execute(source, recipe);
+        using var aligned = new PixelGridAligner().Align(source, new GridAlignmentOptions());
+        using var expected = PixelGridReducer.Reduce(aligned.Aligned, aligned.CellSize);
+        EqualPixels(expected, actual);
+
+        var invalid = new ProcessingRecipe
+        {
+            Steps =
+            [
+                new ProcessingStep { OperationId = ProcessingOperations.Monochrome },
+                new ProcessingStep { OperationId = "unknown.operation" }
+            ]
+        };
+        var updates = new List<WorkflowProgress>();
+        try
+        {
+            using var ignored = new WorkflowExecutor().Execute(source, invalid,
+                progress: new InlineProgress<WorkflowProgress>(updates.Add));
+            throw new InvalidOperationException("Unsupported workflow operation was accepted");
+        }
+        catch (WorkflowStepException ex)
+        {
+            Require(ex.StepIndex == 2 && ex.OperationId == "unknown.operation", "Workflow error lost step metadata");
+            Require(updates.Count == 0, "Workflow started before the complete recipe was validated");
+        }
+
+        RequireThrows<InvalidDataException>(() => WorkflowExecutor.Validate(new ProcessingRecipe { Version = 2 }),
+            "Unsupported workflow version was accepted");
+        RequireThrows<InvalidDataException>(() => WorkflowExecutor.Validate(new ProcessingRecipe()),
+            "Empty workflow was accepted");
+        RequireWorkflowStep(1, ProcessingOperations.Resize, () => WorkflowExecutor.Validate(new ProcessingRecipe
+        {
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.Resize }]
+        }));
+        RequireWorkflowStep(1, ProcessingOperations.Reduce, () => WorkflowExecutor.Validate(new ProcessingRecipe
+        {
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.Reduce, UsePreviousAlignment = true }]
+        }));
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        try
+        {
+            using var ignored = new WorkflowExecutor().Execute(source, recipe, cancellation.Token);
+            throw new InvalidOperationException("Cancelled workflow executed");
+        }
+        catch (WorkflowCanceledException ex)
+        {
+            Require(ex.StepIndex == 1 && ex.OperationId == ProcessingOperations.Align,
+                "Cancellation before a step lost its metadata");
+        }
+
+        using var betweenSteps = new CancellationTokenSource();
+        var twoSteps = new ProcessingRecipe
+        {
+            Steps =
+            [
+                new ProcessingStep { OperationId = ProcessingOperations.Monochrome },
+                new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = new AsciiSettings() }
+            ]
+        };
+        try
+        {
+            using var ignored = new WorkflowExecutor().Execute(source, twoSteps, betweenSteps.Token,
+                new InlineProgress<WorkflowProgress>(update =>
+                {
+                    if (update.Index == 1) betweenSteps.Cancel();
+                }));
+            throw new InvalidOperationException("Workflow continued after cancellation between steps");
+        }
+        catch (WorkflowCanceledException ex)
+        {
+            Require(ex.StepIndex == 2 && ex.OperationId == ProcessingOperations.Ascii,
+                "Cancellation between steps lost the next step metadata");
+        }
+    });
+
+    Check("Workflow profile and ASCII steps match their ordinary processors", () =>
+    {
+        using var source = new Bitmap(input);
+        var options = new DownscaleOptions
+        {
+            TargetWidth = 11,
+            TargetHeight = 9,
+            Palette = PaletteKind.DB16,
+            Quantization = QuantizationMethod.MedianCut,
+            QuantizationColors = 12,
+            ThreadCount = 1
+        };
+        using var actualProfile = new WorkflowExecutor().Execute(source, new ProcessingRecipe
+        {
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.Profile, Downscale = options }]
+        });
+        var processed = new PixelArtDownscaler().Process(source, WorkflowJson.Snapshot(options));
+        using var crop = processed.CroppedSource;
+        using var expectedProfile = processed.Downscaled;
+        EqualPixels(expectedProfile, actualProfile);
+
+        var ascii = new AsciiSettings
+        {
+            Characters = ImageFilters.AsciiRampPresets[2].Characters,
+            KeepSourceSize = false,
+            InvertSource = true,
+            InvertColors = true
+        };
+        using var actualAscii = new WorkflowExecutor().Execute(source, new ProcessingRecipe
+        {
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = ascii }]
+        });
+        using var expectedAscii = ImageFilters.RenderAscii(source, ascii.KeepSourceSize, ascii.Characters,
+            ascii.InvertSource, ascii.InvertColors);
+        EqualPixels(expectedAscii, actualAscii);
+    });
+
+    Check("Macro CLI lists and applies the same workflow executor", () =>
+    {
+        string library = Path.Combine(directory, "macro-library");
+        var store = new MacroStore(library);
+        MacroDefinition saved = store.Save(new MacroDefinition
+        {
+            Name = "Small monochrome",
+            Steps =
+            [
+                new ProcessingStep
+                {
+                    OperationId = ProcessingOperations.Resize,
+                    Downscale = new DownscaleOptions { TargetWidth = 9, TargetHeight = 7, ThreadCount = 123 }
+                },
+                new ProcessingStep { OperationId = ProcessingOperations.Monochrome }
+            ]
+        });
+        string macroPath = store.PathFor(saved.Id);
+        Require(!File.ReadAllText(macroPath).Contains("threadCount", StringComparison.OrdinalIgnoreCase),
+            "Macro persisted a machine-local thread count");
+        Require(saved.Steps[0].Downscale!.ThreadCount == Environment.ProcessorCount,
+            "Saved macro did not restore a local thread count");
+        string outputPath = Path.Combine(directory, "macro-output.png");
+        var list = Run(["macro", "list", "--library", library, "--json"]);
+        Require(list.Code == 0 && list.Error.Length == 0, list.Error);
+        using (var report = JsonDocument.Parse(list.Output))
+        {
+            Require(report.RootElement.GetProperty("count").GetInt32() == 1, "Macro list count differs");
+            Require(report.RootElement.GetProperty("macros")[0].GetProperty("name").GetString() == saved.Name,
+                "Macro list lost its name");
+        }
+
+        var apply = Run(["macro", "apply", input, "--macro", macroPath, "-o", outputPath, "--json"]);
+        Require(apply.Code == 0 && apply.Error.Length == 0, apply.Error);
+        using (var source = new Bitmap(input))
+        using (var expected = new WorkflowExecutor().Execute(source,
+            new ProcessingRecipe { Version = saved.Version, Steps = saved.Steps }))
+        using (var actual = new Bitmap(outputPath))
+            EqualPixels(expected, actual);
+        Require(Run(["macro", "apply", input, "--macro", macroPath, "-o", outputPath]).Code == 1,
+            "Macro apply overwrote an output without --overwrite");
+        Require(Run(["macro", "apply", input, "--macro", macroPath, "-o", outputPath, "--overwrite"]).Code == 0,
+            "Macro apply did not honor --overwrite");
+        Require(Run(["macro", "--help"]).Code == 0 && Run(["macro", "list", "--help"]).Code == 0 &&
+            Run(["macro", "apply", "--help"]).Code == 0, "Macro help is incomplete");
+        Require(Run(["macro", "unknown"]).Code == 2, "Unknown macro command was accepted");
+        Require(Run(["macro", "apply", input, "--macro", macroPath]).Code == 2, "Macro output was optional");
+        Require(Run(["macro", "apply", input, "--macro", Path.Combine(directory, "missing-macro.json"),
+            "-o", Path.Combine(directory, "missing-macro-output.png")]).Code == 1, "Missing macro was not a file error");
+
+        string invalidMacro = Path.Combine(store.DirectoryPath, "invalid.json");
+        File.WriteAllText(invalidMacro, """{"version":2,"id":"00000000-0000-0000-0000-000000000001","name":"Old","steps":[{"operationId":"filter.monochrome"}]}""");
+        Require(Run(["macro", "apply", input, "--macro", invalidMacro,
+            "-o", Path.Combine(directory, "invalid-macro-output.png")]).Code == 1, "Unsupported macro version was accepted");
     });
 
     Check("Color cleanup controls merge close shades and preserve pixels at zero strength", () =>
@@ -892,6 +1148,24 @@ static void Require(bool condition, string message)
         throw new InvalidOperationException(message);
 }
 
+static void RequireThrows<TException>(Action action, string message) where TException : Exception
+{
+    try { action(); }
+    catch (TException) { return; }
+    throw new InvalidOperationException(message);
+}
+
+static void RequireWorkflowStep(int index, string operationId, Action action)
+{
+    try { action(); }
+    catch (WorkflowStepException ex)
+    {
+        Require(ex.StepIndex == index && ex.OperationId == operationId, "Workflow validation lost step metadata");
+        return;
+    }
+    throw new InvalidOperationException("Invalid workflow step was accepted");
+}
+
 static (int Code, string Output, string Error) Run(string[] arguments)
 {
     using var output = new StringWriter();
@@ -982,4 +1256,9 @@ static int DistinctColors(Bitmap bitmap)
         for (int x = 0; x < bitmap.Width; x++)
             colors.Add(bitmap.GetPixel(x, y).ToArgb());
     return colors.Count;
+}
+
+sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+{
+    public void Report(T value) => report(value);
 }
