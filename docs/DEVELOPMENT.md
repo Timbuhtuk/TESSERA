@@ -99,7 +99,7 @@ The Windows job sets up .NET 8 and Python 3.13, builds and tests the solution, p
 - `Tessera-chatgpt-plugin.zip` (local plugin)
 - `Tessera-skill.zip` (standalone skill)
 
-Versions follow `v1.0.N`, where `N` is the workflow run number; the same version is embedded in the executables. Pull request runs can leave gaps in the sequence. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
+The release series starts at `2.0.0` in `release-version.txt`. `Get-ReleaseVersion.ps1` selects the next patch after the highest tag in that major/minor series merged into the current commit; a rerun of a tagged commit keeps its version. PR builds do not consume version numbers. Change the version floor to start a new major/minor series. The workflow passes one resolved version to both the build and publication jobs, so tags, executable versions and embedded notes agree. `tests/ReleaseVersion.Checks.ps1` covers numbering with real isolated Git histories. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
 
 ### Patch notes for every release
 

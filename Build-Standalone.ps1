@@ -1,7 +1,7 @@
 param(
     [switch]$SkipChecks,
-    [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$Version = '1.0.0',
+    [ValidatePattern('^$|^\d+\.\d+\.\d+$')]
+    [string]$Version = '',
     [ValidateNotNullOrEmpty()]
     [string]$OutputDirectory = 'artifacts',
     [string]$ReleaseRepository
@@ -9,6 +9,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = $PSScriptRoot
+if (!$Version) { $Version = & (Join-Path $projectRoot 'Get-ReleaseVersion.ps1') }
 $artifactsRoot = [IO.Path]::GetFullPath($OutputDirectory, $projectRoot)
 $output = Join-Path $artifactsRoot 'standalone'
 $cliOutput = Join-Path $artifactsRoot 'cli'
@@ -27,6 +28,7 @@ try {
     $notesFile = Join-Path $artifactsRoot 'ReleaseNotes.json'
     Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" --nologo
     if (!$SkipChecks) {
+        & (Join-Path $projectRoot 'tests/ReleaseVersion.Checks.ps1')
         & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
         Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
         Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants
@@ -126,8 +128,10 @@ On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
 are copied there. The original library stays intact. Keep WorkspaceData
 when moving the app to another folder or computer.
 
-Tessera checks GitHub Releases for updates at startup. Use Settings > General > Updates
-to check manually and install a newer version. Your library remains in place.
+Tessera checks GitHub Releases at startup and every six hours. A newer version
+offers Update or Later after processing and other dialogs finish. Later hides
+that version until restart. Use Settings > General > Updates to check or retry
+manually. Downloads and installation require confirmation; your library stays.
 Updates: https://github.com/Timbuhtuk/TESSERA/releases/latest
 
 Each new version shows its patch notes on first launch. Read the bundled

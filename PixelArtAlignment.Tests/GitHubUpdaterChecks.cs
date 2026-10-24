@@ -10,6 +10,19 @@ public static class GitHubUpdaterChecks
 {
     public static void Run(Action<string, Action> check)
     {
+        check("GitHub updater crosses major versions and skips installed or newer builds", () =>
+        {
+            foreach (var (current, tag, expected) in new[] {
+                (new Version(1, 0, 57, 0), "v2.0.0", true),
+                (new Version(2, 0, 0, 0), "v2.0.0", false),
+                (new Version(2, 0, 1, 0), "v2.0.0", false),
+                (new Version(2, 0, 0, 0), "v2.0.1", true) })
+            {
+                using var http = new HttpClient(new ReplyHandler(_ => Json($$"""{"tag_name":"{{tag}}","html_url":"https://github.com/Timbuhtuk/TESSERA/releases/tag/{{tag}}","assets":[{"name":"Tessera.exe","browser_download_url":"https://github.com/Timbuhtuk/TESSERA/releases/download/{{tag}}/Tessera.exe","digest":"sha256:{{new string('a', 64)}}"}]}""")));
+                var release = GitHubUpdater.CheckAsync(http, current).GetAwaiter().GetResult();
+                Require((release is not null) == expected, $"Incorrect update decision: {current} -> {tag}");
+            }
+        });
         check("GitHub release version and verified download", () =>
         {
             byte[] executable = Encoding.UTF8.GetBytes("standalone test executable");
