@@ -19,6 +19,8 @@ jobs:
     name: Build and checks (Windows x64)
     runs-on: windows-latest
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     defaults:
       run:
         shell: pwsh
@@ -33,10 +35,16 @@ jobs:
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.13'
+      - name: Determine release version
+        id: version
+        run: |
+          $version = ./Get-ReleaseVersion.ps1
+          "version=$version" >> $env:GITHUB_OUTPUT
       - name: Build, test and package desktop and CLI
         env:
           GH_TOKEN: ${{ github.token }}
-        run: ./Build-Standalone.ps1 -Version "1.0.$env:GITHUB_RUN_NUMBER" -ReleaseRepository $env:GITHUB_REPOSITORY
+          TESSERA_RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: ./Build-Standalone.ps1 -Version $env:TESSERA_RELEASE_VERSION -ReleaseRepository $env:GITHUB_REPOSITORY
       - name: Smoke test standalone CLI
         run: |
           & ./artifacts/cli/tessera.exe --version
@@ -87,6 +95,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          TESSERA_RELEASE_VERSION: ${{ needs.build.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
           function Invoke-Gh {
@@ -102,7 +111,7 @@ jobs:
               exit 0
           }
 
-          $tag = "v1.0.$env:GITHUB_RUN_NUMBER"
+          $tag = "v$env:TESSERA_RELEASE_VERSION"
           $existing = & gh release view $tag --json isDraft
           if ($LASTEXITCODE -eq 0) {
               if (!(($existing | ConvertFrom-Json).isDraft)) {
