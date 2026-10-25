@@ -46,7 +46,7 @@ public static class MaterialMapFile
         int count = checked(header.Width * header.Height);
         var entry = archive.GetEntry("layers.bin") ?? throw new InvalidDataException("Missing material layers.");
         if (entry.Length != (long)count * 32) throw new InvalidDataException("Material layer size does not match its dimensions.");
-        using var reader = new BinaryReader(entry.Open());
+        using var reader = new BinaryReader(new BufferedStream(entry.Open(), 64 * 1024));
         byte[] pixels = reader.ReadBytes(checked(count * 4));
         if (pixels.Length != count * 4) throw new InvalidDataException("Truncated material image.");
         var document = new MaterialMapDocument(header.Width, header.Height, pixels);
