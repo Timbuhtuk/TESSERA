@@ -160,7 +160,9 @@ internal static class WorkspaceChecks
                 Get<ListBox>(window, "generationStrip").SelectedItem is GenerationEntry,
                 "Processing must select exactly the result while retaining its active source document");
             Wait((Task)typeof(MainWindow).GetMethod("AddGenerationAsSourceAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [editedSource, editedSource.Generations.Last()])!);
-            var derived = (SourceEntry)sources.SelectedItem;
+            var derived = sources.SelectedItem as SourceEntry
+                ?? throw new Exception("Result-to-source drop did not select the newly created source");
+            Require(window.ProcessingBasis == 0, "Result-to-source drop retained result processing selection");
             Require(SourceIds().SetEquals([asset.Id, derived.Id]) && window.Workspace.State.Links.Any(l => l.AssetId == derived.Id && l.ProjectId == projectA.Id && l.FolderId == grass.Id), "Result-to-source drop stays in the current project and folder");
             Remove(derived.Id);
 
