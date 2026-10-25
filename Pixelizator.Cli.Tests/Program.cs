@@ -1037,6 +1037,126 @@ try
         }
     });
 
+    Check("Contour cleanup repairs a misplaced edge pixel and reports candidates", () =>
+    {
+        string path = Path.Combine(directory, "contour-source.png");
+        string target = Path.Combine(directory, "contour-clean.png");
+        string candidates = Path.Combine(directory, "contour-candidates.png");
+        using (var fixture = new Bitmap(25, 21, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < fixture.Height; y++)
+                for (int x = 0; x < fixture.Width; x++)
+                    fixture.SetPixel(x, y, x < 12 ? Color.Black : Color.White);
+            fixture.SetPixel(12, 10, Color.Black);
+            fixture.Save(path, ImageFormat.Png);
+        }
+        var run = Run(["clean-contours", path, "-o", target, "--window-size", "7",
+            "--candidates-output", candidates, "--json"]);
+        Require(run.Code == 0 && run.Error.Length == 0, run.Error);
+        using var result = new Bitmap(target);
+        using var map = new Bitmap(candidates);
+        Require(result.GetPixel(12, 10).ToArgb() == Color.White.ToArgb(), "Misplaced contour pixel was not repaired");
+        Require(result.GetPixel(11, 10).ToArgb() == Color.Black.ToArgb(), "Correct side of contour changed");
+        Require(map.GetPixel(12, 10).A == 255, "Candidate map omitted repair");
+        using var report = JsonDocument.Parse(run.Output);
+        Require(report.RootElement.GetProperty("changedPixels").GetInt32() >= 1, "Change count missing");
+        Require(report.RootElement.GetProperty("windowSize").GetInt32() == 7, "Window size not reported");
+
+        foreach (int size in new[] { 5, 15 })
+        {
+            string endpoint = Path.Combine(directory, $"contour-clean-{size}.png");
+            ExpectSuccess(["clean-contours", path, "-o", endpoint, "--window-size", size.ToString()]);
+            using var endpointImage = new Bitmap(endpoint);
+            Require(endpointImage.GetPixel(12, 10).ToArgb() == Color.White.ToArgb(),
+                $"Window {size} failed to repair the same contour error");
+        }
+
+        Require(Run(["clean-contours", path, "-o", target]).Code == 1, "Existing output accepted");
+        Require(Run(["clean-contours", path, "-o", target, "--window-size", "6", "--overwrite"]).Code == 2,
+            "Even analysis window accepted");
+        Require(Run(["clean-contours", path, "-o", target, "--candidates-output", target, "--overwrite"]).Code == 2,
+            "Output and candidate map may collide");
+        Require(Run(["clean-contours", "--help"]).Code == 0, "Contour help missing");
+    });
+
+    Check("Contour cleanup preserves clean fine lines and every alpha value", () =>
+    {
+        string path = Path.Combine(directory, "contour-details.png");
+        string target = Path.Combine(directory, "contour-details-clean.png");
+        using (var fixture = new Bitmap(32, 32, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < fixture.Height; y++)
+                for (int x = 0; x < fixture.Width; x++)
+                    fixture.SetPixel(x, y, Color.FromArgb((x * 8 + y) % 256, x < 16 ? 25 : 220,
+                        x < 16 ? 25 : 220, x < 16 ? 25 : 220));
+            fixture.Save(path, ImageFormat.Png);
+        }
+        ExpectSuccess(["clean-contours", path, "-o", target, "--strictness", "strong"]);
+        using var original = new Bitmap(path);
+        using var result = new Bitmap(target);
+        var alphas = new HashSet<int>();
+        for (int y = 0; y < result.Height; y++)
+            for (int x = 0; x < result.Width; x++)
+            {
+                Require(result.GetPixel(x, y).A == original.GetPixel(x, y).A,
+                    $"Alpha changed at {x},{y}");
+                alphas.Add(result.GetPixel(x, y).A);
+            }
+        Require(alphas.Count == 256, "Fixture did not cover every alpha value");
+
+        string linePath = Path.Combine(directory, "contour-thin-line.png");
+        string lineTarget = Path.Combine(directory, "contour-thin-line-clean.png");
+        using (var line = new Bitmap(31, 31, PixelFormat.Format32bppArgb))
+        {
+            using var graphics = Graphics.FromImage(line);
+            graphics.Clear(Color.White);
+            for (int q = 3; q < 28; q++) line.SetPixel(q, q, Color.Black);
+            line.Save(linePath, ImageFormat.Png);
+        }
+        ExpectSuccess(["clean-contours", linePath, "-o", lineTarget, "--strictness", "strong"]);
+        using (var cleanLine = new Bitmap(linePath))
+        using (var actualLine = new Bitmap(lineTarget))
+            EqualPixels(cleanLine, actualLine);
+
+        string stairPath = Path.Combine(directory, "contour-staircase.png");
+        string stairTarget = Path.Combine(directory, "contour-staircase-clean.png");
+        using (var stairs = new Bitmap(31, 31, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < stairs.Height; y++)
+                for (int x = 0; x < stairs.Width; x++)
+                    stairs.SetPixel(x, y, x < y ? Color.Black : Color.White);
+            stairs.Save(stairPath, ImageFormat.Png);
+        }
+        ExpectSuccess(["clean-contours", stairPath, "-o", stairTarget]);
+        using (var cleanStairs = new Bitmap(stairPath))
+        using (var actualStairs = new Bitmap(stairTarget))
+            EqualPixels(cleanStairs, actualStairs);
+        Require(Run(["clean-contours", path, "-o", target, "--strictness", "unknown", "--overwrite"]).Code == 2,
+            "Unknown strictness accepted");
+    });
+
+    Check("Contour analysis shows candidates and gradients without changing the source", () =>
+    {
+        using var source = new Bitmap(Path.Combine(directory, "contour-source.png"));
+        using var unchanged = (Bitmap)source.Clone();
+        var analysis = ContourNoiseCleaner.Analyze(source, new ContourCleanOptions { WindowSize = 7 });
+        using var heatmap = analysis.Heatmap;
+        Require(analysis.CandidateCount >= 1, "Contour candidate was not found");
+        Require(heatmap.GetPixel(12, 10).ToArgb() == Color.Red.ToArgb(), "Candidate is not red");
+        bool hasGradient = false;
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+            {
+                Color pixel = heatmap.GetPixel(x, y);
+                Require(pixel.A == source.GetPixel(x, y).A, $"Heatmap alpha changed at {x},{y}");
+                if (pixel.A == 0) continue;
+                Require(pixel.R == 255 && pixel.G == pixel.B, $"Heatmap left the white-red scale at {x},{y}");
+                if (pixel.G is > 0 and < 255) hasGradient = true;
+            }
+        Require(hasGradient, "Contour gradients are absent from the heatmap");
+        EqualPixels(unchanged, source);
+    });
+
     int variant = 0;
     foreach (var palette in Enum.GetValues<PaletteKind>())
     foreach (var method in Enum.GetValues<QuantizationMethod>())

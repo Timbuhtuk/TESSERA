@@ -41,6 +41,24 @@ internal static class ImageToolsCommand
         Команда smooth является псевдонимом.
         """;
 
+    internal const string ContourHelp = """
+        Tessera clean-contours — исправить уверенные ошибки цвета вдоль границ пиксель-арта.
+        Использование: tessera clean-contours input.png [-o output.png] [параметры]
+
+          -i, --input PATH          Изображение после предварительной очистки.
+          -o, --output PATH         PNG; по умолчанию <имя>_contours.png.
+          --window-size N           Размер области анализа: 5, 7, 9, 11, 13 или 15 (7).
+          --strictness VALUE        cautious, normal, strong (cautious).
+          --no-detail-guard         Отключить защиту тонких линий и перемычек.
+          --candidates-output PATH  PNG-карта предложенных изменений.
+          --overwrite              Разрешить замену существующих результатов.
+          --json                   Отчёт JSON.
+          -h, --help                Эта справка.
+
+        Один проход; однородные участки не очищаются. Размер и альфа сохраняются.
+        Для замены используются только цвета исходного изображения.
+        """;
+
     internal const string ReplaceHelp = """
         Tessera replace-color — заменить один RGB-цвет во всех видимых пикселях.
         Использование: tessera replace-color input.png -o output.png --from #112233 --to #AABBCC
@@ -146,6 +164,62 @@ internal static class ImageToolsCommand
                     options.Cleanup, elapsedSeconds = timer.Elapsed.TotalSeconds
                 }));
             else output.WriteLine($"Сохранено: {target} ({result.Width} × {result.Height}); {Seconds(timer)} с.");
+            return 0;
+        }
+        catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }
+        catch (Exception ex) { error.WriteLine(BaseMessage(ex)); return 1; }
+    }
+
+    public static int RunContour(string[] args, TextWriter output, TextWriter error)
+    {
+        if (ShowHelp(args, ContourHelp, output)) return 0;
+        try
+        {
+            var parsed = Parse(args, ["--input", "--output", "--window-size", "--strictness", "--candidates-output"],
+                ["--overwrite", "--json", "--no-detail-guard"]);
+            string target = GetImageOutput(parsed, "_contours.png");
+            string? candidates = parsed.Value("--candidates-output");
+            if (candidates is not null)
+            {
+                candidates = Path.GetFullPath(candidates);
+                if (!Path.GetExtension(candidates).Equals(".png", StringComparison.OrdinalIgnoreCase))
+                    throw new CliUsageException("--candidates-output должен иметь расширение .png.");
+            }
+            ValidateOutputs(parsed.Input, parsed.Flag("--overwrite"), target, candidates);
+            int windowSize = parsed.Integer("--window-size", 7, 5, 15);
+            if (windowSize % 2 == 0) throw new CliUsageException("--window-size должен быть нечётным.");
+            string strictness = parsed.Choice("--strictness", "cautious", "cautious", "normal", "strong");
+            var options = new ContourCleanOptions
+            {
+                WindowSize = windowSize,
+                Strictness = strictness switch
+                {
+                    "normal" => ContourCleanStrictness.Normal,
+                    "strong" => ContourCleanStrictness.Strong,
+                    _ => ContourCleanStrictness.Cautious
+                },
+                ProtectDetails = !parsed.Flag("--no-detail-guard")
+            };
+            using var source = Load(parsed.Input);
+            var timer = Stopwatch.StartNew();
+            ContourCleanResult result = ContourNoiseCleaner.Process(source, options);
+            using (result.Image)
+            using (result.CandidateMap)
+            {
+                CliApplication.SaveImage(result.Image, target, parsed.Flag("--overwrite"));
+                if (candidates is not null)
+                    CliApplication.SaveImage(result.CandidateMap, candidates, parsed.Flag("--overwrite"));
+            }
+            timer.Stop();
+            if (parsed.Flag("--json"))
+                output.WriteLine(Json(new
+                {
+                    process = "clean-contours", input = parsed.Input, output = target,
+                    candidatesOutput = candidates, windowSize, strictness,
+                    protectDetails = options.ProtectDetails, result.CandidateCount, result.ChangedPixels,
+                    elapsedSeconds = timer.Elapsed.TotalSeconds
+                }));
+            else output.WriteLine($"Сохранено: {target}; кандидатов {result.CandidateCount}, изменений {result.ChangedPixels}; {Seconds(timer)} с.");
             return 0;
         }
         catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }

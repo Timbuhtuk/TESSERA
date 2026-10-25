@@ -362,6 +362,9 @@ public partial class MainWindow
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
         Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
         ChannelAdjustment = _channelAdjustment,
+        ContourWindowSize = ContourWindowSize,
+        ContourStrictness = (ContourCleanStrictness)Math.Clamp(contourStrictnessInput.SelectedIndex, 0, 2),
+        ContourProtectDetails = contourDetailGuardInput.IsChecked == true,
         DetectGrid = detectGridInput.IsChecked == true, AlignmentMode = SelectedGridAlignmentMode,
         SnapToGlobalGrid = SelectedGridAlignmentMode == GridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
         AspectLock = aspectLock.IsChecked == true
@@ -404,6 +407,9 @@ public partial class MainWindow
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
             RestoreChannelAdjustment(settings.ChannelAdjustment);
+            contourWindowInput.Value = settings.ContourWindowSize is >= 5 and <= 15 && settings.ContourWindowSize % 2 == 1 ? settings.ContourWindowSize : 15;
+            contourStrictnessInput.SelectedIndex = Math.Clamp((int)settings.ContourStrictness, 0, 2);
+            contourDetailGuardInput.IsChecked = settings.ContourProtectDetails;
             (settings.AlignmentMode == GridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
             snapLocalGridInput.IsChecked = settings.SnapToGlobalGrid;
             UpdateGridAlignmentMode();

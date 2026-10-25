@@ -65,7 +65,7 @@ public partial class MainWindow
 
     private void SetActiveLivePreviewTool(string? key)
     {
-        string? next = key is "color" or "smoothing" ? key : null;
+        string? next = key is "color" or "smoothing" or "contours" ? key : null;
         if (_activeLivePreviewTool == next) { ScheduleLiveToolPreviews(); return; }
         _activeLivePreviewTool = next;
         ClearDisplayedLivePreview();
@@ -111,6 +111,7 @@ public partial class MainWindow
 
     private void ClearDisplayedLivePreview()
     {
+        ClearContourPreview();
         if (ReferenceEquals(resultPreview.Image, _livePreviewBitmap) && _livePreviewBitmap is not null)
             resultPreview.Image = _downscaledResult;
         livePreviewFrame.Visibility = livePreviewBadge.Visibility = Visibility.Collapsed;
@@ -122,6 +123,7 @@ public partial class MainWindow
     {
         _livePreviewRevision++;
         _livePreviewTimer.Stop();
+        if (_activeLivePreviewTool == "contours") { ScheduleContourPreview(); return; }
         if (_largePreviewDecisionPending) { ClearDisplayedLivePreview(); return; }
         var basis = LivePreviewBasis;
         if (basis is not null && (long)basis.Width * basis.Height > LivePreviewPixelLimit)

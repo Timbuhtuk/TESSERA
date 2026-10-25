@@ -40,6 +40,7 @@ public partial class MainWindow
                 _dragCandidate = null;
                 if (_processing || _activeSource is null || Within<ScrollBar>(e.OriginalSource as DependencyObject) is not null ||
                     Within<ButtonBase>(e.OriginalSource as DependencyObject) is not null) return;
+                if (ReferenceEquals(origin, resultPreview) && ContourPreviewVisible) return;
                 var generation = ReferenceEquals(origin, generationStrip)
                     ? (ItemsControl.ContainerFromElement(generationStrip, e.OriginalSource as DependencyObject) as ListBoxItem)?.Content as GenerationEntry
                     : _activeSource.SelectedGeneration;

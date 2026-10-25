@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Контуры: карта кандидатов и градиентов",
+        "en": "Contours: candidate and gradient maps"
+      },
+      "notes": {
+        "ru": "- Контуры: добавлен инструмент в «Инструменты → Цвет». Карта в основном предпросмотре показывает цветовые градиенты и кандидатов на исправление оттенками от белого до красного.\n- Настройки Контуров: область анализа от 5 × 5 до 15 × 15, три уровня строгости и защита тонких деталей. Для небольших изображений карта обновляется автоматически; для больших её можно пересчитать вручную.\n- Карта контуров: анализируется выделенный исходник или результат. Кнопка «Создать результат-карту» добавляет карту в историю для сохранения в PNG; размер, прозрачность и настройки сохраняются.\n- CLI: команда clean-contours исправляет уверенные ошибки цвета вдоль границ и при необходимости сохраняет отдельную карту кандидатов. Исходный файл остаётся целым.",
+        "en": "- Contours: a new tool under Tools → Color shows color gradients and candidate corrections in the main preview, using shades from white to red.\n- Contour settings: choose an analysis window from 5 × 5 to 15 × 15, three strictness levels and fine-detail protection. Small images update automatically; refresh large images manually.\n- Contour map: analyze the selected source or result. Create map result adds a history card for PNG export, retaining dimensions, transparency and the settings used.\n- CLI: clean-contours repairs confident color errors along boundaries and can save a separate candidate map. The original file stays intact."
+      }
+    },
+    {
+      "version": "2.6.0",
+      "title": {
         "ru": "Каналы RGBA и предпросмотр в основном окне",
         "en": "RGBA channels and previews in the main pane"
       },
