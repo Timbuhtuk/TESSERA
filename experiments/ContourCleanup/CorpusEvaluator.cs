@@ -7,7 +7,7 @@ using PixelArtDownscale;
 internal static class CorpusEvaluator
 {
     private sealed record Score(string Id, string Motif, int Injected, int Corrected, int RecoveredExactly,
-        int OtherChanges, int CleanDamage, double ErrorBefore, double ErrorAfter);
+        int WrongColor, int OtherChanges, int CleanDamage, double ErrorBefore, double ErrorAfter);
 
     internal static void Evaluate(string root)
     {
@@ -30,7 +30,7 @@ internal static class CorpusEvaluator
                 .ToHashSet();
             int[] cleanComponents = DarkComponentSizes(clean), noisyComponents = DarkComponentSizes(noisy);
             int[] cleanComponents4 = DarkComponentSizes(clean, false), noisyComponents4 = DarkComponentSizes(noisy, false);
-            int corrected = 0, recovered = 0, other = 0, cleanDamage = 0;
+            int corrected = 0, recovered = 0, wrongColor = 0, other = 0, cleanDamage = 0;
             double beforeError = 0, afterError = 0;
             RequireSameCanvasAndAlpha(clean, noisy, id + " noisy");
             RequireSameCanvasAndAlpha(clean, result, id + " processed");
@@ -45,7 +45,9 @@ internal static class CorpusEvaluator
                     afterError += Difference(expected, actual);
                     if (injected.Contains(index))
                     {
-                        featureRows.Add(Features(actual.ToArgb() != damaged.ToArgb() ? "noise_corrected" : "noise_missed",
+                        string label = actual.ToArgb() == expected.ToArgb() ? "noise_corrected" :
+                            actual.ToArgb() != damaged.ToArgb() ? "noise_wrong_color" : "noise_missed";
+                        featureRows.Add(Features(label,
                             id, noisy, x, y, noisyComponents, noisyComponents4, expected));
                         if (actual.ToArgb() != damaged.ToArgb()) corrected++;
                         if (actual.ToArgb() == expected.ToArgb()) recovered++;
@@ -53,9 +55,12 @@ internal static class CorpusEvaluator
                         {
                             missed.Add((id, x, y));
                             if (actual.ToArgb() != damaged.ToArgb())
+                            {
+                                wrongColor++;
                                 Console.WriteLine($"wrong-color {id} {x},{y} expected=#{expected.R:X2}{expected.G:X2}{expected.B:X2} " +
                                     $"actual=#{actual.R:X2}{actual.G:X2}{actual.B:X2} " +
                                     $"neighbors={NeighborColors(noisy, x, y)}");
+                            }
                         }
                     }
                     else if (actual.ToArgb() != damaged.ToArgb())
@@ -71,9 +76,9 @@ internal static class CorpusEvaluator
                         featureRows.Add(Features("clean_damage", id, clean, x, y, cleanComponents, cleanComponents4, expected));
                     }
                 }
-            scores.Add(new Score(id, motif, injected.Count, corrected, recovered, other, cleanDamage,
+            scores.Add(new Score(id, motif, injected.Count, corrected, recovered, wrongColor, other, cleanDamage,
                 Math.Round(beforeError, 1), Math.Round(afterError, 1)));
-            Console.WriteLine($"{id} corrected={corrected}/{injected.Count} exact={recovered} " +
+            Console.WriteLine($"{id} corrected={corrected}/{injected.Count} exact={recovered} wrongColor={wrongColor} " +
                 $"other={other} cleanDamage={cleanDamage} error={beforeError:F0}->{afterError:F0}");
         }
         foreach (string motif in scores.Select(score => score.Motif).Distinct())
@@ -85,11 +90,13 @@ internal static class CorpusEvaluator
             injected = scores.Sum(score => score.Injected),
             corrected = scores.Sum(score => score.Corrected),
             recoveredExactly = scores.Sum(score => score.RecoveredExactly),
+            wrongColor = scores.Sum(score => score.WrongColor),
             otherChanges = scores.Sum(score => score.OtherChanges),
             cleanDamage = scores.Sum(score => score.CleanDamage),
             errorBefore = Math.Round(scores.Sum(score => score.ErrorBefore), 1),
             errorAfter = Math.Round(scores.Sum(score => score.ErrorAfter), 1),
             imagesWithCleanDamage = scores.Count(score => score.CleanDamage > 0),
+            imagesWithWrongColor = scores.Count(score => score.WrongColor > 0),
             imagesWithMissedNoise = scores.Count(score => score.Corrected < score.Injected)
         };
         File.WriteAllText(Path.Combine(root, "evaluation.json"), JsonSerializer.Serialize(new { aggregate, scores },

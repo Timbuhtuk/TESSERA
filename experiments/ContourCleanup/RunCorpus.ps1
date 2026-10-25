@@ -1,7 +1,7 @@
 param(
     [string]$CliDll = (Join-Path $PSScriptRoot '..\..\Pixelizator.Cli\bin\Release\net8.0-windows\tessera.dll'),
     [string]$CorpusRoot = (Join-Path $PSScriptRoot 'corpus'),
-    [double]$MinGain = 30,
+    [double]$MinGain = 20,
     [double]$Consensus = 60,
     [int]$AlphaClearance = 1,
     [int]$MaxCardinalDark = 2,

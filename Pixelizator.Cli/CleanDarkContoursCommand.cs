@@ -59,7 +59,7 @@ internal static class CleanDarkContoursCommand
           --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
           --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
-          --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (30).
+          --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
           --min-bright-consensus N      Доля согласных светлых соседей: 0–100% (60).
           --cardinal-color-weight N     Вес цветов соседей по сторонам: 1–10 (3).
@@ -83,7 +83,7 @@ internal static class CleanDarkContoursCommand
         try
         {
             string? input = null, target = null;
-            double darkness = 5, tolerance = 28, gain = 30, consensus = 60, component = 10,
+            double darkness = 5, tolerance = 28, gain = 20, consensus = 60, component = 10,
                 cardinalWeight = 3, pairTolerance = 8, twoCardinalComponent = 40,
                 protectedComponent = 20, protectedMinimum = 15, repeatSimilarity = 80,
                 largePatchRatio = 1, smallPatchComponent = 6, smallPatchRatio = 3,
