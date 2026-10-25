@@ -10,7 +10,7 @@ namespace DomainColorTest;
 
 public partial class MainWindow
 {
-    private MenuItem fileMenu = null!, imageMenu = null!, toolsMenu = null!, viewMenu = null!, moreMenu = null!;
+    private MenuItem fileMenu = null!, toolsMenu = null!, viewMenu = null!, moreMenu = null!;
     private MenuItem openMenuItem = null!, saveMenuItem = null!, saveAllMenuItem = null!, saveDocumentMenuItem = null!, exportMenu = null!;
     private MenuItem createMenu = null!, returnMenuItem = null!, resultBasisMenuItem = null!, sourceBasisMenuItem = null!;
     private MenuItem profileMenuItem = null!, sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, filtersMenuItem = null!, infoMenuItem = null!;
@@ -46,11 +46,10 @@ public partial class MainWindow
     private void InitializeNavigation()
     {
         fileMenu = NavigationItem("fileMenu", "_Файл");
-        imageMenu = NavigationItem("imageMenu", "_Изображение");
         toolsMenu = NavigationItem("toolsMenu", "Инс_трументы");
         viewMenu = NavigationItem("viewMenu", "_Вид");
         moreMenu = NavigationItem("moreMenu", "_Ещё");
-        foreach (var menu in new[] { fileMenu, imageMenu, toolsMenu, viewMenu }) mainMenu.Items.Add(menu);
+        foreach (var menu in new[] { fileMenu, toolsMenu, viewMenu }) mainMenu.Items.Add(menu);
         openMenuItem = AddNavigation(fileMenu, "openMenuItem", "Открыть файлы…", OpenNavigationFilesAsync, "Ctrl+O");
         createMenu = NavigationItem("createMenu", "Создать"); fileMenu.Items.Add(createMenu);
         AddNavigation(createMenu, "createProjectMenuItem", "Проект…", () => CreateNavigationMaterialAsync("project"));
@@ -66,25 +65,34 @@ public partial class MainWindow
         returnMenuItem = AddNavigation(fileMenu, "returnMenuItem", "Вернуться в библиотеку", () => { GoToLibrary(this, new()); return Task.CompletedTask; });
         checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", "Проверить обновления");
 
-        var basisMenu = NavigationItem("basisMenu", "Обрабатывать"); imageMenu.Items.Add(basisMenu);
+        var processingMenu = NavigationItem("processingMenu", "Обработка"); toolsMenu.Items.Add(processingMenu);
+        var basisMenu = NavigationItem("basisMenu", "Обрабатывать"); processingMenu.Items.Add(basisMenu);
         sourceBasisMenuItem = AddNavigation(basisMenu, "sourceBasisMenuItem", "Исходник", () => { ProcessingBasis = 0; return Task.CompletedTask; });
         resultBasisMenuItem = AddNavigation(basisMenu, "resultBasisMenuItem", "Выбранный результат", () => { ProcessingBasis = 1; return Task.CompletedTask; });
         sourceBasisMenuItem.IsCheckable = resultBasisMenuItem.IsCheckable = true;
-        imageMenu.Items.Add(new Separator());
-        sizeMenuItem = AddTool(imageMenu, "sizeMenuItem", "Размер и кадр…", "size", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
-        colorMenuItem = AddTool(imageMenu, "colorMenuItem", "Число цветов…", "color", 440, colorToolGroup);
-        smoothingMenuItem = AddTool(imageMenu, "smoothingMenuItem", "Очистить цвета…", "smoothing", 470, smoothingToolGroup);
-        AddNavigation(imageMenu, "replaceColorMenuItem", "Заменить цвет…", () => NavigationImageActionAsync("replace"));
-        AddNavigation(imageMenu, "removeBackgroundMenuItem", "Удалить фон…", () => NavigationImageActionAsync("background"));
-        filtersMenuItem = AddTool(imageMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
-        profileMenuItem = AddTool(toolsMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
-        AddTool(toolsMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
-        gridMenuItem = AddTool(toolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
-        AddNavigation(toolsMenu, "materialMapsMenuItem", "Карты Height / Normal / AO…", OpenMaterialMapsAsync);
-        AddNavigation(toolsMenu, "inspectTilesMenuItem", "Проверить тайлы…", () => NavigationImageActionAsync("tiles"));
-        infoMenuItem = AddTool(toolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 760, infoToolGroup);
-        AddNavigation(toolsMenu, "addToBoardMenuItem", "Добавить на доску…", () => NavigationImageActionAsync("board"));
-        _imageCommands.AddRange(imageMenu.Items.OfType<MenuItem>()); _imageCommands.AddRange(toolsMenu.Items.OfType<MenuItem>());
+        profileMenuItem = AddTool(processingMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
+        AddTool(processingMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
+
+        var sizeToolsMenu = NavigationItem("sizeToolsMenu", "Размер и сетка"); toolsMenu.Items.Add(sizeToolsMenu);
+        sizeMenuItem = AddTool(sizeToolsMenu, "sizeMenuItem", "Размер и кадр…", "size", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
+        gridMenuItem = AddTool(sizeToolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
+
+        var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
+        colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Число цветов…", "color", 440, colorToolGroup);
+        smoothingMenuItem = AddTool(colorToolsMenu, "smoothingMenuItem", "Очистить цвета…", "smoothing", 470, smoothingToolGroup);
+        AddNavigation(colorToolsMenu, "replaceColorMenuItem", "Заменить цвет…", () => NavigationImageActionAsync("replace"));
+        infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 760, infoToolGroup);
+
+        var filtersToolsMenu = NavigationItem("filtersToolsMenu", "Фильтры и фон"); toolsMenu.Items.Add(filtersToolsMenu);
+        filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
+        AddNavigation(filtersToolsMenu, "removeBackgroundMenuItem", "Удалить фон…", () => NavigationImageActionAsync("background"));
+
+        var materialsToolsMenu = NavigationItem("materialsToolsMenu", "Материалы и тайлы"); toolsMenu.Items.Add(materialsToolsMenu);
+        AddNavigation(materialsToolsMenu, "materialMapsMenuItem", "Карты Height / Normal / AO…", OpenMaterialMapsAsync);
+        AddNavigation(materialsToolsMenu, "inspectTilesMenuItem", "Проверить тайлы…", () => NavigationImageActionAsync("tiles"));
+        AddNavigation(materialsToolsMenu, "addToBoardMenuItem", "Добавить на доску…", () => NavigationImageActionAsync("board"));
+
+        _imageCommands.AddRange(NavigationDescendants(toolsMenu));
         _imageCommands.Add((MenuItem)FindName("exportIcoMenuItem"));
 
         zoomMenu = NavigationItem("zoomMenu", "Масштаб"); viewMenu.Items.Add(zoomMenu);
@@ -135,6 +143,14 @@ public partial class MainWindow
         };
         parent.Items.Add(item); return item;
     }
+    private static IEnumerable<MenuItem> NavigationDescendants(MenuItem parent)
+    {
+        foreach (var item in parent.Items.OfType<MenuItem>())
+        {
+            yield return item;
+            foreach (var child in NavigationDescendants(item)) yield return child;
+        }
+    }
     private MenuItem AddTool(MenuItem parent, string name, string text, string key, double height, params GroupBox[] groups)
         => AddNavigation(parent, name, text, () => { OpenEditorTool(key, Localization.Text(text).TrimEnd('…'), height, groups); if (key == "info") RefreshInfo(); return Task.CompletedTask; });
 
@@ -152,7 +168,7 @@ public partial class MainWindow
         bool canExport = image || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
-        imageMenu.IsEnabled = toolsMenu.IsEnabled = image && !busy;
+        toolsMenu.IsEnabled = image && !busy;
         foreach (var item in _imageCommands) item.IsEnabled = image && !busy;
         viewMenu.IsEnabled = image;
         saveDocumentMenuItem.IsEnabled = !busy && (_workspaceReady || board || animation || tiles);
@@ -187,7 +203,7 @@ public partial class MainWindow
     {
         if (!_navigationReady || ActualWidth <= 0) return;
         double width = 0;
-        foreach (var item in new[] { fileMenu, imageMenu, toolsMenu, viewMenu })
+        foreach (var item in new[] { fileMenu, toolsMenu, viewMenu })
         {
             var label = new TextBlock { Text = item.Header.ToString()!.Replace("_", ""), FontFamily = mainMenu.FontFamily, FontSize = mainMenu.FontSize };
             label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity)); width += label.DesiredSize.Width + 20;
@@ -195,7 +211,7 @@ public partial class MainWindow
         bool compact = width + libraryButton.ActualWidth + captionButtons.ActualWidth + 48 > titleBar.ActualWidth;
         if (compact == _navigationCompact) return;
         CloseNavigationMenus();
-        foreach (var item in new[] { imageMenu, toolsMenu, viewMenu })
+        foreach (var item in new[] { toolsMenu, viewMenu })
         {
             if (compact) { mainMenu.Items.Remove(item); moreMenu.Items.Add(item); }
             else { moreMenu.Items.Remove(item); mainMenu.Items.Add(item); }
@@ -206,7 +222,7 @@ public partial class MainWindow
     private void CloseNavigationMenus()
     {
         if (!_navigationReady) return;
-        foreach (var item in new[] { fileMenu, imageMenu, toolsMenu, viewMenu, moreMenu }) item.IsSubmenuOpen = false;
+        foreach (var item in new[] { fileMenu, toolsMenu, viewMenu, moreMenu }) item.IsSubmenuOpen = false;
     }
 
     private async Task OpenNavigationFilesAsync()

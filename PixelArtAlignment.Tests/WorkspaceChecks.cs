@@ -205,7 +205,7 @@ internal static class WorkspaceChecks
 
             var board = window.Workspace.State.Assets.Single(a => a.Kind == WorkspaceAssetKind.Board);
             Wait(window.OpenWorkspaceAssetAsync(board)); var boardEditor = Get<MoodboardWorkspace>(window, "moodboardWorkspace");
-            Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && !Get<MenuItem>(window, "imageMenu").IsEnabled, "Board file commands are available while image actions are disabled");
+            Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && !Get<MenuItem>(window, "toolsMenu").IsEnabled, "Board file commands are available while image tools are disabled");
             Wait(boardEditor.AddFilesAsync([second])); Wait(boardEditor.SaveWorkspaceAsync());
             Require(File.ReadAllBytes(boardPath).SequenceEqual(boardOriginal) && board.Thumbnail is not null, "Board edits and thumbnail save to owned document, preserving external original");
             var boardReload = new MoodboardWorkspace(); boardReload.LoadFromFile(window.Workspace.ContentPath(board));

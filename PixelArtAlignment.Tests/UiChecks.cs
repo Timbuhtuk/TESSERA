@@ -215,7 +215,10 @@ internal static class UiChecks
             window.Width = window.MinWidth;
             window.Height = window.MinHeight;
             Capture("minimum.png");
-            Require(Get<Menu>("mainMenu").Items.Count == 2 && Get<MenuItem>("moreMenu").Items.Count == 3,
+            // Larger menu text must still exercise overflow after removing the Image section.
+            double menuFontSize = Get<Menu>("mainMenu").FontSize;
+            Get<Menu>("mainMenu").FontSize = 28; Pump(); Invoke("UpdateNavigationLayout"); Pump();
+            Require(Get<Menu>("mainMenu").Items.Count == 2 && Get<MenuItem>("moreMenu").Items.Count == 2,
                 "Narrow title bar did not group the remaining sections under More");
             Click("moreMenu");
             Require(Get<MenuItem>("moreMenu").IsSubmenuOpen, "More menu did not open");
@@ -225,6 +228,7 @@ internal static class UiChecks
             Click("moreMenu"); Click("infoMenuItem"); Pump();
             Require(Window.GetWindow(Get<TextBlock>("infoSourceSummary")) is { IsVisible: true }, "Narrow menu did not open Info");
             Window.GetWindow(Get<TextBlock>("infoSourceSummary"))!.Close();
+            Get<Menu>("mainMenu").FontSize = menuFontSize; Pump(); Invoke("UpdateNavigationLayout"); Pump();
             Require(ReferenceEquals(Get<Border>("sourceTray").Parent, Get<Grid>("historyRow")) &&
                 Grid.GetColumn(Get<Border>("sourceTray")) == 2, "Narrow editor did not keep both history trays above previews");
             Require(Get<PixelPreview>("sourcePreview").TranslatePoint(new System.Windows.Point(), window).Y >

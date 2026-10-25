@@ -27,22 +27,21 @@ Search matches asset names and tags; multiple words must all match. Choose the c
 
 ## Edit and export
 
-Open a material by double-click or Enter. The title bar contains **File · Image · Tools · View** beside Tessera. Both former editor button rows have been removed. The logo returns to the current library section; the remaining title space shows the material name and its original/library path in a tooltip. The gear and window controls remain on the right.
+Open a material by double-click or Enter. The title bar contains **File · Tools · View** beside Tessera. Both former editor button rows have been removed. The logo returns to the current library section; the remaining title space shows the material name and its original/library path in a tooltip. The gear and window controls remain on the right.
 
 The library header shows the selected section or project/folder path. Opening files and creating materials are available from **File**, without duplicate buttons in the library header.
 
 - **File** opens materials, creates projects/boards/tile collections, saves editable documents and exports PNG, image histories, PNG + JSON or ICO for the active workspace.
-- **Image** selects the processing basis and opens size/frame, color count, color cleanup/replacement, background removal and filters.
-- **Tools** opens workflows, grid alignment/reduction, tile inspection, color information and adding an image to a board.
+- **Tools** groups image operations into **Processing**, **Size and grid**, **Color**, **Filters and background**, and **Materials and tiles**. Processing selects the source/result basis and opens ready workflows or macros. Size and grid contains size/frame and grid alignment/reduction. Color contains palette reduction, cleanup, replacement and image information. Filters and background contains filters and background removal. Materials and tiles contains Height / Normal / AO maps, tile inspection and adding an image to a board.
 - **View** selects zoom, dark/light checkerboards or solid backgrounds, and the alternative comparison mode. In that mode the selected result fills the comparison area; hold Alt for the original and release it for the result. Each image is fitted proportionally rather than compared at an identical pixel zoom. Current basis, zoom and background choices have checkmarks; a result basis requires a saved result.
 
-When the title bar cannot fit all sections and a 48 px drag area, it shows **File · More**. More contains the same Image/Tools/View sections with their existing commands and state. Alt/F10, arrows, Enter and Escape use ordinary application-menu navigation. Opening a settings section does not run processing.
+When the title bar cannot fit all sections and a 48 px drag area, it shows **File · More**. More contains the same Tools/View sections with their existing commands and state. Alt/F10, arrows, Enter and Escape use ordinary application-menu navigation. Opening a settings section does not run processing.
 
 Image processing settings are docked beside the previews; narrow windows place the settings above them. Advanced settings remain collapsible. Background removal, tile inspection and ICO retain their existing dedicated screens/windows in this pass. The image algorithms are the existing shared processors.
 
 Opening an image from a project limits the source filmstrip to that project's images, including all its folders. Switching images keeps this context; shared images use the project they were opened from. **Все ассеты** opens the full image library, while **Без проекта** keeps only standalone images. Imports and independent copies update the filmstrip. Removing the last project image returns to its browser.
 
-Use the corresponding Image/Tools/File menu commands to remove a solid background, inspect tiles, export ICO, replace a color, export PNG, or add the chosen input to an existing board. Background removal and tile correction offer **В историю ассета**, which appends a result directly to the originating image. **Image → Process** identifies whether the source or a saved result is the next input. Ctrl+O opens materials; Ctrl+S exports the current image basis or saves the active editable document.
+Use the corresponding Tools/File menu commands to remove a solid background, inspect tiles, export ICO, replace a color, export PNG, or add the chosen input to an existing board. Background removal and tile correction offer **В историю ассета**, which appends a result directly to the originating image. **Tools → Processing → Process** identifies whether the source or a saved result is the next input. Ctrl+O opens materials; Ctrl+S exports the current image basis or saves the active editable document.
 
 Tile Inspector lists the current project's images across all nested folders, independently of browser search/type filters. Shared assets appear once. Choose an original or selected history result to add it to the collection; returning to the inspector refreshes the selection. Corrections retain the originating asset and loaded history parent. Switching projects respects unsaved collection edits, and applying a correction to image history does not save the collection itself.
 

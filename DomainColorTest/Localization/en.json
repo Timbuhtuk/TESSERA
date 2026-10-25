@@ -1118,5 +1118,9 @@
   "Доступна Tessera {0}. Открыть страницу релиза для скачивания?": "Tessera {0} is available. Open the release page to download it?",
   "Обновить": "Update",
   "Открыть релиз": "Open release",
-  "Позже": "Later"
+  "Позже": "Later",
+  "Обработка": "Processing",
+  "Размер и сетка": "Size and grid",
+  "Фильтры и фон": "Filters and background",
+  "Материалы и тайлы": "Materials and tiles"
 }
