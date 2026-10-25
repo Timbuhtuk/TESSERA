@@ -64,6 +64,8 @@ foreach (var variant in new[]
     (Name: "dark-15-n3-g40-a3", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 3)),
     (Name: "dark-15-n3-g40-a3-c60", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 3, 0.60)),
     (Name: "dark-15-n3-g40-a3-c75", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 3, 0.75)),
+    (Name: "dark-05-n3-g40-a3-c75", Options: new DarkContourExperiment.Options(5, 3, 28, 40, 3, 0.75)),
+    (Name: "dark-10-n3-g40-a3-c75", Options: new DarkContourExperiment.Options(10, 3, 28, 40, 3, 0.75)),
     (Name: "dark-20-n3", Options: new DarkContourExperiment.Options(20, 3, 28, 12)),
     (Name: "dark-15-n4", Options: new DarkContourExperiment.Options(15, 4, 28, 12))
 })
@@ -116,6 +118,8 @@ foreach (var variant in new[]
                 }
             }
         }
+        if (variant.Name == "dark-05-n3-g40-a3-c75")
+            SaveCandidateAtlas(source, cleaned.Image, Path.Combine(output, "candidate-atlas-dark-05.png"));
         Console.WriteLine($"{variant.Name} changed={cleaned.ChangedPixels} dark topology: {topology}");
     }
 }
