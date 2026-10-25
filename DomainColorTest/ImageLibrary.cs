@@ -19,6 +19,7 @@ public sealed class EditorSettings
     public int CellSize { get; set; } = 8;
     public bool DetectGrid { get; set; }
     public GridAlignmentMode AlignmentMode { get; set; } = GridAlignmentMode.Global;
+    public bool SnapToGlobalGrid { get; set; }
     public bool AspectLock { get; set; }
 }
 
@@ -72,9 +73,10 @@ public sealed class GenerationEntry : INotifyPropertyChanged
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     [JsonIgnore] public bool IsHeader => false;
-    [JsonIgnore] public bool IsGlobalAlignment => IsAlignment && Settings.AlignmentMode == GridAlignmentMode.Global;
+    [JsonIgnore] public bool IsGlobalAlignment => IsAlignment && (Settings.AlignmentMode == GridAlignmentMode.Global || Settings.SnapToGlobalGrid);
     [JsonIgnore] public string Label => IsAlignment ? Localization.Format(Settings.AlignmentMode == GridAlignmentMode.Local
-        ? "Локальная сетка {0} px · {1:HH:mm:ss}" : "Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
+        ? Settings.SnapToGlobalGrid ? "Локальная сетка с привязкой {0} px · {1:HH:mm:ss}" : "Локальная сетка {0} px · {1:HH:mm:ss}"
+        : "Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
         : $"{(Operation.Length > 0 ? (OperationId == ProcessingOperations.Macro ? Operation : Localization.StoredText(Operation)) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
     [JsonIgnore] public string Description => $"{(OperationId == ProcessingOperations.Macro ? Caption : Localization.StoredText(Caption))}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{PresentationHint}\n{Localization.StoredText(Log)}";
     [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить результат «{0}» из истории", Label);

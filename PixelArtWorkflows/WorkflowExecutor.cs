@@ -99,7 +99,7 @@ public sealed class WorkflowExecutor
             {
                 if (step is null) throw new InvalidDataException("Step is null.");
                 ValidateStep(step, hasAlignment);
-                if (step.OperationId == ProcessingOperations.Align) hasAlignment = true;
+                if (step.OperationId is ProcessingOperations.Align or ProcessingOperations.AlignLocalSnapped) hasAlignment = true;
                 if (step.OperationId == ProcessingOperations.AlignLocal) hasAlignment = false;
             }
             catch (WorkflowStepException) { throw; }
@@ -130,10 +130,12 @@ public sealed class WorkflowExecutor
                 return (IndependentImageProcessor.ApplyNeighborColors(current, LocalOptions(step.Downscale!)), previousAlignmentCell);
             case ProcessingOperations.Align:
             case ProcessingOperations.AlignLocal:
+            case ProcessingOperations.AlignLocalSnapped:
             {
-                var mode = step.OperationId == ProcessingOperations.AlignLocal ? GridAlignmentMode.Local : GridAlignmentMode.Global;
-                var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode });
-                return (alignment.Aligned, mode == GridAlignmentMode.Global ? alignment.CellSize : null);
+                var mode = step.OperationId == ProcessingOperations.Align ? GridAlignmentMode.Global : GridAlignmentMode.Local;
+                bool snap = step.OperationId == ProcessingOperations.AlignLocalSnapped;
+                var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap });
+                return (alignment.Aligned, mode == GridAlignmentMode.Global || snap ? alignment.CellSize : null);
             }
             case ProcessingOperations.Reduce:
             {
@@ -183,9 +185,10 @@ public sealed class WorkflowExecutor
                 break;
             case ProcessingOperations.Align:
             case ProcessingOperations.AlignLocal:
+            case ProcessingOperations.AlignLocalSnapped:
                 RequireOnly(step, cellSize: true);
                 ValidateCellSize(step.CellSize, optional: true);
-                if (step.OperationId == ProcessingOperations.AlignLocal && step.CellSize > 64)
+                if (step.OperationId != ProcessingOperations.Align && step.CellSize > 64)
                     throw new InvalidDataException("Local cell size must be 2..64.");
                 break;
             case ProcessingOperations.Reduce:

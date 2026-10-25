@@ -1,4 +1,11 @@
 {
+  "Привязать к общей сетке": "Snap to shared grid",
+  "Разрешить сдвиг фигур к сетке холста. После обработки можно сжать ячейки до одного пикселя.": "Allow figures to move onto the canvas grid. The result can then be reduced to one pixel per cell.",
+  "Восстанавливает форму и сдвигает фигуры к общей сетке.": "Restores shapes and moves figures onto one shared grid.",
+  "Локальная сетка с привязкой": "Local grid with snapping",
+  "Локальная сетка с привязкой {0} px · {1:HH:mm:ss}": "Snapped local grid {0} px · {1:HH:mm:ss}",
+  "ЛОКАЛЬНАЯ СЕТКА С ПРИВЯЗКОЙ · {0} × {1} · ячейка {2} px": "SNAPPED LOCAL GRID · {0} × {1} · cell {2} px",
+  "Привязка к общей сетке: сдвинуто областей {0}, конфликтов ячеек {1}.": "Shared grid snapping: {0} regions moved, {1} cell conflicts.",
   "Глобальный": "Global",
   "Локальный": "Local",
   "Одна общая сетка для всего изображения.": "One shared grid for the entire image.",

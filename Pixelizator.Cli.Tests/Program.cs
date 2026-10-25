@@ -686,6 +686,34 @@ try
         Require(Run(["align", "--help"]).Code == 0, "Alignment help failed");
     });
 
+    Check("Local snapping CLI is opt-in, reports shifts and permits exact compaction", () =>
+    {
+        string sourcePath = Path.Combine(directory, "local-snap.png");
+        string offPath = Path.Combine(directory, "local-snap-off.png"), onPath = Path.Combine(directory, "local-snap-on.png");
+        using (var source = new Bitmap(60, 40, PixelFormat.Format32bppArgb))
+        {
+            using var graphics = Graphics.FromImage(source); graphics.Clear(Color.FromArgb(20, 20, 30));
+            using var brush = new SolidBrush(Color.White);
+            graphics.FillRectangle(brush, 12, 12, 5, 10); graphics.FillRectangle(brush, 17, 17, 5, 5);
+            source.Save(sourcePath, ImageFormat.Png);
+        }
+        var off = Run(["align", sourcePath, "--mode", "local", "--cell-size", "5", "--json", "-o", offPath]);
+        Require(off.Code == 0, off.Error);
+        using (var report = JsonDocument.Parse(off.Output))
+            Require(!report.RootElement.GetProperty("snapToGlobalGrid").GetBoolean(), "Snapping default changed");
+        using (var source = new Bitmap(sourcePath)) using (var actual = new Bitmap(offPath)) EqualPixels(source, actual);
+        var on = Run(["align", sourcePath, "--mode", "local", "--cell-size", "5", "--snap-to-grid", "--json", "-o", onPath]);
+        Require(on.Code == 0, on.Error);
+        using (var report = JsonDocument.Parse(on.Output))
+            Require(report.RootElement.GetProperty("snapToGlobalGrid").GetBoolean()
+                && report.RootElement.GetProperty("shiftedRegionCount").GetInt32() == 1, "Snap metadata missing");
+        using (var actual = new Bitmap(onPath))
+        using (var compact = PixelGridReducer.Reduce(actual, 5))
+            Require(compact.Width == 12 && compact.GetPixel(2, 2).R == 255 && compact.GetPixel(3, 3).R == 255, "Snapped shape changed");
+        Require(Run(["align", sourcePath, "--snap-to-grid"]).Code == 2, "Global mode accepted a local snap flag");
+        Require(Run(["align", sourcePath, "--mode", "local", "--snap-to-grid=false"]).Code == 2, "Flag accepted an ambiguous value");
+    });
+
     Check("Grid reduction copies exact cells, including partial edges and alpha", () =>
     {
         string aligned = Path.Combine(directory, "reduction-aligned.png");

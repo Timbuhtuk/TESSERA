@@ -88,3 +88,9 @@ Local grid mode: `--local-grid` (also included in `--ui`) verifies independent o
 legacy default settings, macro roundtrip, refusal of global compaction after local alignment, real
 floating/docked WPF controls, stale results, history restoration, source-copy metadata and RU/EN labels.
 Panel renders are saved under `artifacts/local-grid-ui/wpf/`.
+
+Optional local snapping is covered by the same `--local-grid` suite: 77 combinations of region
+phases across pitches 4, 5 and 6 compare against exact rigid translations, including half-cell ties,
+background cleanup, idempotence and lossless cell compaction. Extra cases cover border cells, a
+one-pixel white star, alpha 0–255, macro replay and the WPF switch in both panel layouts/languages.
+The CLI integration suite checks the opt-in flag, validation, output pixels and JSON metadata.
