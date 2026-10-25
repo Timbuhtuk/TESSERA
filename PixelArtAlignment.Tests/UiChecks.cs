@@ -319,13 +319,13 @@ internal static class UiChecks
             Get<IntegerInput>("localColorPassesInput").Value = 3;
             Get<Slider>("localBrightnessInput").Value = 20;
             Get<Slider>("localContrastInput").Value = 30;
-            Get<Slider>("localSaturationInput").Value = 40;
+            Get<CheckBox>("localDetailGuardInput").IsChecked = false;
             Get<Slider>("localEdgeInput").Value = 60;
             options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
             Require(options.LocalColorPasses == 3 && options.ManualCriteria?.TargetBrightness == .73 &&
                 options.Cleanup?.ColorTolerance == 8 &&
                 options.Cleanup?.Strength == .3 &&
-                options.Cleanup?.DetailProtection == .4 &&
+                options.Cleanup?.DetailProtection == 0 &&
                 options.Cleanup?.EdgeProtection == .6,
                 "Cleanup controls were not independent from size-tool criteria");
             Get<Slider>("brightnessInput").Value = 81;
@@ -341,7 +341,7 @@ internal static class UiChecks
                 neighborSourceGeneration.Settings.Downscale.ManualCriteria?.TargetBrightness == .73 &&
                 neighborSourceGeneration.Settings.Downscale.Cleanup?.ColorTolerance == 8 &&
                 neighborSourceGeneration.Settings.Downscale.Cleanup?.Strength == .3 &&
-                neighborSourceGeneration.Settings.Downscale.Cleanup?.DetailProtection == .4 &&
+                neighborSourceGeneration.Settings.Downscale.Cleanup?.DetailProtection == 0 &&
                 neighborSourceGeneration.Settings.Downscale.Cleanup?.EdgeProtection == .6 &&
                 neighborSourceResult.Size == source.Size,
                 "Local colors on the source lost the basis, dimensions or manual settings");
@@ -349,11 +349,13 @@ internal static class UiChecks
                 Require(sourceColors.Contains(neighborSourceResult.GetPixel(x, y).ToArgb()),
                     "Local colors introduced a color absent from the source");
             Get<IntegerInput>("localColorPassesInput").Value = 5;
+            Get<CheckBox>("localDetailGuardInput").IsChecked = true;
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             Click("neighborColorsButton"); Wait();
             var neighborResultGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             Require(neighborResultGeneration.ParentGenerationId == neighborSourceGeneration.Id &&
-                neighborResultGeneration.Settings.Downscale.LocalColorPasses == 5,
+                neighborResultGeneration.Settings.Downscale.LocalColorPasses == 5 &&
+                neighborResultGeneration.Settings.Downscale.Cleanup?.DetailProtection == new ColorCleanupOptions().DetailProtection,
                 "Local colors did not chain from the selected result");
             Get<Slider>("localBrightnessInput").Value = 68;
             Require(Get<Slider>("brightnessInput").Value == 73,
@@ -362,7 +364,7 @@ internal static class UiChecks
             Require(Get<IntegerInput>("localColorPassesInput").Value == 3 &&
                 Get<Slider>("localBrightnessInput").Value == 20 &&
                 Get<Slider>("localContrastInput").Value == 30 &&
-                Get<Slider>("localSaturationInput").Value == 40 &&
+                Get<CheckBox>("localDetailGuardInput").IsChecked == false &&
                 Get<Slider>("localEdgeInput").Value == 60,
                 "History did not restore the independent local color settings");
             Capture("editor-tools.png");

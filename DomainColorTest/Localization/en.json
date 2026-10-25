@@ -983,6 +983,7 @@
   "Сходство цветов": "Color similarity",
   "Сила очистки": "Cleanup strength",
   "Защита деталей": "Detail protection",
+  "Сохраняет тонкие линии и их окончания. Отключите, чтобы удалять больше мелкого цветового шума.": "Preserves thin lines and their ends. Turn off to remove more fine color noise.",
   "Защита границ": "Edge protection",
   "Объединяет близкие оттенки по соседним пикселям, сохраняя линии, границы и прозрачность. Новые цвета не создаются.": "Consolidates nearby shades using neighboring pixels while preserving lines, edges and transparency. No new colors are created.",
   "Убирает цветовой шум и объединяет близкие оттенки без изменения размера и прозрачности.": "Removes color noise and consolidates nearby shades without changing dimensions or transparency.",
