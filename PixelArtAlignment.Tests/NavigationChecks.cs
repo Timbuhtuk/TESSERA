@@ -45,14 +45,31 @@ internal static class NavigationChecks
             {
                 window.EnableWorkspacePrototype(); window.Show(); Pump();
                 var menu = Get<Menu>("mainMenu");
-                Require(menu.Items.Count == 4 && Get<Border>("titleBar").ActualHeight == 40, "Top navigation is not a single title-bar row");
+                Require(menu.Items.Count == 3 && Get<Border>("titleBar").ActualHeight == 40, "Top navigation is not a single title-bar row");
                 Require(Get<MenuItem>("fileMenu").Header.ToString() == (language == "en" ? "_File" : "_Файл"), "Navigation language is wrong");
-                Require(!Get<MenuItem>("imageMenu").IsEnabled && Get<MenuItem>("saveDocumentMenuItem").IsEnabled, "Library must allow workspace saving without exposing image actions");
+                Require(window.FindName("imageMenu") is null && !Get<MenuItem>("toolsMenu").IsEnabled &&
+                    Get<MenuItem>("saveDocumentMenuItem").IsEnabled, "Library must allow workspace saving without exposing image tools");
                 foreach (string removed in new[] { "editorToolbar", "toolNavigation", "compactToolNavigation", "operationSourceInput", "zoomInput", "backgroundInput", "fileMenuPopup" })
                     Require(window.FindName(removed) is null, "Old toolbar control remains: " + removed);
                 window.Browser!.Navigate("project", project.Id, leaf.Id);
                 window.OpenWorkspaceAssetAsync(window.Workspace!.State.Assets.Single(a => a.Id == source.Id)).GetAwaiter().GetResult(); Pump();
-                Require(Get<MenuItem>("imageMenu").IsEnabled && Get<MenuItem>("saveMenuItem").IsEnabled && Get<TextBlock>("fileLabel").Text == source.Label, "Image navigation state is incomplete");
+                Require(Get<MenuItem>("toolsMenu").IsEnabled && Get<MenuItem>("saveMenuItem").IsEnabled && Get<TextBlock>("fileLabel").Text == source.Label, "Tools navigation state is incomplete");
+                var groups = Get<MenuItem>("toolsMenu").Items.OfType<MenuItem>().ToArray();
+                Require(groups.Length == 5 &&
+                    groups.Select(group => group.Header.ToString()).SequenceEqual(new[] { "Обработка", "Размер и сетка", "Цвет", "Фильтры и фон", "Материалы и тайлы" }.Select(Localization.Text)),
+                    "Tools categories are incomplete or out of order");
+                foreach (var (group, commands) in new[]
+                {
+                    ("processingMenu", new[] { "basisMenu", "profileMenuItem", "macrosMenuItem" }),
+                    ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem" }),
+                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "replaceColorMenuItem", "infoMenuItem" }),
+                    ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
+                    ("materialsToolsMenu", new[] { "materialMapsMenuItem", "inspectTilesMenuItem", "addToBoardMenuItem" })
+                })
+                    Require(Get<MenuItem>(group).Items.Count == commands.Length &&
+                        commands.All(name => Get<MenuItem>(group).Items.Contains(Get<MenuItem>(name))), "Tools category lost a command: " + group);
+                Require(Get<MenuItem>("basisMenu").Items.Contains(Get<MenuItem>("sourceBasisMenuItem")) &&
+                    Get<MenuItem>("basisMenu").Items.Contains(Get<MenuItem>("resultBasisMenuItem")), "Processing basis choices were lost");
                 int historyCount = source.Generations.Count;
                 foreach (string command in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "filtersMenuItem", "profileMenuItem", "gridMenuItem", "infoMenuItem" })
                 {
@@ -73,26 +90,38 @@ internal static class NavigationChecks
                 {
                     window.Width = width; Pump();
                     bool compact = menu.Items.Count == 2;
-                    Require(menu.Items.Count is 2 or 4 && (width == 560 || !compact), "Wrong overflow layout at " + width);
-                    Require(Get<MenuItem>("moreMenu").Items.Count == (compact ? 3 : 0), "Overflow duplicated or lost sections");
+                    Require(menu.Items.Count is 2 or 3 && (width == 560 || !compact), "Wrong overflow layout at " + width);
+                    Require(Get<MenuItem>("moreMenu").Items.Count == (compact ? 2 : 0), "Overflow duplicated or lost sections");
                     var right = menu.TranslatePoint(new System.Windows.Point(menu.ActualWidth, 0), window);
                     var caption = Get<StackPanel>("captionButtons").TranslatePoint(new System.Windows.Point(), window);
                     Require(right.X <= caption.X - 48, "Navigation overlaps the window controls/drag area");
                     if (compact)
                     {
                         NavigationTest.Click(window, "moreMenu"); Pump();
-                        Get<MenuItem>("imageMenu").IsSubmenuOpen = true; Pump();
-                        Require(Get<MenuItem>("sizeMenuItem").IsEnabled, "Nested overflow lost the image commands");
+                        Get<MenuItem>("toolsMenu").IsSubmenuOpen = true; Pump();
+                        Get<MenuItem>("sizeToolsMenu").IsSubmenuOpen = true; Pump();
+                        Require(Get<MenuItem>("sizeMenuItem").IsEnabled, "Nested overflow lost the size commands");
                         NavigationTest.Click(window, "sizeMenuItem"); Pump();
                     }
                     Capture(width.ToString());
                 }
+                window.Width = 560;
+                double normalFontSize = menu.FontSize;
+                menu.FontSize = 28; Pump();
+                typeof(MainWindow).GetMethod("UpdateNavigationLayout", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null); Pump();
+                Require(menu.Items.Count == 2 && Get<MenuItem>("moreMenu").Items.Count == 2, "Large text lost nested overflow");
+                NavigationTest.Click(window, "moreMenu"); Pump();
+                Get<MenuItem>("toolsMenu").IsSubmenuOpen = true; Pump();
+                Get<MenuItem>("colorToolsMenu").IsSubmenuOpen = true; Pump();
+                Require(Get<MenuItem>("smoothingMenuItem").IsEnabled, "Color command disabled in nested overflow");
+                NavigationTest.Click(window, "smoothingMenuItem"); Pump();
+                menu.FontSize = normalFontSize; window.Width = 1220; Pump();
                 NavigationTest.Click(window, "libraryButton"); Pump();
                 Require(window.Browser.Visibility == Visibility.Visible && window.Workspace.State.ProjectId == project.Id && window.Workspace.State.FolderId == leaf.Id, "Brand navigation lost the project/folder");
                 window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == source.Id)).GetAwaiter().GetResult(); Pump();
                 Require(window.PreviewZoom == 7 && window.PreviewBackground == 2 && window.ProcessingBasis == 1 && Get<ListBox>("sourceStrip").Items.Count == 1, "Navigation lost image settings or project source scope");
                 typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [true]);
-                Require(!Get<MenuItem>("imageMenu").IsEnabled && !Get<MenuItem>("openMenuItem").IsEnabled && Get<MenuItem>("viewMenu").IsEnabled, "Busy navigation guard is wrong");
+                Require(!Get<MenuItem>("toolsMenu").IsEnabled && !Get<MenuItem>("materialMapsMenuItem").IsEnabled && !Get<MenuItem>("smoothingMenuItem").IsEnabled && !Get<MenuItem>("openMenuItem").IsEnabled && Get<MenuItem>("viewMenu").IsEnabled, "Busy navigation guard is wrong");
                 typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [false]);
             }
             finally { window.Close(); Pump(); }

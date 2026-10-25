@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Инструменты по категориям",
+        "en": "Tools grouped by category"
+      },
+      "notes": {
+        "ru": "- Меню: команды раздела «Изображение» перенесены в «Инструменты». Все инструменты обработки изображения теперь собраны в одном меню.\n- Инструменты сгруппированы по назначению: «Обработка», «Размер и сетка», «Цвет», «Фильтры и фон», «Материалы и тайлы». В «Обработке» также выбирается исходник или результат для дальнейших действий.\n- В узком окне «Инструменты» доступны через «Ещё», вместе со всеми категориями и командами.",
+        "en": "- Menus: commands from Image have moved to Tools. Image-processing tools are now collected in one menu.\n- Tools are grouped into Processing, Size and grid, Color, Filters and background, and Materials and tiles. Processing also lets you choose the source or selected result for subsequent actions.\n- In a narrow window, Tools remains available through More, including every category and command."
+      }
+    },
+    {
+      "version": "2.3.0",
+      "title": {
         "ru": "Привязка локальной сетки",
         "en": "Local grid snapping"
       },
