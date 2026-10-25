@@ -2,14 +2,14 @@
   "aggregate": {
     "images": 50,
     "injected": 400,
-    "corrected": 380,
-    "recoveredExactly": 380,
+    "corrected": 382,
+    "recoveredExactly": 382,
     "otherChanges": 0,
     "cleanDamage": 0,
     "errorBefore": 2279162.4,
-    "errorAfter": 105549.3,
+    "errorAfter": 96309.6,
     "imagesWithCleanDamage": 0,
-    "imagesWithMissedNoise": 13
+    "imagesWithMissedNoise": 12
   },
   "scores": [
     {
@@ -390,12 +390,12 @@
       "Id": "07-lantern-05",
       "Motif": "lantern",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 28994.8,
-      "ErrorAfter": 5698.2
+      "ErrorAfter": 0
     },
     {
       "Id": "08-chest-01",
@@ -456,12 +456,12 @@
       "Id": "09-alien-01",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 5,
-      "RecoveredExactly": 5,
+      "Corrected": 6,
+      "RecoveredExactly": 6,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 31302.1,
-      "ErrorAfter": 14019.3
+      "ErrorAfter": 10477.8
     },
     {
       "Id": "09-alien-02",

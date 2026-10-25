@@ -18,7 +18,8 @@ public static class DarkContourNoiseCleaner
         int RepeatedPatchMaximumDifferences = 2, int LargePatchRadius = 3,
         int LargePatchMinimumBrightMatches = 2, double LargePatchBrightRatio = 1,
         int SmallPatchRadius = 1, double SmallPatchMaximumComponentRatio = 0.05,
-        int SmallPatchMinimumBrightMatches = 10, double SmallPatchBrightRatio = 3);
+        int SmallPatchMinimumBrightMatches = 10, double SmallPatchBrightRatio = 3,
+        bool AllowDiagonalBridge = true, double DiagonalBridgeMinimumConsensus = 0.9);
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
@@ -56,6 +57,8 @@ public static class DarkContourNoiseCleaner
             !double.IsFinite(options.SmallPatchBrightRatio) || options.SmallPatchBrightRatio is < 0 or > 100 ||
             !double.IsFinite(options.SmallPatchMaximumComponentRatio) ||
             options.SmallPatchMaximumComponentRatio is < 0 or > 1 ||
+            !double.IsFinite(options.DiagonalBridgeMinimumConsensus) ||
+            options.DiagonalBridgeMinimumConsensus is < 0 or > 1 ||
             !double.IsFinite(options.CardinalColorWeight) || options.CardinalColorWeight is < 1 or > 10 ||
             options.MinimumPairExtension is < 0 or > 2 ||
             !double.IsFinite(options.PairColorTolerance) || options.PairColorTolerance is < 0 or > 100 ||
@@ -113,7 +116,11 @@ public static class DarkContourNoiseCleaner
                     }
                 if (!allVisible || darkNeighbors > options.MaximumDarkNeighbors ||
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
-                    DarkRingComponents(dark, width, x, y) > 1 || surrounding.Count < 5) continue;
+                    surrounding.Count < 5) continue;
+                int ringComponents = DarkRingComponents(dark, width, x, y);
+                bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
+                    darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
+                if (ringComponents > 1 && !diagonalBridge) continue;
                 bool patchSupport = options.LargePatchRadius > 0 &&
                     HasBrightPatchMajority(original, dark, width, height, x, y, patchCounts,
                         options.LargePatchRadius, options.LargePatchMinimumBrightMatches,
@@ -149,6 +156,8 @@ public static class DarkContourNoiseCleaner
                 int matching = surrounding.Count(item => DistanceSquared(Lab(item.Color), Lab(replacement)) <=
                     options.BrightColorTolerance * options.BrightColorTolerance);
                 if (!hasPair && matching / (double)surrounding.Count < options.MinimumBrightConsensus) continue;
+                if (diagonalBridge && matching / (double)surrounding.Count <
+                    options.DiagonalBridgeMinimumConsensus) continue;
                 if (Lab(replacement).L - Lab(original[index]).L < options.MinimumLightnessGain) continue;
                 output[index] = Color.FromArgb(original[index].A, replacement.R, replacement.G, replacement.B);
                 changed++;

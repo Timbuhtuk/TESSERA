@@ -22,6 +22,8 @@ param(
     [double]$SmallPatchComponent = 5,
     [int]$SmallPatchBright = 10,
     [double]$SmallPatchRatio = 3,
+    [switch]$NoDiagonalBridge,
+    [double]$DiagonalBridgeConsensus = 90,
     [int]$Passes = 1
 )
 
@@ -30,6 +32,7 @@ $cli = (Resolve-Path -LiteralPath $CliDll).Path
 $corpus = (Resolve-Path -LiteralPath $CorpusRoot).Path
 $report = Join-Path $corpus 'cli-results.jsonl'
 [System.IO.File]::WriteAllText($report, '')
+$bridgeFlag = if ($NoDiagonalBridge) { @('--no-diagonal-bridge') } else { @() }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -54,7 +57,8 @@ foreach ($kind in @('clean', 'noisy'))
             --large-patch-radius $LargePatchRadius --large-patch-bright $LargePatchBright `
             --large-patch-ratio $LargePatchRatio --small-patch-radius $SmallPatchRadius `
             --small-patch-component $SmallPatchComponent --small-patch-bright $SmallPatchBright `
-            --small-patch-ratio $SmallPatchRatio --passes $Passes
+            --small-patch-ratio $SmallPatchRatio --diagonal-bridge-consensus $DiagonalBridgeConsensus `
+            $bridgeFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"
