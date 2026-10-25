@@ -36,6 +36,17 @@ public partial class MaterialMapsWindow
         finally { SetBusy(false); }
     }
 
+    public async Task SaveWorkspaceAsync()
+    {
+        while (IsBusy)
+        {
+            var pending = _busyCompletion?.Task
+                ?? throw new InvalidOperationException(Localization.Text("Дождитесь обновления карт."));
+            await pending;
+        }
+        if (!_closed) SaveWorkspace();
+    }
+
     public void SaveWorkspace(bool force = false)
     {
         if (_saveWorkspace is null || Document is null) return;

@@ -21,6 +21,7 @@ public partial class MaterialMapsWindow : Window
     public string? ProjectPath { get; private set; }
     public Action<string>? ValidateExportPath { get; set; }
     private bool _ready, _allowClose, _closed;
+    private TaskCompletionSource<bool>? _busyCompletion;
     private string _name = "material";
     private BitmapSource? _source;
     private MaterialMapDocument? _boundDocument;
@@ -233,10 +234,16 @@ public partial class MaterialMapsWindow : Window
     }
     private void SetBusy(bool busy)
     {
+        if (busy && !IsBusy) _busyCompletion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         IsBusy = busy;
         settingsPanel.IsEnabled = viewSettings.IsEnabled = openProjectButton.IsEnabled = saveProjectButton.IsEnabled = exportButton.IsEnabled = !busy;
         foreach (var view in MapViews) view.IsEnabled = !busy;
-        if (!busy) UpdateHistory();
+        if (!busy)
+        {
+            _busyCompletion?.TrySetResult(true);
+            _busyCompletion = null;
+            UpdateHistory();
+        }
     }
     private void UndoClicked(object sender, RoutedEventArgs e) => History(false);
     private void RedoClicked(object sender, RoutedEventArgs e) => History(true);
