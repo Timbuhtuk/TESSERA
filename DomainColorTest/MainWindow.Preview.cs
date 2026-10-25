@@ -14,6 +14,7 @@ public partial class MainWindow
     private readonly HashSet<Key> _comparisonAltKeys = [];
     private MenuItem _alternativePreviewItem = null!;
     private bool _alternativePreview, _comparisonOriginal, _comparisonAltOwned;
+    private bool _cropToolActive;
 
     public bool AlternativePreview
     {
@@ -121,6 +122,7 @@ public partial class MainWindow
     private void UpdateCropPreview()
     {
         sourcePreview.SelectedRegion = resultPreview.SelectedRegion = _comparisonPreview.SelectedRegion = null;
+        if (!_cropToolActive) return;
         var basis = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
         if (basis is null || spriteInput.IsChecked == true) return;
         int width = (int)widthInput.Value, height = (int)heightInput.Value;

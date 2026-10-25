@@ -12,7 +12,7 @@ public partial class MainWindow
 {
     private MenuItem fileMenu = null!, toolsMenu = null!, viewMenu = null!, moreMenu = null!;
     private MenuItem openMenuItem = null!, saveMenuItem = null!, saveAllMenuItem = null!, saveDocumentMenuItem = null!, exportMenu = null!;
-    private MenuItem createMenu = null!, returnMenuItem = null!, resultBasisMenuItem = null!, sourceBasisMenuItem = null!;
+    private MenuItem createMenu = null!, returnMenuItem = null!;
     private MenuItem profileMenuItem = null!, sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, filtersMenuItem = null!, infoMenuItem = null!;
     private MenuItem checkUpdatesMenuItem = null!, zoomMenu = null!, backgroundMenu = null!;
     private readonly List<MenuItem> _imageCommands = [];
@@ -28,6 +28,7 @@ public partial class MainWindow
             int next = value == 1 && _downscaledResult is not null ? 1 : 0;
             if (_processingBasis == next) return;
             _processingBasis = next;
+            SyncProcessingSelection();
             if (aspectLock.IsChecked == true) SizeChangedByUser(widthChanged: true); else UpdateSizeHint();
             SetProcessingState(_processing);
             ScheduleLiveToolPreviews();
@@ -67,10 +68,6 @@ public partial class MainWindow
         checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", "Проверить обновления");
 
         var processingMenu = NavigationItem("processingMenu", "Обработка"); toolsMenu.Items.Add(processingMenu);
-        var basisMenu = NavigationItem("basisMenu", "Обрабатывать"); processingMenu.Items.Add(basisMenu);
-        sourceBasisMenuItem = AddNavigation(basisMenu, "sourceBasisMenuItem", "Исходник", () => { ProcessingBasis = 0; return Task.CompletedTask; });
-        resultBasisMenuItem = AddNavigation(basisMenu, "resultBasisMenuItem", "Выбранный результат", () => { ProcessingBasis = 1; return Task.CompletedTask; });
-        sourceBasisMenuItem.IsCheckable = resultBasisMenuItem.IsCheckable = true;
         profileMenuItem = AddTool(processingMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
         AddTool(processingMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
 
@@ -181,10 +178,6 @@ public partial class MainWindow
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;
         saveAllMenuItem.Visibility = image ? Visibility.Visible : Visibility.Collapsed;
         ((MenuItem)FindName("exportIcoMenuItem")).Visibility = image ? Visibility.Visible : Visibility.Collapsed;
-        var selected = _activeSource?.SelectedGeneration;
-        int number = selected is null ? -1 : _activeSource!.Generations.IndexOf(selected) + 1;
-        resultBasisMenuItem.Header = number > 0 ? Localization.Format("Результат №{0}", number) : Localization.Text("Выбранный результат");
-        resultBasisMenuItem.IsEnabled = image && !busy && _downscaledResult is not null;
         if (image) { fileLabel.Text = _activeSource!.Label; fileLabel.ToolTip = _activeSource.OriginalPath; }
         else if (_workspaceActive is { } asset && _workspaceBrowser?.Visibility != Visibility.Visible)
         { fileLabel.Text = asset.Name; fileLabel.ToolTip = asset.Kind == WorkspaceAssetKind.Image ? _activeSource?.OriginalPath : _workspaceCatalog?.ContentPath(asset); }
@@ -194,7 +187,6 @@ public partial class MainWindow
     private void UpdateNavigationChecks()
     {
         if (!_navigationReady) return;
-        sourceBasisMenuItem.IsChecked = ProcessingBasis == 0; resultBasisMenuItem.IsChecked = ProcessingBasis == 1;
         for (int q = 0; q < _zoomChoices.Count; q++) _zoomChoices[q].IsChecked = PreviewZoom == q;
         for (int q = 0; q < _backgroundChoices.Count; q++) _backgroundChoices[q].IsChecked = PreviewBackground == q;
         _alternativePreviewItem.IsChecked = AlternativePreview;

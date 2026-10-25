@@ -157,6 +157,7 @@ internal static class ToolImprovementsChecks
             Console.WriteLine("  Tool editor: checking theme backgrounds");
             VerifyPreviewBackgrounds(sourcePreview);
             Console.WriteLine("  Tool editor: checking crop outlines");
+            NavigationTest.Click(window, "sizeMenuItem"); Pump();
             Get<CheckBox>(window, "spriteInput").IsChecked = false;
             Get<IntegerInput>(window, "widthInput").Value = 5;
             Get<IntegerInput>(window, "heightInput").Value = 4;
@@ -178,6 +179,17 @@ internal static class ToolImprovementsChecks
                     using var oracle = IndependentImageProcessor.Scale(cropped, new() { TargetWidth = 5, TargetHeight = 4, SpriteMode = true });
                     Require(Pixels(actual).SequenceEqual(Pixels(oracle)), "Crop outline and actual Scale sample different source pixels");
                 }
+            NavigationTest.Click(window, "colorMenuItem"); Pump();
+            Require(sourcePreview.SelectedRegion is null, "Crop outline stayed visible after switching tools");
+            var liveFrame = Get<Border>(window, "livePreviewFrame");
+            var liveResult = Get<PixelPreview>(window, "resultPreview");
+            var previewUntil = DateTime.UtcNow.AddSeconds(10);
+            while (liveFrame.Visibility != Visibility.Visible && DateTime.UtcNow < previewUntil) { Pump(); Thread.Sleep(20); }
+            Require(liveFrame.Visibility == Visibility.Visible && liveResult.Image is not null,
+                "Color preview did not appear in the main result pane");
+            NavigationTest.Click(window, "sizeMenuItem"); Pump();
+            Require(liveFrame.Visibility == Visibility.Collapsed && liveResult.Image is null,
+                "Leaving the color tool kept its live result on the canvas");
             Get<CheckBox>(window, "spriteInput").IsChecked = true;
             Call(window, "UpdateSizeHint");
             Require(sourcePreview.SelectedRegion is null, "Whole-frame mode retained a crop border");

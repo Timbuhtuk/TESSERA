@@ -60,7 +60,7 @@ internal static class NavigationChecks
                     "Tools categories are incomplete or out of order");
                 foreach (var (group, commands) in new[]
                 {
-                    ("processingMenu", new[] { "basisMenu", "profileMenuItem", "macrosMenuItem" }),
+                    ("processingMenu", new[] { "profileMenuItem", "macrosMenuItem" }),
                     ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem" }),
                     ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "replaceColorMenuItem", "infoMenuItem" }),
                     ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
@@ -68,8 +68,7 @@ internal static class NavigationChecks
                 })
                     Require(Get<MenuItem>(group).Items.Count == commands.Length &&
                         commands.All(name => Get<MenuItem>(group).Items.Contains(Get<MenuItem>(name))), "Tools category lost a command: " + group);
-                Require(Get<MenuItem>("basisMenu").Items.Contains(Get<MenuItem>("sourceBasisMenuItem")) &&
-                    Get<MenuItem>("basisMenu").Items.Contains(Get<MenuItem>("resultBasisMenuItem")), "Processing basis choices were lost");
+                Require(window.FindName("basisMenu") is null, "Processing source still has a second menu selection");
                 int historyCount = source.Generations.Count;
                 foreach (string command in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "filtersMenuItem", "profileMenuItem", "gridMenuItem", "infoMenuItem" })
                 {
@@ -77,8 +76,13 @@ internal static class NavigationChecks
                     Require(window.OwnedWindows.Count == 0 && Get<Bitmap>("_sourceImage") is not null, "Tool unexpectedly opened a floating window");
                 }
                 Require(library.Load().Single().Generations.Count == historyCount, "Choosing tools started processing");
-                NavigationTest.Click(window, "resultBasisMenuItem"); Pump();
-                Require(window.ProcessingBasis == 1 && Get<MenuItem>("resultBasisMenuItem").IsChecked && !Get<MenuItem>("sourceBasisMenuItem").IsChecked, "Result basis radio state is wrong");
+                var current = Get<SourceEntry>("_activeSource");
+                Get<ListBox>("generationStrip").SelectedItem = current.Generations.Last(); Pump();
+                Require(window.ProcessingBasis == 1 && Get<ListBox>("sourceStrip").SelectedItem is null &&
+                    Get<ListBox>("generationStrip").SelectedItem == current.Generations.Last(), "Result selection did not become the sole processing source");
+                Get<ListBox>("sourceStrip").SelectedItem = current; Pump();
+                Require(window.ProcessingBasis == 0 && Get<ListBox>("sourceStrip").SelectedItem == current &&
+                    Get<ListBox>("generationStrip").SelectedItem is null, "Source selection did not replace the result selection");
                 NavigationTest.Click(window, "zoomChoice7"); NavigationTest.Click(window, "backgroundChoice2"); Pump();
                 Require(window.PreviewZoom == 7 && window.PreviewBackground == 2 && Get<MenuItem>("zoomChoice7").IsChecked && Get<MenuItem>("backgroundChoice2").IsChecked, "View choices did not update/check themselves");
                 Get<MenuItem>("fileMenu").IsSubmenuOpen = true; Pump();
@@ -119,7 +123,9 @@ internal static class NavigationChecks
                 NavigationTest.Click(window, "libraryButton"); Pump();
                 Require(window.Browser.Visibility == Visibility.Visible && window.Workspace.State.ProjectId == project.Id && window.Workspace.State.FolderId == leaf.Id, "Brand navigation lost the project/folder");
                 window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == source.Id)).GetAwaiter().GetResult(); Pump();
-                Require(window.PreviewZoom == 7 && window.PreviewBackground == 2 && window.ProcessingBasis == 1 && Get<ListBox>("sourceStrip").Items.Count == 1, "Navigation lost image settings or project source scope");
+                Require(window.PreviewZoom == 7 && window.PreviewBackground == 2 && window.ProcessingBasis == 0 &&
+                    Get<ListBox>("sourceStrip").SelectedItem == current && Get<ListBox>("generationStrip").SelectedItem is null &&
+                    Get<ListBox>("sourceStrip").Items.Count == 1, "Navigation lost image settings or project source scope");
                 typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [true]);
                 Require(!Get<MenuItem>("toolsMenu").IsEnabled && !Get<MenuItem>("materialMapsMenuItem").IsEnabled && !Get<MenuItem>("smoothingMenuItem").IsEnabled && !Get<MenuItem>("openMenuItem").IsEnabled && Get<MenuItem>("viewMenu").IsEnabled, "Busy navigation guard is wrong");
                 typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [false]);

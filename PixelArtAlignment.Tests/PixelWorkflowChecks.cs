@@ -42,7 +42,9 @@ internal static class PixelWorkflowChecks
             Invoke("LoadImage", input);
             Get<IntegerInput>("gridCellInput").Value = 4;
             Click("alignButton"); Wait();
-            var parent = (SourceEntry)Get<ListBox>("sourceStrip").SelectedItem;
+            var parent = Get<SourceEntry>("_activeSource");
+            Require(Get<ListBox>("sourceStrip").SelectedItem is null && Get<ListBox>("generationStrip").SelectedItem == parent.SelectedGeneration,
+                "Alignment did not select its result as the sole processing input");
             var aligned = parent.SelectedGeneration!;
             Require(aligned.CellSize == 4 && Get<Button>("compactGridButton").IsEnabled, "Alignment did not enable grid reduction");
             // Reduction must use the stored pitch and selected output, ignoring current downscale settings.

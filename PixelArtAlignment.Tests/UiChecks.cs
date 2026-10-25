@@ -284,8 +284,8 @@ internal static class UiChecks
                 Require(sourceColors.Contains(sizeOnly.GetPixel(x, y).ToArgb()), "Independent scaling changed a source color");
             var sizeGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
-            Require(Get<MenuItem>("resultBasisMenuItem").Header?.ToString()?.StartsWith("Результат №") == true,
-                "Selected result was not named in the processing basis");
+            Require(Get<ListBox>("generationStrip").SelectedItem == sizeGeneration && Get<ListBox>("sourceStrip").SelectedItem is null,
+                "Selected result was not the sole processing source");
             Click("colorOnlyButton"); Wait();
             var colorGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             var colorOnly = Get<Bitmap>("_downscaledResult");

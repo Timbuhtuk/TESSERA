@@ -66,8 +66,10 @@ internal static class LibraryRemovalChecks
             var selected = original.SelectedGeneration;
             var unselected = original.Generations[0];
             Remove(generations, unselected);
-            Require(ReferenceEquals(selected, original.SelectedGeneration) && ReferenceEquals(selected, generations.SelectedItem), "Removing another result changed selection");
+            Require(ReferenceEquals(selected, original.SelectedGeneration) && ReferenceEquals(original, sources.SelectedItem) && generations.SelectedItem is null, "Removing another result changed source selection");
             Require(!File.Exists(library.ResultPath(original, unselected)), "Deleted result remains on disk");
+            generations.SelectedItem = selected; Pump();
+            Require(sources.SelectedItem is null && ReferenceEquals(selected, generations.SelectedItem), "Selecting a result left the source selected");
             Remove(generations, selected!);
             Require(!original.Generations.Contains(selected!) && original.SelectedGeneration == original.Generations[^1] && generations.SelectedItem == original.SelectedGeneration, "Selected result did not switch to neighbour: " + Get<TextBlock>("statusLabel").Text);
             Invoke("SetProcessingState", true);

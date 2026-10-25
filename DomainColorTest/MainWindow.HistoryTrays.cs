@@ -323,7 +323,7 @@ public partial class MainWindow
             _traySources.Clear(); foreach (var item in items) _traySources.Add(item);
             sourceStrip.SetLayout(positions);
             if (!ReferenceEquals(sourceStrip.ItemsSource, _traySources)) sourceStrip.ItemsSource = _traySources;
-            sourceStrip.SelectedItem = items.Contains(_activeSource!) ? _activeSource : null;
+            sourceStrip.SelectedItem = ProcessingBasis == 0 && items.Contains(_activeSource!) ? _activeSource : null;
             QueueTrayScrollRestore(sourceStrip, _sourceScrollKey);
         }
         finally { _restoringHistory = restoring; _refreshingTrays = false; }

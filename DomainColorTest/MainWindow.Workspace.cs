@@ -471,9 +471,14 @@ public partial class MainWindow
         _workspaceToolContent = content;
         _workspaceDock.Child = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
         _workspaceDock.Visibility = Visibility.Visible; UpdateWorkspaceDockLayout();
+        _cropToolActive = groups.Contains(frameToolGroup);
+        UpdateCropPreview();
     }
     private void CloseDockedWorkspaceTool()
     {
+        _cropToolActive = false;
+        UpdateCropPreview();
+        SetActiveLivePreviewTool(null);
         if (_workspaceGroups.Contains(infoToolGroup)) ResetInfoSnapshot();
         foreach (var group in _workspaceGroups)
         {
