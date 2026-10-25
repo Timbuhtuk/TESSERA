@@ -10,6 +10,7 @@ public sealed class BitmapBuffer : IDisposable
     private readonly byte[] _bytes;
     private readonly int _stride;
     private readonly bool _writable;
+    private readonly int _bytesPerPixel;
 
     public int Width { get; }
     public int Height { get; }
@@ -22,17 +23,19 @@ public sealed class BitmapBuffer : IDisposable
         Height = bitmap.Height;
 
         var format = bitmap.PixelFormat;
-        if (format != PixelFormat.Format24bppRgb)
-            throw new InvalidOperationException($"Expected Format24bppRgb, got {format}.");
+        if (format is not (PixelFormat.Format24bppRgb or PixelFormat.Format32bppArgb))
+            throw new InvalidOperationException($"Expected Format24bppRgb or Format32bppArgb, got {format}.");
+        _bytesPerPixel = format == PixelFormat.Format32bppArgb ? 4 : 3;
 
         _data = bitmap.LockBits(
             new Rectangle(0, 0, Width, Height),
             writable ? ImageLockMode.ReadWrite : ImageLockMode.ReadOnly,
-            PixelFormat.Format24bppRgb);
+            format);
 
         _stride = Math.Abs(_data.Stride);
         _bytes = new byte[_stride * Height];
-        Marshal.Copy(_data.Scan0, _bytes, 0, _bytes.Length);
+        for (int y = 0; y < Height; y++)
+            Marshal.Copy(IntPtr.Add(_data.Scan0, y * _data.Stride), _bytes, y * _stride, _stride);
     }
 
     public static BitmapBuffer FromBitmap(Bitmap bitmap) => new(bitmap, writable: false);
@@ -41,7 +44,7 @@ public sealed class BitmapBuffer : IDisposable
 
     public int GetPackedColor(int x, int y)
     {
-        int offset = y * _stride + x * 3;
+        int offset = y * _stride + x * _bytesPerPixel;
         byte b = _bytes[offset];
         byte g = _bytes[offset + 1];
         byte r = _bytes[offset + 2];
@@ -53,7 +56,7 @@ public sealed class BitmapBuffer : IDisposable
         if (!_writable)
             throw new InvalidOperationException("Buffer is read-only.");
 
-        int offset = y * _stride + x * 3;
+        int offset = y * _stride + x * _bytesPerPixel;
         _bytes[offset] = ColorSpace.GetB(packed);
         _bytes[offset + 1] = ColorSpace.GetG(packed);
         _bytes[offset + 2] = ColorSpace.GetR(packed);
@@ -64,7 +67,17 @@ public sealed class BitmapBuffer : IDisposable
         if (!_writable)
             return;
 
-        Marshal.Copy(_bytes, 0, _data.Scan0, _bytes.Length);
+        for (int y = 0; y < Height; y++)
+            Marshal.Copy(_bytes, y * _stride, IntPtr.Add(_data.Scan0, y * _data.Stride), _stride);
+    }
+
+    public byte GetAlpha(int x, int y)
+        => _bytesPerPixel == 4 ? _bytes[y * _stride + x * _bytesPerPixel + 3] : (byte)255;
+
+    public void SetAlpha(int x, int y, byte alpha)
+    {
+        if (!_writable) throw new InvalidOperationException("Buffer is read-only.");
+        if (_bytesPerPixel == 4) _bytes[y * _stride + x * _bytesPerPixel + 3] = alpha;
     }
 
     private bool _disposed;
@@ -84,6 +97,31 @@ public sealed class BitmapBuffer : IDisposable
 
 public static class BitmapFactory
 {
+    public static Bitmap CropTransparentEdges(Bitmap source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!Image.IsAlphaPixelFormat(source.PixelFormat) && !source.PixelFormat.HasFlag(PixelFormat.Indexed))
+            return (Bitmap)source.Clone();
+
+        using var argb = source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);
+        using var pixels = BitmapBuffer.FromBitmap(argb);
+        int left = source.Width, top = source.Height, right = -1, bottom = -1;
+        for (int y = 0; y < source.Height; y++)
+        for (int x = 0; x < source.Width; x++)
+        {
+            if (pixels.GetAlpha(x, y) == 0) continue;
+            left = Math.Min(left, x); top = Math.Min(top, y);
+            right = Math.Max(right, x); bottom = Math.Max(bottom, y);
+        }
+
+        if (right < 0) return new Bitmap(1, 1, PixelFormat.Format32bppArgb);
+        return argb.Clone(new Rectangle(left, top, right - left + 1, bottom - top + 1), PixelFormat.Format32bppArgb);
+    }
+
+    internal static Bitmap CreateLike(Bitmap source, int width, int height)
+        => new Bitmap(width, height, Image.IsAlphaPixelFormat(source.PixelFormat)
+            ? PixelFormat.Format32bppArgb : PixelFormat.Format24bppRgb);
+
     public static Bitmap Create24Bpp(int width, int height)
         => new Bitmap(width, height, PixelFormat.Format24bppRgb);
 
@@ -122,12 +160,7 @@ public static class BitmapFactory
             _ => (source.Height - cropHeight) / 2
         };
 
-        var cropped = Create24Bpp(cropWidth, cropHeight);
-
-        using var g = Graphics.FromImage(cropped);
-        g.DrawImage(source, new Rectangle(0, 0, cropWidth, cropHeight),
-            new Rectangle(x, y, cropWidth, cropHeight), GraphicsUnit.Pixel);
-
-        return cropped;
+        return source.Clone(new Rectangle(x, y, cropWidth, cropHeight),
+            source.PixelFormat == PixelFormat.Format24bppRgb ? PixelFormat.Format24bppRgb : PixelFormat.Format32bppArgb);
     }
 }
