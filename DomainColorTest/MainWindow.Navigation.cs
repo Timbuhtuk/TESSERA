@@ -234,7 +234,7 @@ public partial class MainWindow
     }
     private async Task SaveNavigationDocumentAsync()
     {
-        foreach (var window in _materialMapWindows.Values.ToArray()) window.SaveWorkspace();
+        foreach (var window in _materialMapWindows.Values.ToArray()) await window.SaveWorkspaceAsync();
         if (moodboardWorkspace.Visibility == Visibility.Visible) await moodboardWorkspace.SaveWorkspaceAsync();
         if (_workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.SaveWorkspaceDocument();
         PersistWorkspaceState(); statusLabel.Text = Localization.Text("Проект сохранён.");

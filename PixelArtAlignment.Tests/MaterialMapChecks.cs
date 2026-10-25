@@ -279,6 +279,13 @@ internal static class MaterialMapChecks
             Console.WriteLine("  Workspace: autosaved paint layers");
             string stored = catalog.MaterialSessionPath(session);
             Require(MaterialMapFile.Load(stored).AoMask.SequenceEqual(ao), "Idle autosave lost manual layers");
+            ((Slider)maps.FindName("normalStrengthInput")).Value = 5;
+            Task generation = maps.ApplyGenerationAsync();
+            Require(maps.IsBusy, "The concurrent-save fixture did not start generation");
+            Task saving = (Task)typeof(MainWindow).GetMethod("SaveNavigationDocumentAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(main, null)!;
+            Wait(generation); Wait(saving);
+            Require(MaterialMapFile.Load(stored).NormalStrength == 5, "Project save did not await the running map generation");
+            Console.WriteLine("  Workspace: saved during active generation");
             ((Slider)maps.FindName("normalStrengthInput")).Value = 6;
             NavigationTest.Click(main, "saveDocumentMenuItem");
             Require(MaterialMapFile.Load(stored).NormalStrength == 6, "Whole-project save lost a pending slider change");
