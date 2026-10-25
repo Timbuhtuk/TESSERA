@@ -209,3 +209,10 @@ For downscaling, the report includes absolute paths, source/crop/result dimensio
 | 0 | Success, help or version |
 | 1 | Reading, processing or saving failed; output exists without `--overwrite` |
 | 2 | Invalid or unknown arguments, incompatible options, duplicate paths, unsupported output extension or oversized target |
+
+
+`tessera clean-contours` (Tessera 2.7+) performs one experimental cleanup pass along color boundaries after preliminary noise cleanup. `--window-size` accepts odd values from 5 to 15 (default 7); `--strictness` accepts cautious (default), normal or strong. Detail protection is enabled unless `--no-detail-guard` is supplied. `--candidates-output candidates.png` also saves proposed locations in magenta on transparency. The cleaned PNG keeps size and every alpha value, uses only source colors, and leaves uniform areas alone. Output paths cannot overwrite the input or each other; existing files require `--overwrite`. Use `--json` for candidate/change counts. Unlike the desktop tool, this command outputs cleaned pixels; the desktop tool creates a white-to-red analysis map.
+
+```powershell
+tessera clean-contours smoothed.png -o contours.png --window-size 9 --strictness normal --candidates-output candidates.png --json
+```

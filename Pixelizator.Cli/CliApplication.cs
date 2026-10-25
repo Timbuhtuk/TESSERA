@@ -20,6 +20,7 @@ internal static class CliApplication
                        tessera resize <изображение> -o <результат.png>
                        tessera colors <изображение> -o <результат.png>
                        tessera smooth-colors <изображение> -o <результат.png>
+                       tessera clean-contours <изображение> -o <результат.png>
                        tessera monochrome <изображение> -o <результат.png>
                        tessera ascii <изображение> -o <результат.txt>
                        tessera palette-info <изображение> --json
@@ -35,6 +36,7 @@ internal static class CliApplication
         Сглаживание, монохром и ASCII: tessera smooth-colors --help;
         tessera monochrome --help; tessera ascii --help.
         Палитра и замена цвета: tessera palette-info --help; tessera replace-color --help.
+        Очистка контуров: tessera clean-contours --help.
         Многошаговые макросы: tessera macro --help.
         Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
@@ -113,6 +115,8 @@ internal static class CliApplication
             return ImageToolsCommand.RunAscii(args[1..], output, error);
         if (args.Length > 0 && args[0] == "palette-info")
             return ImageToolsCommand.RunPalette(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "clean-contours")
+            return ImageToolsCommand.RunContour(args[1..], output, error);
         if (args.Length > 0 && args[0] == "replace-color")
             return ImageToolsCommand.RunReplace(args[1..], output, error);
         if (args.Length > 0 && args[0] == "macro")

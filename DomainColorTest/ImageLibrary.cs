@@ -21,6 +21,9 @@ public sealed class EditorSettings
     public bool DetectGrid { get; set; }
     public GridAlignmentMode AlignmentMode { get; set; } = GridAlignmentMode.Global;
     public bool SnapToGlobalGrid { get; set; }
+    public int ContourWindowSize { get; set; } = 15;
+    public ContourCleanStrictness ContourStrictness { get; set; } = ContourCleanStrictness.Strong;
+    public bool ContourProtectDetails { get; set; }
     public bool AspectLock { get; set; }
 }
 

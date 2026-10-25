@@ -61,6 +61,10 @@ the main result pane with a contrasting PREVIEW frame; run the tool to
 save a history result.
 Tools > Color > RGBA channels adjusts one channel by value or percentage,
 including fractional amounts and transparency, with history and macros.
+Tools > Color > Contours previews candidate errors and gradients as a white-to-red
+map. Create map result adds an exportable PNG result; window size, strictness and
+fine-detail protection are saved with it. The CLI clean-contours command instead
+performs an experimental cleanup pass with an optional candidate mask.
 Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
 Choose any new color with the hue strip and color field, an image swatch,
