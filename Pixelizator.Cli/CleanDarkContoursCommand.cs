@@ -28,11 +28,34 @@ internal static class CleanDarkContoursCommand
           --large-patch-bright N       Минимум повторений со светлым центром: 0–10000 (2).
           --large-patch-ratio N        Светлых повторений к тёмным: 0–100 (1).
           --small-patch-radius N       Радиус для малых компонентов: 0–4 (1; 0 выключает).
-          --small-patch-component N    Максимальный размер малой компоненты: 0–100% (5).
+          --small-patch-component N    Максимальный размер малой компоненты: 0–100% (6).
+          --small-patch-max-cardinal N Максимум её тёмных прямых соседей: 0–4 (1).
           --small-patch-bright N       Минимум светлых повторений: 0–10000 (10).
           --small-patch-ratio N        Светлых повторений к тёмным: 0–100 (3).
           --no-diagonal-bridge         Сохранить тёмный пиксель между двумя диагональными областями.
           --diagonal-bridge-consensus N  Согласие светлых соседей такого пикселя: 0–100% (90).
+          --no-straight-run            Выключить поиск выступа на прямой линии.
+          --min-straight-run N         Минимальная длина прямой линии: 1–101 (8).
+          --straight-run-radius N      Радиус поиска прямой линии: 1–50 (15).
+          --straight-run-dark5 N       Поддержка 5×5 при двух тёмных соседях: 0–24 (9).
+          --straight-run-consensus N   Согласие светлых соседей для выступа: 0–100% (50).
+          --isolated-patch-radius N     Радиус повтора для одиночной точки: 0–4 (2; 0 выключает).
+          --isolated-patch-bright N     Минимум светлых повторений: 0–10000 (3).
+          --isolated-patch-ratio N      Светлых повторений к тёмным: 0–100 (2).
+          --isolated-patch-consensus N  Согласие светлых соседей: 0–100% (50).
+          --no-repeated-mismatch        Выключить восстановление по отличию повторяющихся деталей.
+          --no-diagonal-gradient        Выключить проверку диагональной пары и градиента.
+          --diagonal-color-tolerance N  Допуск цвета диагональной пары в LAB: 0–100 (8).
+          --diagonal-bright N           Минимум светлых повторений окружения 3×3: 0–10000 (7).
+          --diagonal-bright-ratio N     Светлых повторений к тёмным: 0–100 (2).
+          --diagonal-gradient-ratio N   Модуль градиента точки к среднему соседей: 1–10 (1.22).
+          --diagonal-gradient-radius N  Радиус сравнения градиентов: 1–15 (3).
+          --diagonal-similar-color N    Допуск цвета похожих тёмных соседей в LAB: 0–100 (24).
+          --diagonal-similar-neighbors N  Минимум похожих соседей: 1–1000 (5).
+          --no-diagonal-opposition      Выключить сравнение направления градиентов.
+          --diagonal-opposition-radius N  Радиус сравнения направлений: 1–15 (5).
+          --diagonal-min-opposition N   Минимальная противоположность: 0–100% (80).
+          --diagonal-min-agreement N    Согласие градиентов похожих соседей: 0–100% (20).
           --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
           --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
@@ -63,13 +86,23 @@ internal static class CleanDarkContoursCommand
             double darkness = 5, tolerance = 28, gain = 30, consensus = 60, component = 10,
                 cardinalWeight = 3, pairTolerance = 8, twoCardinalComponent = 40,
                 protectedComponent = 20, protectedMinimum = 15, repeatSimilarity = 80,
-                largePatchRatio = 1, smallPatchComponent = 5, smallPatchRatio = 3,
-                diagonalBridgeConsensus = 90;
+                largePatchRatio = 1, smallPatchComponent = 6, smallPatchRatio = 3,
+                diagonalBridgeConsensus = 90, straightRunConsensus = 50,
+                isolatedPatchRatio = 2, isolatedPatchConsensus = 50,
+                diagonalColorTolerance = 8, diagonalBrightRatio = 2,
+                diagonalGradientRatio = 1.22, diagonalSimilarColor = 24,
+                diagonalOpposition = 80, diagonalAgreement = 20;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3,
                 repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
-                largePatchBright = 2, smallPatchRadius = 1, smallPatchBright = 10;
-            bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true;
+                largePatchBright = 2, smallPatchRadius = 1, smallPatchBright = 10,
+                minimumStraightRun = 8, straightRunRadius = 15, straightRunDark5 = 9,
+                isolatedPatchRadius = 2, isolatedPatchBright = 3,
+                diagonalBright = 7, diagonalGradientRadius = 3, diagonalSimilarNeighbors = 5,
+                diagonalOppositionRadius = 5, smallPatchMaxCardinal = 1;
+            bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
+                useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
+                useDiagonalOpposition = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -113,10 +146,33 @@ internal static class CleanDarkContoursCommand
                     case "--large-patch-ratio": largePatchRatio = NextDouble(); break;
                     case "--small-patch-radius": smallPatchRadius = NextInt(); break;
                     case "--small-patch-component": smallPatchComponent = NextDouble(); break;
+                    case "--small-patch-max-cardinal": smallPatchMaxCardinal = NextInt(); break;
                     case "--small-patch-bright": smallPatchBright = NextInt(); break;
                     case "--small-patch-ratio": smallPatchRatio = NextDouble(); break;
                     case "--no-diagonal-bridge": allowDiagonalBridge = false; break;
                     case "--diagonal-bridge-consensus": diagonalBridgeConsensus = NextDouble(); break;
+                    case "--no-straight-run": useStraightRun = false; break;
+                    case "--min-straight-run": minimumStraightRun = NextInt(); break;
+                    case "--straight-run-radius": straightRunRadius = NextInt(); break;
+                    case "--straight-run-dark5": straightRunDark5 = NextInt(); break;
+                    case "--straight-run-consensus": straightRunConsensus = NextDouble(); break;
+                    case "--isolated-patch-radius": isolatedPatchRadius = NextInt(); break;
+                    case "--isolated-patch-bright": isolatedPatchBright = NextInt(); break;
+                    case "--isolated-patch-ratio": isolatedPatchRatio = NextDouble(); break;
+                    case "--isolated-patch-consensus": isolatedPatchConsensus = NextDouble(); break;
+                    case "--no-repeated-mismatch": useRepeatedMismatch = false; break;
+                    case "--no-diagonal-gradient": useDiagonalGradient = false; break;
+                    case "--diagonal-color-tolerance": diagonalColorTolerance = NextDouble(); break;
+                    case "--diagonal-bright": diagonalBright = NextInt(); break;
+                    case "--diagonal-bright-ratio": diagonalBrightRatio = NextDouble(); break;
+                    case "--diagonal-gradient-ratio": diagonalGradientRatio = NextDouble(); break;
+                    case "--diagonal-gradient-radius": diagonalGradientRadius = NextInt(); break;
+                    case "--diagonal-similar-color": diagonalSimilarColor = NextDouble(); break;
+                    case "--diagonal-similar-neighbors": diagonalSimilarNeighbors = NextInt(); break;
+                    case "--no-diagonal-opposition": useDiagonalOpposition = false; break;
+                    case "--diagonal-opposition-radius": diagonalOppositionRadius = NextInt(); break;
+                    case "--diagonal-min-opposition": diagonalOpposition = NextDouble(); break;
+                    case "--diagonal-min-agreement": diagonalAgreement = NextDouble(); break;
                     case "--two-cardinal-dark5": twoCardinalDark5 = NextInt(); break;
                     case "--two-cardinal-component": twoCardinalComponent = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
@@ -156,10 +212,22 @@ internal static class CleanDarkContoursCommand
                 smallPatchBright is < 0 or > 10000)
                 throw new ArgumentException("Некорректный порог числа совпадений.");
             if (largePatchRatio is < 0 or > 100 || smallPatchRatio is < 0 or > 100 ||
-                smallPatchComponent is < 0 or > 100)
+                smallPatchComponent is < 0 or > 100 || smallPatchMaxCardinal is < 0 or > 4)
                 throw new ArgumentException("Некорректный порог повторяющихся областей.");
             if (diagonalBridgeConsensus is < 0 or > 100)
                 throw new ArgumentException("--diagonal-bridge-consensus должен быть от 0 до 100.");
+            if (minimumStraightRun is < 1 or > 101 || straightRunRadius is < 1 or > 50 ||
+                straightRunDark5 is < 0 or > 24 || straightRunConsensus is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры прямой линии.");
+            if (isolatedPatchRadius is < 0 or > 4 || isolatedPatchBright is < 0 or > 10000 ||
+                isolatedPatchRatio is < 0 or > 100 || isolatedPatchConsensus is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры одиночной точки.");
+            if (diagonalColorTolerance is < 0 or > 100 || diagonalBright is < 0 or > 10000 ||
+                diagonalBrightRatio is < 0 or > 100 || diagonalGradientRatio is < 1 or > 10 ||
+                diagonalGradientRadius is < 1 or > 15 || diagonalSimilarColor is < 0 or > 100 ||
+                diagonalSimilarNeighbors is < 1 or > 1000 || diagonalOppositionRadius is < 1 or > 15 ||
+                diagonalOpposition is < 0 or > 100 || diagonalAgreement is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры диагонального градиента.");
             if (twoCardinalComponent is < 0 or > 100)
                 throw new ArgumentException("--two-cardinal-component должен быть от 0 до 100.");
             var options = new DarkContourNoiseCleaner.Options(darkness, neighbors, tolerance, gain,
@@ -168,7 +236,14 @@ internal static class CleanDarkContoursCommand
                 protectedContinuation, protectedComponent / 100, protectedMinimum / 100, repeatSimilarity / 100,
                 repeatedPatchRadius, repeatedPatchDifferences, largePatchRadius, largePatchBright,
                 largePatchRatio, smallPatchRadius, smallPatchComponent / 100, smallPatchBright,
-                smallPatchRatio, allowDiagonalBridge, diagonalBridgeConsensus / 100);
+                smallPatchRatio, allowDiagonalBridge, diagonalBridgeConsensus / 100,
+                useStraightRun, minimumStraightRun, straightRunRadius, straightRunDark5,
+                straightRunConsensus / 100, isolatedPatchRadius, isolatedPatchBright,
+                isolatedPatchRatio, isolatedPatchConsensus / 100, useRepeatedMismatch,
+                useDiagonalGradient, diagonalColorTolerance, diagonalBright, diagonalBrightRatio,
+                diagonalGradientRatio, diagonalGradientRadius, diagonalSimilarColor, diagonalSimilarNeighbors,
+                useDiagonalOpposition, diagonalOppositionRadius, diagonalOpposition / 100,
+                diagonalAgreement / 100, smallPatchMaxCardinal);
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
                 Path.GetFileNameWithoutExtension(inputPath) + "_dark_contours.png"));

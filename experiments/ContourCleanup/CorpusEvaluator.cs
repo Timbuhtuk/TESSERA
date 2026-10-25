@@ -13,6 +13,7 @@ internal static class CorpusEvaluator
     {
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "manifest.json")));
         var scores = new List<Score>();
+        var missed = new List<(string Id, int X, int Y)>();
         var featureRows = new List<string> { "label,id,x,y,component,largest,component4,largest4,dark8,dark4,dark5,run2,opposite,clearance,trueGain,ring,expectedConsensus" };
         string review = Path.Combine(root, "review-after");
         Directory.CreateDirectory(review);
@@ -48,10 +49,14 @@ internal static class CorpusEvaluator
                             id, noisy, x, y, noisyComponents, noisyComponents4, expected));
                         if (actual.ToArgb() != damaged.ToArgb()) corrected++;
                         if (actual.ToArgb() == expected.ToArgb()) recovered++;
-                        else if (actual.ToArgb() != damaged.ToArgb())
-                            Console.WriteLine($"wrong-color {id} {x},{y} expected=#{expected.R:X2}{expected.G:X2}{expected.B:X2} " +
-                                $"actual=#{actual.R:X2}{actual.G:X2}{actual.B:X2} " +
-                                $"neighbors={NeighborColors(noisy, x, y)}");
+                        else
+                        {
+                            missed.Add((id, x, y));
+                            if (actual.ToArgb() != damaged.ToArgb())
+                                Console.WriteLine($"wrong-color {id} {x},{y} expected=#{expected.R:X2}{expected.G:X2}{expected.B:X2} " +
+                                    $"actual=#{actual.R:X2}{actual.G:X2}{actual.B:X2} " +
+                                    $"neighbors={NeighborColors(noisy, x, y)}");
+                        }
                     }
                     else if (actual.ToArgb() != damaged.ToArgb())
                     {
@@ -73,6 +78,7 @@ internal static class CorpusEvaluator
         }
         foreach (string motif in scores.Select(score => score.Motif).Distinct())
             SaveMotifReview(root, review, motif, scores.Where(score => score.Motif == motif).ToArray());
+        SaveMissedAtlas(root, review, missed);
         var aggregate = new
         {
             images = scores.Count,
@@ -277,5 +283,37 @@ internal static class CorpusEvaluator
             }
         }
         sheet.Save(Path.Combine(review, motif + ".png"), ImageFormat.Png);
+    }
+
+    private static void SaveMissedAtlas(string root, string review, List<(string Id, int X, int Y)> missed)
+    {
+        const int crop = 9, scale = 16, panel = crop * scale, gap = 12, row = 175;
+        using var sheet = new Bitmap(3 * panel + 4 * gap, Math.Max(1, missed.Count) * row,
+            PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(sheet);
+        using var font = new Font("Arial", 9);
+        g.Clear(Color.White);
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        g.PixelOffsetMode = PixelOffsetMode.Half;
+        for (int q = 0; q < missed.Count; q++)
+        {
+            var point = missed[q];
+            using var clean = new Bitmap(Path.Combine(root, "clean", point.Id + ".png"));
+            using var noisy = new Bitmap(Path.Combine(root, "noisy", point.Id + ".png"));
+            using var result = new Bitmap(Path.Combine(root, "processed-noisy", point.Id + ".png"));
+            Bitmap[] images = [clean, noisy, result];
+            string[] labels = ["clean", "noisy", "Tessera"];
+            for (int e = 0; e < 3; e++)
+            {
+                int left = gap + e * (panel + gap), top = q * row;
+                g.DrawString($"{point.Id} ({point.X},{point.Y}) {labels[e]}", font,
+                    Brushes.Black, left, top + 2);
+                g.DrawImage(images[e], new Rectangle(left, top + 22, panel, panel),
+                    new Rectangle(point.X - 4, point.Y - 4, crop, crop), GraphicsUnit.Pixel);
+                using var pen = new Pen(Color.Red, 2);
+                g.DrawRectangle(pen, left + 4 * scale, top + 22 + 4 * scale, scale, scale);
+            }
+        }
+        sheet.Save(Path.Combine(review, "missed-atlas.png"), ImageFormat.Png);
     }
 }

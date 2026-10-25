@@ -2,26 +2,26 @@
   "aggregate": {
     "images": 50,
     "injected": 400,
-    "corrected": 382,
-    "recoveredExactly": 382,
+    "corrected": 398,
+    "recoveredExactly": 398,
     "otherChanges": 0,
     "cleanDamage": 0,
     "errorBefore": 2279162.4,
-    "errorAfter": 96309.6,
+    "errorAfter": 9165,
     "imagesWithCleanDamage": 0,
-    "imagesWithMissedNoise": 12
+    "imagesWithMissedNoise": 2
   },
   "scores": [
     {
       "Id": "01-sword-01",
       "Motif": "sword",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 73218,
-      "ErrorAfter": 6936.3
+      "ErrorAfter": 0
     },
     {
       "Id": "01-sword-02",
@@ -71,12 +71,12 @@
       "Id": "02-shield-01",
       "Motif": "shield",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 66428.3,
-      "ErrorAfter": 10592.4
+      "ErrorAfter": 0
     },
     {
       "Id": "02-shield-02",
@@ -148,12 +148,12 @@
       "Id": "03-potion-03",
       "Motif": "potion",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 38539.2,
-      "ErrorAfter": 6253
+      "ErrorAfter": 0
     },
     {
       "Id": "03-potion-04",
@@ -170,12 +170,12 @@
       "Id": "03-potion-05",
       "Motif": "potion",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 37968.6,
-      "ErrorAfter": 5902.4
+      "ErrorAfter": 0
     },
     {
       "Id": "04-mushroom-01",
@@ -302,23 +302,23 @@
       "Id": "06-tree-02",
       "Motif": "tree",
       "Injected": 8,
-      "Corrected": 6,
-      "RecoveredExactly": 6,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 38492.7,
-      "ErrorAfter": 8476.1
+      "ErrorAfter": 0
     },
     {
       "Id": "06-tree-03",
       "Motif": "tree",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 49549.1,
-      "ErrorAfter": 6194.9
+      "ErrorAfter": 0
     },
     {
       "Id": "06-tree-04",
@@ -335,12 +335,12 @@
       "Id": "06-tree-05",
       "Motif": "tree",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 47265.8,
-      "ErrorAfter": 5902.4
+      "ErrorAfter": 0
     },
     {
       "Id": "07-lantern-01",
@@ -456,23 +456,23 @@
       "Id": "09-alien-01",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 6,
-      "RecoveredExactly": 6,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 31302.1,
-      "ErrorAfter": 10477.8
+      "ErrorAfter": 0
     },
     {
       "Id": "09-alien-02",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 4,
-      "RecoveredExactly": 4,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 41574.8,
-      "ErrorAfter": 17088.6
+      "ErrorAfter": 0
     },
     {
       "Id": "09-alien-03",
@@ -489,12 +489,12 @@
       "Id": "09-alien-04",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 6,
-      "RecoveredExactly": 6,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 39695.4,
-      "ErrorAfter": 9320.7
+      "ErrorAfter": 0
     },
     {
       "Id": "09-alien-05",
