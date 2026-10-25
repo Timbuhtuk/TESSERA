@@ -18,6 +18,7 @@ internal static class CliApplication
                        tessera reduce-grid <выровненное.png> --cell-size 8
                        tessera ico <изображение> -o <иконка.ico>
                        tessera remove-background <изображение> -o <результат.png>
+                       tessera clean-dark-contours <изображение> -o <результат.png>
                        tessera resize <изображение> -o <результат.png>
                        tessera colors <изображение> -o <результат.png>
                        tessera aseprite <анимация.aseprite> --output-dir <папка>
@@ -25,6 +26,7 @@ internal static class CliApplication
         Сжатие выровненной сетки: tessera reduce-grid --help.
         Создание многоразмерной иконки Windows: tessera ico --help.
         Удаление однотонного фона: tessera remove-background --help.
+        Очистка тёмных выступов: tessera clean-dark-contours --help.
         Отдельные размер и цвета: tessera resize --help; tessera colors --help.
         Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
@@ -83,6 +85,8 @@ internal static class CliApplication
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
     {
+        if (args.Length > 0 && args[0] == "clean-dark-contours")
+            return CleanDarkContoursCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "align")
             return GridAlignmentCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] is "reduce-grid" or "compact-grid")

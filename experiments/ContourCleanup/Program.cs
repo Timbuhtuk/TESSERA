@@ -2,6 +2,30 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using PixelArtDownscale;
 
+if (args.Length > 0 && args[0] == "generate-corpus")
+{
+    string corpusRoot = args.Length > 1 ? Path.GetFullPath(args[1]) :
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "corpus"));
+    CorpusGenerator.Generate(corpusRoot);
+    return;
+}
+if (args.Length > 0 && args[0] == "evaluate-corpus")
+{
+    string corpusRoot = args.Length > 1 ? Path.GetFullPath(args[1]) :
+        Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "corpus"));
+    CorpusEvaluator.Evaluate(corpusRoot);
+    return;
+}
+if (args.Length > 0 && args[0] == "compare-images")
+{
+    if (args.Length != 4) throw new ArgumentException("compare-images BEFORE AFTER OUTPUT");
+    using var before = new Bitmap(Path.GetFullPath(args[1]));
+    using var after = new Bitmap(Path.GetFullPath(args[2]));
+    RequireSameAlpha(before, after);
+    SaveSideBySide(before, after, Path.GetFullPath(args[3]));
+    Console.WriteLine("Сравнение сохранено.");
+    return;
+}
 string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
 string input = args.Length > 0 ? Path.GetFullPath(args[0]) : Path.Combine(root, "fixtures", "T_StrongHand_UNP.png");
 string output = args.Length > 1 ? Path.GetFullPath(args[1]) : Path.Combine(root, "artifacts", "review");
@@ -54,23 +78,23 @@ foreach (int window in new[] { 3, 7, 15 })
 
 foreach (var variant in new[]
 {
-    (Name: "dark-10-n3", Options: new DarkContourExperiment.Options(10, 3, 28, 12)),
-    (Name: "dark-15-n2", Options: new DarkContourExperiment.Options(15, 2, 28, 12)),
-    (Name: "dark-15-n3", Options: new DarkContourExperiment.Options(15, 3, 28, 12)),
-    (Name: "dark-15-n3-g20", Options: new DarkContourExperiment.Options(15, 3, 28, 20)),
-    (Name: "dark-15-n3-g30", Options: new DarkContourExperiment.Options(15, 3, 28, 30)),
-    (Name: "dark-15-n3-g40", Options: new DarkContourExperiment.Options(15, 3, 28, 40)),
-    (Name: "dark-15-n3-g40-a2", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 2)),
-    (Name: "dark-15-n3-g40-a3", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 3)),
-    (Name: "dark-15-n3-g40-a3-c60", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 3, 0.60)),
-    (Name: "dark-15-n3-g40-a3-c75", Options: new DarkContourExperiment.Options(15, 3, 28, 40, 3, 0.75)),
-    (Name: "dark-05-n3-g40-a3-c75", Options: new DarkContourExperiment.Options(5, 3, 28, 40, 3, 0.75)),
-    (Name: "dark-10-n3-g40-a3-c75", Options: new DarkContourExperiment.Options(10, 3, 28, 40, 3, 0.75)),
-    (Name: "dark-20-n3", Options: new DarkContourExperiment.Options(20, 3, 28, 12)),
-    (Name: "dark-15-n4", Options: new DarkContourExperiment.Options(15, 4, 28, 12))
+    (Name: "dark-10-n3", Options: new DarkContourNoiseCleaner.Options(10, 3, 28, 12)),
+    (Name: "dark-15-n2", Options: new DarkContourNoiseCleaner.Options(15, 2, 28, 12)),
+    (Name: "dark-15-n3", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 12)),
+    (Name: "dark-15-n3-g20", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 20)),
+    (Name: "dark-15-n3-g30", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 30)),
+    (Name: "dark-15-n3-g40", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 40)),
+    (Name: "dark-15-n3-g40-a2", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 40, 2)),
+    (Name: "dark-15-n3-g40-a3", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 40, 3)),
+    (Name: "dark-15-n3-g40-a3-c60", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 40, 3, 0.60)),
+    (Name: "dark-15-n3-g40-a3-c75", Options: new DarkContourNoiseCleaner.Options(15, 3, 28, 40, 3, 0.75)),
+    (Name: "dark-05-n3-g40-a3-c75", Options: new DarkContourNoiseCleaner.Options(5, 3, 28, 40, 3, 0.75)),
+    (Name: "dark-10-n3-g40-a3-c75", Options: new DarkContourNoiseCleaner.Options(10, 3, 28, 40, 3, 0.75)),
+    (Name: "dark-20-n3", Options: new DarkContourNoiseCleaner.Options(20, 3, 28, 12)),
+    (Name: "dark-15-n4", Options: new DarkContourNoiseCleaner.Options(15, 4, 28, 12))
 })
 {
-    var cleaned = DarkContourExperiment.Clean(source, variant.Options);
+    var cleaned = DarkContourNoiseCleaner.Clean(source, variant.Options);
     using (cleaned.Image)
     {
         RequireSameAlpha(source, cleaned.Image);
@@ -101,7 +125,7 @@ foreach (var variant in new[]
                 Console.WriteLine($"baseline window={pair.Key} overlap with dark experiment={overlap}/{cleaned.ChangedPixels}");
             }
             SaveCandidateAtlas(source, cleaned.Image, Path.Combine(output, "candidate-atlas.png"));
-            var second = DarkContourExperiment.Clean(cleaned.Image, variant.Options);
+            var second = DarkContourNoiseCleaner.Clean(cleaned.Image, variant.Options);
             using (second.Image)
             {
                 RequireSameAlpha(source, second.Image);
@@ -110,7 +134,7 @@ foreach (var variant in new[]
                 using var white = OnWhite(second.Image);
                 using var enlarged = Enlarge(white, 6);
                 enlarged.Save(Path.Combine(output, "dark-15-n3-g40-a3-c75-pass2-on-white-6x.png"), ImageFormat.Png);
-                var third = DarkContourExperiment.Clean(second.Image, variant.Options);
+                var third = DarkContourNoiseCleaner.Clean(second.Image, variant.Options);
                 using (third.Image)
                 {
                     RequireSameAlpha(source, third.Image);
