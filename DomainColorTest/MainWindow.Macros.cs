@@ -68,6 +68,7 @@ public partial class MainWindow
         ProcessingOperations.Colors => "Число цветов",
         ProcessingOperations.Cleanup => "Очистка цветов",
         ProcessingOperations.Align => "Выравнивание сетки",
+        ProcessingOperations.AlignLocal => "Локальное выравнивание сетки",
         ProcessingOperations.Reduce => "Сжатие сетки",
         ProcessingOperations.Monochrome => "Монохром",
         ProcessingOperations.Ascii => "ASCII-изображение",

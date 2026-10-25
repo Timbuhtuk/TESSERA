@@ -12,6 +12,7 @@ internal static class GridAlignmentCommand
 
           -i, --input PATH       Исходное изображение.
           -o, --output PATH      Только PNG; по умолчанию <имя>_aligned.png.
+          --mode V              global или local (global).
           --cell-size N          Размер квадратной ячейки в исходных пикселях (от 2).
                                  Если не указан, выполняется поиск сетки.
           --max-cell-size N      Верхняя граница поиска: 2–256 (32).
@@ -45,7 +46,7 @@ internal static class GridAlignmentCommand
                     if (equals >= 0) throw new CliUsageException($"{name} не принимает значение.");
                     Add(name, "true");
                 }
-                else if (name is "--input" or "--output" or "--cell-size" or "--max-cell-size")
+                else if (name is "--input" or "--output" or "--cell-size" or "--max-cell-size" or "--mode")
                 {
                     if (equals >= 0) Add(name, token[(equals + 1)..]);
                     else if (++i < args.Length && !args[i].StartsWith('-')) Add(name, args[i]);
@@ -66,17 +67,24 @@ internal static class GridAlignmentCommand
             {
                 CellSize = values.ContainsKey("--cell-size") ? Number("--cell-size", 2, 65535) : null,
                 MaxDetectedCellSize = values.ContainsKey("--max-cell-size") ? Number("--max-cell-size", 2, 256) : 32,
-                Adaptive = !values.ContainsKey("--rigid")
+                Adaptive = !values.ContainsKey("--rigid"),
+                Mode = values.GetValueOrDefault("--mode", "global").ToLowerInvariant() switch
+                {
+                    "global" => GridAlignmentMode.Global,
+                    "local" => GridAlignmentMode.Local,
+                    _ => throw new CliUsageException("Режим сетки: global или local.")
+                }
             };
             if (!File.Exists(input)) throw new IOException($"Исходный файл не найден: {input}");
             using var source = CliApplication.LoadImage(input);
-            if (options.CellSize > Math.Min(source.Width, source.Height)) throw new CliUsageException("Ячейка больше изображения.");
+            if (options.Mode == GridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height)) throw new CliUsageException("Ячейка больше изображения.");
             using var result = new PixelGridAligner().Align(source, options);
             CliApplication.SaveImage(result.Aligned, target, overwrite);
             if (values.ContainsKey("--json"))
                 output.WriteLine(JsonSerializer.Serialize(new { process = "grid-alignment", input, output = target,
                     width = result.Aligned.Width, height = result.Aligned.Height, cellSize = result.CellSize,
                     detected = result.WasDetected, detectionConfidence = result.DetectionConfidence,
+                    mode = options.Mode.ToString().ToLowerInvariant(), localRegionCount = result.LocalRegionCount,
                     adaptive = options.Adaptive, elapsedSeconds = result.ElapsedSeconds }, new JsonSerializerOptions { WriteIndented = true }));
             else
                 output.WriteLine($"Сетка выровнена: {target}; {source.Width} × {source.Height}; ячейка {result.CellSize} px; {result.ElapsedSeconds:F3} с.");

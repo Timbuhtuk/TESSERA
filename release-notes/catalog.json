@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Локальное выравнивание сетки",
+        "en": "Local grid alignment"
+      },
+      "notes": {
+        "ru": "- Сетка: добавлены режимы «Глобальный» и «Локальный». Локальный выправляет неровные клетки отдельных фигур, сохраняя их положение и мелкие контрастные детали.\n- Локальное выравнивание очищает близкие оттенки и поддерживает автоматический или ручной размер ячейки. Сложные изгибы могут потребовать дополнительной правки.\n- Выбранный режим сохраняется в истории и макросах. Сжатие ячеек до одного пикселя доступно для глобальной сетки.",
+        "en": "- Grid: choose Global or Local alignment. Local mode restores uneven cells of separate figures while retaining their positions and small contrast details.\n- Local alignment cleans nearby shades and supports automatic or manual cell size. Complex bends may need further correction.\n- The selected mode is retained in history and macros. Reducing cells to one pixel is available for a global grid."
+      }
+    },
+    {
+      "version": "2.0.0",
+      "title": {
         "ru": "Tessera 2.0",
         "en": "Tessera 2.0"
       },
