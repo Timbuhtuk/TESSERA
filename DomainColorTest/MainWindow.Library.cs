@@ -165,7 +165,7 @@ public partial class MainWindow
     {
         AdoptWorkspaceSource(source);
         ChooseSourceFolder(source);
-        if (ReferenceEquals(_activeSource, source)) { ShowEditor(); return; }
+        if (ReferenceEquals(_activeSource, source)) { ProcessingBasis = 0; SyncProcessingSelection(); ShowEditor(); return; }
         var bitmap = ImageLibrary.ReadBitmap(_library.SourcePath(source));
         ShowEditor();
         if (_activeSource is not null) _activeSource.DraftSettings = CaptureSettings();
@@ -197,12 +197,15 @@ public partial class MainWindow
         }
         sourcePreview.ScrollToRelativePosition(0, 0);
         resultPreview.ScrollToRelativePosition(0, 0);
+        ProcessingBasis = 0;
+        SyncProcessingSelection();
         SetProcessingState(_processing);
         RestoreWorkspaceImageView(source);
     }
 
     private void ClearDisplayedResult()
     {
+        ClearDisplayedLivePreview();
         resultPreview.Image = null;
         _downscaledResult?.Dispose(); _downscaledResult = null;
         _resultStale = _resultPreservesTransparency = _resultIsAlignment = false;
@@ -213,6 +216,7 @@ public partial class MainWindow
     private void SelectGeneration(GenerationEntry generation)
     {
         if (_activeSource is null || !_activeSource.Generations.Contains(generation)) return;
+        ClearDisplayedLivePreview();
         var output = ImageLibrary.ReadBitmap(_library.ResultPath(_activeSource, generation));
         if (generation.OperationId != ProcessingOperations.Macro) RestoreSettings(generation.Settings);
         _restoringHistory = true;
@@ -232,10 +236,24 @@ public partial class MainWindow
             generationStrip.ScrollIntoView(generation);
         }
         finally { _restoringHistory = false; }
+        ProcessingBasis = 1;
+        SyncProcessingSelection();
         UpdateSourcePreview();
         UpdateSizeHint();
         SetProcessingState(_processing);
         statusLabel.Text = Localization.Format("Результат от {0:dd.MM.yyyy HH:mm:ss}. Сохранён в истории.", generation.CreatedAt);
+    }
+
+    private void SyncProcessingSelection()
+    {
+        if (_restoringHistory) return;
+        _restoringHistory = true;
+        try
+        {
+            sourceStrip.SelectedItem = ProcessingBasis == 0 ? _activeSource : null;
+            generationStrip.SelectedItem = ProcessingBasis == 1 ? _activeSource?.SelectedGeneration : null;
+        }
+        finally { _restoringHistory = false; }
     }
 
     private void RemoveLibraryItem(object sender, RoutedEventArgs e)
@@ -297,6 +315,7 @@ public partial class MainWindow
         int index = source.Generations.IndexOf(generation);
         bool selected = ReferenceEquals(source.SelectedGeneration, generation);
         bool visible = ReferenceEquals(source, _activeSource);
+        bool resultWasSelected = visible && ProcessingBasis == 1;
         var next = source.Generations.Count <= 1 ? null
             : source.Generations[index + 1 < source.Generations.Count ? index + 1 : index - 1];
         _library.RemoveGeneration(source, generation);
@@ -317,8 +336,16 @@ public partial class MainWindow
         finally { _restoringHistory = false; }
         if (selected && visible)
         {
-            if (next is not null) SelectGeneration(next);
-            else { UpdateSourcePreview(); UpdateSizeHint(); }
+            if (next is not null)
+            {
+                SelectGeneration(next);
+                if (!resultWasSelected) { ProcessingBasis = 0; SyncProcessingSelection(); }
+            }
+            else
+            {
+                ProcessingBasis = 0; SyncProcessingSelection();
+                UpdateSourcePreview(); UpdateSizeHint();
+            }
         }
         statusLabel.Text = Localization.Text("Результат удалён из истории.");
     }
@@ -334,6 +361,7 @@ public partial class MainWindow
     {
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
         Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
+        ChannelAdjustment = _channelAdjustment,
         DetectGrid = detectGridInput.IsChecked == true, AlignmentMode = SelectedGridAlignmentMode,
         SnapToGlobalGrid = SelectedGridAlignmentMode == GridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
         AspectLock = aspectLock.IsChecked == true
@@ -375,6 +403,7 @@ public partial class MainWindow
             saturationInput.Value = (options.ManualCriteria?.TargetSaturation ?? .5) * 100;
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
+            RestoreChannelAdjustment(settings.ChannelAdjustment);
             (settings.AlignmentMode == GridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
             snapLocalGridInput.IsChecked = settings.SnapToGlobalGrid;
             UpdateGridAlignmentMode();

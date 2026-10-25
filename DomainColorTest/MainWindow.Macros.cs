@@ -75,6 +75,7 @@ public partial class MainWindow
         ProcessingOperations.Monochrome => "Монохром",
         ProcessingOperations.Ascii => "ASCII-изображение",
         ProcessingOperations.ReplaceColor => "Замена цвета",
+        ProcessingOperations.AdjustChannel => "Каналы RGBA",
         ProcessingOperations.RemoveBackground => "Удаление фона",
         _ => operation
     });

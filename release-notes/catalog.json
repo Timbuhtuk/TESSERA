@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Каналы RGBA и предпросмотр в основном окне",
+        "en": "RGBA channels and previews in the main pane"
+      },
+      "notes": {
+        "ru": "- Каналы RGBA: добавлен инструмент в «Инструменты → Цвет». Выберите R, G, B или A и прибавьте либо отнимите значение или процент от текущего канала. Поддерживаются дробные величины; остальные каналы сохраняются, результат ограничен диапазоном 0–255.\n- Настройки каналов сохраняются с результатом и доступны в макросах. Изменение A позволяет менять прозрачность, в том числе делать полностью прозрачные пиксели видимыми прибавлением значения.\n- Выбор для обработки: теперь выделена ровно одна карточка — исходник или результат. Отдельное меню выбора основы убрано; действия применяются к выделенному изображению.\n- Число цветов и Очистка цветов: живой предпросмотр перенесён в основную панель результата. Он отмечен контрастной рамкой и подписью «ПРЕДПРОСМОТР» и не создаёт записи в истории.\n- Размер и кадр: рамка обрезки скрывается при переходе к другому инструменту.",
+        "en": "- RGBA channels: a new tool under Tools → Color lets you add or subtract a value or a percentage of the current R, G, B or A channel. Fractional amounts are supported; other channels stay unchanged and results are limited to 0–255.\n- Channel settings are saved with results and supported in macros. Adjust A to change transparency; adding a value can reveal fully transparent pixels.\n- Processing selection: exactly one card is selected, either the source or a result. The separate processing-basis menu is gone; actions use the selected image.\n- Reduce Colors and Cleanup Colors: live previews now appear in the main result pane with a contrasting border and PREVIEW label, without adding history entries.\n- Size and frame: the crop outline disappears when switching to another tool."
+      }
+    },
+    {
+      "version": "2.5.0",
+      "title": {
         "ru": "Живой предпросмотр и обрезка прозрачных краёв",
         "en": "Live previews and transparent-edge trimming"
       },

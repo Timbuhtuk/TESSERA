@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
+        InitializeChannelTool();
         InitializeHistoryTrays();
         InitializeMacros();
         InitializeNavigation();

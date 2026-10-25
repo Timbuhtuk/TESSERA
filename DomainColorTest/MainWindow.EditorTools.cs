@@ -12,7 +12,10 @@ public partial class MainWindow
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
     {
-        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); if (key == "info") RefreshInfo(); if (key is "color" or "smoothing") AutoEnableLivePreview(key); return; }
+        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); _cropToolActive = key == "size"; UpdateCropPreview(); SetActiveLivePreviewTool(key); if (key == "info") RefreshInfo(); if (key is "color" or "smoothing") AutoEnableLivePreview(key); return; }
+        _cropToolActive = key == "size";
+        UpdateCropPreview();
+        SetActiveLivePreviewTool(key);
         if (_toolWindows.TryGetValue(key, out var existing))
         {
             if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
@@ -42,9 +45,12 @@ public partial class MainWindow
             });
 
         var tool = new EditorToolWindow(this, title, content, height);
+        tool.Activated += (_, _) => { _cropToolActive = key == "size"; UpdateCropPreview(); SetActiveLivePreviewTool(key); };
         tool.Closed += (_, _) =>
         {
             _toolWindows.Remove(key);
+            if (_cropToolActive && key == "size") { _cropToolActive = false; UpdateCropPreview(); }
+            if (ActiveLivePreviewTool == key) SetActiveLivePreviewTool(null);
             if (key == "info") ResetInfoSnapshot();
             foreach (var group in groups)
             {

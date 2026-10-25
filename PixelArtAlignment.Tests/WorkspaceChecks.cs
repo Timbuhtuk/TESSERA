@@ -155,9 +155,14 @@ internal static class WorkspaceChecks
             WaitUntil(() => !(bool)typeof(MainWindow).GetField("_processing", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window)!);
             Require(source.Id == asset.Id && images.Load().Single(s => s.Id == asset.Id).Generations.Count == 3, "Docked action adds persistent shared history");
             window.Width = 1440; Pump(); Capture(window, Path.Combine(root, "workspace-editor.png"));
-            var editedSource = (SourceEntry)sources.SelectedItem;
+            var editedSource = (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            Require(window.ProcessingBasis == 1 && sources.SelectedItem is null &&
+                Get<ListBox>(window, "generationStrip").SelectedItem is GenerationEntry,
+                "Processing must select exactly the result while retaining its active source document");
             Wait((Task)typeof(MainWindow).GetMethod("AddGenerationAsSourceAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [editedSource, editedSource.Generations.Last()])!);
-            var derived = (SourceEntry)sources.SelectedItem;
+            var derived = sources.SelectedItem as SourceEntry
+                ?? throw new Exception("Result-to-source drop did not select the newly created source");
+            Require(window.ProcessingBasis == 0, "Result-to-source drop retained result processing selection");
             Require(SourceIds().SetEquals([asset.Id, derived.Id]) && window.Workspace.State.Links.Any(l => l.AssetId == derived.Id && l.ProjectId == projectA.Id && l.FolderId == grass.Id), "Result-to-source drop stays in the current project and folder");
             Remove(derived.Id);
 

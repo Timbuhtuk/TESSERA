@@ -48,40 +48,45 @@ internal static class ProjectNotesChecks
             window.Show(); Pump(); Open(small);
             NavigationTest.Click(window, "colorMenuItem"); Pump();
             var colorCheck = Get<CheckBox>("colorLivePreviewInput");
-            Until(() => Get<PixelPreview>("colorLivePreview").Image is not null);
+            var liveResult = Get<PixelPreview>("resultPreview");
+            var liveFrame = Get<Border>("livePreviewFrame");
+            Until(() => liveResult.Image is not null && liveFrame.Visibility == Visibility.Visible);
             Require(colorCheck.IsChecked == true, "Small color preview did not auto-enable");
-            var previous = Get<PixelPreview>("colorLivePreview").Image;
+            Require(Get<TextBlock>("livePreviewBadgeText").Text == (docked ? "PREVIEW" : "ПРЕДПРОСМОТР"),
+                "Main-pane preview badge is not localized");
+            var previous = liveResult.Image;
             Get<IntegerInput>("quantizationColorsInput").Value = 1;
-            Until(() => Get<PixelPreview>("colorLivePreview").Image is { } image && !ReferenceEquals(image, previous));
+            Until(() => liveResult.Image is { } image && !ReferenceEquals(image, previous));
             var options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
             using (var expected = IndependentImageProcessor.ApplyColors(Get<Bitmap>("_sourceImage"), options))
-                EqualPixels(expected, Get<PixelPreview>("colorLivePreview").Image!, "Color live result differs from Apply");
+                EqualPixels(expected, liveResult.Image!, "Color live result differs from Apply");
             NavigationTest.Click(window, "smoothingMenuItem"); Pump();
             var smoothCheck = Get<CheckBox>("smoothingLivePreviewInput");
-            Until(() => Get<PixelPreview>("smoothingLivePreview").Image is not null);
+            Until(() => liveResult.Image is not null && liveFrame.Visibility == Visibility.Visible);
             Require(smoothCheck.IsChecked == true, "Small cleanup preview did not auto-enable");
-            previous = Get<PixelPreview>("smoothingLivePreview").Image;
+            previous = liveResult.Image;
             Get<Slider>("localContrastInput").Value = 25;
-            Until(() => Get<PixelPreview>("smoothingLivePreview").Image is { } image && !ReferenceEquals(image, previous));
+            Until(() => liveResult.Image is { } image && !ReferenceEquals(image, previous));
             options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
             using (var expected = IndependentImageProcessor.ApplyNeighborColors(Get<Bitmap>("_sourceImage"), options))
-                EqualPixels(expected, Get<PixelPreview>("smoothingLivePreview").Image!, "Cleanup live result differs from Apply");
+                EqualPixels(expected, liveResult.Image!, "Cleanup live result differs from Apply");
             Require(Get<SourceEntry>("_activeSource").Generations.Count == 0, "Live previews saved history");
 
             Open(large); NavigationTest.Click(window, "colorMenuItem"); Pump();
             Require(colorCheck.IsChecked != true && smoothCheck.IsChecked != true, "Large input inherited small-input approval");
             Decide(colorCheck, MessageBoxResult.No);
-            Require(colorCheck.IsChecked != true && Get<PixelPreview>("colorLivePreview").Image is null,
+            Require(colorCheck.IsChecked != true && liveResult.Image is null && liveFrame.Visibility == Visibility.Collapsed,
                 "Declined large preview remained enabled");
             Decide(colorCheck, MessageBoxResult.Yes);
-            Until(() => Get<PixelPreview>("colorLivePreview").Image is not null);
+            try { Until(() => liveResult.Image is not null && liveFrame.Visibility == Visibility.Visible); }
+            catch { throw new Exception($"Large color preview: checked={colorCheck.IsChecked}, busy={Get<bool>("_livePreviewBusy")}, tool={Get<string>("_activeLivePreviewTool")}, status={Get<TextBlock>("statusLabel").Text}, image={liveResult.Image is not null}, frame={liveFrame.Visibility}"); }
             Require(colorCheck.IsChecked == true, "Accepted large preview did not enable");
             Open(other); NavigationTest.Click(window, "smoothingMenuItem"); Pump();
             Require(colorCheck.IsChecked != true && smoothCheck.IsChecked != true, "Approval leaked to another large input");
             Decide(smoothCheck, MessageBoxResult.No);
             Require(smoothCheck.IsChecked != true, "Declined large cleanup preview remained enabled");
             Decide(smoothCheck, MessageBoxResult.Yes);
-            Until(() => Get<PixelPreview>("smoothingLivePreview").Image is not null);
+            Until(() => liveResult.Image is not null && liveFrame.Visibility == Visibility.Visible);
             Require(Get<SourceEntry>("_activeSource").Generations.Count == 0 && window.WindowState == WindowState.Normal,
                 "Preview/modal changed history or minimized the owner");
 
@@ -133,7 +138,7 @@ internal static class ProjectNotesChecks
             // An in-flight temporary result must not resurrect previews/timers after closure.
             Task pending = (Task)Invoke("RenderLiveToolPreviews")!;
             window.Close(); Wait(pending); Pump();
-            Require(Get<PixelPreview>("colorLivePreview").Image is null && Get<PixelPreview>("smoothingLivePreview").Image is null &&
+            Require(liveResult.Image is null && liveFrame.Visibility == Visibility.Collapsed &&
                 !Get<DispatcherTimer>("_livePreviewTimer").IsEnabled, "Preview rendering survived closure");
             Console.WriteLine($"  Project notes: docked={docked}, small/large preview decisions, exact tool parity, no history, comparison wheel, differing aspects, corner and closed-window cleanup passed.");
         }

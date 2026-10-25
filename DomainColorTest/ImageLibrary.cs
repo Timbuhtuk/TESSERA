@@ -16,6 +16,7 @@ public sealed class EditorSettings
 {
     public int Mode { get; set; } = 1;
     public DownscaleOptions Downscale { get; set; } = new();
+    public ChannelAdjustmentOptions ChannelAdjustment { get; set; } = new();
     public int CellSize { get; set; } = 8;
     public bool DetectGrid { get; set; }
     public GridAlignmentMode AlignmentMode { get; set; } = GridAlignmentMode.Global;

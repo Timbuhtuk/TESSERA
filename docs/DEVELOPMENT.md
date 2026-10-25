@@ -33,6 +33,8 @@ dotnet publish Pixelizator.Cli -c Release -p:PublishProfile=win-x64
 
 Checks generate their own images and temporary libraries. They do not use the user's library or external image collections. See the [alignment evaluation protocol](../PixelArtAlignment.Tests/README.md).
 
+`dotnet run --project PixelArtAlignment.Tests -c Release -- --channels` checks RGBA channel arithmetic, fractions, clamping, unchanged channels and sources, cancellation, recipe replay, docked/floating UI, RU/EN, PNG and persisted settings. Arithmetic checks also run with `--invariants`; UI checks also run with `--ui`.
+
 ## Source layout
 
 Historical project and namespace names are retained:

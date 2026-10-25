@@ -192,7 +192,9 @@ internal static class EditorRegressionChecks
             string text = Path.Combine(folder, "safe-ascii.TXT");
             WaitTask((Task)Invoke("SaveAsciiTextAsync", text)!);
             Console.WriteLine("  Export regression: ASCII export completed");
-            string expected = PixelArtDownscale.ImageFilters.ToAscii(Get<Bitmap>("_sourceImage"), Get<TextBox>("asciiCharactersInput").Text, Get<CheckBox>("asciiInvertSourceInput").IsChecked == true);
+            Require(Get<ListBox>("generationStrip").SelectedItem is GenerationEntry && Get<ListBox>("sourceStrip").SelectedItem is null,
+                "The saved result must be the sole input after processing");
+            string expected = PixelArtDownscale.ImageFilters.ToAscii(Get<Bitmap>("_downscaledResult"), Get<TextBox>("asciiCharactersInput").Text, Get<CheckBox>("asciiInvertSourceInput").IsChecked == true);
             Require(File.ReadAllText(text) == expected, "ASCII export did not write expected text");
             WaitTask((Task)Invoke("SaveAsciiTextAsync", text)!);
             Require(!Directory.EnumerateFiles(folder, "*.tmp", SearchOption.AllDirectories).Any(), "Rejected export left temporary files");

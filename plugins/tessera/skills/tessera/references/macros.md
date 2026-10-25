@@ -53,6 +53,7 @@ Use a fresh nonempty UUID when creating a separate macro, a nonblank name, and a
 | `grid.reduce` | Literal `cellSize`, or `usePreviousAlignment: true` following `grid.align` or `grid.align.local.snapped` in this recipe |
 | `filter.monochrome` | No additional payload |
 | `filter.ascii` | `ascii`: `characters`, `keepSourceSize`, `invertSource`, `invertColors`; produces an image |
+| `color.channel.adjust` | `channelAdjustment`: `channel` (`R`, `G`, `B`, `A`), `mode` (`Value`, `Percent`), nonnegative finite `amount`, optional `subtract` (Tessera 2.6+) |
 | `color.replace` | `colorReplacement`: `fromArgb` and `toArgb` as signed 32-bit ARGB integers |
 | `background.remove` | `background`: `mode` (`GlobalColor` or `EdgeConnected`), `tolerance` (0–100), optional `colorArgb`; omit/null to estimate separately for each input |
 

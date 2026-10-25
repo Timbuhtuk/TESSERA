@@ -49,14 +49,19 @@ Its name refers to an individual piece of a mosaic.
 Open images from File > Open, with Ctrl+O or drag and drop.
 The library organizes shared assets in projects and nested folders, with
 tags, search, filters and result histories. Right-click projects/folders
-for organization commands. The title bar contains File, Image, Tools and
-View, with More on narrow windows. Settings selects theme and RU/EN.
+for organization commands. The title bar contains File, Tools and View,
+with More on narrow windows. Settings selects theme and RU/EN.
 The editor can change size and colors separately or together, with crisp
 pixel enlargement. It also aligns grids and reduces cells to one pixel.
 The interface includes bundled Cascadia Code and Science Gothic fonts.
 Size fields accept dimensions above 4K, subject to available memory and codec limits.
-Image and Tools open processing settings beside the previews. Select
-Source or a saved result as the input. Info shows dimensions, color counts and palette
+Tools opens processing settings beside the previews. Select exactly one
+source or result card as the input. Color and cleanup previews appear in
+the main result pane with a contrasting PREVIEW frame; run the tool to
+save a history result.
+Tools > Color > RGBA channels adjusts one channel by value or percentage,
+including fractional amounts and transparency, with history and macros.
+Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
 Choose any new color with the hue strip and color field, an image swatch,
 or HEX. The original stays intact.
