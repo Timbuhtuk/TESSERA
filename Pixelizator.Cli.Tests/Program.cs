@@ -550,6 +550,35 @@ try
             "-o", Path.Combine(directory, "invalid-macro-output.png")]).Code == 1, "Unsupported macro version was accepted");
     });
 
+    Check("RGBA channel macros preserve PNG channels and support value/percent add/subtract", () =>
+    {
+        string sourcePath = Path.Combine(directory, "channels-source.png");
+        using var source = new Bitmap(3, 1, PixelFormat.Format32bppArgb);
+        source.SetPixel(0, 0, Color.FromArgb(0, 12, 34, 56));
+        source.SetPixel(1, 0, Color.FromArgb(97, 100, 150, 200));
+        source.SetPixel(2, 0, Color.FromArgb(255, 255, 0, 2));
+        source.Save(sourcePath, ImageFormat.Png);
+        byte[] original = File.ReadAllBytes(sourcePath);
+        var store = new MacroStore(Path.Combine(directory, "channels-library"));
+        foreach (var channel in Enum.GetValues<RgbaChannel>())
+        foreach (var mode in Enum.GetValues<ChannelAdjustmentMode>())
+        foreach (bool subtract in new[] { false, true })
+        {
+            var options = new ChannelAdjustmentOptions { Channel = channel, Mode = mode,
+                Amount = mode == ChannelAdjustmentMode.Value ? 12.5 : 25.5, Subtract = subtract };
+            string label = $"{channel}-{mode}-{subtract}";
+            var saved = store.Save(new MacroDefinition { Name = label,
+                Steps = [new ProcessingStep { OperationId = ProcessingOperations.AdjustChannel, ChannelAdjustment = options }] });
+            string outputPath = Path.Combine(directory, "channels-" + label + ".png");
+            var apply = Run(["macro", "apply", sourcePath, "--macro", store.PathFor(saved.Id), "-o", outputPath, "--json"]);
+            Require(apply.Code == 0 && apply.Error.Length == 0, apply.Error);
+            using var expected = ChannelAdjustment.Apply(source, options);
+            using var actual = new Bitmap(outputPath);
+            EqualPixels(expected, actual);
+        }
+        Require(File.ReadAllBytes(sourcePath).SequenceEqual(original), "RGBA macro modified its source");
+    });
+
     Check("Trim macro CLI keeps semitransparent boundaries and source PNG", () =>
     {
         string sourcePath = Path.Combine(directory, "trim-source.png");

@@ -53,6 +53,7 @@ public partial class MainWindow
         monochromeButton.IsEnabled = enabled;
         asciiSaveTextButton.IsEnabled = enabled;
         asciiRenderButton.IsEnabled = enabled;
+        RefreshChannelAdjustmentState();
     }
 
     private async void ApplyMonochrome()

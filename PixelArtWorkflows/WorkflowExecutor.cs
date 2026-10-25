@@ -165,6 +165,8 @@ public sealed class WorkflowExecutor
                 return (BackgroundRemover.Remove(current, settings.Mode, settings.Tolerance, color, cancellationToken),
                     previousAlignmentCell);
             }
+            case ProcessingOperations.AdjustChannel:
+                return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -215,6 +217,11 @@ public sealed class WorkflowExecutor
             case ProcessingOperations.ReplaceColor:
                 RequireOnly(step, replacement: true);
                 if (step.ColorReplacement is null) throw new InvalidDataException("Color replacement parameters are required.");
+                break;
+            case ProcessingOperations.AdjustChannel:
+                RequireOnly(step, channelAdjustment: true);
+                if (step.ChannelAdjustment is null) throw new InvalidDataException("Channel adjustment parameters are required.");
+                step.ChannelAdjustment.Validate();
                 break;
             case ProcessingOperations.RemoveBackground:
                 RequireOnly(step, background: true);
@@ -276,11 +283,12 @@ public sealed class WorkflowExecutor
     }
 
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
-        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false)
+        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false, bool channelAdjustment = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
-            !replacement && step.ColorReplacement is not null || !background && step.Background is not null)
+            !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
+            !channelAdjustment && step.ChannelAdjustment is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }

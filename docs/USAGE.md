@@ -18,6 +18,12 @@ Image size fields accept dimensions above 4K. Available memory and image codec s
 
 In the paired comparison, the image with fewer pixels is enlarged into the displayed bounds of the larger image while preserving its proportions. This keeps source and result visually comparable at Fit and fixed zoom.
 
+### RGBA channels
+
+Open **Tools → Color → RGBA channels…**. Choose R, G, B or A, select **Add** or **Subtract**, and enter a number or a percentage of each pixel's current channel value. Decimal amounts accept a dot or comma. For example, a value of 100 plus 20% becomes 120. Results round to the nearest integer (halves away from zero) and stay within 0–255.
+
+Only the selected channel changes; image dimensions and the other three channels stay intact. Adding a fixed amount to A also affects fully transparent pixels and can reveal their stored RGB. A percentage of zero remains zero. Use the processing basis selector to adjust the source or a selected result. Applying creates a history result with saved settings, supports macro replay, and exports as PNG.
+
 ### Height, Normal and ambient occlusion maps
 
 Open an image asset, select its source card or a saved result card, then use **Tools → Materials and tiles → Height / Normal / AO maps…**. The tool accepts the entire image at its original dimensions, including sprites and atlases, and automatically generates initial maps locally. Height and Normal occupy the top row of a 2×2 grid; AO and the lighting preview occupy the bottom row. All four panes share zoom, fit scale and horizontal/vertical scrolling. Ctrl+mouse wheel works over any pane, including the lighting preview.

@@ -361,6 +361,7 @@ public partial class MainWindow
     {
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
         Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
+        ChannelAdjustment = _channelAdjustment,
         DetectGrid = detectGridInput.IsChecked == true, AlignmentMode = SelectedGridAlignmentMode,
         SnapToGlobalGrid = SelectedGridAlignmentMode == GridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
         AspectLock = aspectLock.IsChecked == true
@@ -402,6 +403,7 @@ public partial class MainWindow
             saturationInput.Value = (options.ManualCriteria?.TargetSaturation ?? .5) * 100;
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
+            RestoreChannelAdjustment(settings.ChannelAdjustment);
             (settings.AlignmentMode == GridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
             snapLocalGridInput.IsChecked = settings.SnapToGlobalGrid;
             UpdateGridAlignmentMode();

@@ -52,6 +52,8 @@ internal static class ProjectNotesChecks
             var liveFrame = Get<Border>("livePreviewFrame");
             Until(() => liveResult.Image is not null && liveFrame.Visibility == Visibility.Visible);
             Require(colorCheck.IsChecked == true, "Small color preview did not auto-enable");
+            Require(Get<TextBlock>("livePreviewBadgeText").Text == (docked ? "PREVIEW" : "ПРЕДПРОСМОТР"),
+                "Main-pane preview badge is not localized");
             var previous = liveResult.Image;
             Get<IntegerInput>("quantizationColorsInput").Value = 1;
             Until(() => liveResult.Image is { } image && !ReferenceEquals(image, previous));

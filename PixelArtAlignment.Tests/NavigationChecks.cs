@@ -62,7 +62,7 @@ internal static class NavigationChecks
                 {
                     ("processingMenu", new[] { "profileMenuItem", "macrosMenuItem" }),
                     ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem" }),
-                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "replaceColorMenuItem", "infoMenuItem" }),
+                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "channelMenuItem", "replaceColorMenuItem", "infoMenuItem" }),
                     ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
                     ("materialsToolsMenu", new[] { "materialMapsMenuItem", "inspectTilesMenuItem", "addToBoardMenuItem" })
                 })
@@ -70,7 +70,7 @@ internal static class NavigationChecks
                         commands.All(name => Get<MenuItem>(group).Items.Contains(Get<MenuItem>(name))), "Tools category lost a command: " + group);
                 Require(window.FindName("basisMenu") is null, "Processing source still has a second menu selection");
                 int historyCount = source.Generations.Count;
-                foreach (string command in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "filtersMenuItem", "profileMenuItem", "gridMenuItem", "infoMenuItem" })
+                foreach (string command in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "channelMenuItem", "filtersMenuItem", "profileMenuItem", "gridMenuItem", "infoMenuItem" })
                 {
                     NavigationTest.Click(window, command); Pump();
                     Require(window.OwnedWindows.Count == 0 && Get<Bitmap>("_sourceImage") is not null, "Tool unexpectedly opened a floating window");

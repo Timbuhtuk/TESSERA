@@ -78,6 +78,7 @@ public partial class MainWindow
         var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
         colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Число цветов…", "color", 440, colorToolGroup);
         smoothingMenuItem = AddTool(colorToolsMenu, "smoothingMenuItem", "Очистить цвета…", "smoothing", 470, smoothingToolGroup);
+        AddTool(colorToolsMenu, "channelMenuItem", "Каналы RGBA…", "channel", 460, channelToolGroup);
         AddNavigation(colorToolsMenu, "replaceColorMenuItem", "Заменить цвет…", () => NavigationImageActionAsync("replace"));
         infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 760, infoToolGroup);
 

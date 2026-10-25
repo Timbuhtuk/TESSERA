@@ -19,6 +19,7 @@ public static class ProcessingOperations
     public const string Monochrome = "filter.monochrome";
     public const string Ascii = "filter.ascii";
     public const string ReplaceColor = "color.replace";
+    public const string AdjustChannel = "color.channel.adjust";
     public const string RemoveBackground = "background.remove";
     public const string Macro = "macro.apply";
 }
@@ -32,6 +33,7 @@ public sealed class ProcessingStep
     public bool UsePreviousAlignment { get; init; }
     public AsciiSettings? Ascii { get; init; }
     public ColorReplacementSettings? ColorReplacement { get; init; }
+    public ChannelAdjustmentOptions? ChannelAdjustment { get; init; }
     public BackgroundSettings? Background { get; init; }
 }
 
