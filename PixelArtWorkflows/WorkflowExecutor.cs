@@ -124,6 +124,8 @@ public sealed class WorkflowExecutor
             }
             case ProcessingOperations.Resize:
                 return (IndependentImageProcessor.Scale(current, LocalOptions(step.Downscale!)), previousAlignmentCell);
+            case ProcessingOperations.Trim:
+                return (BitmapFactory.CropTransparentEdges(current), previousAlignmentCell);
             case ProcessingOperations.Colors:
                 return (IndependentImageProcessor.ApplyColors(current, LocalOptions(step.Downscale!)), previousAlignmentCell);
             case ProcessingOperations.Cleanup:
@@ -199,6 +201,7 @@ public sealed class WorkflowExecutor
                 }
                 else ValidateCellSize(step.CellSize, optional: false);
                 break;
+            case ProcessingOperations.Trim:
             case ProcessingOperations.Monochrome:
                 RequireOnly(step);
                 break;

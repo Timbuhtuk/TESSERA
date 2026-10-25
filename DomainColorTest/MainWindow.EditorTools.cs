@@ -12,7 +12,7 @@ public partial class MainWindow
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
     {
-        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); if (key == "info") RefreshInfo(); return; }
+        if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); if (key == "info") RefreshInfo(); if (key is "color" or "smoothing") AutoEnableLivePreview(key); return; }
         if (_toolWindows.TryGetValue(key, out var existing))
         {
             if (existing.WindowState == WindowState.Minimized) existing.WindowState = WindowState.Normal;
@@ -54,6 +54,7 @@ public partial class MainWindow
         };
         _toolWindows.Add(key, tool);
         tool.Show();
+        if (key is "color" or "smoothing") AutoEnableLivePreview(key);
     }
 
     private void CloseEditorTools()

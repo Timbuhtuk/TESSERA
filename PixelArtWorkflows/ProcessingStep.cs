@@ -9,6 +9,7 @@ public static class ProcessingOperations
 {
     public const string Profile = "image.profile";
     public const string Resize = "image.resize";
+    public const string Trim = "image.trim";
     public const string Colors = "image.colors";
     public const string Cleanup = "image.cleanup";
     public const string Align = "grid.align";

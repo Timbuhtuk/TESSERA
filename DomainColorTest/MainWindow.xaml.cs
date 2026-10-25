@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         UpdateGridAlignmentMode();
         processButton.Click += ProcessImage;
         scaleOnlyButton.Click += ScaleOnlyImage;
+        trimTransparentButton.Click += TrimTransparentEdges;
         colorOnlyButton.Click += ApplyColorsOnly;
         neighborColorsButton.Click += ApplyNeighborColorsOnly;
         alignButton.Click += AlignImage;
@@ -91,6 +92,7 @@ public partial class MainWindow : Window
         InitializeCleanupControls();
         InitializeLibrary();
         InitializeImageActions();
+        InitializeLiveToolPreviews();
         InitializeHome();
         InitializeIcons();
         InitializeAseprite();
@@ -325,6 +327,8 @@ public partial class MainWindow : Window
         processButton.IsEnabled = !processing && _sourceImage is not null;
         scaleOnlyButton.IsEnabled = colorOnlyButton.IsEnabled = neighborColorsButton.IsEnabled =
             !processing && _sourceImage is not null;
+        trimTransparentButton.IsEnabled = !processing && _sourceImage is not null;
+        if (!processing) ScheduleLiveToolPreviews();
         if (_downscaledResult is null && ProcessingBasis == 1) ProcessingBasis = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
         Cursor = processing ? Cursors.Wait : null;

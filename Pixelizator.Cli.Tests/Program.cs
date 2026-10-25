@@ -550,6 +550,33 @@ try
             "-o", Path.Combine(directory, "invalid-macro-output.png")]).Code == 1, "Unsupported macro version was accepted");
     });
 
+    Check("Trim macro CLI keeps semitransparent boundaries and source PNG", () =>
+    {
+        string sourcePath = Path.Combine(directory, "trim-source.png");
+        string outputPath = Path.Combine(directory, "trim-output.png");
+        using (var source = new Bitmap(8, 7, PixelFormat.Format32bppArgb))
+        {
+            source.SetPixel(1, 2, Color.FromArgb(1, 12, 34, 56));
+            source.SetPixel(5, 6, Color.FromArgb(128, 210, 70, 30));
+            source.Save(sourcePath, ImageFormat.Png);
+        }
+        byte[] original = File.ReadAllBytes(sourcePath);
+        var store = new MacroStore(Path.Combine(directory, "trim-library"));
+        var saved = store.Save(new MacroDefinition
+        {
+            Name = "Transparent trim",
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.Trim }]
+        });
+        var apply = Run(["macro", "apply", sourcePath, "--macro", store.PathFor(saved.Id), "-o", outputPath, "--json"]);
+        Require(apply.Code == 0 && apply.Error.Length == 0, apply.Error);
+        using var expected = new Bitmap(5, 5, PixelFormat.Format32bppArgb);
+        expected.SetPixel(0, 0, Color.FromArgb(1, 12, 34, 56));
+        expected.SetPixel(4, 4, Color.FromArgb(128, 210, 70, 30));
+        using var actual = new Bitmap(outputPath);
+        EqualPixels(expected, actual);
+        Require(File.ReadAllBytes(sourcePath).SequenceEqual(original), "Trim macro overwrote its source");
+    });
+
     Check("Color cleanup controls merge close shades and preserve pixels at zero strength", () =>
     {
         string sourcePath = Path.Combine(directory, "cleanup-controls.png");

@@ -26,6 +26,7 @@ public sealed class PixelPreview : Grid
     private readonly Surface _surface = new();
     private readonly TextBlock _empty;
     private Bitmap? _image;
+    private System.Drawing.Size? _referenceImageSize;
     private double _zoom;
     private int _background;
     private double _relativeX, _relativeY;
@@ -37,6 +38,16 @@ public sealed class PixelPreview : Grid
     public event EventHandler<PixelColorPickedEventArgs>? ColorPicked;
     public (double X, double Y) ScrollPosition => (_relativeX, _relativeY);
     public double EffectiveZoom => _surface.Source is { } source ? _surface.ImageWidth * VisualTreeHelper.GetDpi(this).DpiScaleX / source.PixelWidth : 1;
+    public System.Drawing.Size? ReferenceImageSize
+    {
+        get => _referenceImageSize;
+        set { _referenceImageSize = value; UpdateScale(); }
+    }
+    public void ScrollByWheel(int delta)
+    {
+        if (_scroll.ScrollableHeight > 0) _scroll.ScrollToVerticalOffset(_scroll.VerticalOffset - delta);
+        else if (_scroll.ScrollableWidth > 0) _scroll.ScrollToHorizontalOffset(_scroll.HorizontalOffset - delta);
+    }
     public Bitmap? Image
     {
         get => _image;
@@ -204,8 +215,11 @@ public sealed class PixelPreview : Grid
         double availableHeight = Math.Max(1, _scroll.ViewportHeight > 0 ? _scroll.ViewportHeight : ActualHeight);
         if (_surface.Source is { } source)
         {
-            double scale = fit ? Math.Min(Math.Max(1, availableWidth * dpi.DpiScaleX - 16) / source.PixelWidth, Math.Max(1, availableHeight * dpi.DpiScaleY - 16) / source.PixelHeight) : _zoom;
+            int referenceWidth = _referenceImageSize?.Width ?? source.PixelWidth;
+            int referenceHeight = _referenceImageSize?.Height ?? source.PixelHeight;
+            double scale = fit ? Math.Min(Math.Max(1, availableWidth * dpi.DpiScaleX - 16) / referenceWidth, Math.Max(1, availableHeight * dpi.DpiScaleY - 16) / referenceHeight) : _zoom;
             if (fit && !_continuousFit && scale >= 1) scale = Math.Floor(scale);
+            scale = Math.Min(referenceWidth * scale / source.PixelWidth, referenceHeight * scale / source.PixelHeight);
             _surface.ImageWidth = (_continuousFit ? source.PixelWidth * scale : Math.Max(1, Math.Round(source.PixelWidth * scale))) / dpi.DpiScaleX;
             _surface.ImageHeight = (_continuousFit ? source.PixelHeight * scale : Math.Max(1, Math.Round(source.PixelHeight * scale))) / dpi.DpiScaleY;
         }
