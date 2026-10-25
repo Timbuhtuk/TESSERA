@@ -30,6 +30,7 @@ public partial class MainWindow
             _processingBasis = next;
             if (aspectLock.IsChecked == true) SizeChangedByUser(widthChanged: true); else UpdateSizeHint();
             SetProcessingState(_processing);
+            ScheduleLiveToolPreviews();
         }
     }
     public int PreviewZoom
@@ -197,7 +198,7 @@ public partial class MainWindow
         for (int q = 0; q < _zoomChoices.Count; q++) _zoomChoices[q].IsChecked = PreviewZoom == q;
         for (int q = 0; q < _backgroundChoices.Count; q++) _backgroundChoices[q].IsChecked = PreviewBackground == q;
         _alternativePreviewItem.IsChecked = AlternativePreview;
-        zoomMenu.IsEnabled = !AlternativePreview;
+        zoomMenu.IsEnabled = true;
     }
     private void UpdateNavigationLayout()
     {

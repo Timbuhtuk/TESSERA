@@ -33,7 +33,7 @@ public partial class MainWindow
         _comparisonPreview.Name = "comparisonPreview";
         RegisterName(_comparisonPreview.Name, _comparisonPreview);
         _comparisonPreview.EmptyText = Localization.Text("Выберите результат для сравнения. Удерживайте Alt, чтобы показать исходник.");
-        _comparisonPreview.ToolTip = Localization.Text("Результат занимает всё поле. Удерживайте Alt для исходника; отпустите для результата. Изображения вписываются по пропорциям.");
+        _comparisonPreview.ToolTip = Localization.Text("Результат занимает всё поле. Удерживайте Alt для исходника; отпустите для результата. Колесо меняет масштаб, Ctrl + колесо прокручивает изображение.");
         AutomationProperties.SetName(_comparisonPreview, Localization.Text("Сравнение исходника и результата"));
         Grid.SetRow(_comparisonPreview, 2);
         previewArea.Children.Add(_comparisonPreview);
@@ -102,10 +102,20 @@ public partial class MainWindow
         previewPair.Visibility = enabled ? Visibility.Collapsed : Visibility.Visible;
         _comparisonPreview.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         _comparisonPreview.PreviewBackground = PreviewBackground;
-        _comparisonPreview.Zoom = 0;
+        _comparisonPreview.Zoom = ZoomFactors[Math.Clamp(PreviewZoom, 0, ZoomFactors.Length - 1)];
         var image = enabled ? _comparisonOriginal ? _sourceImage : _downscaledResult : null;
         if (!ReferenceEquals(_comparisonPreview.Image, image)) _comparisonPreview.Image = image;
         UpdateCropPreview();
+    }
+
+    private void UpdateSharedPreviewScale()
+    {
+        var source = sourcePreview.Image;
+        var result = resultPreview.Image;
+        System.Drawing.Size? reference = source is null || result is null ? null :
+            (long)source.Width * source.Height >= (long)result.Width * result.Height ? source.Size : result.Size;
+        sourcePreview.ReferenceImageSize = reference;
+        resultPreview.ReferenceImageSize = reference;
     }
 
     private void UpdateCropPreview()

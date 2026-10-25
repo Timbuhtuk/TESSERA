@@ -1,10 +1,12 @@
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 using DomainColorTest;
 using Bitmap = System.Drawing.Bitmap;
 using Color = System.Drawing.Color;
+using Point = System.Windows.Point;
 
 namespace PixelArtAlignment.Tests;
 
@@ -55,6 +57,23 @@ internal static class AlphaChannelUiChecks
                 Require(!Get<bool>("_processing"), "Image processing timed out");
                 Pump();
                 VerifyAlpha(Get<Bitmap>("_downscaledResult"));
+                if (!sprite && button == "scaleOnlyButton")
+                {
+                    var sourcePreview = Get<PixelPreview>("sourcePreview");
+                    var resultPreview = Get<PixelPreview>("resultPreview");
+                    Require(Math.Abs(sourcePreview.EffectiveZoom * 512 - resultPreview.EffectiveZoom * 256) < 2,
+                        "Paired Fit previews have different displayed widths");
+                    var zoom = typeof(MainWindow).GetMethod("ChangePreviewZoom", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                    zoom.Invoke(window, [sourcePreview, 120, new Point(100, 80), ModifierKeys.Control]); Pump();
+                    int sourceStep = window.PreviewZoom;
+                    window.PreviewZoom = 0; Pump();
+                    zoom.Invoke(window, [resultPreview, 120, new Point(100, 80), ModifierKeys.Control]); Pump();
+                    Require(window.PreviewZoom == sourceStep, "Fit zoom step differs between source and result");
+                    window.PreviewZoom = 6; Pump();
+                    Require(Math.Abs(sourcePreview.EffectiveZoom * 512 - resultPreview.EffectiveZoom * 256) < 2,
+                        "Paired 100% previews have different displayed widths");
+                    window.PreviewZoom = 0; Pump();
+                }
                 Require(Get<bool>("_resultPreservesTransparency"), "Editor did not protect transparent export");
                 string output = Path.Combine(folder, $"{button}-{sprite}.png");
                 Invoke("SaveResult", output);
@@ -72,6 +91,15 @@ internal static class AlphaChannelUiChecks
             window = Open();
             VerifyAlpha(Get<Bitmap>("_downscaledResult"));
             Require(Get<SourceEntry>("_activeSource").Generations.Count == 4, "Alpha history did not survive restart");
+            window.ProcessingBasis = 1;
+            Get<Button>("trimTransparentButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var trimUntil = DateTime.UtcNow.AddSeconds(10);
+            while (Get<bool>("_processing") && DateTime.UtcNow < trimUntil) { Pump(); Thread.Sleep(5); }
+            Require(!Get<bool>("_processing"), "Transparent-edge trim timed out");
+            var trimmed = Get<Bitmap>("_downscaledResult");
+            Require(trimmed.Width == 255 && trimmed.Height == 32 && trimmed.GetPixel(0, 0).A == 1,
+                "Editor trim lost the alpha-one edge or selected the wrong bounds");
+            Require(Get<SourceEntry>("_activeSource").Generations.Count == 5, "Trim did not enter history");
             Console.WriteLine("  Alpha UI: PNG and persisted history retain every alpha value.");
         }
         finally { window.Close(); Pump(); }

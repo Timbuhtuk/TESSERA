@@ -65,6 +65,7 @@ public partial class MainWindow
     {
         ProcessingOperations.Profile => "Профильная обработка",
         ProcessingOperations.Resize => "Размер и кадр",
+        ProcessingOperations.Trim => "Обрезка прозрачных краёв",
         ProcessingOperations.Colors => "Число цветов",
         ProcessingOperations.Cleanup => "Очистка цветов",
         ProcessingOperations.Align => "Выравнивание сетки",

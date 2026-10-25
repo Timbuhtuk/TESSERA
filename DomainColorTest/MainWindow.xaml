@@ -211,6 +211,7 @@
                             <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="aspectLock" Content="{local:Translate Text650D2C0CB70B}" ToolTip="{local:Translate TextA67C95BAA6B1}" />
                             <TextBlock x:Name="sizeHint" Visibility="Collapsed" />
                             <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text3837BA14575C}" IsEnabled="False" Margin="0,7,0,0" ToolTip="{local:Translate Text7FAF700157C0}" />
+                            <Button x:Name="trimTransparentButton" Content="Обрезать прозрачные края" IsEnabled="False" Margin="0,7,0,0" />
                         </StackPanel>
                     </GroupBox>
                     <GroupBox x:Name="colorToolGroup" Header="{local:Translate TextA54DBD5BB0E1}">
@@ -232,6 +233,8 @@
                             </StackPanel>
 
                             <Button x:Name="colorOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text1D197AED7DF5}" IsEnabled="False" Margin="0,7,0,0" />
+                            <CheckBox x:Name="colorLivePreviewInput" Content="Живой предпросмотр" Margin="0,10,0,5" />
+                            <local:PixelPreview x:Name="colorLivePreview" Height="190" Visibility="Collapsed" EmptyText="Предпросмотр цвета" />
 
                         </StackPanel>
                     </GroupBox>
@@ -244,6 +247,8 @@
                             <CheckBox x:Name="localDetailGuardInput" Content="{local:Translate Text7B7E1D1E5648}" IsChecked="True" Margin="0,10,0,4" AutomationProperties.Name="{local:Translate Text7B7E1D1E5648}" />
                             <TextBlock x:Name="localEdgeLabel" /><Slider x:Name="localEdgeInput" AutomationProperties.Name="{local:Translate Text5BDF726A8CD1}" />
                             <Button x:Name="neighborColorsButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text0E5D28F79CFA}" IsEnabled="False" Margin="0,7,0,0" ToolTip="{local:Translate Text30DD7B49072F}" />
+                            <CheckBox x:Name="smoothingLivePreviewInput" Content="Живой предпросмотр" Margin="0,10,0,5" />
+                            <local:PixelPreview x:Name="smoothingLivePreview" Height="190" Visibility="Collapsed" EmptyText="Предпросмотр очистки цветов" />
                         </StackPanel>
                     </GroupBox>
                         <GroupBox x:Name="frameToolGroup" Header="{local:Translate TextCD38DB4CAD42}">

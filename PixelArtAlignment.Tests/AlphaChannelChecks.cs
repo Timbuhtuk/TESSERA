@@ -1,5 +1,6 @@
 using System.Drawing.Imaging;
 using PixelArtDownscale;
+using PixelArtWorkflows;
 
 namespace PixelArtAlignment.Tests;
 
@@ -13,6 +14,7 @@ internal static class AlphaChannelChecks
         check("Combined processing keeps partial alpha with quantization, palettes and dithering", CombinedAlpha);
         check("Sprite processing keeps all 256 alpha values", SpriteAlpha);
         check("Indexed and premultiplied images retain partial alpha", OtherPixelFormats);
+        check("Transparent-edge trim includes alpha one, preserves PNG, and replays in recipes", TrimTransparentEdges);
     }
 
     private static Bitmap AlphaRamp(int scale)
@@ -145,6 +147,31 @@ internal static class AlphaChannelChecks
                 Require(scaled.GetPixel(x, 0).A == alpha[x] && crop.GetPixel(x, 0).A == alpha[x] &&
                     output.GetPixel(x, 0).A == alpha[x], $"{source.PixelFormat}: alpha {alpha[x]} changed");
         }
+    }
+
+    private static void TrimTransparentEdges()
+    {
+        using var source = new Bitmap(7, 6, PixelFormat.Format32bppArgb);
+        source.SetPixel(1, 4, Color.FromArgb(1, 12, 34, 56));
+        source.SetPixel(5, 2, Color.FromArgb(255, 210, 70, 30));
+        using var cropped = BitmapFactory.CropTransparentEdges(source);
+        Require(cropped.Width == 5 && cropped.Height == 3, "Inclusive alpha bounds are wrong");
+        Require(cropped.GetPixel(0, 2).ToArgb() == source.GetPixel(1, 4).ToArgb(), "Alpha-one edge changed");
+        Require(cropped.GetPixel(4, 0).ToArgb() == source.GetPixel(5, 2).ToArgb(), "Opaque edge changed");
+        Require(source.Width == 7 && source.GetPixel(1, 4).A == 1, "Trim mutated the source");
+        using var stream = new MemoryStream();
+        cropped.Save(stream, ImageFormat.Png);
+        stream.Position = 0;
+        using var reopened = new Bitmap(stream);
+        Require(reopened.GetPixel(0, 2).ToArgb() == cropped.GetPixel(0, 2).ToArgb(), "PNG round trip changed partial alpha");
+
+        var recipe = new ProcessingRecipe { Steps = [new ProcessingStep { OperationId = ProcessingOperations.Trim }] };
+        using var replayed = new WorkflowExecutor().Execute(source, recipe);
+        Require(replayed.Size == cropped.Size && replayed.GetPixel(0, 2).ToArgb() == cropped.GetPixel(0, 2).ToArgb(),
+            "Trim recipe differs from the direct operation");
+        using var blank = new Bitmap(4, 4, PixelFormat.Format32bppArgb);
+        using var empty = BitmapFactory.CropTransparentEdges(blank);
+        Require(empty.Width == 1 && empty.Height == 1 && empty.GetPixel(0, 0).A == 0, "Empty image did not produce a transparent pixel");
     }
 
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }

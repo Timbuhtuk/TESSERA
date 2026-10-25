@@ -51,6 +51,16 @@ Historical project and namespace names are retained:
 
 The editable Tessera mark and its generation script are documented in the [asset README](../DomainColorTest/Assets/README.md).
 
+## Project notes implementation
+
+The paired source/result previews use the image with the greater pixel area as a shared display reference. Each image fits into that reference's visible bounds with its own aspect ratio.
+
+The alternative comparison preview uses the shared zoom choices. Its ordinary wheel changes zoom and Ctrl+wheel scrolls the image. Palette and color cleanup render temporary results through their normal processors after a 350 ms debounce. Up to 65,536 source pixels enable preview automatically when opening the tool; larger inputs require confirmation. Stale renders are discarded and never saved to history.
+
+`BitmapFactory.CropTransparentEdges` scans alpha values and clones inclusive bounds for every pixel with alpha above zero. It preserves translucent edge pixels and returns a transparent 1 × 1 bitmap for a fully transparent input. The operation is available in history and recipes. The possible use of vectorization in [project notes](PROJECT_NOTES.md) remains an open fallback; no vectorization is used by these operations.
+
+The local ScrollViewer template fills the corner between simultaneous horizontal and vertical scrollbars with the theme canvas brush, so it follows the dark palette.
+
 ## Tile seam inspector
 
 Library PNG writes use .NET file streams rather than GDI+ filename APIs, which fail at legacy MAX_PATH lengths. The UI suite includes source/result/crop pixel and alpha round trips plus history reopening in a library whose root exceeds 270 characters. Editor regression tests fail on unexpected owned error dialogs instead of waiting invisibly for user input.

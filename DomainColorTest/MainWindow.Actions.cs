@@ -22,11 +22,23 @@ public partial class MainWindow
     private void InitializeImageActions()
     {
         compactGridButton.Click += CompactGrid;
+        sourcePreview.ImageChanged += (_, _) => UpdateSharedPreviewScale();
+        resultPreview.ImageChanged += (_, _) => UpdateSharedPreviewScale();
         foreach (var preview in new[] { sourcePreview, resultPreview })
             preview.PreviewMouseWheel += (_, e) =>
             {
                 if (ChangePreviewZoom(preview, e.Delta, e.GetPosition(preview), Keyboard.Modifiers)) e.Handled = true;
             };
+        _comparisonPreview.PreviewMouseWheel += (_, e) =>
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+            {
+                _comparisonPreview.ScrollByWheel(e.Delta);
+                e.Handled = true;
+            }
+            else if (ChangePreviewZoom(_comparisonPreview, e.Delta, e.GetPosition(_comparisonPreview), Keyboard.Modifiers))
+                e.Handled = true;
+        };
         foreach (var origin in new FrameworkElement[] { generationStrip, resultPreview })
         {
             origin.PreviewMouseLeftButtonDown += (_, e) =>
@@ -61,10 +73,16 @@ public partial class MainWindow
 
     private bool ChangePreviewZoom(PixelPreview preview, int delta, Point pointer, ModifierKeys modifiers)
     {
-        if ((modifiers & ModifierKeys.Control) == 0 || preview.Image is null || delta == 0) return false;
+        bool comparison = ReferenceEquals(preview, _comparisonPreview);
+        if (((modifiers & ModifierKeys.Control) == 0) != comparison || preview.Image is null || delta == 0) return false;
         var image = preview.Image;
         var anchor = preview.ImagePointAt(pointer);
         double factor = PreviewZoom > 0 ? ZoomFactors[PreviewZoom] : preview.EffectiveZoom;
+        if (!comparison && PreviewZoom == 0 && preview.ReferenceImageSize is { } reference)
+        {
+            var referencePreview = sourcePreview.Image?.Size == reference ? sourcePreview : resultPreview;
+            factor = referencePreview.EffectiveZoom;
+        }
         int steps = Math.Max(1, Math.Abs(delta / 120));
         for (int step = 0; step < steps; step++)
             factor = delta > 0
@@ -79,8 +97,11 @@ public partial class MainWindow
             if (revision != _zoomRequestRevision || !ReferenceEquals(image, preview.Image)) return;
             preview.PlaceImagePointAt(anchor, pointer);
             var position = preview.ScrollPosition;
-            var other = ReferenceEquals(preview, sourcePreview) ? resultPreview : sourcePreview;
-            other.ScrollToRelativePosition(position.X, position.Y);
+            if (!comparison)
+            {
+                var other = ReferenceEquals(preview, sourcePreview) ? resultPreview : sourcePreview;
+                other.ScrollToRelativePosition(position.X, position.Y);
+            }
         }));
         return true;
     }
