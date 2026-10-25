@@ -12,6 +12,7 @@ public static class ProcessingOperations
     public const string Colors = "image.colors";
     public const string Cleanup = "image.cleanup";
     public const string Align = "grid.align";
+    public const string AlignLocal = "grid.align.local";
     public const string Reduce = "grid.reduce";
     public const string Monochrome = "filter.monochrome";
     public const string Ascii = "filter.ascii";

@@ -174,6 +174,12 @@
                     </GroupBox>
                     <GroupBox x:Name="gridToolGroup" Header="{local:Translate TextEADBE6F13967}">
                         <StackPanel>
+                            <WrapPanel Margin="0,0,0,10">
+                                <RadioButton x:Name="globalGridModeInput" GroupName="GridAlignmentMode" Content="{local:Translate Text49D09A33DA31}" AutomationProperties.Name="{local:Translate Text49D09A33DA31}" IsChecked="True" Margin="0,0,18,0" />
+                                <RadioButton x:Name="localGridModeInput" GroupName="GridAlignmentMode" Content="{local:Translate Text6BB303B8E555}" AutomationProperties.Name="{local:Translate Text6BB303B8E555}" />
+                            </WrapPanel>
+                            <TextBlock x:Name="globalGridHint" Text="{local:Translate Text3B94738EE48D}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" />
+                            <TextBlock x:Name="localGridHint" Text="{local:Translate TextBECD19E58423}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" Visibility="Collapsed" />
 
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text7F066E3E2030}" Width="132" /><local:IntegerInput x:Name="gridCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="{local:Translate Text878E11FA1C5A}" /></DockPanel>
                             <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="detectGridInput" Content="{local:Translate TextEFE1F0641A20}" ToolTip="{local:Translate Text984A44FAC7F2}" />

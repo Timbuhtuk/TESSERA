@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Imaging;
 using PixelArtDownscale;
+using PixelArtAlignment;
 using PixelArtWorkflows;
 using Bitmap = System.Drawing.Bitmap;
 
@@ -17,6 +18,7 @@ public sealed class EditorSettings
     public DownscaleOptions Downscale { get; set; } = new();
     public int CellSize { get; set; } = 8;
     public bool DetectGrid { get; set; }
+    public GridAlignmentMode AlignmentMode { get; set; } = GridAlignmentMode.Global;
     public bool AspectLock { get; set; }
 }
 
@@ -70,7 +72,9 @@ public sealed class GenerationEntry : INotifyPropertyChanged
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     [JsonIgnore] public bool IsHeader => false;
-    [JsonIgnore] public string Label => IsAlignment ? Localization.Format("Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
+    [JsonIgnore] public bool IsGlobalAlignment => IsAlignment && Settings.AlignmentMode == GridAlignmentMode.Global;
+    [JsonIgnore] public string Label => IsAlignment ? Localization.Format(Settings.AlignmentMode == GridAlignmentMode.Local
+        ? "Локальная сетка {0} px · {1:HH:mm:ss}" : "Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
         : $"{(Operation.Length > 0 ? (OperationId == ProcessingOperations.Macro ? Operation : Localization.StoredText(Operation)) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
     [JsonIgnore] public string Description => $"{(OperationId == ProcessingOperations.Macro ? Caption : Localization.StoredText(Caption))}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{PresentationHint}\n{Localization.StoredText(Log)}";
     [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить результат «{0}» из истории", Label);
@@ -157,7 +161,7 @@ public sealed partial class ImageLibrary(string directory)
         return ImportImage(ResultPath(parent, generation), existing, new SourceEntry
         {
             DisplayName = $"{Path.GetFileNameWithoutExtension(parent.Label)}_{suffix}_{generation.Width}x{generation.Height}_{generation.CreatedAt:HHmmss}.png",
-            AlignedCellSize = generation.IsAlignment ? generation.CellSize : generation.IsGridReduction ? 1 : 0,
+            AlignedCellSize = generation.IsGlobalAlignment ? generation.CellSize : generation.IsGridReduction ? 1 : 0,
             OriginSourceId = parent.Id, OriginGenerationId = generation.Id
         });
     }

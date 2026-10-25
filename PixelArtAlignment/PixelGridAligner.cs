@@ -1,12 +1,13 @@
 using System.Diagnostics;
+using PixelArtDownscale;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
 namespace PixelArtAlignment;
 
 /// <summary>
-/// Geometry-only grid normalization. Independent of PixelArtDownscale and its palette/quantizer.
-/// Source ARGB samples are selected unchanged; no palette or averaged color is introduced.
+/// Global grid normalization or local shade cleanup with independent region grid restoration.
+/// Both modes select existing ARGB samples without introducing averaged colors or a palette.
 /// </summary>
 public sealed class PixelGridAligner
 {
@@ -14,7 +15,10 @@ public sealed class PixelGridAligner
     {
         ArgumentNullException.ThrowIfNull(source);
         options ??= new GridAlignmentOptions();
-        if (options.CellSize is < 2 || options.CellSize > Math.Min(source.Width, source.Height))
+        if (!Enum.IsDefined(options.Mode)) throw new ArgumentOutOfRangeException(nameof(options.Mode));
+        if (options.Mode == GridAlignmentMode.Local && options.CellSize > 64)
+            throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Local cell size must be 2..64.");
+        if (options.CellSize is < 2 || options.Mode == GridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height))
             throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Cell size must be 2..min(width,height).");
         if (options.MaxDetectedCellSize is < 2 or > 256)
             throw new ArgumentOutOfRangeException(nameof(options.MaxDetectedCellSize));
@@ -34,6 +38,16 @@ public sealed class PixelGridAligner
         double[] xp = Project(ex, w, h, true, 0, h), yp = Project(ey, w, h, false, 0, w);
         var detected = options.CellSize is null ? Detect(xp, yp, options.MaxDetectedCellSize) : (options.CellSize.Value, 1.0);
         int pitch = detected.Item1;
+        if (options.Mode == GridAlignmentMode.Local)
+        {
+            if (pitch > 64) throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Local cell size must be 2..64.");
+            LocalDeltaResult cleaned = LocalDeltaProcessor.Process(source, new LocalDeltaOptions());
+            using var cleanedImage = cleaned.Image;
+            LocalGridResult restored = LocalGridProcessor.Process(cleanedImage, new LocalGridOptions(pitch, Adaptive: options.Adaptive));
+            return new GridAlignmentResult { Aligned = restored.Image, CellSize = pitch, Mode = GridAlignmentMode.Local,
+                LocalRegionCount = restored.Regions.Count(r => r.Status == "restored"),
+                DetectionConfidence = detected.Item2, WasDetected = options.CellSize is null, ElapsedSeconds = timer.Elapsed.TotalSeconds };
+        }
         if (IsAlreadyAligned(pixels, w, h, pitch))
             return new GridAlignmentResult { Aligned = Write(pixels, w, h), CellSize = pitch,
                 DetectionConfidence = detected.Item2, WasDetected = options.CellSize is null, ElapsedSeconds = timer.Elapsed.TotalSeconds };

@@ -2,7 +2,7 @@ using PixelArtAlignment.Tests;
 
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("PixelArtAlignment.Tests: --updates, --history-macros, --invariants, --ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("PixelArtAlignment.Tests: --local-grid, --updates, --history-macros, --invariants, --ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;
@@ -16,7 +16,7 @@ if (args is ["--evaluate", var actualPath, var referencePath, "--cell-size", var
     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(quality, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     return quality.Score >= 90 ? 0 : 1;
 }
-if (args.Any(a => a is not ("--updates" or "--history-macros" or "--invariants" or "--ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -27,6 +27,7 @@ if (args.Length == 0) args = ["--invariants", "--benchmark"];
 // Written before the alignment implementation. Scores are 0..100, with a fixed 90 gate.
 // Color recall is macro-averaged: large backgrounds cannot hide missing small colors.
 int failed = 0;
+if (args.Contains("--local-grid") || args.Contains("--ui")) LocalGridModeChecks.Run(Check);
 if (args.Contains("--material-maps") || args.Contains("--ui")) MaterialMapChecks.Run(Check);
 Check("Perfect grid and intact artwork score 100", () =>
 {

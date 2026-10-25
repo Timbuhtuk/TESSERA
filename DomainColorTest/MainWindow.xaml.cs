@@ -68,6 +68,9 @@ public partial class MainWindow : Window
         detectGridInput.Checked += (_, _) => { gridCellInput.IsEnabled = false; AlignmentSettingsChanged(); };
         detectGridInput.Unchecked += (_, _) => { gridCellInput.IsEnabled = true; AlignmentSettingsChanged(); };
         gridCellInput.ValueChanged += (_, _) => AlignmentSettingsChanged();
+        globalGridModeInput.Checked += (_, _) => UpdateGridAlignmentMode();
+        localGridModeInput.Checked += (_, _) => UpdateGridAlignmentMode();
+        UpdateGridAlignmentMode();
         processButton.Click += ProcessImage;
         scaleOnlyButton.Click += ScaleOnlyImage;
         colorOnlyButton.Click += ApplyColorsOnly;
@@ -503,12 +506,24 @@ public partial class MainWindow : Window
             throw new InvalidOperationException(Localization.Text("Выберите другое имя: исходные изображения нужно сохранить."));
     }
 
+    private GridAlignmentMode SelectedGridAlignmentMode => localGridModeInput.IsChecked == true ? GridAlignmentMode.Local : GridAlignmentMode.Global;
+
+    private void UpdateGridAlignmentMode()
+    {
+        bool local = SelectedGridAlignmentMode == GridAlignmentMode.Local;
+        gridCellInput.Maximum = local ? 64 : 256;
+        gridCellInput.Value = Math.Min(gridCellInput.Value, gridCellInput.Maximum);
+        globalGridHint.Visibility = local ? Visibility.Collapsed : Visibility.Visible;
+        localGridHint.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
+        AlignmentSettingsChanged();
+    }
+
     private void AlignmentSettingsChanged()
     {
         if (_restoringHistory || !_resultIsAlignment || _downscaledResult is null) return;
         _resultStale = true;
         resultCaption.Text = Localization.Format("ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · предыдущие настройки", _downscaledResult.Width, _downscaledResult.Height);
-        statusLabel.Text = Localization.Text("Размер ячейки изменён. Нажмите «Выровнять сетку».");
+        statusLabel.Text = Localization.Text("Параметры сетки изменены. Нажмите «Выровнять сетку».");
     }
 
     private async void AlignImage(object? sender, EventArgs e)
@@ -516,7 +531,7 @@ public partial class MainWindow : Window
         if (_sourceImage is null || _activeSource is null || _processing) return;
         CommitInputs();
         var settings = CaptureSettings();
-        var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize };
+        var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize, Mode = settings.AlignmentMode };
         bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
         var document = _activeSource;
@@ -531,12 +546,17 @@ public partial class MainWindow : Window
                 using var result = new PixelGridAligner().Align(source, options);
                 return _library.SaveGeneration(document, result.Aligned, null, new GenerationEntry
                 {
-                    OperationId = ProcessingOperations.Align,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Align, CellSize = options.CellSize }),
+                    OperationId = settings.AlignmentMode == GridAlignmentMode.Local ? ProcessingOperations.AlignLocal : ProcessingOperations.Align,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = settings.AlignmentMode == GridAlignmentMode.Local
+                        ? ProcessingOperations.AlignLocal : ProcessingOperations.Align, CellSize = options.CellSize }),
                     Settings = settings, IsAlignment = true, PreservesTransparency = true, CellSize = result.CellSize,
                     ParentGenerationId = parentId,
-                    Caption = Localization.Format("ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px", result.Aligned.Width, result.Aligned.Height, result.CellSize),
-                    Log = Localization.Format("Выравнивание: {0:F3} с. Ячейка: {1} px.", result.ElapsedSeconds, result.CellSize)
+                    Caption = Localization.Format(settings.AlignmentMode == GridAlignmentMode.Local
+                        ? "ЛОКАЛЬНАЯ СЕТКА · {0} × {1} · ячейка {2} px" : "ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px",
+                        result.Aligned.Width, result.Aligned.Height, result.CellSize),
+                    Log = settings.AlignmentMode == GridAlignmentMode.Local
+                        ? Localization.Format("Локальное выравнивание: {0:F3} с. Ячейка: {1} px. Областей: {2}.", result.ElapsedSeconds, result.CellSize, result.LocalRegionCount)
+                        : Localization.Format("Выравнивание: {0:F3} с. Ячейка: {1} px.", result.ElapsedSeconds, result.CellSize)
                 });
             });
             document.Generations.Add(generation);

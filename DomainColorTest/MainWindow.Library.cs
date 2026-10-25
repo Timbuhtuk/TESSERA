@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using PixelArtDownscale;
+using PixelArtAlignment;
 
 namespace DomainColorTest;
 
@@ -333,7 +334,7 @@ public partial class MainWindow
     {
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
         Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
-        DetectGrid = detectGridInput.IsChecked == true, AspectLock = aspectLock.IsChecked == true
+        DetectGrid = detectGridInput.IsChecked == true, AlignmentMode = SelectedGridAlignmentMode, AspectLock = aspectLock.IsChecked == true
     };
 
     private void RestoreSettings(EditorSettings settings)
@@ -372,6 +373,8 @@ public partial class MainWindow
             saturationInput.Value = (options.ManualCriteria?.TargetSaturation ?? .5) * 100;
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
+            (settings.AlignmentMode == GridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
+            UpdateGridAlignmentMode();
             gridCellInput.Value = settings.CellSize; detectGridInput.IsChecked = settings.DetectGrid;
             UpdateDependentControls();
             ditheringInput.IsChecked = options.Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && options.EnableDithering;

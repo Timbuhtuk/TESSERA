@@ -86,7 +86,7 @@ public partial class MainWindow
     }
 
     private int CompactableCellSize => _activeSource?.SelectedGeneration is { } generation
-        ? generation.IsAlignment ? generation.CellSize : 0
+        ? generation.IsGlobalAlignment ? generation.CellSize : 0
         : _activeSource?.AlignedCellSize ?? 0;
 
     private void UpdateCompactButton()
@@ -94,7 +94,9 @@ public partial class MainWindow
         int cellSize = CompactableCellSize;
         var image = _activeSource?.SelectedGeneration is null ? _sourceImage : _downscaledResult;
         compactGridButton.IsEnabled = !_processing && image is not null && cellSize >= 2;
-        compactGridButton.ToolTip = image is not null && cellSize >= 2
+        compactGridButton.ToolTip = _activeSource?.SelectedGeneration is { IsAlignment: true, IsGlobalAlignment: false }
+            ? Localization.Text("Для сжатия до одного пикселя нужна общая глобальная сетка.")
+            : image is not null && cellSize >= 2
             ? Localization.Format("Одна ячейка {0} × {1} → один пиксель. Размер: {2} × {3}. Цвета и прозрачность сохраняются.", cellSize, cellSize, (image.Width - 1) / cellSize + 1, (image.Height - 1) / cellSize + 1)
             : Localization.Text("Выберите выровненный результат или добавленный из него исходник.");
     }

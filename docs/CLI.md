@@ -117,12 +117,13 @@ All image-producing commands save PNG, reject source overwrite, require `--overw
 
 | Option | Meaning |
 | --- | --- |
-| `--cell-size N` | Explicit square cell size, at least 2 and no larger than the smaller image dimension |
+| `--mode global\|local` | Shared grid or independent local grids; default `global` |
+| `--cell-size N` | Explicit square cell size: global requires 2..min(width,height); local supports 2..64 |
 | `--max-cell-size N` | Upper bound for automatic detection: 2–256; default 32 |
 | `--rigid` | Disable adaptation to local grid shifts |
 | `--overwrite`, `--json` | Shared output replacement and reporting options |
 
-Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. See the [algorithm and API](../PixelArtAlignment/README.md).
+Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. Local mode cleans nearby shades and restores each detected contrast region on its own grid origin, retaining independent figure positions. Small and ambiguous regions are preserved. Complex bends may remain partly distorted. Use `tessera align input.png -o local.png --mode local --cell-size 5`. The JSON report includes `mode` and `localRegionCount`. Local results do not imply one shared grid suitable for `reduce-grid`. See the [algorithm and API](../PixelArtAlignment/README.md).
 
 ## Reduce an aligned grid
 

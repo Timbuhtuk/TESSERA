@@ -33,3 +33,16 @@ result.Aligned.Save("aligned.png", ImageFormat.Png);
 `CellSize = null` enables automatic detection. `Adaptive = false` disables adaptation to local shifts. `GridAlignmentResult` contains the image, cell size, diagnostic detection confidence and timing. Dispose the result; the input `Bitmap` remains owned by the caller.
 
 The method cannot guarantee recovery of details smaller than the chosen cell, or infer a uniquely correct artistic interpretation of an ambiguous image. See the [evaluation protocol](../PixelArtAlignment.Tests/README.md) for the tested range and reproducible measurements.
+
+
+## Global and local modes
+
+`GridAlignmentOptions.Mode` defaults to `GridAlignmentMode.Global`, preserving the original API behavior.
+`GridAlignmentMode.Local` runs the shared local Lab-delta cleanup and per-region geometry restoration
+(`LocalDeltaProcessor` and `LocalGridProcessor` from `PixelArtDownscale`). It accepts cell sizes 2–64,
+with automatic detection available when `CellSize` is null. Each contrast region keeps an independent
+grid origin. Small and ambiguous regions are preserved; complicated bends may be restored only partly.
+
+`GridAlignmentResult.Mode` identifies the selected mode, and `LocalRegionCount` counts restored regions.
+Local results must not be treated as globally compactable grids. History/macros use the distinct
+`grid.align.local` operation ID; older readers reject this operation instead of silently replaying it globally.
