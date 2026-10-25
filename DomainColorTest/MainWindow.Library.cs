@@ -362,7 +362,7 @@ public partial class MainWindow
             var cleanup = options.Cleanup ?? new ColorCleanupOptions();
             localBrightnessInput.Value = cleanup.ColorTolerance / .4;
             localContrastInput.Value = cleanup.Strength * 100;
-            localSaturationInput.Value = cleanup.DetailProtection * 100;
+            localDetailGuardInput.IsChecked = cleanup.DetailProtection > 0;
             localEdgeInput.Value = cleanup.EdgeProtection * 100;
             colorWeightsInput.IsChecked = options.UseColorWeights;
             threadsInput.Value = options.ThreadCount;

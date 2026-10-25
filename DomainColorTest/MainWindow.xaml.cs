@@ -54,13 +54,13 @@ public partial class MainWindow : Window
         foreach (var input in new[] { paletteStepInput, alphaInput, quantizationColorsInput, localColorPassesInput })
             input.ValueChanged += SettingsChanged;
         foreach (var check in new ToggleButton[] { spriteInput, ditheringInput, colorWeightsInput, automaticInput, manualInput,
-            quantizationColorModeInput, paletteColorModeInput })
+            quantizationColorModeInput, paletteColorModeInput, localDetailGuardInput })
         {
             check.Checked += SettingsChanged;
             check.Unchecked += SettingsChanged;
         }
         foreach (var slider in new[] { brightnessInput, contrastInput, saturationInput, edgeInput,
-            localBrightnessInput, localContrastInput, localSaturationInput, localEdgeInput })
+            localBrightnessInput, localContrastInput, localEdgeInput })
             slider.ValueChanged += (_, _) => SettingsChanged(null, EventArgs.Empty);
         widthInput.ValueChanged += (_, _) => SizeChangedByUser(widthChanged: true);
         heightInput.ValueChanged += (_, _) => SizeChangedByUser(widthChanged: false);
@@ -172,7 +172,6 @@ public partial class MainWindow : Window
         edgeLabel.Text = Localization.Format("Контур · {0}", edgeInput.Value);
         localBrightnessLabel.Text = Localization.Format("Сходство цветов · {0:0.#} ΔE", localBrightnessInput.Value * .4);
         localContrastLabel.Text = Localization.Format("Сила очистки · {0:0}%", localContrastInput.Value);
-        localSaturationLabel.Text = Localization.Format("Защита деталей · {0:0}%", localSaturationInput.Value);
         localEdgeLabel.Text = Localization.Format("Защита границ · {0:0}%", localEdgeInput.Value);
     }
 
@@ -360,7 +359,7 @@ public partial class MainWindow : Window
         {
             ColorTolerance = localBrightnessInput.Value * .4,
             Strength = localContrastInput.Value / 100.0,
-            DetailProtection = localSaturationInput.Value / 100.0,
+            DetailProtection = localDetailGuardInput.IsChecked == true ? new ColorCleanupOptions().DetailProtection : 0,
             EdgeProtection = localEdgeInput.Value / 100.0
         },
         UseColorWeights = colorWeightsInput.IsChecked == true,

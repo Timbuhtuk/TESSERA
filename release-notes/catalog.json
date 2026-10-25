@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Переключатель защиты деталей",
+        "en": "Detail protection switch"
+      },
+      "notes": {
+        "ru": "- Очистка цветов: «Защита деталей» теперь включается одним переключателем вместо ползунка. Защита включена по умолчанию; отключите её, чтобы убирать больше мелкого цветового шума.\n- Состояние защиты сохраняется в истории и макросах. При открытии старого результата ненулевой уровень защиты отображается как включённый. Сходство цветов, сила очистки и защита границ настраиваются отдельно.",
+        "en": "- Cleanup Colors: turn Detail protection on or off with a single switch instead of a slider. Protection starts enabled; turn it off to remove more fine color noise.\n- The protection state is retained in history and macros. Older results with a nonzero protection level open with the switch enabled. Color similarity, cleanup strength and edge protection remain separate controls."
+      }
+    },
+    {
+      "version": "2.1.0",
+      "title": {
         "ru": "Локальное выравнивание сетки",
         "en": "Local grid alignment"
       },

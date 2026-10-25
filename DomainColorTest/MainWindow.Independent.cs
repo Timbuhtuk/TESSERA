@@ -17,7 +17,7 @@ public partial class MainWindow
         var defaults = new ColorCleanupOptions();
         localBrightnessInput.Value = defaults.ColorTolerance / .4;
         localContrastInput.Value = defaults.Strength * 100;
-        localSaturationInput.Value = defaults.DetailProtection * 100;
+        localDetailGuardInput.IsChecked = defaults.DetailProtection > 0;
         localEdgeInput.Value = defaults.EdgeProtection * 100;
         cleanupDescription.Text = Localization.Text("Объединяет близкие оттенки по соседним пикселям, сохраняя линии, границы и прозрачность. Новые цвета не создаются.");
         neighborColorsButton.Content = Localization.Text("Очистить цвета");
@@ -25,11 +25,11 @@ public partial class MainWindow
         localColorPassesInput.ToolTip = Localization.Text("Повторяет очистку до указанного числа проходов. Обработка останавливается раньше, если цвета перестали меняться.");
         localBrightnessInput.ToolTip = Localization.Text("Максимальная разница близких оттенков. Больше значение — больше цветов объединяется; 0 сохраняет исходник.");
         localContrastInput.ToolTip = Localization.Text("Насколько сильно соседние пиксели влияют на выбор цвета. При 0 очистка выключена.");
-        localSaturationInput.ToolTip = Localization.Text("Сохраняет тонкие линии и их окончания. Уменьшите, чтобы удалять больше мелкого цветового шума.");
+        localDetailGuardInput.ToolTip = Localization.Text("Сохраняет тонкие линии и их окончания. Отключите, чтобы удалять больше мелкого цветового шума.");
         localEdgeInput.ToolTip = Localization.Text("Защищает границы устойчивых цветовых областей от размывания близкими оттенками.");
         System.Windows.Automation.AutomationProperties.SetName(localBrightnessInput, Localization.Text("Сходство цветов"));
         System.Windows.Automation.AutomationProperties.SetName(localContrastInput, Localization.Text("Сила очистки"));
-        System.Windows.Automation.AutomationProperties.SetName(localSaturationInput, Localization.Text("Защита деталей"));
+        System.Windows.Automation.AutomationProperties.SetName(localDetailGuardInput, Localization.Text("Защита деталей"));
         System.Windows.Automation.AutomationProperties.SetName(localEdgeInput, Localization.Text("Защита границ"));
         UpdateDependentControls();
     }
