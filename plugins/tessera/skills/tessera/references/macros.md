@@ -44,6 +44,7 @@ Use a fresh nonempty UUID when creating a separate macro, a nonblank name, and a
 | --- | --- |
 | `image.profile` | `downscale`: combined downscale and palette settings |
 | `image.resize` | `downscale`: independent size settings |
+| `image.trim` | No payload; trim fully transparent borders, retaining semitransparent pixels (Tessera 2.5+) |
 | `image.colors` | `downscale`: independent color settings |
 | `image.cleanup` | `downscale`: local cleanup settings |
 | `grid.align` | Optional `cellSize`; omit/null to detect separately for each input |

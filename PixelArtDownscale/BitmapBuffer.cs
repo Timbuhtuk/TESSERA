@@ -104,14 +104,16 @@ public static class BitmapFactory
             return (Bitmap)source.Clone();
 
         using var argb = source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);
-        using var pixels = BitmapBuffer.FromBitmap(argb);
         int left = source.Width, top = source.Height, right = -1, bottom = -1;
-        for (int y = 0; y < source.Height; y++)
-        for (int x = 0; x < source.Width; x++)
+        using (var pixels = BitmapBuffer.FromBitmap(argb))
         {
-            if (pixels.GetAlpha(x, y) == 0) continue;
-            left = Math.Min(left, x); top = Math.Min(top, y);
-            right = Math.Max(right, x); bottom = Math.Max(bottom, y);
+            for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+            {
+                if (pixels.GetAlpha(x, y) == 0) continue;
+                left = Math.Min(left, x); top = Math.Min(top, y);
+                right = Math.Max(right, x); bottom = Math.Max(bottom, y);
+            }
         }
         if (right < 0) return new Bitmap(1, 1, PixelFormat.Format32bppArgb);
         return argb.Clone(new Rectangle(left, top, right - left + 1, bottom - top + 1), PixelFormat.Format32bppArgb);

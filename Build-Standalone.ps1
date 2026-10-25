@@ -69,7 +69,7 @@ divider, or double-click it to switch between compact and expanded views.
 The source tray follows the current project's folders.
 
 Right-click a result and choose Create macro to save its supported steps.
-Tools > Macros lists saved macros, shows their steps and applies them to
+Tools > Processing > Macros lists saved macros, shows their steps and applies them to
 the selected source or result, saving one final result. Right-click a macro
 to rename or delete it. Esc or Cancel stops a run without a partial result.
 Saved macros can also be listed and applied through the CLI and chat skill.

@@ -135,6 +135,10 @@ internal static class AlphaChannelChecks
         for (int x = 0; x < 4; x++) premultiplied.SetPixel(x, 0, Color.FromArgb(alpha[x], 210, 70, 30));
         foreach (var source in new[] { indexed, premultiplied })
         {
+            using var trimmed = BitmapFactory.CropTransparentEdges(source);
+            Require(trimmed.Width == 3 && trimmed.Height == 1 && trimmed.GetPixel(0, 0).A == 1 &&
+                trimmed.GetPixel(1, 0).A == 97 && trimmed.GetPixel(2, 0).A == 255,
+                $"{source.PixelFormat}: trim lost indexed or premultiplied alpha");
             using var scaled = IndependentImageProcessor.Scale(source, new DownscaleOptions { TargetWidth = 4, TargetHeight = 1 });
             using var crop = BitmapFactory.CropCenter(source, 4, 1);
             var processed = new PixelArtDownscaler().Process(source, new DownscaleOptions

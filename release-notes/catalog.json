@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Живой предпросмотр и обрезка прозрачных краёв",
+        "en": "Live previews and transparent-edge trimming"
+      },
+      "notes": {
+        "ru": "- Предпросмотр: исходник и результат используют общую видимую рамку. Меньший вариант увеличивается для сравнения; пропорции каждого изображения сохраняются.\n- Альтернативный просмотр: колесо меняет масштаб, Ctrl + колесо прокручивает изображение. Масштаб также выбирается в меню «Вид».\n- Число цветов и Очистка цветов: добавлен живой предпросмотр настроек без записей в истории. Для изображений до 65 536 пикселей он включается автоматически; для больших требуется подтверждение предупреждения о возможном замедлении.\n- Размер и кадр: добавлена обрезка прозрачных краёв с учётом полупрозрачных пикселей. Результат сохраняется в истории и поддерживается в макросах. Полностью прозрачное изображение превращается в прозрачный пиксель 1 × 1.\n- Полосы прокрутки: угол на их пересечении соответствует тёмному оформлению.",
+        "en": "- Preview: source and result share one displayed reference frame. Smaller results are enlarged for comparison while each image retains its proportions.\n- Alternative preview: use the wheel to zoom and Ctrl + wheel to scroll. Zoom is also available in the View menu.\n- Reduce Colors and Cleanup Colors: live previews show setting changes without adding history entries. They start automatically for images up to 65,536 pixels; larger images require confirmation of a possible slowdown.\n- Size and frame: trim transparent edges while retaining semitransparent pixels. The result is saved in history and supported in macros. A fully transparent image becomes one transparent 1 × 1 pixel.\n- Scrollbars: the corner where both bars meet now follows the dark theme."
+      }
+    },
+    {
+      "version": "2.4.0",
+      "title": {
         "ru": "Инструменты по категориям",
         "en": "Tools grouped by category"
       },

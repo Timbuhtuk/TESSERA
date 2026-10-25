@@ -59,6 +59,8 @@ The alternative comparison preview uses the shared zoom choices. Its ordinary wh
 
 `BitmapFactory.CropTransparentEdges` scans alpha values and clones inclusive bounds for every pixel with alpha above zero. It preserves translucent edge pixels and returns a transparent 1 × 1 bitmap for a fully transparent input. The operation is available in history and recipes. The possible use of vectorization in [project notes](PROJECT_NOTES.md) remains an open fallback; no vectorization is used by these operations.
 
+Run `--project-notes` (also included in `--ui`) for RU/EN docked/floating preview parity, real modal accept/decline, approval reset on input changes, comparison wheel dispatch, differing aspect ratios, scrollbar corners and pending-render cleanup. These checks use programmatic WPF and no physical input.
+
 The local ScrollViewer template fills the corner between simultaneous horizontal and vertical scrollbars with the theme canvas brush, so it follows the dark palette.
 
 ## Tile seam inspector

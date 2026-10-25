@@ -31,13 +31,7 @@ public partial class MainWindow
             };
         _comparisonPreview.PreviewMouseWheel += (_, e) =>
         {
-            if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
-            {
-                _comparisonPreview.ScrollByWheel(e.Delta);
-                e.Handled = true;
-            }
-            else if (ChangePreviewZoom(_comparisonPreview, e.Delta, e.GetPosition(_comparisonPreview), Keyboard.Modifiers))
-                e.Handled = true;
+            if (HandleComparisonWheel(e.Delta, e.GetPosition(_comparisonPreview), Keyboard.Modifiers)) e.Handled = true;
         };
         foreach (var origin in new FrameworkElement[] { generationStrip, resultPreview })
         {
@@ -69,6 +63,17 @@ public partial class MainWindow
                 e.Handled = true;
             };
         }
+    }
+
+    private bool HandleComparisonWheel(int delta, Point pointer, ModifierKeys modifiers)
+    {
+        if (_comparisonPreview.Image is null || delta == 0) return false;
+        if ((modifiers & ModifierKeys.Control) != 0)
+        {
+            _comparisonPreview.ScrollByWheel(delta);
+            return true;
+        }
+        return ChangePreviewZoom(_comparisonPreview, delta, pointer, modifiers);
     }
 
     private bool ChangePreviewZoom(PixelPreview preview, int delta, Point pointer, ModifierKeys modifiers)
