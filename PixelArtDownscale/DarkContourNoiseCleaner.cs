@@ -14,10 +14,15 @@ public static class DarkContourNoiseCleaner
         int TwoCardinalMinimumDark5 = 11, double TwoCardinalMinimumComponentRatio = 0.4,
         int ThreeNeighborProtectedContinuation = 3, double ThreeNeighborProtectedComponentRatio = 0.2,
         double ThreeNeighborProtectedMinimumComponentRatio = 0.15,
-        double RepeatedComponentSimilarity = 0.8);
+        double RepeatedComponentSimilarity = 0.8, int RepeatedPatchRadius = 3,
+        int RepeatedPatchMaximumDifferences = 2, int LargePatchRadius = 3,
+        int LargePatchMinimumBrightMatches = 2, double LargePatchBrightRatio = 1,
+        int SmallPatchRadius = 1, double SmallPatchMaximumComponentRatio = 0.05,
+        int SmallPatchMinimumBrightMatches = 10, double SmallPatchBrightRatio = 3);
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
+    private readonly record struct PatchCounts(int Bright, int Dark);
     private sealed record DarkComponent(int[] Pixels, int MinX, int MinY, int MaxX, int MaxY);
 
     public static Result Clean(Bitmap source, Options options)
@@ -41,6 +46,16 @@ public static class DarkContourNoiseCleaner
             options.ThreeNeighborProtectedMinimumComponentRatio > options.ThreeNeighborProtectedComponentRatio ||
             !double.IsFinite(options.RepeatedComponentSimilarity) ||
             options.RepeatedComponentSimilarity is < 0 or > 1 ||
+            options.RepeatedPatchRadius is < 0 or > 4 ||
+            options.RepeatedPatchMaximumDifferences is < 0 or > 80 ||
+            options.LargePatchRadius is < 0 or > 4 ||
+            options.SmallPatchRadius is < 0 or > 4 ||
+            options.LargePatchMinimumBrightMatches is < 0 or > 10000 ||
+            options.SmallPatchMinimumBrightMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.LargePatchBrightRatio) || options.LargePatchBrightRatio is < 0 or > 100 ||
+            !double.IsFinite(options.SmallPatchBrightRatio) || options.SmallPatchBrightRatio is < 0 or > 100 ||
+            !double.IsFinite(options.SmallPatchMaximumComponentRatio) ||
+            options.SmallPatchMaximumComponentRatio is < 0 or > 1 ||
             !double.IsFinite(options.CardinalColorWeight) || options.CardinalColorWeight is < 1 or > 10 ||
             options.MinimumPairExtension is < 0 or > 2 ||
             !double.IsFinite(options.PairColorTolerance) || options.PairColorTolerance is < 0 or > 100 ||
@@ -64,6 +79,11 @@ public static class DarkContourNoiseCleaner
         int largestComponent = componentSizes.Max();
         int[] cardinalComponentSizes = DarkComponentSizes(dark, width, height, false);
         int largestCardinalComponent = cardinalComponentSizes.Max();
+        Dictionary<UInt128, PatchCounts> patchCounts = options.LargePatchRadius > 0 ?
+            BuildPatchCounts(original, dark, width, height, options.LargePatchRadius) : new();
+        Dictionary<UInt128, PatchCounts> shortPatchCounts = options.SmallPatchRadius > 0 &&
+            options.SmallPatchMaximumComponentRatio > 0 ?
+            BuildPatchCounts(original, dark, width, height, options.SmallPatchRadius) : new();
 
         var output = (Color[])original.Clone();
         int changed = 0;
@@ -94,20 +114,31 @@ public static class DarkContourNoiseCleaner
                 if (!allVisible || darkNeighbors > options.MaximumDarkNeighbors ||
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
                     DarkRingComponents(dark, width, x, y) > 1 || surrounding.Count < 5) continue;
+                bool patchSupport = options.LargePatchRadius > 0 &&
+                    HasBrightPatchMajority(original, dark, width, height, x, y, patchCounts,
+                        options.LargePatchRadius, options.LargePatchMinimumBrightMatches,
+                        options.LargePatchBrightRatio);
+                if (!patchSupport && options.SmallPatchRadius > 0 &&
+                    componentSizes[index] < largestComponent * options.SmallPatchMaximumComponentRatio)
+                    patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
+                        shortPatchCounts, options.SmallPatchRadius,
+                        options.SmallPatchMinimumBrightMatches, options.SmallPatchBrightRatio);
                 if (darkNeighbors == 3 &&
                     (Dark5Support(dark, width, height, x, y) < options.ThreeNeighborMinimumDark5 ||
-                     componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio)) continue;
+                     componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio) &&
+                    !patchSupport) continue;
                 if (darkNeighbors == 3 && options.ThreeNeighborProtectedContinuation > 0 &&
                     DarkContinuation(dark, width, height, x, y) >= options.ThreeNeighborProtectedContinuation &&
                     componentSizes[index] >= largestComponent * options.ThreeNeighborProtectedMinimumComponentRatio &&
                     componentSizes[index] < largestComponent * options.ThreeNeighborProtectedComponentRatio &&
-                    HasRepeatedComponentPixel(componentIds, components, width, height, x, y,
-                        options.RepeatedComponentSimilarity)) continue;
+                    HasRepeatedComponentPixel(original, dark, componentIds, components, width, height, x, y,
+                        options.RepeatedComponentSimilarity, options.RepeatedPatchRadius,
+                        options.RepeatedPatchMaximumDifferences)) continue;
                 if (cardinalDarkNeighbors == 2 &&
                     (Dark5Support(dark, width, height, x, y) < options.TwoCardinalMinimumDark5 ||
                      componentSizes[index] < largestComponent * options.TwoCardinalMinimumComponentRatio ||
                      cardinalComponentSizes[index] < largestCardinalComponent *
-                         options.TwoCardinalMinimumComponentRatio)) continue;
+                         options.TwoCardinalMinimumComponentRatio) && !patchSupport) continue;
 
                 Color pairColor = default;
                 bool hasPair = options.UseOppositeBrightPair && TryOppositeBrightPair(original, dark,
@@ -165,6 +196,47 @@ public static class DarkContourNoiseCleaner
                 if (dark[nearY * width + nearX] && dark[farY * width + farX]) count++;
             }
         return count;
+    }
+
+    private static Dictionary<UInt128, PatchCounts> BuildPatchCounts(Color[] colors, bool[] dark,
+        int width, int height, int radius)
+    {
+        var counts = new Dictionary<UInt128, PatchCounts>();
+        for (int y = radius; y < height - radius; y++)
+            for (int x = radius; x < width - radius; x++)
+            {
+                int index = y * width + x;
+                if (colors[index].A == 0) continue;
+                UInt128 key = PatchPattern(colors, dark, width, x, y, radius);
+                counts.TryGetValue(key, out PatchCounts current);
+                counts[key] = dark[index] ? current with { Dark = current.Dark + 1 } :
+                    current with { Bright = current.Bright + 1 };
+            }
+        return counts;
+    }
+
+    private static bool HasBrightPatchMajority(Color[] colors, bool[] dark, int width, int height,
+        int x, int y, Dictionary<UInt128, PatchCounts> counts, int radius, int minimumBright,
+        double darkMultiplier = 1)
+    {
+        if (x < radius || y < radius || x + radius >= width || y + radius >= height) return false;
+        UInt128 key = PatchPattern(colors, dark, width, x, y, radius);
+        return counts.TryGetValue(key, out PatchCounts match) &&
+            match.Bright >= minimumBright && match.Bright > match.Dark * darkMultiplier;
+    }
+
+    private static UInt128 PatchPattern(Color[] colors, bool[] dark, int width, int x, int y, int radius)
+    {
+        UInt128 key = 0;
+        for (int dy = -radius; dy <= radius; dy++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                int index = (y + dy) * width + x + dx;
+                int value = colors[index].A == 0 ? 0 : dark[index] ? 1 : 2;
+                key = key * 3 + (uint)value;
+            }
+        return key;
     }
 
     private static int[] DarkComponentSizes(bool[] dark, int width, int height, bool includeDiagonals = true)
@@ -236,8 +308,9 @@ public static class DarkContourNoiseCleaner
         return (sizes, ids, components);
     }
 
-    private static bool HasRepeatedComponentPixel(int[] ids, List<DarkComponent> components,
-        int width, int height, int x, int y, double similarity)
+    private static bool HasRepeatedComponentPixel(Color[] colors, bool[] dark, int[] ids,
+        List<DarkComponent> components,
+        int width, int height, int x, int y, double similarity, int patchRadius, int maximumPatchDifferences)
     {
         int sourceId = ids[y * width + x];
         DarkComponent source = components[sourceId];
@@ -255,6 +328,13 @@ public static class DarkContourNoiseCleaner
                     int counterpartX = x + dx, counterpartY = y + dy;
                     if (counterpartX < 0 || counterpartY < 0 || counterpartX >= width || counterpartY >= height ||
                         ids[counterpartY * width + counterpartX] != id) continue;
+                    if (patchRadius > 0 &&
+                        (x < patchRadius || y < patchRadius || x + patchRadius >= width ||
+                         y + patchRadius >= height || counterpartX < patchRadius ||
+                         counterpartY < patchRadius || counterpartX + patchRadius >= width ||
+                         counterpartY + patchRadius >= height ||
+                         PatchDifference(colors, dark, width, x, y, counterpartX, counterpartY,
+                             patchRadius) > maximumPatchDifferences)) continue;
                     int overlap = 0;
                     foreach (int pixel in source.Pixels)
                     {
@@ -266,6 +346,23 @@ public static class DarkContourNoiseCleaner
                 }
         }
         return false;
+    }
+
+    private static int PatchDifference(Color[] colors, bool[] dark, int width,
+        int x, int y, int otherX, int otherY, int radius)
+    {
+        int differences = 0;
+        for (int dy = -radius; dy <= radius; dy++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                int a = (y + dy) * width + x + dx;
+                int b = (otherY + dy) * width + otherX + dx;
+                int classA = colors[a].A == 0 ? 0 : dark[a] ? 1 : 2;
+                int classB = colors[b].A == 0 ? 0 : dark[b] ? 1 : 2;
+                if (classA != classB) differences++;
+            }
+        return differences;
     }
 
     private static bool TryOppositeBrightPair(Color[] original, bool[] dark, int width, int height,

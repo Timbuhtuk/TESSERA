@@ -22,6 +22,15 @@ internal static class CleanDarkContoursCommand
           --three-neighbor-protected-component N  Защищать продолжения на компонентах меньше 0–100% (20).
           --three-neighbor-protected-min N  Нижняя граница размера защищаемой компоненты: 0–100% (15).
           --repeated-component-similarity N  Сходство двух повторяющихся деталей: 0–100% (80).
+          --repeated-patch-radius N    Радиус сравнения повторяющихся деталей: 0–4 (3; 0 выключает).
+          --repeated-patch-differences N  Допустимое число разных соседей: 0–80 (2).
+          --large-patch-radius N       Радиус поиска похожих окружений: 0–4 (3; 0 выключает).
+          --large-patch-bright N       Минимум повторений со светлым центром: 0–10000 (2).
+          --large-patch-ratio N        Светлых повторений к тёмным: 0–100 (1).
+          --small-patch-radius N       Радиус для малых компонентов: 0–4 (1; 0 выключает).
+          --small-patch-component N    Максимальный размер малой компоненты: 0–100% (5).
+          --small-patch-bright N       Минимум светлых повторений: 0–10000 (10).
+          --small-patch-ratio N        Светлых повторений к тёмным: 0–100 (3).
           --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
           --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
@@ -51,9 +60,12 @@ internal static class CleanDarkContoursCommand
             string? input = null, target = null;
             double darkness = 5, tolerance = 28, gain = 30, consensus = 60, component = 10,
                 cardinalWeight = 3, pairTolerance = 8, twoCardinalComponent = 40,
-                protectedComponent = 20, protectedMinimum = 15, repeatSimilarity = 80;
+                protectedComponent = 20, protectedMinimum = 15, repeatSimilarity = 80,
+                largePatchRatio = 1, smallPatchComponent = 5, smallPatchRatio = 3;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
-                pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3;
+                pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3,
+                repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
+                largePatchBright = 2, smallPatchRadius = 1, smallPatchBright = 10;
             bool overwrite = false, json = false, usePair = true;
             for (int q = 0; q < args.Length; q++)
             {
@@ -91,6 +103,15 @@ internal static class CleanDarkContoursCommand
                     case "--three-neighbor-protected-component": protectedComponent = NextDouble(); break;
                     case "--three-neighbor-protected-min": protectedMinimum = NextDouble(); break;
                     case "--repeated-component-similarity": repeatSimilarity = NextDouble(); break;
+                    case "--repeated-patch-radius": repeatedPatchRadius = NextInt(); break;
+                    case "--repeated-patch-differences": repeatedPatchDifferences = NextInt(); break;
+                    case "--large-patch-radius": largePatchRadius = NextInt(); break;
+                    case "--large-patch-bright": largePatchBright = NextInt(); break;
+                    case "--large-patch-ratio": largePatchRatio = NextDouble(); break;
+                    case "--small-patch-radius": smallPatchRadius = NextInt(); break;
+                    case "--small-patch-component": smallPatchComponent = NextDouble(); break;
+                    case "--small-patch-bright": smallPatchBright = NextInt(); break;
+                    case "--small-patch-ratio": smallPatchRatio = NextDouble(); break;
                     case "--two-cardinal-dark5": twoCardinalDark5 = NextInt(); break;
                     case "--two-cardinal-component": twoCardinalComponent = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
@@ -123,12 +144,24 @@ internal static class CleanDarkContoursCommand
                 throw new ArgumentException("--three-neighbor-protected-min должен быть от 0 до верхней границы.");
             if (repeatSimilarity is < 0 or > 100)
                 throw new ArgumentException("--repeated-component-similarity должен быть от 0 до 100.");
+            if (repeatedPatchRadius is < 0 or > 4 || largePatchRadius is < 0 or > 4 ||
+                smallPatchRadius is < 0 or > 4)
+                throw new ArgumentException("Радиусы сопоставления должны быть от 0 до 4.");
+            if (repeatedPatchDifferences is < 0 or > 80 || largePatchBright is < 0 or > 10000 ||
+                smallPatchBright is < 0 or > 10000)
+                throw new ArgumentException("Некорректный порог числа совпадений.");
+            if (largePatchRatio is < 0 or > 100 || smallPatchRatio is < 0 or > 100 ||
+                smallPatchComponent is < 0 or > 100)
+                throw new ArgumentException("Некорректный порог повторяющихся областей.");
             if (twoCardinalComponent is < 0 or > 100)
                 throw new ArgumentException("--two-cardinal-component должен быть от 0 до 100.");
             var options = new DarkContourNoiseCleaner.Options(darkness, neighbors, tolerance, gain,
                 clearance, consensus / 100, cardinal, dark5, component / 100, cardinalWeight,
                 usePair, pairExtension, pairTolerance, twoCardinalDark5, twoCardinalComponent / 100,
-                protectedContinuation, protectedComponent / 100, protectedMinimum / 100, repeatSimilarity / 100);
+                protectedContinuation, protectedComponent / 100, protectedMinimum / 100, repeatSimilarity / 100,
+                repeatedPatchRadius, repeatedPatchDifferences, largePatchRadius, largePatchBright,
+                largePatchRatio, smallPatchRadius, smallPatchComponent / 100, smallPatchBright,
+                smallPatchRatio);
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
                 Path.GetFileNameWithoutExtension(inputPath) + "_dark_contours.png"));

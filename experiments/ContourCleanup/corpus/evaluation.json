@@ -2,14 +2,14 @@
   "aggregate": {
     "images": 50,
     "injected": 400,
-    "corrected": 365,
-    "recoveredExactly": 365,
+    "corrected": 380,
+    "recoveredExactly": 380,
     "otherChanges": 0,
     "cleanDamage": 0,
     "errorBefore": 2279162.4,
-    "errorAfter": 202149,
+    "errorAfter": 105549.3,
     "imagesWithCleanDamage": 0,
-    "imagesWithMissedNoise": 19
+    "imagesWithMissedNoise": 13
   },
   "scores": [
     {
@@ -93,12 +93,12 @@
       "Id": "02-shield-03",
       "Motif": "shield",
       "Injected": 8,
-      "Corrected": 6,
-      "RecoveredExactly": 6,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 29867.2,
-      "ErrorAfter": 4936.5
+      "ErrorAfter": 0
     },
     {
       "Id": "02-shield-04",
@@ -401,23 +401,23 @@
       "Id": "08-chest-01",
       "Motif": "chest",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 52354.7,
-      "ErrorAfter": 10457.9
+      "ErrorAfter": 0
     },
     {
       "Id": "08-chest-02",
       "Motif": "chest",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 59193.4,
-      "ErrorAfter": 11840.3
+      "ErrorAfter": 0
     },
     {
       "Id": "08-chest-03",
@@ -434,12 +434,12 @@
       "Id": "08-chest-04",
       "Motif": "chest",
       "Injected": 8,
-      "Corrected": 7,
-      "RecoveredExactly": 7,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 47102.7,
-      "ErrorAfter": 7179.4
+      "ErrorAfter": 0
     },
     {
       "Id": "08-chest-05",
@@ -456,56 +456,56 @@
       "Id": "09-alien-01",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 4,
-      "RecoveredExactly": 4,
+      "Corrected": 5,
+      "RecoveredExactly": 5,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 31302.1,
-      "ErrorAfter": 17454.6
+      "ErrorAfter": 14019.3
     },
     {
       "Id": "09-alien-02",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 2,
-      "RecoveredExactly": 2,
+      "Corrected": 4,
+      "RecoveredExactly": 4,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 41574.8,
-      "ErrorAfter": 33098.7
+      "ErrorAfter": 17088.6
     },
     {
       "Id": "09-alien-03",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 6,
-      "RecoveredExactly": 6,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 52209.8,
-      "ErrorAfter": 14944
+      "ErrorAfter": 0
     },
     {
       "Id": "09-alien-04",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 3,
-      "RecoveredExactly": 3,
+      "Corrected": 6,
+      "RecoveredExactly": 6,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 39695.4,
-      "ErrorAfter": 25636.5
+      "ErrorAfter": 9320.7
     },
     {
       "Id": "09-alien-05",
       "Motif": "alien",
       "Injected": 8,
-      "Corrected": 6,
-      "RecoveredExactly": 6,
+      "Corrected": 8,
+      "RecoveredExactly": 8,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 42279.9,
-      "ErrorAfter": 11480.4
+      "ErrorAfter": 0
     },
     {
       "Id": "10-gauntlet-01",

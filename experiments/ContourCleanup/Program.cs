@@ -26,6 +26,18 @@ if (args.Length > 0 && args[0] == "compare-images")
     Console.WriteLine("Сравнение сохранено.");
     return;
 }
+if (args.Length > 0 && args[0] == "probe-gradient")
+{
+    if (args.Length != 4) throw new ArgumentException("probe-gradient IMAGE X Y");
+    GradientProbe.Run(Path.GetFullPath(args[1]), int.Parse(args[2]), int.Parse(args[3]));
+    return;
+}
+if (args.Length > 0 && args[0] == "probe-patch")
+{
+    if (args.Length != 4) throw new ArgumentException("probe-patch IMAGE X Y");
+    PatchProbe.Run(Path.GetFullPath(args[1]), int.Parse(args[2]), int.Parse(args[3]));
+    return;
+}
 string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
 string input = args.Length > 0 ? Path.GetFullPath(args[0]) : Path.Combine(root, "fixtures", "T_StrongHand_UNP.png");
 string output = args.Length > 1 ? Path.GetFullPath(args[1]) : Path.Combine(root, "artifacts", "review");
