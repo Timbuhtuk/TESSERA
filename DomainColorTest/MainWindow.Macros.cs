@@ -69,6 +69,7 @@ public partial class MainWindow
         ProcessingOperations.Cleanup => "Очистка цветов",
         ProcessingOperations.Align => "Выравнивание сетки",
         ProcessingOperations.AlignLocal => "Локальное выравнивание сетки",
+        ProcessingOperations.AlignLocalSnapped => "Локальная сетка с привязкой",
         ProcessingOperations.Reduce => "Сжатие сетки",
         ProcessingOperations.Monochrome => "Монохром",
         ProcessingOperations.Ascii => "ASCII-изображение",

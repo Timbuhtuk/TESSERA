@@ -16,6 +16,8 @@ public sealed class PixelGridAligner
         ArgumentNullException.ThrowIfNull(source);
         options ??= new GridAlignmentOptions();
         if (!Enum.IsDefined(options.Mode)) throw new ArgumentOutOfRangeException(nameof(options.Mode));
+        if (options.SnapToGlobalGrid && options.Mode != GridAlignmentMode.Local)
+            throw new ArgumentException("SnapToGlobalGrid requires local mode.", nameof(options));
         if (options.Mode == GridAlignmentMode.Local && options.CellSize > 64)
             throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Local cell size must be 2..64.");
         if (options.CellSize is < 2 || options.Mode == GridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height))
@@ -43,9 +45,12 @@ public sealed class PixelGridAligner
             if (pitch > 64) throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Local cell size must be 2..64.");
             LocalDeltaResult cleaned = LocalDeltaProcessor.Process(source, new LocalDeltaOptions());
             using var cleanedImage = cleaned.Image;
-            LocalGridResult restored = LocalGridProcessor.Process(cleanedImage, new LocalGridOptions(pitch, Adaptive: options.Adaptive));
+            LocalGridResult restored = LocalGridProcessor.Process(cleanedImage,
+                new LocalGridOptions(pitch, Adaptive: options.Adaptive, SnapToGlobalGrid: options.SnapToGlobalGrid));
             return new GridAlignmentResult { Aligned = restored.Image, CellSize = pitch, Mode = GridAlignmentMode.Local,
                 LocalRegionCount = restored.Regions.Count(r => r.Status == "restored"),
+                SnapToGlobalGrid = options.SnapToGlobalGrid, ShiftedRegionCount = restored.ShiftedRegionCount,
+                ConflictingCellCount = restored.ConflictingCellCount,
                 DetectionConfidence = detected.Item2, WasDetected = options.CellSize is null, ElapsedSeconds = timer.Elapsed.TotalSeconds };
         }
         if (IsAlreadyAligned(pixels, w, h, pitch))

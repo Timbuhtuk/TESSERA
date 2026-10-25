@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Привязка локальной сетки",
+        "en": "Local grid snapping"
+      },
+      "notes": {
+        "ru": "- Сетка: в локальном режиме добавлен переключатель «Привязать к общей сетке». Он разрешает сдвиг фигур к общей решётке; по умолчанию выключен.\n- После привязки можно сжать ячейки до одного пикселя. Выбор сохраняется в истории и макросах.\n- При близко расположенных фигурах детали могут попасть в одну ячейку; проверяйте результат привязки. Без привязки положения фигур сохраняются.",
+        "en": "- Grid: Local mode now offers “Snap to shared grid”. It allows figures to move onto one shared grid and is off by default.\n- Snapped results can be reduced to one pixel per cell. The setting is retained in history and macros.\n- Closely spaced figures can compete for the same cell; inspect snapped results. With snapping off, figure positions stay unchanged."
+      }
+    },
+    {
+      "version": "2.2.0",
+      "title": {
         "ru": "Переключатель защиты деталей",
         "en": "Detail protection switch"
       },

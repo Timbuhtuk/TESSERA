@@ -70,6 +70,8 @@ public partial class MainWindow : Window
         gridCellInput.ValueChanged += (_, _) => AlignmentSettingsChanged();
         globalGridModeInput.Checked += (_, _) => UpdateGridAlignmentMode();
         localGridModeInput.Checked += (_, _) => UpdateGridAlignmentMode();
+        snapLocalGridInput.Checked += (_, _) => UpdateGridAlignmentMode();
+        snapLocalGridInput.Unchecked += (_, _) => UpdateGridAlignmentMode();
         UpdateGridAlignmentMode();
         processButton.Click += ProcessImage;
         scaleOnlyButton.Click += ScaleOnlyImage;
@@ -513,7 +515,10 @@ public partial class MainWindow : Window
         gridCellInput.Maximum = local ? 64 : 256;
         gridCellInput.Value = Math.Min(gridCellInput.Value, gridCellInput.Maximum);
         globalGridHint.Visibility = local ? Visibility.Collapsed : Visibility.Visible;
-        localGridHint.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
+        bool snap = snapLocalGridInput.IsChecked == true;
+        snapLocalGridInput.Visibility = local ? Visibility.Visible : Visibility.Collapsed;
+        localGridHint.Visibility = local && !snap ? Visibility.Visible : Visibility.Collapsed;
+        snappedGridHint.Visibility = local && snap ? Visibility.Visible : Visibility.Collapsed;
         AlignmentSettingsChanged();
     }
 
@@ -530,7 +535,10 @@ public partial class MainWindow : Window
         if (_sourceImage is null || _activeSource is null || _processing) return;
         CommitInputs();
         var settings = CaptureSettings();
-        var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize, Mode = settings.AlignmentMode };
+        var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize,
+            Mode = settings.AlignmentMode, SnapToGlobalGrid = settings.SnapToGlobalGrid };
+        string operation = settings.AlignmentMode == GridAlignmentMode.Global ? ProcessingOperations.Align
+            : settings.SnapToGlobalGrid ? ProcessingOperations.AlignLocalSnapped : ProcessingOperations.AlignLocal;
         bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
         var document = _activeSource;
@@ -545,16 +553,18 @@ public partial class MainWindow : Window
                 using var result = new PixelGridAligner().Align(source, options);
                 return _library.SaveGeneration(document, result.Aligned, null, new GenerationEntry
                 {
-                    OperationId = settings.AlignmentMode == GridAlignmentMode.Local ? ProcessingOperations.AlignLocal : ProcessingOperations.Align,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = settings.AlignmentMode == GridAlignmentMode.Local
-                        ? ProcessingOperations.AlignLocal : ProcessingOperations.Align, CellSize = options.CellSize }),
+                    OperationId = operation,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = operation, CellSize = options.CellSize }),
                     Settings = settings, IsAlignment = true, PreservesTransparency = true, CellSize = result.CellSize,
                     ParentGenerationId = parentId,
                     Caption = Localization.Format(settings.AlignmentMode == GridAlignmentMode.Local
-                        ? "ЛОКАЛЬНАЯ СЕТКА · {0} × {1} · ячейка {2} px" : "ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px",
+                        ? settings.SnapToGlobalGrid ? "ЛОКАЛЬНАЯ СЕТКА С ПРИВЯЗКОЙ · {0} × {1} · ячейка {2} px"
+                            : "ЛОКАЛЬНАЯ СЕТКА · {0} × {1} · ячейка {2} px" : "ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px",
                         result.Aligned.Width, result.Aligned.Height, result.CellSize),
                     Log = settings.AlignmentMode == GridAlignmentMode.Local
                         ? Localization.Format("Локальное выравнивание: {0:F3} с. Ячейка: {1} px. Областей: {2}.", result.ElapsedSeconds, result.CellSize, result.LocalRegionCount)
+                            + (settings.SnapToGlobalGrid ? "\n" + Localization.Format("Привязка к общей сетке: сдвинуто областей {0}, конфликтов ячеек {1}.",
+                                result.ShiftedRegionCount, result.ConflictingCellCount) : "")
                         : Localization.Format("Выравнивание: {0:F3} с. Ячейка: {1} px.", result.ElapsedSeconds, result.CellSize)
                 });
             });
