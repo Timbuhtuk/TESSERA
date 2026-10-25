@@ -79,7 +79,7 @@ public partial class MainWindow
         filtersMenuItem = AddTool(imageMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
         profileMenuItem = AddTool(toolsMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
         AddTool(toolsMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
-        gridMenuItem = AddTool(toolsMenu, "gridMenuItem", "Сетка…", "grid", 360, gridToolGroup);
+        gridMenuItem = AddTool(toolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
         AddNavigation(toolsMenu, "materialMapsMenuItem", "Карты Height / Normal / AO…", OpenMaterialMapsAsync);
         AddNavigation(toolsMenu, "inspectTilesMenuItem", "Проверить тайлы…", () => NavigationImageActionAsync("tiles"));
         infoMenuItem = AddTool(toolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 760, infoToolGroup);

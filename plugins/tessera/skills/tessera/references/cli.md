@@ -117,12 +117,14 @@ All image-producing commands save PNG, reject source overwrite, require `--overw
 
 | Option | Meaning |
 | --- | --- |
-| `--cell-size N` | Explicit square cell size, at least 2 and no larger than the smaller image dimension |
+| `--mode global\|local` | Shared grid or independent local grids; default `global` |
+| `--cell-size N` | Explicit square cell size: global requires 2..min(width,height); local supports 2..64 |
 | `--max-cell-size N` | Upper bound for automatic detection: 2–256; default 32 |
+| `--snap-to-grid` | Local mode only: move restored regions to the shared canvas-origin grid; off by default |
 | `--rigid` | Disable adaptation to local grid shifts |
 | `--overwrite`, `--json` | Shared output replacement and reporting options |
 
-Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. See the [algorithm and API](https://github.com/Timbuhtuk/TESSERA/blob/main/PixelArtAlignment/README.md).
+Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. Local mode cleans nearby shades and restores each detected contrast region on its own grid origin, retaining independent figure positions. Small and ambiguous regions are preserved. Complex bends may remain partly distorted. Use `tessera align input.png -o local.png --mode local --cell-size 5`. The JSON report includes `mode` and `localRegionCount`. Add `--snap-to-grid` to allow rigid region shifts onto the shared grid: `tessera align input.png -o snapped.png --mode local --cell-size 5 --snap-to-grid`. These results support `reduce-grid`. Without this flag, local results do not imply one shared compactable grid. The JSON report also includes `snapToGlobalGrid`, `shiftedRegionCount` and `conflictingCellCount`. Snapping keeps the canvas size and fills vacated areas from the surrounding background; tiny details occupy a complete output cell. Adjacent regions may compete for a cell; unavoidable collisions retain the stronger contrast detail and are counted in the report. See the [algorithm and API](../PixelArtAlignment/README.md).
 
 ## Reduce an aligned grid
 
@@ -157,7 +159,7 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 
 `--sizes` accepts unique integer sizes from 1 to 256 separated by commas. The default set is 16, 24, 32, 48, 64, 128 and 256. `--resize` accepts `smooth` or `nearest-neighbor`; the latter avoids color blending for pixel art. `--fit contain` preserves aspect ratio with transparent padding, `cover` fills the frame with a centered crop, and `stretch` fills it by stretching.
 
-`--overwrite` and `--json` are supported. Without `--output`, the result is `<name>.ico` beside the input. Full command help is `tessera ico --help`. See the [ICO format and shared API](https://github.com/Timbuhtuk/TESSERA/blob/main/PixelArtDownscale/ICO.md) for details, including background removal in the desktop workspace and library API.
+`--overwrite` and `--json` are supported. Without `--output`, the result is `<name>.ico` beside the input. Full command help is `tessera ico --help`. See the [ICO format and shared API](../PixelArtDownscale/ICO.md) for details, including background removal in the desktop workspace and library API.
 
 ## Aseprite sprite sheets
 
@@ -167,7 +169,7 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 .\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4 --padding 2 --inspection --json
 ```
 
-Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder composites visible RGBA32 image layers and excludes hidden layers; see [Aseprite conversion details](https://github.com/Timbuhtuk/TESSERA/blob/main/PixelArtAseprite/README.md) for the remaining format limits.
+Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder composites visible RGBA32 image layers and excludes hidden layers; see [Aseprite conversion details](../PixelArtAseprite/README.md) for the remaining format limits.
 
 ## More examples
 

@@ -180,6 +180,8 @@
                             </WrapPanel>
                             <TextBlock x:Name="globalGridHint" Text="{local:Translate Text3B94738EE48D}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" />
                             <TextBlock x:Name="localGridHint" Text="{local:Translate TextBECD19E58423}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" Visibility="Collapsed" />
+                            <TextBlock x:Name="snappedGridHint" Text="{local:Translate Text2ED1128D81D3}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" Visibility="Collapsed" />
+                            <CheckBox x:Name="snapLocalGridInput" Content="{local:Translate Text7B1CE1CC5046}" AutomationProperties.Name="{local:Translate Text7B1CE1CC5046}" ToolTip="{local:Translate Text8A424260821F}" Visibility="Collapsed" Margin="0,0,0,8" />
 
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text7F066E3E2030}" Width="132" /><local:IntegerInput x:Name="gridCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="{local:Translate Text878E11FA1C5A}" /></DockPanel>
                             <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="detectGridInput" Content="{local:Translate TextEFE1F0641A20}" ToolTip="{local:Translate Text984A44FAC7F2}" />

@@ -120,10 +120,11 @@ All image-producing commands save PNG, reject source overwrite, require `--overw
 | `--mode global\|local` | Shared grid or independent local grids; default `global` |
 | `--cell-size N` | Explicit square cell size: global requires 2..min(width,height); local supports 2..64 |
 | `--max-cell-size N` | Upper bound for automatic detection: 2–256; default 32 |
+| `--snap-to-grid` | Local mode only: move restored regions to the shared canvas-origin grid; off by default |
 | `--rigid` | Disable adaptation to local grid shifts |
 | `--overwrite`, `--json` | Shared output replacement and reporting options |
 
-Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. Local mode cleans nearby shades and restores each detected contrast region on its own grid origin, retaining independent figure positions. Small and ambiguous regions are preserved. Complex bends may remain partly distorted. Use `tessera align input.png -o local.png --mode local --cell-size 5`. The JSON report includes `mode` and `localRegionCount`. Local results do not imply one shared grid suitable for `reduce-grid`. See the [algorithm and API](../PixelArtAlignment/README.md).
+Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grids. Local mode cleans nearby shades and restores each detected contrast region on its own grid origin, retaining independent figure positions. Small and ambiguous regions are preserved. Complex bends may remain partly distorted. Use `tessera align input.png -o local.png --mode local --cell-size 5`. The JSON report includes `mode` and `localRegionCount`. Add `--snap-to-grid` to allow rigid region shifts onto the shared grid: `tessera align input.png -o snapped.png --mode local --cell-size 5 --snap-to-grid`. These results support `reduce-grid`. Without this flag, local results do not imply one shared compactable grid. The JSON report also includes `snapToGlobalGrid`, `shiftedRegionCount` and `conflictingCellCount`. Snapping keeps the canvas size and fills vacated areas from the surrounding background; tiny details occupy a complete output cell. Adjacent regions may compete for a cell; unavoidable collisions retain the stronger contrast detail and are counted in the report. See the [algorithm and API](../PixelArtAlignment/README.md).
 
 ## Reduce an aligned grid
 

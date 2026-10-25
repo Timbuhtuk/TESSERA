@@ -7,6 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DomainColorTest;
 using PixelArtAlignment;
+using PixelArtDownscale;
 using PixelArtWorkflows;
 using Color = System.Drawing.Color;
 
@@ -18,6 +19,8 @@ internal static class LocalGridModeChecks
     {
         check("Local grid retains independent origins and detects the common pitch", VerifyPixels);
         check("Local recipes replay correctly and reject global compaction", VerifyRecipe);
+        check("Optional snapping preserves rigid shapes across odd and even grid phases", VerifySnapping);
+        check("Snapping preserves border cells, tiny stars and alpha samples", VerifySnapDetails);
         check("Grid modes work in floating and docked WPF tools, history and English", VerifyUi);
     }
 
@@ -32,6 +35,7 @@ internal static class LocalGridModeChecks
         Equal(input, automatic.Aligned);
         Require(new EditorSettings().AlignmentMode == GridAlignmentMode.Global, "Legacy settings changed their mode");
         Require(JsonSerializer.Deserialize<EditorSettings>("{\"CellSize\":5}")!.AlignmentMode == GridAlignmentMode.Global, "Old history is not global");
+        Require(!JsonSerializer.Deserialize<EditorSettings>("{\"CellSize\":5}")!.SnapToGlobalGrid, "Old history enables snapping");
     }
 
     private static void VerifyRecipe()
@@ -50,6 +54,62 @@ internal static class LocalGridModeChecks
             throw new Exception("A local grid was accepted as a globally compactable grid");
         }
         catch (WorkflowStepException exception) { Require(exception.StepIndex == 2, "Wrong validation step"); }
+        var snappedRecipe = new ProcessingRecipe { Steps = [new ProcessingStep
+            { OperationId = ProcessingOperations.AlignLocalSnapped, CellSize = 5 }, new ProcessingStep
+            { OperationId = ProcessingOperations.Reduce, UsePreviousAlignment = true }] };
+        string snappedJson = JsonSerializer.Serialize(snappedRecipe, WorkflowJson.Options);
+        Require(snappedJson.Contains("grid.align.local.snapped"), "Snapping is not explicit in the macro");
+        using var compact = new WorkflowExecutor().Execute(input, JsonSerializer.Deserialize<ProcessingRecipe>(snappedJson, WorkflowJson.Options)!);
+        using var expected = Fixture(starX: 115, starY: 30);
+        using var expectedCompact = PixelGridReducer.Reduce(expected, 5);
+        Equal(compact, expectedCompact);
+    }
+
+    private static void VerifySnapping()
+    {
+        foreach (int pitch in new[] { 4, 5, 6 })
+            for (int y = 0; y < pitch; y++)
+                for (int x = 0; x < pitch; x++)
+                {
+                    using var input = Fixture(pitch, pitch * 23 + x, pitch * 6 + y);
+                    using var off = new PixelGridAligner().Align(input, new GridAlignmentOptions { Mode = GridAlignmentMode.Local, CellSize = pitch });
+                    Equal(input, off.Aligned);
+                    using var on = new PixelGridAligner().Align(input, new GridAlignmentOptions
+                        { Mode = GridAlignmentMode.Local, CellSize = pitch, SnapToGlobalGrid = true });
+                    int sx = x <= pitch / 2 ? 0 : pitch, sy = y <= pitch / 2 ? 0 : pitch;
+                    using var expected = Fixture(pitch, pitch * 23 + sx, pitch * 6 + sy);
+                    Equal(expected, on.Aligned);
+                    Require(on.SnapToGlobalGrid && on.ConflictingCellCount == 0, "Snapping metadata or independent shapes failed");
+                    using var compact = PixelGridReducer.Reduce(on.Aligned, pitch);
+                    for (int py = 0; py < input.Height; py++) for (int px = 0; px < input.Width; px++)
+                        Require(on.Aligned.GetPixel(px, py) == compact.GetPixel(px / pitch, py / pitch), "Compaction loses a cell");
+                    using var again = new PixelGridAligner().Align(on.Aligned, new GridAlignmentOptions
+                        { Mode = GridAlignmentMode.Local, CellSize = pitch, SnapToGlobalGrid = true });
+                    Equal(on.Aligned, again.Aligned);
+                }
+    }
+
+    private static void VerifySnapDetails()
+    {
+        using var input = new Bitmap(80, 60);
+        using (var graphics = Graphics.FromImage(input))
+        {
+            graphics.Clear(Color.FromArgb(12, 12, 20));
+            using var brush = new System.Drawing.SolidBrush(Color.White);
+            graphics.FillRectangle(brush, 1, 11, 5, 10);
+            graphics.FillRectangle(brush, 27, 37, 1, 1);
+        }
+        using var result = new PixelGridAligner().Align(input, new GridAlignmentOptions
+            { Mode = GridAlignmentMode.Local, CellSize = 5, SnapToGlobalGrid = true });
+        using var compact = PixelGridReducer.Reduce(result.Aligned, 5);
+        Require(result.Aligned.GetPixel(0, 10).R == 255 && result.Aligned.GetPixel(0, 15).R == 255, "Border clipping removed a cell");
+        Require(result.Aligned.GetPixel(25, 35).R == 255, "A tiny white star disappeared");
+        Require(result.Aligned.GetPixel(5, 10).R == 12, "Vacated shape left a ghost");
+        using var alpha = new Bitmap(1280, 10, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        for (int y = 0; y < alpha.Height; y++) for (int x = 0; x < alpha.Width; x++)
+            alpha.SetPixel(x, y, Color.FromArgb(x / 5, 80, 120, 160));
+        var restored = LocalGridProcessor.Process(alpha, new LocalGridOptions(5, SnapToGlobalGrid: true));
+        using (restored.Image) Equal(alpha, restored.Image);
     }
 
     private static void VerifyUi()
@@ -87,11 +147,14 @@ internal static class LocalGridModeChecks
             NavigationTest.Click(window, "gridMenuItem"); Pump();
             var global = Get<RadioButton>(window, "globalGridModeInput");
             var local = Get<RadioButton>(window, "localGridModeInput");
+            var snap = Get<CheckBox>(window, "snapLocalGridInput");
             Require(global.IsVisible && local.IsVisible && global.IsChecked == true, "Grid mode controls unavailable");
+            Require(!snap.IsVisible && snap.IsChecked != true, "Snapping is enabled by default or exposed in global mode");
             Get<IntegerInput>(window, "gridCellInput").Value = 5;
             local.IsChecked = true; Pump();
             Require(Get<IntegerInput>(window, "gridCellInput").Maximum == 64, "Local size limit not applied");
             Require(Get<TextBlock>(window, "localGridHint").IsVisible && !Get<TextBlock>(window, "globalGridHint").IsVisible, "Wrong mode description");
+            Require(snap.IsVisible && snap.IsChecked != true, "Local snap switch is missing");
             var source = Field<SourceEntry>(window, "_activeSource");
             NavigationTest.Click(window, "alignButton");
             Until(() => !Field<bool>(window, "_processing"), "Local alignment did not complete");
@@ -119,27 +182,46 @@ internal static class LocalGridModeChecks
             Require(local.IsChecked == true && !Get<Button>(window, "compactGridButton").IsEnabled, "History did not restore local mode");
             var imported = Field<ImageLibrary>(window, "_library").ImportGeneration(source, localEntry, [source]);
             Require(imported.AlignedCellSize == 0, "Local source copy was marked globally aligned");
+            snap.IsChecked = true; Pump();
+            Require(Field<bool>(window, "_resultStale") && Get<TextBlock>(window, "snappedGridHint").IsVisible
+                && !Get<TextBlock>(window, "localGridHint").IsVisible, "Snapping did not update the hint and invalidate the result");
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
+            NavigationTest.Click(window, "alignButton");
+            Until(() => !Field<bool>(window, "_processing"), "Snapped alignment did not complete");
+            var snappedEntry = source.SelectedGeneration!;
+            Require(snappedEntry.Settings.SnapToGlobalGrid && snappedEntry.IsGlobalAlignment
+                && snappedEntry.AppliedRecipe!.Steps.Single().OperationId == ProcessingOperations.AlignLocalSnapped, "History or macro lost snapping");
+            Require(Get<Button>(window, "compactGridButton").IsEnabled, "Snapped local result cannot be compacted");
+            using (var saved = new Bitmap(Field<ImageLibrary>(window, "_library").ResultPath(source, snappedEntry)))
+            using (var expected = Fixture(starX: 115, starY: 30)) Equal(saved, expected);
+            Require(Field<ImageLibrary>(window, "_library").ImportGeneration(source, snappedEntry, [source]).AlignedCellSize == 5,
+                "Snapped source copy lost its global cell size");
+            Capture(Get<GroupBox>(window, "gridToolGroup"), Path.Combine(folder, "snap-ru.png"));
+            Invoke(window, "SelectGeneration", localEntry); Pump();
+            Require(snap.IsChecked != true, "Old local history inherited snapping");
+            Invoke(window, "SelectGeneration", snappedEntry); Pump();
+            Require(snap.IsChecked == true, "History did not restore snapping");
             DomainColorTest.Localization.Initialize("en"); Pump();
             Require(local.Content?.ToString() == "Local" && global.Content?.ToString() == "Global", "Grid modes are not translated");
-            Require(Get<TextBlock>(window, "localGridHint").Text.StartsWith("Separate grids"), "Grid hint did not update its language");
-            Capture(Get<GroupBox>(window, "gridToolGroup"), Path.Combine(folder, "local-en.png"));
+            Require(snap.Content?.ToString() == "Snap to shared grid", "Snap switch did not update its language");
+            Capture(Get<GroupBox>(window, "gridToolGroup"), Path.Combine(folder, "snap-en.png"));
         }
         finally { window.Close(); Pump(); DomainColorTest.Localization.Initialize("ru"); }
     }
 
-    private static Bitmap Fixture()
+    private static Bitmap Fixture(int pitch = 5, int starX = 117, int starY = 32)
     {
-        var image = new Bitmap(180, 100);
+        var image = new Bitmap(pitch * 36, pitch * 20);
         using var graphics = Graphics.FromImage(image); graphics.Clear(Color.FromArgb(34, 32, 51));
         var colors = new Dictionary<char, Color> { ['p'] = Color.FromArgb(65, 61, 112), ['b'] = Color.FromArgb(19, 77, 127),
             ['c'] = Color.FromArgb(0, 151, 207), ['w'] = Color.FromArgb(250, 250, 250) };
         string[] arrow = ["....p....", "....wp...", "....wwp..", "ppppwwwp.", "wwwwwwwwp", "ppppwwwp.", "....wwp..", "....wp...", "....p...."];
         string[] star = ["...b...", "p.bcp..", ".bcwcbp", "..pcp..", "...p...", "....p.."];
-        foreach (var item in new[] { (Shape: arrow, X: 15, Y: 25), (Shape: star, X: 117, Y: 32) })
+        foreach (var item in new[] { (Shape: arrow, X: pitch * 3, Y: pitch * 5), (Shape: star, X: starX, Y: starY) })
             for (int y = 0; y < item.Shape.Length; y++)
                 for (int x = 0; x < item.Shape[y].Length; x++)
                     if (colors.TryGetValue(item.Shape[y][x], out Color color))
-                    { using var brush = new System.Drawing.SolidBrush(color); graphics.FillRectangle(brush, item.X + x * 5, item.Y + y * 5, 5, 5); }
+                    { using var brush = new System.Drawing.SolidBrush(color); graphics.FillRectangle(brush, item.X + x * pitch, item.Y + y * pitch, pitch, pitch); }
         return image;
     }
 
@@ -158,6 +240,8 @@ internal static class LocalGridModeChecks
     private static void Capture(FrameworkElement element, string path)
     {
         element.UpdateLayout(); Pump();
+        // Allow the theme's checked-state animation to reach its final frame.
+        for (int q = 0; q < 30; q++) { Thread.Sleep(10); Pump(); }
         Require(element.ActualWidth > 150 && element.ActualHeight > 100, "Grid panel did not render");
         var image = new RenderTargetBitmap((int)Math.Ceiling(element.ActualWidth), (int)Math.Ceiling(element.ActualHeight), 96, 96, PixelFormats.Pbgra32);
         var drawing = new DrawingVisual();

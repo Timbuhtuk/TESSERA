@@ -44,5 +44,18 @@ with automatic detection available when `CellSize` is null. Each contrast region
 grid origin. Small and ambiguous regions are preserved; complicated bends may be restored only partly.
 
 `GridAlignmentResult.Mode` identifies the selected mode, and `LocalRegionCount` counts restored regions.
-Local results must not be treated as globally compactable grids. History/macros use the distinct
+Local results without snapping must not be treated as globally compactable grids. History/macros use the distinct
 `grid.align.local` operation ID; older readers reject this operation instead of silently replaying it globally.
+
+`SnapToGlobalGrid = true` is an opt-in local-mode setting. Restoration runs first, then whole region
+cell patterns are translated onto the shared grid anchored at (0,0). Vacated areas are filled using
+nearby background samples; each output cell contains one existing ARGB color, so `PixelGridReducer`
+can compact it exactly. Tiny independent details occupy a complete cell. Normal shifts choose the
+nearest grid origin; a displacement up to less than one cell can avoid clipping or a collision.
+When nearby figures cannot fit without overlap, the stronger contrast detail wins that cell.
+`ShiftedRegionCount` and `ConflictingCellCount` report these placements. The canvas size stays fixed.
+
+Use `new GridAlignmentOptions { Mode = GridAlignmentMode.Local, CellSize = 5, SnapToGlobalGrid = true }`.
+The setting defaults to false in both public APIs and old editor histories. Snapped recipes use the
+separate `grid.align.local.snapped` operation ID and permit a following reduction with
+`UsePreviousAlignment = true`; older readers reject that operation instead of silently dropping snapping.

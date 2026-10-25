@@ -47,7 +47,9 @@ Use a fresh nonempty UUID when creating a separate macro, a nonblank name, and a
 | `image.colors` | `downscale`: independent color settings |
 | `image.cleanup` | `downscale`: local cleanup settings |
 | `grid.align` | Optional `cellSize`; omit/null to detect separately for each input |
-| `grid.reduce` | Literal `cellSize`, or `usePreviousAlignment: true` following an earlier `grid.align` in this recipe |
+| `grid.align.local` | Optional `cellSize` (2–64); restore independent region grids without moving figures |
+| `grid.align.local.snapped` | Optional `cellSize` (2–64); restore local grids, then move figures onto the shared canvas-origin grid |
+| `grid.reduce` | Literal `cellSize`, or `usePreviousAlignment: true` following `grid.align` or `grid.align.local.snapped` in this recipe |
 | `filter.monochrome` | No additional payload |
 | `filter.ascii` | `ascii`: `characters`, `keepSourceSize`, `invertSource`, `invertColors`; produces an image |
 | `color.replace` | `colorReplacement`: `fromArgb` and `toArgb` as signed 32-bit ARGB integers |

@@ -13,6 +13,7 @@ internal static class GridAlignmentCommand
           -i, --input PATH       Исходное изображение.
           -o, --output PATH      Только PNG; по умолчанию <имя>_aligned.png.
           --mode V              global или local (global).
+          --snap-to-grid         Сдвигать локальные сетки к общей сетке холста (только local).
           --cell-size N          Размер квадратной ячейки в исходных пикселях (от 2).
                                  Если не указан, выполняется поиск сетки.
           --max-cell-size N      Верхняя граница поиска: 2–256 (32).
@@ -41,7 +42,7 @@ internal static class GridAlignmentCommand
                 int equals = token.IndexOf('=');
                 string name = equals < 0 ? token : token[..equals];
                 name = name switch { "-i" => "--input", "-o" => "--output", _ => name };
-                if (name is "--rigid" or "--overwrite" or "--json")
+                if (name is "--rigid" or "--overwrite" or "--json" or "--snap-to-grid")
                 {
                     if (equals >= 0) throw new CliUsageException($"{name} не принимает значение.");
                     Add(name, "true");
@@ -68,6 +69,7 @@ internal static class GridAlignmentCommand
                 CellSize = values.ContainsKey("--cell-size") ? Number("--cell-size", 2, 65535) : null,
                 MaxDetectedCellSize = values.ContainsKey("--max-cell-size") ? Number("--max-cell-size", 2, 256) : 32,
                 Adaptive = !values.ContainsKey("--rigid"),
+                SnapToGlobalGrid = values.ContainsKey("--snap-to-grid"),
                 Mode = values.GetValueOrDefault("--mode", "global").ToLowerInvariant() switch
                 {
                     "global" => GridAlignmentMode.Global,
@@ -75,6 +77,8 @@ internal static class GridAlignmentCommand
                     _ => throw new CliUsageException("Режим сетки: global или local.")
                 }
             };
+            if (options.SnapToGlobalGrid && options.Mode != GridAlignmentMode.Local)
+                throw new CliUsageException("--snap-to-grid доступен только с --mode local.");
             if (!File.Exists(input)) throw new IOException($"Исходный файл не найден: {input}");
             using var source = CliApplication.LoadImage(input);
             if (options.Mode == GridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height)) throw new CliUsageException("Ячейка больше изображения.");
@@ -85,6 +89,8 @@ internal static class GridAlignmentCommand
                     width = result.Aligned.Width, height = result.Aligned.Height, cellSize = result.CellSize,
                     detected = result.WasDetected, detectionConfidence = result.DetectionConfidence,
                     mode = options.Mode.ToString().ToLowerInvariant(), localRegionCount = result.LocalRegionCount,
+                    snapToGlobalGrid = result.SnapToGlobalGrid, shiftedRegionCount = result.ShiftedRegionCount,
+                    conflictingCellCount = result.ConflictingCellCount,
                     adaptive = options.Adaptive, elapsedSeconds = result.ElapsedSeconds }, new JsonSerializerOptions { WriteIndented = true }));
             else
                 output.WriteLine($"Сетка выровнена: {target}; {source.Width} × {source.Height}; ячейка {result.CellSize} px; {result.ElapsedSeconds:F3} с.");

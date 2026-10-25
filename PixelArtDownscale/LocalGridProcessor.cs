@@ -1,10 +1,11 @@
 
 namespace PixelArtDownscale;
 
-public sealed record LocalGridOptions(int CellSize = 5, double RegionDelta = 8, bool Adaptive = true);
+public sealed record LocalGridOptions(int CellSize = 5, double RegionDelta = 8, bool Adaptive = true, bool SnapToGlobalGrid = false);
 public sealed record LocalGridRegion(int Id, Rectangle Bounds, int Area, int OriginX, int OriginY,
-    double ConfidenceX, double ConfidenceY, int ChangedPixels, string Status, int PreservedAnchors = 0);
-public sealed record LocalGridResult(Bitmap Image, int ChangedPixels, IReadOnlyList<LocalGridRegion> Regions);
+    double ConfidenceX, double ConfidenceY, int ChangedPixels, string Status, int PreservedAnchors = 0, int ShiftX = 0, int ShiftY = 0);
+public sealed record LocalGridResult(Bitmap Image, int ChangedPixels, IReadOnlyList<LocalGridRegion> Regions,
+    int ShiftedRegionCount = 0, int ConflictingCellCount = 0);
 
 public static class LocalGridProcessor
 {
@@ -363,9 +364,30 @@ public static class LocalGridProcessor
                 return (anchor % pitch + pitch) % pitch;
             }
         }
+        int shifted = 0, conflicts = 0;
+        if (options.SnapToGlobalGrid)
+        {
+            var backgroundMeans = backdrop.Select(root => new Lab(sums[root].L / size[root],
+                sums[root].A / size[root], sums[root].B / size[root])).ToArray();
+            var backgroundCache = new Dictionary<int, bool>();
+            bool IsBackground(int color)
+            {
+                if ((uint)color >> 24 == 0) return true;
+                int rgb = color & 0xFFFFFF;
+                if (backgroundCache.TryGetValue(rgb, out bool value)) return value;
+                value = backgroundMeans.Any(mean => mean.Distance(lookup[rgb]) <= options.RegionDelta);
+                backgroundCache.Add(rgb, value);
+                return value;
+            }
+            var background = new bool[input.Length];
+            for (int q = 0; q < input.Length; q++)
+                background[q] = alpha[q] == 0 || backdrop.Contains(Find(q)) || alpha[q] < minimumAlpha && IsBackground(input[q]);
+            var snapped = LocalGridSnapper.Process(output, input, owner, background, IsBackground, width, height, pitch, reports, options.RegionDelta);
+            output = snapped.Pixels; reports = snapped.Regions; shifted = snapped.Shifted; conflicts = snapped.Conflicts;
+        }
         int total = 0;
         for (int q = 0; q < input.Length; q++) if (input[q] != output[q]) total++;
-        return new(LocalDeltaProcessor.Write(output, width, height), total, reports);
+        return new(LocalDeltaProcessor.Write(output, width, height), total, reports, shifted, conflicts);
     }
 
     private static (int Phase, double Confidence) Phase(double[] profile, int pitch)
