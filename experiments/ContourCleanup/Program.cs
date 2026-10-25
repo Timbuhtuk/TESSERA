@@ -105,6 +105,7 @@ foreach (var variant in new[]
             using (second.Image)
             {
                 RequireSameAlpha(source, second.Image);
+                SaveCandidateAtlas(cleaned.Image, second.Image, Path.Combine(output, "pass2-atlas.png"));
                 second.Image.Save(Path.Combine(output, "dark-15-n3-g40-a3-c75-pass2.png"), ImageFormat.Png);
                 using var white = OnWhite(second.Image);
                 using var enlarged = Enlarge(white, 6);
@@ -119,7 +120,11 @@ foreach (var variant in new[]
             }
         }
         if (variant.Name == "dark-05-n3-g40-a3-c75")
+        {
             SaveCandidateAtlas(source, cleaned.Image, Path.Combine(output, "candidate-atlas-dark-05.png"));
+            cleaned.Image.Save(Path.Combine(output, "recommended.png"), ImageFormat.Png);
+            SaveSideBySide(source, cleaned.Image, Path.Combine(output, "before-after-on-white-6x.png"));
+        }
         Console.WriteLine($"{variant.Name} changed={cleaned.ChangedPixels} dark topology: {topology}");
     }
 }
@@ -248,6 +253,27 @@ static void SaveCandidateAtlas(Bitmap source, Bitmap result, string path)
                     }
     }
     atlas.Save(path, ImageFormat.Png);
+}
+
+static void SaveSideBySide(Bitmap source, Bitmap result, string path)
+{
+    const int scale = 6, margin = 12, header = 34;
+    using var beforeWhite = OnWhite(source);
+    using var afterWhite = OnWhite(result);
+    using var before = Enlarge(beforeWhite, scale);
+    using var after = Enlarge(afterWhite, scale);
+    using var comparison = new Bitmap(before.Width * 2 + margin * 3, before.Height + header + margin,
+        PixelFormat.Format32bppArgb);
+    using (var graphics = Graphics.FromImage(comparison))
+    using (var font = new Font("Arial", 14, FontStyle.Bold))
+    {
+        graphics.Clear(Color.White);
+        graphics.DrawString("Исходник", font, Brushes.Black, margin, 5);
+        graphics.DrawString("Очистка чёрных линий", font, Brushes.Black, before.Width + margin * 2, 5);
+        graphics.DrawImageUnscaled(before, margin, header);
+        graphics.DrawImageUnscaled(after, before.Width + margin * 2, header);
+    }
+    comparison.Save(path, ImageFormat.Png);
 }
 
 static Bitmap DarkTopologyOverlay(Bitmap source, double threshold)
