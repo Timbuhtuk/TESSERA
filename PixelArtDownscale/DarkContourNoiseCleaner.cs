@@ -104,8 +104,8 @@ public static class DarkContourNoiseCleaner
         public bool UseSingleDiagonalGradientRescue { get; init; }
         public int SingleDiagonalMinimumDistinctColors { get; init; } = 4;
         public double SingleDiagonalMaximumLightness { get; init; } = 2.5;
-        public double SingleDiagonalMinimumEnergyDrop { get; init; } = 0.5;
-        public double SingleDiagonalMinimumBrightWeight { get; init; } = 0.1;
+        public double SingleDiagonalMinimumEnergyDrop { get; init; } = 0.1;
+        public double SingleDiagonalMinimumBrightWeight { get; init; } = 0.01;
         public int SingleDiagonalGradientRadius { get; init; } = 3;
         public double SingleDiagonalColorTolerance { get; init; } = 24;
         public int SingleDiagonalMinimumSimilarNeighbors { get; init; } = 5;

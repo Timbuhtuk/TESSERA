@@ -168,8 +168,8 @@ internal static class CleanDarkContoursCommand
           --no-single-diagonal-gradient-rescue Выключить эту проверку.
           --single-diagonal-colors N          Минимум разных цветов окружения: 1–8 (4).
           --single-diagonal-lightness N       Максимальная светлота точки LAB L: 0–100 (2.5).
-          --single-diagonal-energy N          Минимальное снижение перепада: 0–100 % (50).
-          --single-diagonal-bright N          Минимальный вес светлых повторов: 0–10000 (0.1).
+          --single-diagonal-energy N          Минимальное снижение перепада: 0–100 % (10).
+          --single-diagonal-bright N          Минимальный вес светлых повторов: 0–10000 (0.01).
           --single-diagonal-radius N          Радиус сравнения градиентов: 1–15 (3).
           --single-diagonal-tolerance N       Допуск похожих цветов LAB: 0–100 (24).
           --single-diagonal-neighbors N       Минимум похожих соседей: 1–1000 (5).
@@ -245,8 +245,8 @@ internal static class CleanDarkContoursCommand
                 threeNeighborTexturedBright = 0, texturedGradientEnergy = 58,
                 texturedGradientBright = 0.1, texturedGradientTolerance = 24,
                 texturedGradientOpposition = 20,
-                singleDiagonalLightness = 2.5, singleDiagonalEnergy = 50,
-                singleDiagonalBright = 0.1,
+                singleDiagonalLightness = 2.5, singleDiagonalEnergy = 10,
+                singleDiagonalBright = 0.01,
                 singleDiagonalTolerance = 24, singleDiagonalOpposition = 20,
                 threeGradientLightness = 2.5, threeGradientEnergy = 15,
                 threeGradientBright = 0.1, threeGradientTolerance = 24,
