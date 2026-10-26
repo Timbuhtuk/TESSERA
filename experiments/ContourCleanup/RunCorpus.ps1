@@ -283,6 +283,7 @@ param(
     [int]$GroupedPaletteBright = 5,
     [int]$GroupedPaletteDark = 3,
     [double]$GroupedPaletteAverage = 5,
+    [double]$GroupedPaletteHighAverage = 4,
     [double]$GroupedPaletteSpacing = 8,
     [double]$GroupedPaletteRatio = 1.5,
     [double]$GroupedPaletteHighRatio = 1,
@@ -525,7 +526,8 @@ foreach ($kind in @('clean', 'noisy'))
             --grouped-palette-high-near $GroupedPaletteHighNear --grouped-palette-high-ratio $GroupedPaletteHighRatio `
             --grouped-palette-prior-near $GroupedPalettePriorNear --grouped-palette-prior-min $GroupedPalettePriorMin `
             --grouped-palette-bright $GroupedPaletteBright --grouped-palette-dark $GroupedPaletteDark `
-            --grouped-palette-average $GroupedPaletteAverage --grouped-palette-spacing $GroupedPaletteSpacing `
+            --grouped-palette-average $GroupedPaletteAverage --grouped-palette-high-average $GroupedPaletteHighAverage `
+            --grouped-palette-spacing $GroupedPaletteSpacing `
             --grouped-palette-ratio $GroupedPaletteRatio --grouped-palette-gain $GroupedPaletteGain `
             --sparse-palette-consensus-tolerance $SparsePaletteConsensusTolerance --sparse-palette-consensus-max $SparsePaletteConsensusMax `
             --sparse-palette-consensus-gain $SparsePaletteConsensusGain --sparse-palette-consensus-energy $SparsePaletteConsensusEnergy `

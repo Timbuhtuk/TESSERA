@@ -295,6 +295,7 @@ internal static class CleanDarkContoursCommand
           --grouped-palette-bright N    Минимум светлых соседей точки: 0–8 (5).
           --grouped-palette-dark N      Максимум тёмных соседей точки: 0–8 (3).
           --grouped-palette-average N   Минимум светлых соседей в среднем по группе: 0–8 (5).
+          --grouped-palette-high-average N Минимум среднего при числе близких оттенков выше порога ранее исправленных точек: 0–8 (4).
           --grouped-palette-spacing N   Минимальная медиана расстояний между повторами: 0–10000 (8).
           --grouped-palette-ratio N     Максимальное отношение ошибок образцов: 0–100 (1.5).
           --grouped-palette-high-ratio N Отношение ошибок при числе близких пикселей выше порога: 0–100 (1).
@@ -395,7 +396,7 @@ internal static class CleanDarkContoursCommand
                 sparseDarkPaletteExtendedTolerance = 0.5,
                 sparseDarkPaletteExtendedGain = 20, sparseDarkPaletteExtendedEnergy = 0,
                 sparsePaletteExclusiveTolerance = 0.5, sparsePaletteExclusiveGain = 20,
-                exemplarRatio = 20, groupedPaletteAverage = 5,
+                exemplarRatio = 20, groupedPaletteAverage = 5, groupedPaletteHighAverage = 4,
                 groupedPaletteSpacing = 8, groupedPaletteRatio = 1.5,
                 groupedPaletteHighRatio = 1,
                 groupedPaletteGain = 20;
@@ -776,6 +777,7 @@ internal static class CleanDarkContoursCommand
                     case "--grouped-palette-bright": groupedPaletteBright = NextInt(); break;
                     case "--grouped-palette-dark": groupedPaletteDark = NextInt(); break;
                     case "--grouped-palette-average": groupedPaletteAverage = NextDouble(); break;
+                    case "--grouped-palette-high-average": groupedPaletteHighAverage = NextDouble(); break;
                     case "--grouped-palette-spacing": groupedPaletteSpacing = NextDouble(); break;
                     case "--grouped-palette-ratio": groupedPaletteRatio = NextDouble(); break;
                     case "--grouped-palette-high-ratio": groupedPaletteHighRatio = NextDouble(); break;
@@ -1100,6 +1102,7 @@ internal static class CleanDarkContoursCommand
                 GroupedPaletteMinimumBrightNeighbors = groupedPaletteBright,
                 GroupedPaletteMaximumDarkNeighbors = groupedPaletteDark,
                 GroupedPaletteMinimumAverageBrightNeighbors = groupedPaletteAverage,
+                GroupedPaletteHighNearMinimumAverageBrightNeighbors = groupedPaletteHighAverage,
                 GroupedPaletteMinimumMedianSpacing = groupedPaletteSpacing,
                 GroupedPaletteMaximumExemplarRatio = groupedPaletteRatio,
                 GroupedPaletteHighNearMaximumExemplarRatio = groupedPaletteHighRatio,

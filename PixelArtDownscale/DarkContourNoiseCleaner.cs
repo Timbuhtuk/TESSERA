@@ -212,6 +212,7 @@ public static class DarkContourNoiseCleaner
         public int GroupedPaletteMinimumBrightNeighbors { get; init; } = 5;
         public int GroupedPaletteMaximumDarkNeighbors { get; init; } = 3;
         public double GroupedPaletteMinimumAverageBrightNeighbors { get; init; } = 5;
+        public double GroupedPaletteHighNearMinimumAverageBrightNeighbors { get; init; } = 4;
         public double GroupedPaletteMinimumMedianSpacing { get; init; } = 8;
         public double GroupedPaletteMaximumExemplarRatio { get; init; } = 1.5;
         public double GroupedPaletteHighNearMaximumExemplarRatio { get; init; } = 1;
@@ -441,6 +442,8 @@ public static class DarkContourNoiseCleaner
             options.GroupedPaletteMaximumDarkNeighbors is < 0 or > 8 ||
             !double.IsFinite(options.GroupedPaletteMinimumAverageBrightNeighbors) ||
             options.GroupedPaletteMinimumAverageBrightNeighbors is < 0 or > 8 ||
+            !double.IsFinite(options.GroupedPaletteHighNearMinimumAverageBrightNeighbors) ||
+            options.GroupedPaletteHighNearMinimumAverageBrightNeighbors is < 0 or > 8 ||
             !double.IsFinite(options.GroupedPaletteMinimumMedianSpacing) ||
             options.GroupedPaletteMinimumMedianSpacing is < 0 or > 10000 ||
             !double.IsFinite(options.GroupedPaletteMaximumExemplarRatio) ||
@@ -1556,9 +1559,11 @@ public static class DarkContourNoiseCleaner
                     darkNeighbors <= options.GroupedPaletteMaximumDarkNeighbors;
                 if (supported[q]) supportedCount++;
             }
+            double minimumAverageBright = nearPixels > options.GroupedPalettePriorChangesThreshold ?
+                options.GroupedPaletteHighNearMinimumAverageBrightNeighbors :
+                options.GroupedPaletteMinimumAverageBrightNeighbors;
             if (supportedCount < options.GroupedPaletteMinimumSupportedPixels ||
-                totalBright / points.Count <
-                    options.GroupedPaletteMinimumAverageBrightNeighbors) continue;
+                totalBright / points.Count < minimumAverageBright) continue;
 
             var nearest = new double[points.Count];
             for (int q = 0; q < points.Count; q++)
