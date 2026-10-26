@@ -241,6 +241,9 @@ public static class DarkContourNoiseCleaner
         public bool UseConfirmedGroupCardinalMaterialVeto { get; init; } = false;
         public int ConfirmedGroupCardinalDarkChannel { get; init; } = 40;
         public int ConfirmedGroupCardinalMaximumDarkNeighbors { get; init; } = 1;
+        public int ConfirmedGroupCardinalMaximumExemplarDarkNeighbors { get; init; } = 2;
+        public double ConfirmedGroupCardinalExtraDarkMaximumExemplarRatio { get; init; } = 0.1;
+        public int ConfirmedGroupCardinalExtraDarkMaximumRingError { get; init; } = 5000;
         public int ConfirmedGroupCardinalMinimumBrightNeighbors { get; init; } = 3;
         public int ConfirmedGroupCardinalMinimumStrongNeighbors { get; init; } = 2;
         public int ConfirmedGroupCardinalMaximumExemplarRingError { get; init; } = 10000;
@@ -510,6 +513,12 @@ public static class DarkContourNoiseCleaner
             options.ConfirmedGroupExemplarMaximumFlatPaletteColors is < 1 or > 1000000 ||
             options.ConfirmedGroupCardinalDarkChannel is < 0 or > 255 ||
             options.ConfirmedGroupCardinalMaximumDarkNeighbors is < 0 or > 4 ||
+            options.ConfirmedGroupCardinalMaximumExemplarDarkNeighbors is < 0 or > 4 ||
+            options.ConfirmedGroupCardinalMaximumExemplarDarkNeighbors <
+                options.ConfirmedGroupCardinalMaximumDarkNeighbors ||
+            !double.IsFinite(options.ConfirmedGroupCardinalExtraDarkMaximumExemplarRatio) ||
+            options.ConfirmedGroupCardinalExtraDarkMaximumExemplarRatio is < 0 or > 100 ||
+            options.ConfirmedGroupCardinalExtraDarkMaximumRingError is < 0 or > 100000000 ||
             options.ConfirmedGroupCardinalMinimumBrightNeighbors is < 0 or > 8 ||
             options.ConfirmedGroupCardinalMinimumStrongNeighbors is < 1 or > 8 ||
             options.ConfirmedGroupCardinalMaximumExemplarRingError is < 0 or > 100000000 ||
@@ -1924,7 +1933,14 @@ public static class DarkContourNoiseCleaner
                     if (Math.Max(neighbor.R, Math.Max(neighbor.G, neighbor.B)) <=
                         options.ConfirmedGroupCardinalDarkChannel) cardinalDark++;
                 }
-                if (cardinalDark > options.ConfirmedGroupCardinalMaximumDarkNeighbors)
+                Color exemplar = Color.Empty;
+                double ringError = double.PositiveInfinity;
+                if (cardinalDark > options.ConfirmedGroupCardinalMaximumDarkNeighbors &&
+                    (cardinalDark > options.ConfirmedGroupCardinalMaximumExemplarDarkNeighbors ||
+                     !HasBrightExemplar(original, width, height, x, y, options,
+                         options.ConfirmedGroupCardinalExtraDarkMaximumExemplarRatio,
+                         out exemplar, out ringError) ||
+                     ringError > options.ConfirmedGroupCardinalExtraDarkMaximumRingError))
                 { audit?.Invoke(x, y, "confirmed-group-cardinal-neighbors"); continue; }
 
                 var surrounding = new List<NeighborColor>(8);
@@ -1951,8 +1967,9 @@ public static class DarkContourNoiseCleaner
                 { audit?.Invoke(x, y, "confirmed-group-cardinal-bright"); continue; }
                 Color replacement = BrightRepresentative(strongSurrounding,
                     options.BrightColorTolerance);
-                HasBrightExemplar(original, width, height, x, y, options,
-                    double.PositiveInfinity, out Color exemplar, out double ringError);
+                if (exemplar.A != 255)
+                    HasBrightExemplar(original, width, height, x, y, options,
+                        double.PositiveInfinity, out exemplar, out ringError);
                 if (exemplar.A == 255 && double.IsFinite(ringError))
                 {
                     if (ringError <= options.ConfirmedGroupCardinalMaximumExemplarRingError)

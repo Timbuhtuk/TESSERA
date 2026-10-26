@@ -330,6 +330,9 @@ internal static class CleanDarkContoursCommand
           --no-confirmed-group-cardinal    Выключить проверку остатка группы.
           --confirmed-group-cardinal-channel N Верхняя граница тёмного соседа: 0–255 (40).
           --confirmed-group-cardinal-dark N Максимум тёмных соседей по сторонам: 0–4 (1).
+          --confirmed-group-cardinal-extra-dark N Предел при сильном светлом образце: 0–4 (2).
+          --confirmed-group-cardinal-extra-ratio N Отношение ошибок для такого образца: 0–100 (0.1).
+          --confirmed-group-cardinal-extra-error N Максимальная ошибка его окружения: 0–100000000 (5000).
           --confirmed-group-cardinal-bright N Минимум светлых соседей из восьми: 0–8 (3).
           --confirmed-group-cardinal-strong N Минимум соседей с достаточным приростом LAB L: 1–8 (2).
           --confirmed-group-cardinal-exemplar-error N Допуск окружения образца: 0–100000000 (10000).
@@ -444,7 +447,8 @@ internal static class CleanDarkContoursCommand
                 localMaterialChroma = 2, localMaterialNeighborChroma = 4,
                 localMaterialNeighborLightness = 12,
                 localMaterialHueAgreement = 0.85,
-                confirmedGroupCardinalColorDistance = 40;
+                confirmedGroupCardinalColorDistance = 40,
+                confirmedGroupCardinalExtraRatio = 0.1;
             double gridColorTolerance = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 gridCellSize = 1,
@@ -498,6 +502,8 @@ internal static class CleanDarkContoursCommand
                 confirmedGroupDirectError = 5000, confirmedGroupFlatColors = 256,
                 confirmedGroupProtectRadius = 1,
                 confirmedGroupCardinalChannel = 40, confirmedGroupCardinalDark = 1,
+                confirmedGroupCardinalExtraDark = 2,
+                confirmedGroupCardinalExtraError = 5000,
                 confirmedGroupCardinalBright = 3,
                 confirmedGroupCardinalStrong = 2,
                 confirmedGroupCardinalExemplarError = 10000,
@@ -873,6 +879,9 @@ internal static class CleanDarkContoursCommand
                     case "--no-confirmed-group-cardinal": confirmedGroupCardinal = false; break;
                     case "--confirmed-group-cardinal-channel": confirmedGroupCardinalChannel = NextInt(); break;
                     case "--confirmed-group-cardinal-dark": confirmedGroupCardinalDark = NextInt(); break;
+                    case "--confirmed-group-cardinal-extra-dark": confirmedGroupCardinalExtraDark = NextInt(); break;
+                    case "--confirmed-group-cardinal-extra-ratio": confirmedGroupCardinalExtraRatio = NextDouble(); break;
+                    case "--confirmed-group-cardinal-extra-error": confirmedGroupCardinalExtraError = NextInt(); break;
                     case "--confirmed-group-cardinal-bright": confirmedGroupCardinalBright = NextInt(); break;
                     case "--confirmed-group-cardinal-strong": confirmedGroupCardinalStrong = NextInt(); break;
                     case "--confirmed-group-cardinal-exemplar-error": confirmedGroupCardinalExemplarError = NextInt(); break;
@@ -1234,6 +1243,9 @@ internal static class CleanDarkContoursCommand
                 UseConfirmedGroupCardinalMaterialVeto = confirmedGroupCardinalMaterialVeto,
                 ConfirmedGroupCardinalDarkChannel = confirmedGroupCardinalChannel,
                 ConfirmedGroupCardinalMaximumDarkNeighbors = confirmedGroupCardinalDark,
+                ConfirmedGroupCardinalMaximumExemplarDarkNeighbors = confirmedGroupCardinalExtraDark,
+                ConfirmedGroupCardinalExtraDarkMaximumExemplarRatio = confirmedGroupCardinalExtraRatio,
+                ConfirmedGroupCardinalExtraDarkMaximumRingError = confirmedGroupCardinalExtraError,
                 ConfirmedGroupCardinalMinimumBrightNeighbors = confirmedGroupCardinalBright,
                 ConfirmedGroupCardinalMinimumStrongNeighbors = confirmedGroupCardinalStrong,
                 ConfirmedGroupCardinalMaximumExemplarRingError = confirmedGroupCardinalExemplarError,

@@ -313,6 +313,9 @@ param(
     [switch]$ConfirmedGroupCardinalMaterialVeto,
     [int]$ConfirmedGroupCardinalChannel = 40,
     [int]$ConfirmedGroupCardinalDark = 1,
+    [int]$ConfirmedGroupCardinalExtraDark = 2,
+    [double]$ConfirmedGroupCardinalExtraRatio = 0.1,
+    [int]$ConfirmedGroupCardinalExtraError = 5000,
     [int]$ConfirmedGroupCardinalBright = 3,
     [int]$ConfirmedGroupCardinalStrong = 2,
     [int]$ConfirmedGroupCardinalExemplarError = 10000,
@@ -576,6 +579,9 @@ foreach ($kind in @('clean', 'noisy'))
             --confirmed-group-protect-radius $ConfirmedGroupProtectRadius `
             --confirmed-group-cardinal-channel $ConfirmedGroupCardinalChannel `
             --confirmed-group-cardinal-dark $ConfirmedGroupCardinalDark `
+            --confirmed-group-cardinal-extra-dark $ConfirmedGroupCardinalExtraDark `
+            --confirmed-group-cardinal-extra-ratio $ConfirmedGroupCardinalExtraRatio `
+            --confirmed-group-cardinal-extra-error $ConfirmedGroupCardinalExtraError `
             --confirmed-group-cardinal-bright $ConfirmedGroupCardinalBright `
             --confirmed-group-cardinal-strong $ConfirmedGroupCardinalStrong `
             --confirmed-group-cardinal-exemplar-error $ConfirmedGroupCardinalExemplarError `
