@@ -179,7 +179,7 @@ public static class DarkContourNoiseCleaner
         public bool UseSparseDarkPaletteRescue { get; init; } = true;
         public double SparseDarkPaletteColorTolerance { get; init; } = 0.5;
         public int SparseDarkPaletteMaximumSimilarPixels { get; init; } = 5;
-        public double SparseDarkPaletteMinimumLightnessGain { get; init; } = 40;
+        public double SparseDarkPaletteMinimumLightnessGain { get; init; } = 20;
         public double SparseDarkPaletteMinimumEnergyDrop { get; init; }
     }
 

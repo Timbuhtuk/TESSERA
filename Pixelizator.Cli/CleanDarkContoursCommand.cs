@@ -258,7 +258,7 @@ internal static class CleanDarkContoursCommand
           --no-sparse-dark-palette-rescue Выключить этот допуск.
           --sparse-dark-palette-tolerance N  Допуск похожих тёмных цветов LAB: 0–100 (0.5).
           --sparse-dark-palette-max N    Максимум похожих пикселей другого оттенка: 0–1000000 (5).
-          --sparse-dark-palette-gain N   Минимальное увеличение LAB L: 0–100 (40).
+          --sparse-dark-palette-gain N   Минимальное увеличение LAB L: 0–100 (20).
           --sparse-dark-palette-energy N Минимальное снижение перепада: 0–100 % (0).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
@@ -336,7 +336,7 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkLightness = 2.5, repeatedBridgeGain = 60,
                 repeatedBridgeEnergy = 45, repeatedBridgeTolerance = 24,
                 repeatedBridgeOpposition = 70, sparseDarkPaletteTolerance = 0.5,
-                sparseDarkPaletteGain = 40, sparseDarkPaletteEnergy = 0;
+                sparseDarkPaletteGain = 20, sparseDarkPaletteEnergy = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,

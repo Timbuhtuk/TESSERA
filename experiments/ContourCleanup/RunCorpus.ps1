@@ -246,7 +246,7 @@ param(
     [switch]$NoSparseDarkPaletteRescue,
     [double]$SparseDarkPaletteTolerance = 0.5,
     [int]$SparseDarkPaletteMax = 5,
-    [double]$SparseDarkPaletteGain = 40,
+    [double]$SparseDarkPaletteGain = 20,
     [double]$SparseDarkPaletteEnergy = 0,
     [switch]$CandidateAudit,
     [int]$Passes = 1
