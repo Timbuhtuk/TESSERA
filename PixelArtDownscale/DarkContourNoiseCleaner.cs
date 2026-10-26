@@ -149,6 +149,18 @@ public static class DarkContourNoiseCleaner
         public double SymmetricPatchColorTolerance { get; init; } = 24;
         public int SymmetricPatchMinimumSimilarNeighbors { get; init; } = 5;
         public double SymmetricPatchMinimumOpposition { get; init; } = 0.5;
+        public bool UseHighContrastGradientRescue { get; init; }
+        public int HighContrastMaximumDarkNeighbors { get; init; } = 2;
+        public double HighContrastMinimumLightnessGain { get; init; } = 45;
+        public double HighContrastMinimumEnergyDrop { get; init; } = 0.5;
+        public int HighContrastGradientRadius { get; init; } = 3;
+        public double HighContrastColorTolerance { get; init; } = 24;
+        public int HighContrastMinimumSimilarNeighbors { get; init; } = 5;
+        public double HighContrastMinimumOpposition { get; init; } = 0.5;
+        public bool UseHighContrastConsensus { get; init; }
+        public double HighContrastConsensusThreshold { get; init; } = 0.4;
+        public double HighContrastConsensusMinimumGain { get; init; } = 60;
+        public int HighContrastConsensusMaximumDarkNeighbors { get; init; } = 3;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -178,7 +190,7 @@ public static class DarkContourNoiseCleaner
         double Alignment);
     private sealed record DarkComponent(int[] Pixels, int MinX, int MinY, int MaxX, int MaxY);
 
-    public static Result Clean(Bitmap source, Options options)
+    public static Result Clean(Bitmap source, Options options, Action<int, int, string>? audit = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
@@ -281,6 +293,22 @@ public static class DarkContourNoiseCleaner
             options.SymmetricPatchMinimumSimilarNeighbors is < 1 or > 1000 ||
             !double.IsFinite(options.SymmetricPatchMinimumOpposition) ||
             options.SymmetricPatchMinimumOpposition is < 0 or > 1 ||
+            !double.IsFinite(options.HighContrastMinimumLightnessGain) ||
+            options.HighContrastMinimumLightnessGain is < 0 or > 100 ||
+            options.HighContrastMaximumDarkNeighbors is < 0 or > 8 ||
+            !double.IsFinite(options.HighContrastMinimumEnergyDrop) ||
+            options.HighContrastMinimumEnergyDrop is < 0 or > 1 ||
+            options.HighContrastGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.HighContrastColorTolerance) ||
+            options.HighContrastColorTolerance is < 0 or > 100 ||
+            options.HighContrastMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.HighContrastMinimumOpposition) ||
+            options.HighContrastMinimumOpposition is < 0 or > 1 ||
+            !double.IsFinite(options.HighContrastConsensusThreshold) ||
+            options.HighContrastConsensusThreshold is < 0 or > 1 ||
+            !double.IsFinite(options.HighContrastConsensusMinimumGain) ||
+            options.HighContrastConsensusMinimumGain is < 0 or > 100 ||
+            options.HighContrastConsensusMaximumDarkNeighbors is < 0 or > 8 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -497,7 +525,8 @@ public static class DarkContourNoiseCleaner
             {
                 int index = y * width + x;
                 if (!dark[index]) continue;
-                if (!HasAlphaClearance(original, width, height, x, y, options.AlphaClearance)) continue;
+                if (!HasAlphaClearance(original, width, height, x, y, options.AlphaClearance))
+                { audit?.Invoke(x, y, "alpha-clearance"); continue; }
                 var surrounding = new List<NeighborColor>(8);
                 int darkNeighbors = 0, cardinalDarkNeighbors = 0;
                 bool allVisible = true;
@@ -518,13 +547,15 @@ public static class DarkContourNoiseCleaner
                     }
                 if (!allVisible || darkNeighbors > options.MaximumDarkNeighbors ||
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
-                    surrounding.Count < 5) continue;
+                    surrounding.Count < 5)
+                { audit?.Invoke(x, y, "dark-neighbors"); continue; }
                 if (cardinalDarkNeighbors == 2 &&
                     options.TwoCardinalMinimumBrightPatternMatches > 0)
                 {
                     UInt128 pattern = PatchPattern(original, dark, width, x, y, 1);
                     if (!diagonalPatchCounts.TryGetValue(pattern, out PatchCounts matches) ||
-                        matches.Bright < options.TwoCardinalMinimumBrightPatternMatches) continue;
+                        matches.Bright < options.TwoCardinalMinimumBrightPatternMatches)
+                    { audit?.Invoke(x, y, "two-cardinal-pattern"); continue; }
                 }
                 bool colorPatchMatch = !options.RequireColorMatchedPatch ||
                     HasColorMatchedPatch(original, dark, width, x, y, colorPatchIndex,
@@ -575,11 +606,13 @@ public static class DarkContourNoiseCleaner
                 if (!colorPatchMatch && !options.UseColorPatchEnergyRescue &&
                     !threeNeighborEnergyRescue && !texturedGradientRescue &&
                     !singleDiagonalRescue && !threeNeighborGradientRescue &&
-                    !extendedTexturedPatch && !symmetricPatchRescue) continue;
+                    !extendedTexturedPatch && !symmetricPatchRescue)
+                { audit?.Invoke(x, y, "color-patch"); continue; }
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
-                if (ringComponents > 1 && !diagonalBridge) continue;
+                if (ringComponents > 1 && !diagonalBridge)
+                { audit?.Invoke(x, y, "dark-ring-components"); continue; }
                 int dark5Support = Dark5Support(dark, width, height, x, y);
                 bool straightSpur = options.UseStraightRun && cardinalDarkNeighbors == 1 &&
                     (darkNeighbors == 3 || darkNeighbors == 2 &&
@@ -672,10 +705,12 @@ public static class DarkContourNoiseCleaner
                     (dark5Support < options.ThreeNeighborMinimumDark5 ||
                      componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio) &&
                     !patchSupport && !straightSpur && !repeatedMismatch && !diagonalEvidence &&
-                    !taperedRun && !divergentGradientRescue && !patchGradientRescue) continue;
+                    !taperedRun && !divergentGradientRescue && !patchGradientRescue)
+                { audit?.Invoke(x, y, "three-neighbor-support"); continue; }
                 if (darkNeighbors == 3 && options.ThreeNeighborProtectedContinuation > 0 &&
                     DarkContinuation(dark, width, height, x, y) >= options.ThreeNeighborProtectedContinuation &&
-                    repeated.DarkPeer) continue;
+                    repeated.DarkPeer)
+                { audit?.Invoke(x, y, "repeated-dark-continuation"); continue; }
                 bool coherentGradientRescue = cardinalDarkNeighbors == 2 &&
                     options.UseCoherentGradientRescue &&
                     dark5Support >= options.CoherentGradientMinimumDark5 &&
@@ -691,7 +726,8 @@ public static class DarkContourNoiseCleaner
                      cardinalComponentSizes[index] < largestCardinalComponent *
                          options.TwoCardinalMinimumComponentRatio) && !patchSupport && !repeatedMismatch &&
                     !diagonalEvidence && !taperedRun && !coherentGradientRescue &&
-                    !divergentGradientRescue && !patchGradientRescue) continue;
+                    !divergentGradientRescue && !patchGradientRescue)
+                { audit?.Invoke(x, y, "two-cardinal-support"); continue; }
 
                 Color pairColor = default;
                 bool hasPair = options.UseOppositeBrightPair && TryOppositeBrightPair(original, dark,
@@ -719,14 +755,22 @@ public static class DarkContourNoiseCleaner
                     colorConsensus >= options.SoftMinimumConsensus &&
                     MaximumColorSpreadSquared(surrounding) <=
                         options.SoftMaximumColorSpread * options.SoftMaximumColorSpread;
+                bool highContrastConsensus = options.UseHighContrastConsensus &&
+                    darkNeighbors <= options.HighContrastConsensusMaximumDarkNeighbors &&
+                    colorConsensus >= options.HighContrastConsensusThreshold &&
+                    Lab(replacement).L - Lab(original[index]).L >=
+                        options.HighContrastConsensusMinimumGain;
                 if (!hasPair && !diagonalEvidence && !brightCorner &&
                     colorConsensus < options.MinimumBrightConsensus && !softColorConsensus &&
+                    !highContrastConsensus &&
                     !(straightSpur && colorConsensus >=
                         options.StraightRunMinimumConsensus) &&
                     !(isolatedEvidence && colorConsensus >=
-                        options.IsolatedPatchMinimumConsensus)) continue;
+                        options.IsolatedPatchMinimumConsensus))
+                { audit?.Invoke(x, y, "color-consensus"); continue; }
                 if (diagonalBridge && colorConsensus <
-                    options.DiagonalBridgeMinimumConsensus) continue;
+                    options.DiagonalBridgeMinimumConsensus)
+                { audit?.Invoke(x, y, "diagonal-bridge-consensus"); continue; }
                 double colorSpread = MaximumColorSpreadSquared(surrounding);
                 bool mediumShadeContinuation = darkNeighbors == 3 && cardinalDarkNeighbors == 1 &&
                     dark5Support == options.VerticalMediumDark5 &&
@@ -819,14 +863,28 @@ public static class DarkContourNoiseCleaner
                             options.SymmetricPatchColorTolerance,
                             options.SymmetricPatchMinimumSimilarNeighbors,
                             options.SymmetricPatchMinimumOpposition);
+                    bool highContrastRescue = options.UseHighContrastGradientRescue &&
+                        darkNeighbors <= options.HighContrastMaximumDarkNeighbors &&
+                        Lab(replacement).L - Lab(original[index]).L >=
+                            options.HighContrastMinimumLightnessGain &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.HighContrastMinimumEnergyDrop) &&
+                        HasOpposedReplacementGradient(original, width, height, x, y,
+                            replacement, options.HighContrastGradientRadius,
+                            options.HighContrastColorTolerance,
+                            options.HighContrastMinimumSimilarNeighbors,
+                            options.HighContrastMinimumOpposition);
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
-                        !extendedTexturedAllowed && !symmetricPatchAllowed) continue;
+                        !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue)
+                    { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }
                 if (options.RequireCommonGradient &&
-                    !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
+                    !HasOpposedCommonGradient(original, width, height, x, y, options))
+                { audit?.Invoke(x, y, "common-gradient"); continue; }
                 double lightnessGain = Lab(replacement).L - Lab(original[index]).L;
-                if (lightnessGain < options.MinimumLightnessGain) continue;
+                if (lightnessGain < options.MinimumLightnessGain)
+                { audit?.Invoke(x, y, "lightness-gain"); continue; }
                 Color restored = Color.FromArgb(original[index].A, replacement.R, replacement.G, replacement.B);
                 double localGradientRatio = TryMeasureSimilarGradients(original, width, height, x, y,
                     1, options.CommonColorTolerance, 1, out GradientEvidence localEvidence) ?
@@ -846,9 +904,11 @@ public static class DarkContourNoiseCleaner
             int x = proposal.Index % width, y = proposal.Index / width;
             if (options.CandidateConflictRadius > 0 && accepted.Any(item =>
                     Math.Abs(item.Index % width - x) <= options.CandidateConflictRadius &&
-                    Math.Abs(item.Index / width - y) <= options.CandidateConflictRadius)) continue;
+                    Math.Abs(item.Index / width - y) <= options.CandidateConflictRadius))
+            { audit?.Invoke(x, y, "proposal-conflict"); continue; }
             accepted.Add(proposal);
             output[proposal.Index] = proposal.Color;
+            audit?.Invoke(x, y, "accepted");
         }
 
         var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);

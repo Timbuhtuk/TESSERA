@@ -13,6 +13,7 @@ internal static class CleanDarkContoursCommand
         Использование: tessera clean-dark-contours input.png [-o output.png] [параметры]
 
           -o, --output PATH             PNG; по умолчанию <имя>_dark_contours.png.
+          --candidate-audit PATH        CSV с причиной решения для каждого тёмного пикселя и прохода.
           --dark-lightness N            Верхняя граница LAB L для тёмного пикселя: 0–100 (5).
           --max-dark-neighbors N        Максимум тёмных соседей из восьми: 0–8 (3).
           --max-cardinal-dark N         Максимум тёмных соседей по сторонам: 0–4 (2).
@@ -219,6 +220,20 @@ internal static class CleanDarkContoursCommand
           --symmetric-patch-tolerance N  Допуск похожих цветов LAB: 0–100 (24).
           --symmetric-patch-neighbors N  Минимум похожих соседей: 1–1000 (5).
           --symmetric-patch-opposition N Минимальная противоположность: 0–100 % (50).
+          --high-contrast-rescue        Дополнительная проверка контрастного выброса (включена).
+          --no-high-contrast-rescue     Выключить эту проверку.
+          --high-contrast-max-dark N   Максимум тёмных соседей: 0–8 (2).
+          --high-contrast-gain N        Минимальное увеличение LAB L: 0–100 (45).
+          --high-contrast-energy N      Минимальное снижение перепада: 0–100 % (50).
+          --high-contrast-radius N      Радиус сравнения градиентов: 1–15 (3).
+          --high-contrast-tolerance N   Допуск похожих цветов LAB: 0–100 (24).
+          --high-contrast-neighbors N   Минимум похожих соседей: 1–1000 (5).
+          --high-contrast-opposition N  Минимальная противоположность: 0–100 % (50).
+          --contrast-consensus          Смягчить согласие светлых соседей при большом контрасте (включено).
+          --no-contrast-consensus       Выключить это смягчение.
+          --contrast-consensus-min N    Доля согласных светлых соседей: 0–100 % (40).
+          --contrast-consensus-gain N   Минимальное увеличение LAB L: 0–100 (60).
+          --contrast-consensus-max-dark N Максимум тёмных соседей: 0–8 (3).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -243,7 +258,7 @@ internal static class CleanDarkContoursCommand
 
         try
         {
-            string? input = null, target = null;
+            string? input = null, target = null, candidateAudit = null;
             double darkness = 5, tolerance = 28, gain = 20, consensus = 60, component = 10,
                 cardinalWeight = 3, pairTolerance = 8, twoCardinalComponent = 40,
                 protectedComponent = 20, protectedMinimum = 15, repeatSimilarity = 80,
@@ -287,7 +302,10 @@ internal static class CleanDarkContoursCommand
                 symmetricPatchLightness = 2.5, symmetricPatchSigma = 5,
                 symmetricPatchBright = 0.5, symmetricPatchDark = 0.05,
                 symmetricPatchRatio = 5, symmetricPatchEnergy = 60,
-                symmetricPatchTolerance = 24, symmetricPatchOpposition = 50;
+                symmetricPatchTolerance = 24, symmetricPatchOpposition = 50,
+                highContrastGain = 45, highContrastEnergy = 50,
+                highContrastTolerance = 24, highContrastOpposition = 50,
+                contrastConsensusMinimum = 40, contrastConsensusGain = 60;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -320,7 +338,9 @@ internal static class CleanDarkContoursCommand
                 extendedPatchCardinal = 1, extendedPatchRadius = 3,
                 extendedPatchNeighbors = 5, symmetricPatchColors = 4,
                 symmetricPatchCardinal = 1, symmetricPatchRadius = 3,
-                symmetricPatchNeighbors = 5;
+                symmetricPatchNeighbors = 5, highContrastRadius = 3,
+                highContrastNeighbors = 5, highContrastMaxDark = 2,
+                contrastConsensusMaxDark = 3;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -332,7 +352,8 @@ internal static class CleanDarkContoursCommand
                 singleDiagonalGradientRescue = true,
                 threeGradientRescue = true,
                 weightedPatchRescue = true, extendedWeightedPatch = true,
-                symmetricPatchRescue = true, symmetricPatchFirstPass = true;
+                symmetricPatchRescue = true, symmetricPatchFirstPass = true,
+                highContrastRescue = true, contrastConsensus = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -360,6 +381,7 @@ internal static class CleanDarkContoursCommand
                 switch (name)
                 {
                     case "-o": case "--output": target = NextValue(); break;
+                    case "--candidate-audit": candidateAudit = NextValue(); break;
                     case "--dark-lightness": darkness = NextDouble(); break;
                     case "--max-dark-neighbors": neighbors = NextInt(); break;
                     case "--max-cardinal-dark": cardinal = NextInt(); break;
@@ -566,6 +588,20 @@ internal static class CleanDarkContoursCommand
                     case "--symmetric-patch-tolerance": symmetricPatchTolerance = NextDouble(); break;
                     case "--symmetric-patch-neighbors": symmetricPatchNeighbors = NextInt(); break;
                     case "--symmetric-patch-opposition": symmetricPatchOpposition = NextDouble(); break;
+                    case "--high-contrast-rescue": highContrastRescue = true; break;
+                    case "--no-high-contrast-rescue": highContrastRescue = false; break;
+                    case "--high-contrast-max-dark": highContrastMaxDark = NextInt(); break;
+                    case "--high-contrast-gain": highContrastGain = NextDouble(); break;
+                    case "--high-contrast-energy": highContrastEnergy = NextDouble(); break;
+                    case "--high-contrast-radius": highContrastRadius = NextInt(); break;
+                    case "--high-contrast-tolerance": highContrastTolerance = NextDouble(); break;
+                    case "--high-contrast-neighbors": highContrastNeighbors = NextInt(); break;
+                    case "--high-contrast-opposition": highContrastOpposition = NextDouble(); break;
+                    case "--contrast-consensus": contrastConsensus = true; break;
+                    case "--no-contrast-consensus": contrastConsensus = false; break;
+                    case "--contrast-consensus-min": contrastConsensusMinimum = NextDouble(); break;
+                    case "--contrast-consensus-gain": contrastConsensusGain = NextDouble(); break;
+                    case "--contrast-consensus-max-dark": contrastConsensusMaxDark = NextInt(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -810,7 +846,19 @@ internal static class CleanDarkContoursCommand
                 SymmetricPatchGradientRadius = symmetricPatchRadius,
                 SymmetricPatchColorTolerance = symmetricPatchTolerance,
                 SymmetricPatchMinimumSimilarNeighbors = symmetricPatchNeighbors,
-                SymmetricPatchMinimumOpposition = symmetricPatchOpposition / 100
+                SymmetricPatchMinimumOpposition = symmetricPatchOpposition / 100,
+                UseHighContrastGradientRescue = highContrastRescue,
+                HighContrastMaximumDarkNeighbors = highContrastMaxDark,
+                HighContrastMinimumLightnessGain = highContrastGain,
+                HighContrastMinimumEnergyDrop = highContrastEnergy / 100,
+                HighContrastGradientRadius = highContrastRadius,
+                HighContrastColorTolerance = highContrastTolerance,
+                HighContrastMinimumSimilarNeighbors = highContrastNeighbors,
+                HighContrastMinimumOpposition = highContrastOpposition / 100,
+                UseHighContrastConsensus = contrastConsensus,
+                HighContrastConsensusThreshold = contrastConsensusMinimum / 100,
+                HighContrastConsensusMinimumGain = contrastConsensusGain,
+                HighContrastConsensusMaximumDarkNeighbors = contrastConsensusMaxDark
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
@@ -822,6 +870,16 @@ internal static class CleanDarkContoursCommand
                 throw new ArgumentException("Результат должен быть PNG.");
             if (File.Exists(outputPath) && !overwrite)
                 throw new IOException($"Результат уже существует: {outputPath}. Используйте --overwrite.");
+            string? auditPath = candidateAudit is null ? null : Path.GetFullPath(candidateAudit);
+            if (auditPath is not null &&
+                (string.Equals(auditPath, inputPath, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(auditPath, outputPath, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException("Путь аудита должен отличаться от исходника и PNG результата.");
+            if (auditPath is not null && File.Exists(auditPath) && !overwrite)
+                throw new IOException($"Файл аудита уже существует: {auditPath}. Используйте --overwrite.");
+            if (auditPath is not null) Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
+            using StreamWriter? auditWriter = auditPath is null ? null : new StreamWriter(auditPath, false);
+            auditWriter?.WriteLine("pass,x,y,decision");
 
             using var source = new Bitmap(inputPath);
             Bitmap current = source;
@@ -832,7 +890,9 @@ internal static class CleanDarkContoursCommand
                 {
                     var passOptions = symmetricPatchFirstPass && q > 0 ?
                         options with { UseSymmetricColorPatchRescue = false } : options;
-                    var result = DarkContourNoiseCleaner.Clean(current, passOptions);
+                    var result = DarkContourNoiseCleaner.Clean(current, passOptions,
+                        auditWriter is null ? null : (x, y, decision) =>
+                            auditWriter.WriteLine($"{q + 1},{x},{y},{decision}"));
                     if (!ReferenceEquals(current, source)) current.Dispose();
                     current = result.Image;
                     changed[q] = result.ChangedPixels;

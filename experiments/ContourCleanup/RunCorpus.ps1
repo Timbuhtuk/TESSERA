@@ -209,6 +209,21 @@ param(
     [double]$SymmetricPatchTolerance = 24,
     [int]$SymmetricPatchNeighbors = 5,
     [double]$SymmetricPatchOpposition = 50,
+    [switch]$HighContrastRescue = $true,
+    [switch]$NoHighContrastRescue,
+    [int]$HighContrastMaxDark = 2,
+    [double]$HighContrastGain = 45,
+    [double]$HighContrastEnergy = 50,
+    [int]$HighContrastRadius = 3,
+    [double]$HighContrastTolerance = 24,
+    [int]$HighContrastNeighbors = 5,
+    [double]$HighContrastOpposition = 50,
+    [switch]$ContrastConsensus = $true,
+    [switch]$NoContrastConsensus,
+    [double]$ContrastConsensusMin = 40,
+    [double]$ContrastConsensusGain = 60,
+    [int]$ContrastConsensusMaxDark = 3,
+    [switch]$CandidateAudit,
     [int]$Passes = 1
 )
 
@@ -252,6 +267,8 @@ $weightedRescueFlag = if ($NoColorPatchWeightedRescue) { @('--no-color-patch-wei
 $extendedWeightedFlag = if ($NoExtendedWeightedPatch) { @('--no-extended-weighted-patch') } else { @('--extended-weighted-patch') }
 $symmetricPatchFlag = if ($NoSymmetricPatchRescue) { @('--no-symmetric-patch-rescue') } else { @('--symmetric-patch-rescue') }
 $symmetricFirstPassFlag = if ($SymmetricPatchAllPasses) { @('--symmetric-patch-all-passes') } else { @('--symmetric-patch-first-pass') }
+$highContrastFlag = if ($NoHighContrastRescue -or !$HighContrastRescue) { @('--no-high-contrast-rescue') } else { @('--high-contrast-rescue') }
+$contrastConsensusFlag = if ($NoContrastConsensus -or !$ContrastConsensus) { @('--no-contrast-consensus') } else { @('--contrast-consensus') }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -262,6 +279,9 @@ foreach ($kind in @('clean', 'noisy'))
     foreach ($file in $files)
     {
         $target = Join-Path $outputDir $file.Name
+        $auditArgs = if ($CandidateAudit) {
+            @('--candidate-audit', (Join-Path $corpus "candidate-audit/$kind/$($file.BaseName).csv"))
+        } else { @() }
         $line = & dotnet $cli clean-dark-contours $file.FullName -o $target --json --overwrite `
             --dark-lightness $DarkLightness `
             --min-lightness-gain $MinGain --min-bright-consensus $Consensus `
@@ -385,7 +405,13 @@ foreach ($kind in @('clean', 'noisy'))
             --symmetric-patch-ratio $SymmetricPatchRatio --symmetric-patch-energy $SymmetricPatchEnergy `
             --symmetric-patch-radius $SymmetricPatchRadius --symmetric-patch-tolerance $SymmetricPatchTolerance `
             --symmetric-patch-neighbors $SymmetricPatchNeighbors --symmetric-patch-opposition $SymmetricPatchOpposition `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag --passes $Passes
+            --high-contrast-max-dark $HighContrastMaxDark `
+            --high-contrast-gain $HighContrastGain --high-contrast-energy $HighContrastEnergy `
+            --high-contrast-radius $HighContrastRadius --high-contrast-tolerance $HighContrastTolerance `
+            --high-contrast-neighbors $HighContrastNeighbors --high-contrast-opposition $HighContrastOpposition `
+            --contrast-consensus-min $ContrastConsensusMin --contrast-consensus-gain $ContrastConsensusGain `
+            --contrast-consensus-max-dark $ContrastConsensusMaxDark `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $auditArgs --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"
