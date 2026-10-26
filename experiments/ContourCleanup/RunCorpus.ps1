@@ -180,6 +180,19 @@ param(
     [double]$WeightedPatchSigma = 5,
     [double]$WeightedPatchMinimumBright = 1,
     [double]$WeightedPatchRatio = 5,
+    [switch]$ExtendedWeightedPatch,
+    [switch]$NoExtendedWeightedPatch,
+    [double]$ExtendedPatchSigma = 6,
+    [double]$ExtendedPatchBright = 1,
+    [double]$ExtendedPatchRatio = 5,
+    [int]$ExtendedPatchColors = 4,
+    [double]$ExtendedPatchLightness = 2.5,
+    [int]$ExtendedPatchCardinal = 1,
+    [double]$ExtendedPatchEnergy = 40,
+    [int]$ExtendedPatchRadius = 3,
+    [double]$ExtendedPatchTolerance = 24,
+    [int]$ExtendedPatchNeighbors = 5,
+    [double]$ExtendedPatchOpposition = 50,
     [int]$Passes = 1
 )
 
@@ -190,6 +203,7 @@ if ($ThreeNeighborEnergyRescue -and $NoThreeNeighborEnergyRescue) { throw 'Ук�
 if ($TexturedGradientRescue -and $NoTexturedGradientRescue) { throw 'Укажите только один из -TexturedGradientRescue и -NoTexturedGradientRescue.' }
 if ($SingleDiagonalGradientRescue -and $NoSingleDiagonalGradientRescue) { throw 'Укажите только один из -SingleDiagonalGradientRescue и -NoSingleDiagonalGradientRescue.' }
 if ($ThreeGradientRescue -and $NoThreeGradientRescue) { throw 'Укажите только один из -ThreeGradientRescue и -NoThreeGradientRescue.' }
+if ($ExtendedWeightedPatch -and $NoExtendedWeightedPatch) { throw 'Укажите только один из -ExtendedWeightedPatch и -NoExtendedWeightedPatch.' }
 $cli = (Resolve-Path -LiteralPath $CliDll).Path
 $corpus = (Resolve-Path -LiteralPath $CorpusRoot).Path
 $report = Join-Path $corpus 'cli-results.jsonl'
@@ -217,6 +231,7 @@ $texturedGradientRescueFlag = if ($NoTexturedGradientRescue) { @('--no-textured-
 $singleDiagonalFlag = if ($NoSingleDiagonalGradientRescue) { @('--no-single-diagonal-gradient-rescue') } else { @('--single-diagonal-gradient-rescue') }
 $threeGradientFlag = if ($NoThreeGradientRescue) { @('--no-three-gradient-rescue') } else { @('--three-gradient-rescue') }
 $weightedRescueFlag = if ($NoColorPatchWeightedRescue) { @('--no-color-patch-weighted-rescue') } else { @('--color-patch-weighted-rescue') }
+$extendedWeightedFlag = if ($NoExtendedWeightedPatch) { @('--no-extended-weighted-patch') } else { @('--extended-weighted-patch') }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -338,7 +353,13 @@ foreach ($kind in @('clean', 'noisy'))
             --three-gradient-neighbors $ThreeGradientNeighbors --three-gradient-opposition $ThreeGradientOpposition `
             --weighted-patch-differences $WeightedPatchDifferences --weighted-patch-sigma $WeightedPatchSigma `
             --weighted-patch-min-bright $WeightedPatchMinimumBright --weighted-patch-ratio $WeightedPatchRatio `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag --passes $Passes
+            --extended-patch-sigma $ExtendedPatchSigma --extended-patch-bright $ExtendedPatchBright `
+            --extended-patch-ratio $ExtendedPatchRatio --extended-patch-colors $ExtendedPatchColors `
+            --extended-patch-lightness $ExtendedPatchLightness --extended-patch-cardinal $ExtendedPatchCardinal `
+            --extended-patch-energy $ExtendedPatchEnergy --extended-patch-radius $ExtendedPatchRadius `
+            --extended-patch-tolerance $ExtendedPatchTolerance --extended-patch-neighbors $ExtendedPatchNeighbors `
+            --extended-patch-opposition $ExtendedPatchOpposition `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

@@ -124,6 +124,18 @@ public static class DarkContourNoiseCleaner
         public double WeightedColorPatchSigma { get; init; } = 5;
         public double WeightedColorPatchMinimumBrightWeight { get; init; } = 1;
         public double WeightedColorPatchBrightRatio { get; init; } = 5;
+        public bool UseExtendedWeightedColorPatchRescue { get; init; }
+        public double ExtendedWeightedPatchSigma { get; init; } = 6;
+        public double ExtendedWeightedPatchMinimumBrightWeight { get; init; } = 1;
+        public double ExtendedWeightedPatchBrightRatio { get; init; } = 5;
+        public int ExtendedWeightedPatchTexturedDistinctColors { get; init; } = 4;
+        public double ExtendedWeightedPatchMaximumLightness { get; init; } = 2.5;
+        public int ExtendedWeightedPatchMinimumCardinalDarkNeighbors { get; init; } = 1;
+        public double ExtendedWeightedPatchMinimumEnergyDrop { get; init; } = 0.4;
+        public int ExtendedWeightedPatchGradientRadius { get; init; } = 3;
+        public double ExtendedWeightedPatchColorTolerance { get; init; } = 24;
+        public int ExtendedWeightedPatchMinimumSimilarNeighbors { get; init; } = 5;
+        public double ExtendedWeightedPatchMinimumOpposition { get; init; } = 0.5;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -207,6 +219,24 @@ public static class DarkContourNoiseCleaner
             options.WeightedColorPatchMinimumBrightWeight is < 0 or > 10000 ||
             !double.IsFinite(options.WeightedColorPatchBrightRatio) ||
             options.WeightedColorPatchBrightRatio is < 0 or > 100 ||
+            !double.IsFinite(options.ExtendedWeightedPatchSigma) ||
+            options.ExtendedWeightedPatchSigma is <= 0 or > 100 ||
+            !double.IsFinite(options.ExtendedWeightedPatchMinimumBrightWeight) ||
+            options.ExtendedWeightedPatchMinimumBrightWeight is < 0 or > 10000 ||
+            !double.IsFinite(options.ExtendedWeightedPatchBrightRatio) ||
+            options.ExtendedWeightedPatchBrightRatio is < 0 or > 100 ||
+            options.ExtendedWeightedPatchTexturedDistinctColors is < 1 or > 8 ||
+            !double.IsFinite(options.ExtendedWeightedPatchMaximumLightness) ||
+            options.ExtendedWeightedPatchMaximumLightness is < 0 or > 100 ||
+            options.ExtendedWeightedPatchMinimumCardinalDarkNeighbors is < 0 or > 4 ||
+            !double.IsFinite(options.ExtendedWeightedPatchMinimumEnergyDrop) ||
+            options.ExtendedWeightedPatchMinimumEnergyDrop is < 0 or > 1 ||
+            options.ExtendedWeightedPatchGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.ExtendedWeightedPatchColorTolerance) ||
+            options.ExtendedWeightedPatchColorTolerance is < 0 or > 100 ||
+            options.ExtendedWeightedPatchMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.ExtendedWeightedPatchMinimumOpposition) ||
+            options.ExtendedWeightedPatchMinimumOpposition is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -405,7 +435,8 @@ public static class DarkContourNoiseCleaner
                 options.ColorMatchedPatchMaximumPatternDifferences) : new();
         Dictionary<UInt128, List<ColorPatchSample>> weightedPatchIndex =
             options.RequireColorMatchedPatch &&
-            (options.UseWeightedColorPatchRescue || options.UseThreeNeighborEnergyRescue ||
+            (options.UseWeightedColorPatchRescue || options.UseExtendedWeightedColorPatchRescue ||
+             options.UseThreeNeighborEnergyRescue ||
              options.UseTexturedGradientRescue || options.UseSingleDiagonalGradientRescue ||
              options.UseThreeNeighborGradientRescue) ?
                 BuildColorPatchIndex(original, dark, width, height,
@@ -457,6 +488,16 @@ public static class DarkContourNoiseCleaner
                         weightedPatchIndex, options.WeightedColorPatchSigma,
                         options.WeightedColorPatchMinimumBrightWeight,
                         options.WeightedColorPatchBrightRatio);
+                bool extendedWeightedPatch = !colorPatchMatch &&
+                    options.UseExtendedWeightedColorPatchRescue &&
+                    HasWeightedColorPatch(original, dark, width, x, y,
+                        weightedPatchIndex, options.ExtendedWeightedPatchSigma,
+                        options.ExtendedWeightedPatchMinimumBrightWeight,
+                        options.ExtendedWeightedPatchBrightRatio);
+                bool extendedTexturedPatch = extendedWeightedPatch &&
+                    DistinctRingColors(original, width, x, y) >=
+                        options.ExtendedWeightedPatchTexturedDistinctColors;
+                if (extendedWeightedPatch && !extendedTexturedPatch) colorPatchMatch = true;
                 bool threeNeighborEnergyRescue = options.UseThreeNeighborEnergyRescue &&
                     darkNeighbors == 3 && cardinalDarkNeighbors == 1;
                 bool texturedGradientRescue = options.UseTexturedGradientRescue &&
@@ -475,7 +516,8 @@ public static class DarkContourNoiseCleaner
                         options.ThreeNeighborGradientMinimumDistinctColors;
                 if (!colorPatchMatch && !options.UseColorPatchEnergyRescue &&
                     !threeNeighborEnergyRescue && !texturedGradientRescue &&
-                    !singleDiagonalRescue && !threeNeighborGradientRescue) continue;
+                    !singleDiagonalRescue && !threeNeighborGradientRescue &&
+                    !extendedTexturedPatch) continue;
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
@@ -700,8 +742,20 @@ public static class DarkContourNoiseCleaner
                             options.ThreeNeighborGradientColorTolerance,
                             options.ThreeNeighborGradientMinimumSimilarNeighbors,
                             options.ThreeNeighborGradientMinimumOpposition);
+                    bool extendedTexturedAllowed = extendedTexturedPatch &&
+                        cardinalDarkNeighbors >=
+                            options.ExtendedWeightedPatchMinimumCardinalDarkNeighbors &&
+                        Lab(original[index]).L <= options.ExtendedWeightedPatchMaximumLightness &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.ExtendedWeightedPatchMinimumEnergyDrop) &&
+                        HasOpposedReplacementGradient(original, width, height, x, y,
+                            replacement, options.ExtendedWeightedPatchGradientRadius,
+                            options.ExtendedWeightedPatchColorTolerance,
+                            options.ExtendedWeightedPatchMinimumSimilarNeighbors,
+                            options.ExtendedWeightedPatchMinimumOpposition);
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
-                        !singleDiagonalGradientRescue && !threeNeighborGradientAllowed) continue;
+                        !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
+                        !extendedTexturedAllowed) continue;
                 }
                 if (options.RequireCommonGradient &&
                     !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;

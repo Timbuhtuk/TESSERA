@@ -190,6 +190,19 @@ internal static class CleanDarkContoursCommand
           --weighted-patch-sigma N       Ширина цветового ядра LAB: >0–100 (5).
           --weighted-patch-min-bright N  Минимальный вес светлых повторов: 0–10000 (1).
           --weighted-patch-ratio N       Отношение весов светлых к тёмным: 0–100 (5).
+          --extended-weighted-patch      Дополнительный поиск цветовых повторов LAB (включено).
+          --no-extended-weighted-patch   Выключить дополнительный поиск.
+          --extended-patch-sigma N       Ширина цветового ядра LAB: >0–100 (6).
+          --extended-patch-bright N      Минимальный вес светлых повторов: 0–10000 (1).
+          --extended-patch-ratio N       Отношение светлых к тёмным: 0–100 (5).
+          --extended-patch-colors N      Число цветов, начиная с которого нужна защита текстуры: 1–8 (4).
+          --extended-patch-lightness N   Максимальная светлота точки на текстуре: 0–100 (2.5).
+          --extended-patch-cardinal N    Минимум прямых тёмных соседей на текстуре: 0–4 (1).
+          --extended-patch-energy N      Минимальное снижение перепада на текстуре: 0–100 % (40).
+          --extended-patch-radius N      Радиус градиента на текстуре: 1–15 (3).
+          --extended-patch-tolerance N   Допуск похожих цветов LAB: 0–100 (24).
+          --extended-patch-neighbors N   Минимум похожих соседей: 1–1000 (5).
+          --extended-patch-opposition N  Минимальная противоположность: 0–100 % (50).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -251,7 +264,10 @@ internal static class CleanDarkContoursCommand
                 threeGradientLightness = 2.5, threeGradientEnergy = 15,
                 threeGradientBright = 0.1, threeGradientTolerance = 24,
                 threeGradientOpposition = 50,
-                weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5;
+                weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5,
+                extendedPatchSigma = 6, extendedPatchBright = 1, extendedPatchRatio = 5,
+                extendedPatchLightness = 2.5, extendedPatchEnergy = 40,
+                extendedPatchTolerance = 24, extendedPatchOpposition = 50;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -280,7 +296,9 @@ internal static class CleanDarkContoursCommand
                 texturedGradientNeighbors = 5, singleDiagonalColors = 4,
                 singleDiagonalRadius = 3, singleDiagonalNeighbors = 5;
             int threeGradientColors = 4, threeGradientRadius = 3,
-                threeGradientNeighbors = 5;
+                threeGradientNeighbors = 5, extendedPatchColors = 4,
+                extendedPatchCardinal = 1, extendedPatchRadius = 3,
+                extendedPatchNeighbors = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -291,7 +309,7 @@ internal static class CleanDarkContoursCommand
                 threeNeighborEnergyRescue = true, texturedGradientRescue = true,
                 singleDiagonalGradientRescue = true,
                 threeGradientRescue = true,
-                weightedPatchRescue = true;
+                weightedPatchRescue = true, extendedWeightedPatch = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -496,6 +514,19 @@ internal static class CleanDarkContoursCommand
                     case "--weighted-patch-sigma": weightedPatchSigma = NextDouble(); break;
                     case "--weighted-patch-min-bright": weightedPatchMinBright = NextDouble(); break;
                     case "--weighted-patch-ratio": weightedPatchRatio = NextDouble(); break;
+                    case "--extended-weighted-patch": extendedWeightedPatch = true; break;
+                    case "--no-extended-weighted-patch": extendedWeightedPatch = false; break;
+                    case "--extended-patch-sigma": extendedPatchSigma = NextDouble(); break;
+                    case "--extended-patch-bright": extendedPatchBright = NextDouble(); break;
+                    case "--extended-patch-ratio": extendedPatchRatio = NextDouble(); break;
+                    case "--extended-patch-colors": extendedPatchColors = NextInt(); break;
+                    case "--extended-patch-lightness": extendedPatchLightness = NextDouble(); break;
+                    case "--extended-patch-cardinal": extendedPatchCardinal = NextInt(); break;
+                    case "--extended-patch-energy": extendedPatchEnergy = NextDouble(); break;
+                    case "--extended-patch-radius": extendedPatchRadius = NextInt(); break;
+                    case "--extended-patch-tolerance": extendedPatchTolerance = NextDouble(); break;
+                    case "--extended-patch-neighbors": extendedPatchNeighbors = NextInt(); break;
+                    case "--extended-patch-opposition": extendedPatchOpposition = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -715,7 +746,19 @@ internal static class CleanDarkContoursCommand
                 WeightedColorPatchMaximumPatternDifferences = weightedPatchDifferences,
                 WeightedColorPatchSigma = weightedPatchSigma,
                 WeightedColorPatchMinimumBrightWeight = weightedPatchMinBright,
-                WeightedColorPatchBrightRatio = weightedPatchRatio
+                WeightedColorPatchBrightRatio = weightedPatchRatio,
+                UseExtendedWeightedColorPatchRescue = extendedWeightedPatch,
+                ExtendedWeightedPatchSigma = extendedPatchSigma,
+                ExtendedWeightedPatchMinimumBrightWeight = extendedPatchBright,
+                ExtendedWeightedPatchBrightRatio = extendedPatchRatio,
+                ExtendedWeightedPatchTexturedDistinctColors = extendedPatchColors,
+                ExtendedWeightedPatchMaximumLightness = extendedPatchLightness,
+                ExtendedWeightedPatchMinimumCardinalDarkNeighbors = extendedPatchCardinal,
+                ExtendedWeightedPatchMinimumEnergyDrop = extendedPatchEnergy / 100,
+                ExtendedWeightedPatchGradientRadius = extendedPatchRadius,
+                ExtendedWeightedPatchColorTolerance = extendedPatchTolerance,
+                ExtendedWeightedPatchMinimumSimilarNeighbors = extendedPatchNeighbors,
+                ExtendedWeightedPatchMinimumOpposition = extendedPatchOpposition / 100
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
