@@ -73,6 +73,7 @@ public partial class MainWindow : Window
         saveButton.Click += (sender, e) => { fileMenuPopup.IsOpen = false; SaveImage(sender, e); };
         saveAllButton.Click += SaveAllImages;
         alignButton.Click += AlignImage;
+        finishPixelArtButton.Click += FinishPixelArt;
         Closing += (_, e) => { if (_processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = "Дождитесь завершения обработки."; } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
         Closed += (_, _) =>
         {
@@ -304,9 +305,9 @@ public partial class MainWindow : Window
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
-        foreach (var button in new[] { fileMenuButton, toolsMenuButton, gridToolButton, sizeToolButton,
+        foreach (var button in new[] { fileMenuButton, toolsMenuButton, gridToolButton, pixelArtToolButton, sizeToolButton,
             colorToolButton, smoothingToolButton, profileToolButton, filtersToolButton, infoToolButton, compactProfileToolButton,
-            compactSizeToolButton, compactColorToolButton, compactSmoothingToolButton, compactGridToolButton,
+            compactSizeToolButton, compactColorToolButton, compactSmoothingToolButton, compactGridToolButton, compactPixelArtToolButton,
             compactFiltersToolButton, compactInfoToolButton })
             button.IsEnabled = !processing;
         operationSourceInput.IsEnabled = !processing;
@@ -324,6 +325,7 @@ public partial class MainWindow : Window
         ((ComboBoxItem)operationSourceInput.Items[1]).IsEnabled = !processing && _downscaledResult is not null;
         if (_downscaledResult is null && operationSourceInput.SelectedIndex == 1) operationSourceInput.SelectedIndex = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
+        finishPixelArtButton.IsEnabled = !processing && _sourceImage is not null;
         saveButton.IsEnabled = !processing && _downscaledResult is not null;
         saveAllButton.IsEnabled = !processing && _activeSource?.Generations.Count > 0;
         Cursor = processing ? Cursors.Wait : null;

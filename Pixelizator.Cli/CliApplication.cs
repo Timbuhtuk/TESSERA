@@ -19,6 +19,7 @@ internal static class CliApplication
                        tessera ico <изображение> -o <иконка.ico>
                        tessera remove-background <изображение> -o <результат.png>
                        tessera clean-dark-contours <изображение> -o <результат.png>
+                       tessera finish-pixel-art <изображение> -o <результат.png>
                        tessera resize <изображение> -o <результат.png>
                        tessera colors <изображение> -o <результат.png>
                        tessera aseprite <анимация.aseprite> --output-dir <папка>
@@ -27,6 +28,7 @@ internal static class CliApplication
         Создание многоразмерной иконки Windows: tessera ico --help.
         Удаление однотонного фона: tessera remove-background --help.
         Очистка тёмных выступов: tessera clean-dark-contours --help.
+        Сборка пиксель-арта на сетке: tessera finish-pixel-art --help.
         Отдельные размер и цвета: tessera resize --help; tessera colors --help.
         Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
@@ -85,6 +87,8 @@ internal static class CliApplication
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
     {
+        if (args.Length > 0 && args[0] == "finish-pixel-art")
+            return FinishPixelArtCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "clean-dark-contours")
             return CleanDarkContoursCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "align")

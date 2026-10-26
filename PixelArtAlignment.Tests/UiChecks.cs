@@ -84,9 +84,9 @@ internal static class UiChecks
                 Get<Grid>("workspaceGrid").ColumnDefinitions.Count <= 1, "The old settings sidebar is still visible");
             // WPF gives MinWidth precedence over the CI monitor's native size limit.
             // Native resizing and monitor bounds are covered by WindowChromeChecks.
-            window.MinWidth = 1600; window.Width = 1600; Pump();
-            Require(Math.Abs(window.ActualWidth - 1600) < 1,
-                $"Wide layout fixture was constrained to {window.ActualWidth} instead of 1600");
+            window.MinWidth = 1750; window.Width = 1750; Pump();
+            Require(Math.Abs(window.ActualWidth - 1750) < 1,
+                $"Wide layout fixture was constrained to {window.ActualWidth} instead of 1750");
             double toolbarY = Get<Button>("backToLibraryButton").TranslatePoint(new System.Windows.Point(), window).Y;
             Require(Math.Abs(Get<Button>("gridToolButton").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5 &&
                 Math.Abs(Get<ComboBox>("zoomInput").TranslatePoint(new System.Windows.Point(), window).Y - toolbarY) < 5,

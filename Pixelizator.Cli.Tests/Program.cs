@@ -348,6 +348,21 @@ try
         Require(Run(["reduce-grid", "--help"]).Code == 0 && Run(["compact-grid", "--help"]).Code == 0,
             "Reduction help missing");
     });
+    Check("Pixel-art finish creates a compact PNG and protects the input", () =>
+    {
+        string target = Path.Combine(directory, "finished.png");
+        var run = Run(["finish-pixel-art", input, "-o", target, "--cell-size", "8", "--colors", "8", "--json"]);
+        Require(run.Code == 0 && run.Error.Length == 0, run.Error);
+        using var report = JsonDocument.Parse(run.Output);
+        Require(report.RootElement.GetProperty("process").GetString() == "finish-pixel-art", "Wrong finish report");
+        Require(report.RootElement.GetProperty("outputSize").GetProperty("width").GetInt32() == 9, "Wrong finish width");
+        using var actual = new Bitmap(target);
+        Require(actual.Size == new Size(9, 8), "Wrong compact dimensions");
+        Require(Run(["finish-pixel-art", input, "-o", target]).Code == 1, "Existing finish result accepted");
+        Require(Run(["finish-pixel-art", input, "-o", input, "--overwrite"]).Code == 2, "Finish overwrote source");
+        Require(Run(["finish-pixel-art", input, "--cell-size", "1"]).Code == 2, "Invalid finish cell accepted");
+        Require(Run(["finish-pixel-art", "--help"]).Code == 0, "Finish help missing");
+    });
     Check("Sprite mode keeps odd-sized canvas edges, transparency and preview pixels", () =>
     {
         string sprite = Path.Combine(directory, "sprite.png");

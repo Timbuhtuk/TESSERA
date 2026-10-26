@@ -17,6 +17,7 @@ public partial class MainWindow
         colorToolButton.Click += (_, _) => OpenEditorTool("color", "Палитра", 440, colorToolGroup);
         smoothingToolButton.Click += (_, _) => OpenEditorTool("smoothing", "Сглаживание", 470, smoothingToolGroup);
         gridToolButton.Click += (_, _) => OpenEditorTool("grid", "Сетка", 280, gridToolGroup);
+        pixelArtToolButton.Click += (_, _) => OpenEditorTool("pixel-art", "Пиксель-арт", 390, pixelArtToolGroup);
         filtersToolButton.Click += (_, _) => OpenEditorTool("filters", "Фильтры", 410, filtersToolGroup);
         infoToolButton.Click += (_, _) => { OpenEditorTool("info", "Инфо", 560, infoToolGroup); RefreshInfo(); };
         fileMenuButton.Click += (_, _) => fileMenuPopup.IsOpen = !fileMenuPopup.IsOpen;
@@ -28,6 +29,7 @@ public partial class MainWindow
             (compactColorToolButton, colorToolButton),
             (compactSmoothingToolButton, smoothingToolButton),
             (compactGridToolButton, gridToolButton),
+            (compactPixelArtToolButton, pixelArtToolButton),
             (compactFiltersToolButton, filtersToolButton),
             (compactInfoToolButton, infoToolButton)
         })
@@ -38,7 +40,7 @@ public partial class MainWindow
 
     private void UpdateToolNavigation()
     {
-        bool compact = (ActualWidth > 0 ? ActualWidth : Width) < 1500;
+        bool compact = (ActualWidth > 0 ? ActualWidth : Width) < 1700;
         SetVisible(toolNavigation, !compact);
         SetVisible(compactToolNavigation, compact);
         if (!compact) toolsMenuPopup.IsOpen = false;

@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using DomainColorTest;
 using PixelArtAlignment;
+using PixelArtDownscale;
 using Color = System.Drawing.Color;
 
 namespace PixelArtAlignment.Tests;
@@ -29,6 +30,7 @@ internal static class EditorRegressionChecks
         Check("tool-state", VerifyTools);
         Check("aspect-lock", VerifyAspectLock);
         Check("grid-basis", VerifyGridBasis);
+        Check("pixel-art-finish", VerifyFinish);
         Require(failures.Count == 0, string.Join(Environment.NewLine, failures));
 
         void Check(string name, Action verify)
@@ -62,7 +64,8 @@ internal static class EditorRegressionChecks
             var changes = new List<string>();
             Get<Slider>("brightnessInput").ValueChanged += (_, e) => changes.Add($"brightness {e.OldValue} -> {e.NewValue}");
             foreach (var pair in new[] { ("sizeToolButton", "widthInput"), ("smoothingToolButton", "localBrightnessInput"),
-                ("colorToolButton", "paletteInput"), ("gridToolButton", "gridCellInput"), ("profileToolButton", "sceneMode") })
+                ("colorToolButton", "paletteInput"), ("gridToolButton", "gridCellInput"),
+                ("pixelArtToolButton", "finishCellInput"), ("profileToolButton", "sceneMode") })
                 for (int q = 0; q < 2; q++)
                 {
                     Click(pair.Item1); Pump();
@@ -128,6 +131,30 @@ internal static class EditorRegressionChecks
             using (var expected = new PixelGridAligner().Align(source, new GridAlignmentOptions()))
                 EqualPixels(expected.Aligned, Get<Bitmap>("_downscaledResult"), "Automatic alignment of source");
             Require(document.SelectedGeneration!.ParentGenerationId is null, "Source alignment retained an unrelated parent");
+        }
+
+        void VerifyFinish()
+        {
+            var document = Get<SourceEntry>("_activeSource");
+            var parent = document.SelectedGeneration!;
+            using var basis = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
+            Get<ComboBox>("operationSourceInput").SelectedIndex = 1;
+            Get<IntegerInput>("finishCellInput").Value = 8;
+            Get<IntegerInput>("finishSmoothInput").Value = 1;
+            Get<IntegerInput>("finishColorsInput").Value = 128;
+            Get<CheckBox>("finishAdaptiveInput").IsChecked = true;
+            Click("finishPixelArtButton"); Wait();
+
+            using var expected = PixelArtFinisher.Process(basis, new PixelArtFinishOptions());
+            EqualPixels(expected, Get<Bitmap>("_downscaledResult"), "Pixel-art UI result");
+            Require(document.SelectedGeneration!.ParentGenerationId == parent.Id &&
+                    document.SelectedGeneration.Operation == "Пиксель-арт" &&
+                    document.SelectedGeneration.CellSize == 8, "Pixel-art history metadata missing");
+            EqualPixels(source, Get<Bitmap>("_sourceImage"), "Pixel-art processing changed the source");
+            string export = Path.Combine(folder, "pixel-art-finish.png");
+            Invoke("SaveResult", export);
+            using var saved = new Bitmap(export);
+            EqualPixels(expected, saved, "Pixel-art export");
         }
 
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
