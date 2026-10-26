@@ -1037,7 +1037,7 @@ try
         }
     });
 
-    Check("Contour cleanup repairs a misplaced edge pixel and reports candidates", () =>
+    Check("Contour cleanup requires opposing gradients and validates its settings", () =>
     {
         string path = Path.Combine(directory, "contour-source.png");
         string target = Path.Combine(directory, "contour-clean.png");
@@ -1055,27 +1055,32 @@ try
         Require(run.Code == 0 && run.Error.Length == 0, run.Error);
         using var result = new Bitmap(target);
         using var map = new Bitmap(candidates);
-        Require(result.GetPixel(12, 10).ToArgb() == Color.White.ToArgb(), "Misplaced contour pixel was not repaired");
+        Require(result.GetPixel(12, 10).ToArgb() == Color.Black.ToArgb(),
+            "A pixel without an opposing similar-color gradient was changed");
         Require(result.GetPixel(11, 10).ToArgb() == Color.Black.ToArgb(), "Correct side of contour changed");
-        Require(map.GetPixel(12, 10).A == 255, "Candidate map omitted repair");
+        Require(map.GetPixel(12, 10).A == 0, "Pixel without opposing gradient became a candidate");
         using var report = JsonDocument.Parse(run.Output);
-        Require(report.RootElement.GetProperty("changedPixels").GetInt32() >= 1, "Change count missing");
+        Require(report.RootElement.GetProperty("changedPixels").GetInt32() == 0, "Unexpected replacement");
         Require(report.RootElement.GetProperty("windowSize").GetInt32() == 7, "Window size not reported");
 
-        foreach (int size in new[] { 5, 15 })
+        foreach (int size in new[] { 3, 5, 15 })
         {
             string endpoint = Path.Combine(directory, $"contour-clean-{size}.png");
             ExpectSuccess(["clean-contours", path, "-o", endpoint, "--window-size", size.ToString()]);
             using var endpointImage = new Bitmap(endpoint);
-            Require(endpointImage.GetPixel(12, 10).ToArgb() == Color.White.ToArgb(),
-                $"Window {size} failed to repair the same contour error");
+            Require(endpointImage.GetPixel(12, 10).ToArgb() == Color.Black.ToArgb(),
+                $"Window {size} ignored the opposing-gradient rule");
         }
 
         Require(Run(["clean-contours", path, "-o", target]).Code == 1, "Existing output accepted");
         Require(Run(["clean-contours", path, "-o", target, "--window-size", "6", "--overwrite"]).Code == 2,
             "Even analysis window accepted");
+        Require(Run(["clean-contours", path, "-o", target, "--window-size", "1", "--overwrite"]).Code == 2,
+            "Analysis window below 3 × 3 accepted");
         Require(Run(["clean-contours", path, "-o", target, "--candidates-output", target, "--overwrite"]).Code == 2,
             "Output and candidate map may collide");
+        Require(Run(["clean-contours", path, "-o", target, "--min-opposition", "101", "--overwrite"]).Code == 2,
+            "Invalid opposition threshold accepted");
         Require(Run(["clean-contours", "--help"]).Code == 0, "Contour help missing");
     });
 
@@ -1137,12 +1142,18 @@ try
 
     Check("Contour analysis shows candidates and gradients without changing the source", () =>
     {
-        using var source = new Bitmap(Path.Combine(directory, "contour-source.png"));
+        using var source = new Bitmap(9, 9, PixelFormat.Format32bppArgb);
+        using (var graphics = Graphics.FromImage(source)) graphics.Clear(Color.White);
+        for (int y = 4; y <= 5; y++)
+            for (int x = 4; x <= 5; x++) source.SetPixel(x, y, Color.Black);
         using var unchanged = (Bitmap)source.Clone();
-        var analysis = ContourNoiseCleaner.Analyze(source, new ContourCleanOptions { WindowSize = 7 });
+        var analysis = ContourNoiseCleaner.Analyze(source, new ContourCleanOptions
+        {
+            WindowSize = 3, ProtectDetails = false, MinimumAgreement = 0, MinimumOpposition = 0
+        });
         using var heatmap = analysis.Heatmap;
         Require(analysis.CandidateCount >= 1, "Contour candidate was not found");
-        Require(heatmap.GetPixel(12, 10).ToArgb() == Color.Red.ToArgb(), "Candidate is not red");
+        Require(heatmap.GetPixel(4, 4).ToArgb() == Color.Red.ToArgb(), "Candidate is not red");
         bool hasGradient = false;
         for (int y = 0; y < source.Height; y++)
             for (int x = 0; x < source.Width; x++)
@@ -1155,6 +1166,56 @@ try
             }
         Require(hasGradient, "Contour gradients are absent from the heatmap");
         EqualPixels(unchanged, source);
+    });
+
+    Check("Contour candidate thresholds can be tuned independently", () =>
+    {
+        using var source = new Bitmap(9, 9, PixelFormat.Format32bppArgb);
+        using (var graphics = Graphics.FromImage(source)) graphics.Clear(Color.White);
+        source.SetPixel(4, 4, Color.Black);
+        source.SetPixel(5, 4, Color.FromArgb(12, 12, 12));
+        source.SetPixel(4, 5, Color.FromArgb(18, 18, 18));
+        source.SetPixel(5, 5, Color.FromArgb(24, 24, 24));
+        ContourCleanOptions Options(double colorGap, int neighborCount,
+            double pixelGradient = 120, double neighborGradient = 80,
+            double agreement = 0, double opposition = 0) => new()
+        {
+            WindowSize = 3, ProtectDetails = false, SimilarColorDistance = colorGap,
+            MinimumSimilarNeighbors = neighborCount, MinimumPixelGradient = pixelGradient,
+            MinimumNeighborGradient = neighborGradient, MinimumAgreement = agreement,
+            MinimumOpposition = opposition
+        };
+        using var found = ContourNoiseCleaner.Analyze(source, Options(24, 2)).Heatmap;
+        using var noColorGap = ContourNoiseCleaner.Analyze(source, Options(0, 2)).Heatmap;
+        using var tooManyNeighbors = ContourNoiseCleaner.Analyze(source, Options(24, 4)).Heatmap;
+        using var highPixelGradient = ContourNoiseCleaner.Analyze(source, Options(24, 2, pixelGradient: 20000)).Heatmap;
+        using var highNeighborGradient = ContourNoiseCleaner.Analyze(source, Options(24, 2, neighborGradient: 20000)).Heatmap;
+        using var highAgreement = ContourNoiseCleaner.Analyze(source, Options(24, 2, agreement: 1)).Heatmap;
+        using var highOpposition = ContourNoiseCleaner.Analyze(source, Options(24, 2, opposition: 1)).Heatmap;
+        Require(found.GetPixel(4, 4).ToArgb() == Color.Red.ToArgb(), "Expected gradient candidate missing");
+        Require(noColorGap.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Color gap had no effect");
+        Require(tooManyNeighbors.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Neighbor count had no effect");
+        Require(highPixelGradient.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Pixel gradient threshold had no effect");
+        Require(highNeighborGradient.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Neighbor gradient threshold had no effect");
+        Require(highAgreement.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Agreement threshold had no effect");
+        Require(highOpposition.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Opposition threshold had no effect");
+    });
+
+    Check("Contour heatmap gives distant LAB colors stronger weight", () =>
+    {
+        int[] contrast = new int[2];
+        int[] shades = [130, 210];
+        for (int q = 0; q < shades.Length; q++)
+        {
+            using var source = new Bitmap(7, 7, PixelFormat.Format32bppArgb);
+            using (var graphics = Graphics.FromImage(source)) graphics.Clear(Color.FromArgb(90, 90, 90));
+            source.SetPixel(4, 3, Color.FromArgb(shades[q], shades[q], shades[q]));
+            var analysis = ContourNoiseCleaner.Analyze(source, new ContourCleanOptions { WindowSize = 3 });
+            using var heatmap = analysis.Heatmap;
+            contrast[q] = 255 - heatmap.GetPixel(3, 3).G;
+        }
+        Require(contrast[0] > 0 && contrast[1] >= contrast[0] * 4,
+            $"Distant color should dominate the squared gradient: {contrast[0]} vs {contrast[1]}");
     });
 
     int variant = 0;

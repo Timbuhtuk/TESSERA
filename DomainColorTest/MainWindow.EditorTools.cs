@@ -12,6 +12,7 @@ public partial class MainWindow
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
     {
+        if (key == "contours") UpdateContourWindowLabel();
         if (_workspaceReady) { OpenDockedWorkspaceTool(key switch { "profile" => Localization.Text("Готовые сценарии"), "color" => Localization.Text("Уменьшить число цветов"), "smoothing" => Localization.Text("Очистить цвета"), "info" => Localization.Text("Цвета и сведения"), _ => title }, groups); _cropToolActive = key == "size"; UpdateCropPreview(); SetActiveLivePreviewTool(key); if (key == "info") RefreshInfo(); if (key is "color" or "smoothing") AutoEnableLivePreview(key); return; }
         _cropToolActive = key == "size";
         UpdateCropPreview();

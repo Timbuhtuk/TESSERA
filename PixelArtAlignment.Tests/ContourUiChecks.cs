@@ -39,10 +39,13 @@ internal static class ContourUiChecks
         string library = Path.Combine(folder, "library"); Directory.CreateDirectory(library);
         new AppearanceSettings { Language = language }.Save(Path.Combine(library, "appearance.json"));
         string path = Path.Combine(folder, "source.png");
-        using var source = new Bitmap(25, 21, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using var source = new Bitmap(9, 9, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
         for (int y = 0; y < source.Height; y++)
-            for (int x = 0; x < source.Width; x++) source.SetPixel(x, y, x < 12 ? Color.Black : Color.White);
-        source.SetPixel(12, 10, Color.Black);
+            for (int x = 0; x < source.Width; x++) source.SetPixel(x, y, Color.White);
+        source.SetPixel(4, 4, Color.Black);
+        source.SetPixel(5, 4, Color.FromArgb(12, 12, 12));
+        source.SetPixel(4, 5, Color.FromArgb(18, 18, 18));
+        source.SetPixel(5, 5, Color.FromArgb(24, 24, 24));
         foreach (int alpha in new[] { 0, 1, 97, 128, 254 }) source.SetPixel(alpha % 5, 0, Color.FromArgb(alpha, 12, 34, 56));
         source.Save(path, System.Drawing.Imaging.ImageFormat.Png);
         byte[] original = File.ReadAllBytes(path);
@@ -69,17 +72,32 @@ internal static class ContourUiChecks
             Require(Get<Button>("contourApplyButton").Content.ToString() == (language == "en" ? "Create map result" : "Создать результат-карту"), "Contour action is not localized");
             var controls = Get<Slider>("contourWindowInput");
             Require(!docked || ReferenceEquals(Window.GetWindow(controls), window), "Workspace contours detached from its native panel");
-            controls.Value = 7;
-            Get<ComboBox>("contourStrictnessInput").SelectedIndex = 0;
-            Get<CheckBox>("contourDetailGuardInput").IsChecked = true;
-            WaitForMap(source, new() { WindowSize = 7 });
-            Require(Get<PixelPreview>("resultPreview").Image!.GetPixel(12, 10).R == 255, "Expected candidate missing");
+            Require(controls.Minimum == 3, "Contours does not allow the 3x3 window");
+            controls.Value = 3;
+            Get<IntegerInput>("contourAgreementInput").Value = 0;
+            Get<IntegerInput>("contourOppositionInput").Value = 0;
+            Get<CheckBox>("contourDetailGuardInput").IsChecked = false;
+            WaitForMap(source, new() { WindowSize = 3, ProtectDetails = false, MinimumAgreement = 0, MinimumOpposition = 0 });
+            Require(Get<PixelPreview>("resultPreview").Image!.GetPixel(4, 4).ToArgb() == Color.Red.ToArgb(), "Expected direction candidate missing");
+            Require(Get<TextBlock>("contourWindowLabel").Text.Contains("3 × 3"), "Analysis window label does not reflect the 3x3 setting");
+            foreach (var (name, threshold, originalValue) in new[] {
+                ("contourSimilarityInput", 0, 24), ("contourPixelGradientInput", 20000, 120),
+                ("contourNeighborGradientInput", 20000, 80), ("contourNeighborCountInput", 224, 2),
+                ("contourAgreementInput", 100, 0), ("contourOppositionInput", 100, 0) })
+            {
+                var old = Get<PixelPreview>("resultPreview").Image;
+                Get<IntegerInput>(name).Value = threshold;
+                Until(() => Visible() && !ReferenceEquals(Get<PixelPreview>("resultPreview").Image, old));
+                Require(Get<PixelPreview>("resultPreview").Image!.GetPixel(4, 4).ToArgb() != Color.Red.ToArgb(), "Threshold did not affect selection: " + name);
+                Get<IntegerInput>(name).Value = originalValue;
+                WaitForMap(source, new() { WindowSize = 3, ProtectDetails = false, MinimumAgreement = 0, MinimumOpposition = 0 });
+            }
             Require(!Get<MenuItem>("saveMenuItem").IsEnabled, "Temporary map can be exported as a saved result");
             Capture(window, Path.Combine(folder, "preview-" + language + ".png"));
             NavigationTest.Click(window, "contourApplyButton");
             Until(() => document.Generations.Count == 1 && !Get<bool>("_processing"));
             var first = document.SelectedGeneration!;
-            using var expected = ContourNoiseCleaner.Analyze(source, new() { WindowSize = 7 }).Heatmap;
+            using var expected = ContourNoiseCleaner.Analyze(source, new() { WindowSize = 3, ProtectDetails = false, MinimumAgreement = 0, MinimumOpposition = 0 }).Heatmap;
             Equal(expected, Get<Bitmap>("_downscaledResult"));
             Require(first.ParentGenerationId is null && window.ProcessingBasis == 1, "Contour result used an unselected input");
             Require(Get<ListBox>("sourceStrip").SelectedItem is null && ReferenceEquals(Get<ListBox>("generationStrip").SelectedItem, first), "Contour result is not the sole selected card");
@@ -89,9 +107,14 @@ internal static class ContourUiChecks
             using var basis = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
             NavigationTest.Click(window, "contoursMenuItem");
             controls.Value = 5;
-            Get<ComboBox>("contourStrictnessInput").SelectedIndex = 2;
+            Get<IntegerInput>("contourSimilarityInput").Value = 31;
+            Get<IntegerInput>("contourPixelGradientInput").Value = 210;
+            Get<IntegerInput>("contourNeighborGradientInput").Value = 125;
+            Get<IntegerInput>("contourNeighborCountInput").Value = 224;
+            Get<IntegerInput>("contourAgreementInput").Value = 65;
+            Get<IntegerInput>("contourOppositionInput").Value = 45;
             Get<CheckBox>("contourDetailGuardInput").IsChecked = false;
-            WaitForMap(basis, new() { WindowSize = 5, Strictness = ContourCleanStrictness.Strong, ProtectDetails = false });
+            WaitForMap(basis, new() { WindowSize = 5, ProtectDetails = false, SimilarColorDistance = 31, MinimumPixelGradient = 210, MinimumNeighborGradient = 125, MinimumSimilarNeighbors = 224, MinimumAgreement = .65, MinimumOpposition = .45 });
             NavigationTest.Click(window, "contourApplyButton");
             Until(() => document.Generations.Count == 2 && !Get<bool>("_processing"));
             Require(document.SelectedGeneration!.ParentGenerationId == first.Id, "Contour result lost its selected-result parent");
@@ -108,7 +131,9 @@ internal static class ContourUiChecks
             Require(document.Generations.Count == 2, "Tool switch created history");
             window.Close(); window = Open();
             Equal(final, Get<Bitmap>("_downscaledResult"));
-            Require(Get<Slider>("contourWindowInput").Value == 5 && Get<ComboBox>("contourStrictnessInput").SelectedIndex == 2 && Get<CheckBox>("contourDetailGuardInput").IsChecked == false,
+            Require(Get<Slider>("contourWindowInput").Value == 5 && Get<IntegerInput>("contourSimilarityInput").Value == 31 && Get<IntegerInput>("contourPixelGradientInput").Value == 210 &&
+                Get<IntegerInput>("contourNeighborGradientInput").Value == 125 && Get<IntegerInput>("contourNeighborCountInput").Value == 224 &&
+                Get<IntegerInput>("contourAgreementInput").Value == 65 && Get<IntegerInput>("contourOppositionInput").Value == 45 && Get<CheckBox>("contourDetailGuardInput").IsChecked == false,
                 "Saved contour settings did not survive reopening");
             Require(File.ReadAllBytes(path).SequenceEqual(original), "Contours overwrote its original source");
             Console.WriteLine($"  Contours: docked={docked}, language={language}, selected source/result, map, alpha, history, PNG, restart and tool isolation: {folder}");

@@ -363,8 +363,14 @@ public partial class MainWindow
         Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
         ChannelAdjustment = _channelAdjustment,
         ContourWindowSize = ContourWindowSize,
-        ContourStrictness = (ContourCleanStrictness)Math.Clamp(contourStrictnessInput.SelectedIndex, 0, 2),
+        ContourStrictness = ContourCleanStrictness.Strong,
         ContourProtectDetails = contourDetailGuardInput.IsChecked == true,
+        ContourSimilarColorDistance = contourSimilarityInput.Value,
+        ContourMinimumPixelGradient = contourPixelGradientInput.Value,
+        ContourMinimumNeighborGradient = contourNeighborGradientInput.Value,
+        ContourMinimumSimilarNeighbors = contourNeighborCountInput.Value,
+        ContourMinimumAgreement = contourAgreementInput.Value,
+        ContourMinimumOpposition = contourOppositionInput.Value,
         DetectGrid = detectGridInput.IsChecked == true, AlignmentMode = SelectedGridAlignmentMode,
         SnapToGlobalGrid = SelectedGridAlignmentMode == GridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
         AspectLock = aspectLock.IsChecked == true
@@ -407,9 +413,14 @@ public partial class MainWindow
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
             RestoreChannelAdjustment(settings.ChannelAdjustment);
-            contourWindowInput.Value = settings.ContourWindowSize is >= 5 and <= 15 && settings.ContourWindowSize % 2 == 1 ? settings.ContourWindowSize : 15;
-            contourStrictnessInput.SelectedIndex = Math.Clamp((int)settings.ContourStrictness, 0, 2);
+            contourWindowInput.Value = settings.ContourWindowSize is >= 3 and <= 15 && settings.ContourWindowSize % 2 == 1 ? settings.ContourWindowSize : 15;
             contourDetailGuardInput.IsChecked = settings.ContourProtectDetails;
+            contourSimilarityInput.Value = settings.ContourSimilarColorDistance;
+            contourPixelGradientInput.Value = settings.ContourMinimumPixelGradient;
+            contourNeighborGradientInput.Value = settings.ContourMinimumNeighborGradient;
+            contourNeighborCountInput.Value = settings.ContourMinimumSimilarNeighbors;
+            contourAgreementInput.Value = settings.ContourMinimumAgreement;
+            contourOppositionInput.Value = settings.ContourMinimumOpposition;
             (settings.AlignmentMode == GridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
             snapLocalGridInput.IsChecked = settings.SnapToGlobalGrid;
             UpdateGridAlignmentMode();

@@ -14,7 +14,7 @@ public partial class MainWindow
     private bool _contourToolOpen => ActiveLivePreviewTool == "contours";
     private Bitmap? _contourPreviewBitmap, _contourPreviewBasis;
 
-    private int ContourWindowSize => 5 + 2 * Math.Clamp((int)Math.Round((contourWindowInput.Value - 5) / 2), 0, 5);
+    private int ContourWindowSize => 3 + 2 * Math.Clamp((int)Math.Round((contourWindowInput.Value - 3) / 2), 0, 6);
     private bool ContourPreviewVisible => _contourPreviewBitmap is not null &&
         ReferenceEquals(resultPreview.Image, _contourPreviewBitmap);
 
@@ -31,7 +31,10 @@ public partial class MainWindow
             contourWindowLabel.Text = Localization.Format("Область анализа · {0} × {0}", window);
             ScheduleContourPreview();
         };
-        contourStrictnessInput.SelectionChanged += (_, _) => ScheduleContourPreview();
+        foreach (var input in new[] { contourSimilarityInput, contourPixelGradientInput,
+            contourNeighborGradientInput, contourNeighborCountInput, contourAgreementInput, contourOppositionInput })
+            input.ValueChanged += (_, _) => ScheduleContourPreview();
+        UpdateContourWindowLabel();
         contourDetailGuardInput.Checked += (_, _) => ScheduleContourPreview();
         contourDetailGuardInput.Unchecked += (_, _) => ScheduleContourPreview();
         contourPreviewButton.Click += async (_, _) => await RenderContourPreview(true);
@@ -39,11 +42,20 @@ public partial class MainWindow
         Closed += (_, _) => ClearContourPreview();
     }
 
+    private void UpdateContourWindowLabel()
+        => contourWindowLabel.Text = Localization.Format("Область анализа · {0} × {0}", ContourWindowSize);
+
     private ContourCleanOptions BuildContourOptions() => new()
     {
         WindowSize = ContourWindowSize,
-        Strictness = (ContourCleanStrictness)Math.Clamp(contourStrictnessInput.SelectedIndex, 0, 2),
-        ProtectDetails = contourDetailGuardInput.IsChecked == true
+        Strictness = ContourCleanStrictness.Strong,
+        ProtectDetails = contourDetailGuardInput.IsChecked == true,
+        SimilarColorDistance = contourSimilarityInput.Value,
+        MinimumPixelGradient = contourPixelGradientInput.Value,
+        MinimumNeighborGradient = contourNeighborGradientInput.Value,
+        MinimumSimilarNeighbors = contourNeighborCountInput.Value,
+        MinimumAgreement = contourAgreementInput.Value / 100.0,
+        MinimumOpposition = contourOppositionInput.Value / 100.0
     };
 
     private void CloseContourTool()
@@ -167,9 +179,11 @@ public partial class MainWindow
                         ParentGenerationId = parentId,
                         PreservesTransparency = true,
                         Caption = $"КАРТА КОНТУРОВ · {analysis.Heatmap.Width} × {analysis.Heatmap.Height}",
-                        Log = $"Кандидатов: {analysis.CandidateCount}. Окно {options.WindowSize} × {options.WindowSize}; " +
-                            $"строгость {options.Strictness}; защита деталей {(options.ProtectDetails ? "включена" : "выключена")}. " +
-                            "Белый → красный: градиент и кандидаты."
+                        Log = Localization.Format("Кандидатов: {0}. Окно {1} × {1}. Допуск цветов: {2}; градиенты пикселя/соседей: {3}/{4}; похожих соседей: {5}; согласие: {6}%; противоположность: {7}%; защита деталей: {8}.", analysis.CandidateCount,
+                            options.WindowSize, options.SimilarColorDistance, options.MinimumPixelGradient,
+                            options.MinimumNeighborGradient, options.MinimumSimilarNeighbors,
+                            options.MinimumAgreement * 100, options.MinimumOpposition * 100,
+                            Localization.Text(options.ProtectDetails ? "Да" : "Нет"))
                     });
             });
             document.Generations.Add(generation);
