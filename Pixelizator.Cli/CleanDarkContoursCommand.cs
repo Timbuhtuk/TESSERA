@@ -330,6 +330,8 @@ internal static class CleanDarkContoursCommand
           --pair-color-tolerance N      Допуск цвета противоположной пары в LAB: 0–100 (8).
           --no-opposite-pair            Выключить восстановление по паре противоположных цветов.
           --passes N                    Число последовательных проходов: 1–10 (1).
+          --grid-cell-size N            Сеточный режим для ячейки 2–256 px: одиночные выбросы.
+          --grid-color-tolerance N      Допуск похожего RGB при равной альфе: 0–442 (0).
           --overwrite                   Разрешить замену существующего результата.
           --json                        Отчёт JSON.
           -h, --help                    Эта справка.
@@ -411,7 +413,9 @@ internal static class CleanDarkContoursCommand
                 groupedPaletteGain = 20, exemplarMaterialSource = 100,
                 exemplarMaterialBright = 40, exemplarMaterialDrop = 20,
                 exemplarMaterialAgreementDistance = 20;
+            double gridColorTolerance = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
+                gridCellSize = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
                 repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
@@ -479,7 +483,8 @@ internal static class CleanDarkContoursCommand
                 repeatedBridgeRescue = true, sparseDarkPaletteRescue = true,
                 sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
                 sparseDarkPaletteExtended = true, sparsePaletteExclusive = true,
-                exemplarRescue = true, groupedPaletteRescue = true, exemplarMaterialVeto = true;
+                exemplarRescue = true, groupedPaletteRescue = true, exemplarMaterialVeto = true,
+                gridCellSizeSet = false;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -508,6 +513,8 @@ internal static class CleanDarkContoursCommand
                 {
                     case "-o": case "--output": target = NextValue(); break;
                     case "--candidate-audit": candidateAudit = NextValue(); break;
+                    case "--grid-cell-size": gridCellSize = NextInt(); gridCellSizeSet = true; break;
+                    case "--grid-color-tolerance": gridColorTolerance = NextDouble(); break;
                     case "--dark-lightness": darkness = NextDouble(); break;
                     case "--max-dark-neighbors": neighbors = NextInt(); break;
                     case "--max-cardinal-dark": cardinal = NextInt(); break;
@@ -835,6 +842,12 @@ internal static class CleanDarkContoursCommand
             }
             if (input is null) throw new ArgumentException("Не указан исходный PNG.");
             if (passes is < 1 or > 10) throw new ArgumentException("--passes должен быть от 1 до 10.");
+            if (gridCellSizeSet && gridCellSize is < 2 or > 256)
+                throw new ArgumentException("--grid-cell-size должен быть от 2 до 256.");
+            if (!double.IsFinite(gridColorTolerance) || gridColorTolerance is < 0 or > 442)
+                throw new ArgumentException("--grid-color-tolerance должен быть от 0 до 442.");
+            if (!gridCellSizeSet && gridColorTolerance != 0)
+                throw new ArgumentException("--grid-color-tolerance требует --grid-cell-size.");
             if (consensus is < 0 or > 100) throw new ArgumentException("--min-bright-consensus должен быть от 0 до 100.");
             if (component is < 0 or > 100) throw new ArgumentException("--three-neighbor-component должен быть от 0 до 100.");
             if (protectedContinuation is < 0 or > 8)
@@ -1171,6 +1184,41 @@ internal static class CleanDarkContoursCommand
             auditWriter?.WriteLine("pass,x,y,decision");
 
             using var source = new Bitmap(inputPath);
+            if (gridCellSize > 1)
+            {
+                if (gridCellSize > Math.Min(source.Width, source.Height))
+                    throw new ArgumentException("Ячейка сетки больше изображения.");
+                Bitmap gridCurrent = source;
+                int[] gridChanged = new int[passes];
+                try
+                {
+                    for (int q = 0; q < passes; q++)
+                    {
+                        int pass = q + 1;
+                        var result = GridSingletonNoiseCleaner.Clean(gridCurrent, gridCellSize,
+                            gridColorTolerance, auditWriter is null ? null : (x, y, decision) =>
+                                auditWriter.WriteLine($"{pass},{x},{y},{decision}"));
+                        if (!ReferenceEquals(gridCurrent, source)) gridCurrent.Dispose();
+                        gridCurrent = result.Image;
+                        gridChanged[q] = result.ChangedPixels;
+                        if (result.ChangedPixels == 0) break;
+                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+                    gridCurrent.Save(outputPath, ImageFormat.Png);
+                }
+                finally
+                {
+                    if (!ReferenceEquals(gridCurrent, source)) gridCurrent.Dispose();
+                }
+                if (json)
+                    output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours-grid",
+                        input = inputPath, output = outputPath, width = source.Width, height = source.Height,
+                        changedPixels = gridChanged.Sum(), changedPerPass = gridChanged,
+                        gridCellSize, gridColorTolerance }));
+                else
+                    output.WriteLine($"Сохранено: {outputPath}; исправлено сеточных выбросов: {gridChanged.Sum()}.");
+                return 0;
+            }
             Bitmap current = source;
             int[] changed = new int[passes];
             var repeatedDarkAccepted = new List<(int X, int Y)>();
