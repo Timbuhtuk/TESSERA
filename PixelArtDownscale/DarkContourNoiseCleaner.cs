@@ -187,6 +187,10 @@ public static class DarkContourNoiseCleaner
         public double SparseDarkPaletteExtendedMaximumConsensus { get; init; } = 0.5;
         public double SparseDarkPaletteExtendedMinimumLightnessGain { get; init; } = 20;
         public double SparseDarkPaletteExtendedMinimumEnergyDrop { get; init; }
+        public bool UseSparsePaletteExclusiveRescue { get; init; } = true;
+        public double SparsePaletteExclusiveColorTolerance { get; init; } = 0.5;
+        public int SparsePaletteExclusiveMaximumSimilarPixels { get; init; } = 2;
+        public double SparsePaletteExclusiveMinimumLightnessGain { get; init; } = 20;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -384,6 +388,11 @@ public static class DarkContourNoiseCleaner
             options.SparseDarkPaletteExtendedMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparseDarkPaletteExtendedMinimumEnergyDrop) ||
             options.SparseDarkPaletteExtendedMinimumEnergyDrop is < 0 or > 1 ||
+            !double.IsFinite(options.SparsePaletteExclusiveColorTolerance) ||
+            options.SparsePaletteExclusiveColorTolerance is < 0 or > 100 ||
+            options.SparsePaletteExclusiveMaximumSimilarPixels is < 0 or > 1000000 ||
+            !double.IsFinite(options.SparsePaletteExclusiveMinimumLightnessGain) ||
+            options.SparsePaletteExclusiveMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -577,7 +586,10 @@ public static class DarkContourNoiseCleaner
                 dark[index] = color.A > 0 && Lab(color).L < options.DarkLightness;
             }
         var darkColorOccurrences = new Dictionary<int, int>();
-        if (options.UseRepeatedDarkColorRescue)
+        if (options.UseRepeatedDarkColorRescue || options.UseRepeatedDiagonalBridgeRescue ||
+            options.UseSparseDarkPaletteRescue || options.UseSparseDarkPaletteExtendedRescue ||
+            options.UseSparsePaletteConsensusRescue || options.UseSparsePaletteThreeNeighborRescue ||
+            options.UseSparsePaletteExclusiveRescue)
             for (int q = 0; q < original.Length; q++)
             {
                 if (!dark[q]) continue;
@@ -651,8 +663,7 @@ public static class DarkContourNoiseCleaner
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
                     surrounding.Count < 5)
                 { audit?.Invoke(x, y, "dark-neighbors"); continue; }
-                bool rareDarkColor = options.UseRepeatedDarkColorRescue &&
-                    Lab(original[index]).L <= options.RepeatedDarkColorMaximumLightness &&
+                bool rareDarkColor = Lab(original[index]).L <= options.RepeatedDarkColorMaximumLightness &&
                     darkColorOccurrences.TryGetValue(original[index].ToArgb(), out int occurrences) &&
                     occurrences >= options.RepeatedDarkColorMinimumOccurrences &&
                     occurrences <= options.RepeatedDarkColorMaximumOccurrences;
@@ -1029,7 +1040,7 @@ public static class DarkContourNoiseCleaner
                             options.HighContrastColorTolerance,
                             options.HighContrastMinimumSimilarNeighbors,
                             options.HighContrastMinimumOpposition);
-                    bool repeatedDarkRescue = repeatedDarkColor &&
+                    bool repeatedDarkRescue = options.UseRepeatedDarkColorRescue && repeatedDarkColor &&
                         Lab(replacement).L - Lab(original[index]).L >=
                             options.RepeatedDarkColorMinimumLightnessGain &&
                         HasColorPatchEnergyRescue(original, width, x, y, replacement,
@@ -1053,16 +1064,24 @@ public static class DarkContourNoiseCleaner
                         HasSparseDarkPalette(original[index], darkColorOccurrences,
                             options.SparseDarkPaletteExtendedColorTolerance,
                             options.SparseDarkPaletteExtendedMaximumSimilarPixels);
+                    bool sparsePaletteExclusiveRescue = rareDarkColor &&
+                        options.UseSparsePaletteExclusiveRescue &&
+                        Lab(replacement).L - Lab(original[index]).L >=
+                            options.SparsePaletteExclusiveMinimumLightnessGain &&
+                        HasSparseDarkPalette(original[index], darkColorOccurrences,
+                            options.SparsePaletteExclusiveColorTolerance,
+                            options.SparsePaletteExclusiveMaximumSimilarPixels);
                     repeatedDarkOnly |= repeatedDarkRescue && !globalEnergyRescue && !localEnergyRescue &&
                         !texturedRescue && !singleDiagonalGradientRescue &&
                         !threeNeighborGradientAllowed && !extendedTexturedAllowed &&
                         !symmetricPatchAllowed && !highContrastRescue;
-                    repeatedDarkOnly |= sparseDarkPaletteRescue || sparseDarkPaletteExtendedRescue;
+                    repeatedDarkOnly |= sparseDarkPaletteRescue || sparseDarkPaletteExtendedRescue ||
+                        sparsePaletteExclusiveRescue;
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
                         !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue &&
                         !repeatedDarkRescue && !sparseDarkPaletteRescue &&
-                        !sparseDarkPaletteExtendedRescue &&
+                        !sparseDarkPaletteExtendedRescue && !sparsePaletteExclusiveRescue &&
                         !sparsePaletteThreeNeighborRescue)
                     { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }

@@ -267,6 +267,11 @@ internal static class CleanDarkContoursCommand
           --sparse-dark-palette-extended-tolerance N Допуск цветов LAB: 0–100 (0.5).
           --sparse-dark-palette-extended-gain N Минимальное увеличение LAB L: 0–100 (20).
           --sparse-dark-palette-extended-energy N Минимальное снижение перепада: 0–100 % (0).
+          --sparse-palette-exclusive    Допуск исключительного тёмного оттенка без порога перепада (включён).
+          --no-sparse-palette-exclusive Выключить этот допуск.
+          --sparse-palette-exclusive-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
+          --sparse-palette-exclusive-max N Максимум похожих пикселей: 0–1000000 (2).
+          --sparse-palette-exclusive-gain N Минимальное увеличение LAB L: 0–100 (20).
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
           --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
@@ -361,7 +366,8 @@ internal static class CleanDarkContoursCommand
                 sparsePaletteThreeTolerance = 0.5, sparsePaletteThreeGain = 20,
                 sparsePaletteThreeEnergy = 30, sparseDarkPaletteExtendedConsensus = 50,
                 sparseDarkPaletteExtendedTolerance = 0.5,
-                sparseDarkPaletteExtendedGain = 20, sparseDarkPaletteExtendedEnergy = 0;
+                sparseDarkPaletteExtendedGain = 20, sparseDarkPaletteExtendedEnergy = 0,
+                sparsePaletteExclusiveTolerance = 0.5, sparsePaletteExclusiveGain = 20;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -401,7 +407,8 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1,
                 repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5,
                 sparseDarkPaletteMax = 5, sparsePaletteConsensusMax = 0,
-                sparsePaletteThreeMax = 5, sparseDarkPaletteExtendedMax = 10;
+                sparsePaletteThreeMax = 5, sparseDarkPaletteExtendedMax = 10,
+                sparsePaletteExclusiveMax = 2;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -418,7 +425,7 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkRescue = true, repeatedDarkFirstPass = true,
                 repeatedBridgeRescue = true, sparseDarkPaletteRescue = true,
                 sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
-                sparseDarkPaletteExtended = true;
+                sparseDarkPaletteExtended = true, sparsePaletteExclusive = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -700,6 +707,11 @@ internal static class CleanDarkContoursCommand
                     case "--sparse-dark-palette-extended-tolerance": sparseDarkPaletteExtendedTolerance = NextDouble(); break;
                     case "--sparse-dark-palette-extended-gain": sparseDarkPaletteExtendedGain = NextDouble(); break;
                     case "--sparse-dark-palette-extended-energy": sparseDarkPaletteExtendedEnergy = NextDouble(); break;
+                    case "--sparse-palette-exclusive": sparsePaletteExclusive = true; break;
+                    case "--no-sparse-palette-exclusive": sparsePaletteExclusive = false; break;
+                    case "--sparse-palette-exclusive-tolerance": sparsePaletteExclusiveTolerance = NextDouble(); break;
+                    case "--sparse-palette-exclusive-max": sparsePaletteExclusiveMax = NextInt(); break;
+                    case "--sparse-palette-exclusive-gain": sparsePaletteExclusiveGain = NextDouble(); break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
                     case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
@@ -995,6 +1007,10 @@ internal static class CleanDarkContoursCommand
                 SparseDarkPaletteExtendedMaximumConsensus = sparseDarkPaletteExtendedConsensus / 100,
                 SparseDarkPaletteExtendedMinimumLightnessGain = sparseDarkPaletteExtendedGain,
                 SparseDarkPaletteExtendedMinimumEnergyDrop = sparseDarkPaletteExtendedEnergy / 100,
+                UseSparsePaletteExclusiveRescue = sparsePaletteExclusive,
+                SparsePaletteExclusiveColorTolerance = sparsePaletteExclusiveTolerance,
+                SparsePaletteExclusiveMaximumSimilarPixels = sparsePaletteExclusiveMax,
+                SparsePaletteExclusiveMinimumLightnessGain = sparsePaletteExclusiveGain,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
                 SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
@@ -1042,7 +1058,16 @@ internal static class CleanDarkContoursCommand
                     if (q > 0 && symmetricPatchFirstPass)
                         passOptions = passOptions with { UseSymmetricColorPatchRescue = false };
                     if (q > 0 && repeatedDarkFirstPass)
-                        passOptions = passOptions with { UseRepeatedDarkColorRescue = false };
+                        passOptions = passOptions with
+                        {
+                            UseRepeatedDarkColorRescue = false,
+                            UseRepeatedDiagonalBridgeRescue = false,
+                            UseSparseDarkPaletteRescue = false,
+                            UseSparseDarkPaletteExtendedRescue = false,
+                            UseSparsePaletteConsensusRescue = false,
+                            UseSparsePaletteThreeNeighborRescue = false,
+                            UseSparsePaletteExclusiveRescue = false
+                        };
                     if (q == 1 && repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
                         repeatedDarkAccepted.Count > 0)
                     {
