@@ -199,6 +199,19 @@ public static class DarkContourNoiseCleaner
         public int ExemplarMinimumBrightChannel { get; init; } = 25;
         public int ExemplarMaximumDarkChannel { get; init; } = 15;
         public int ExemplarExclusionRadius { get; init; } = 3;
+        public bool UseGroupedPaletteRescue { get; init; } = true;
+        public int GroupedPaletteMaximumChannel { get; init; } = 10;
+        public int GroupedPaletteMinimumOccurrences { get; init; } = 4;
+        public int GroupedPaletteMaximumOccurrences { get; init; } = 8;
+        public int GroupedPaletteNearColorDistance { get; init; } = 4;
+        public int GroupedPaletteMaximumNearPixels { get; init; } = 40;
+        public int GroupedPaletteMinimumSupportedPixels { get; init; } = 4;
+        public int GroupedPaletteMinimumBrightNeighbors { get; init; } = 5;
+        public int GroupedPaletteMaximumDarkNeighbors { get; init; } = 3;
+        public double GroupedPaletteMinimumAverageBrightNeighbors { get; init; } = 5;
+        public double GroupedPaletteMinimumMedianSpacing { get; init; } = 8;
+        public double GroupedPaletteMaximumExemplarRatio { get; init; } = 1.5;
+        public double GroupedPaletteMinimumLightnessGain { get; init; } = 20;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -410,6 +423,23 @@ public static class DarkContourNoiseCleaner
             options.ExemplarMaximumDarkChannel is < 0 or > 255 ||
             options.ExemplarMaximumDarkChannel >= options.ExemplarMinimumBrightChannel ||
             options.ExemplarExclusionRadius is < 1 or > 20 ||
+            options.GroupedPaletteMaximumChannel is < 0 or > 255 ||
+            options.GroupedPaletteMinimumOccurrences is < 1 or > 1000000 ||
+            options.GroupedPaletteMaximumOccurrences is < 1 or > 1000000 ||
+            options.GroupedPaletteMinimumOccurrences > options.GroupedPaletteMaximumOccurrences ||
+            options.GroupedPaletteNearColorDistance is < 0 or > 765 ||
+            options.GroupedPaletteMaximumNearPixels is < 0 or > 1000000 ||
+            options.GroupedPaletteMinimumSupportedPixels is < 1 or > 8 ||
+            options.GroupedPaletteMinimumBrightNeighbors is < 0 or > 8 ||
+            options.GroupedPaletteMaximumDarkNeighbors is < 0 or > 8 ||
+            !double.IsFinite(options.GroupedPaletteMinimumAverageBrightNeighbors) ||
+            options.GroupedPaletteMinimumAverageBrightNeighbors is < 0 or > 8 ||
+            !double.IsFinite(options.GroupedPaletteMinimumMedianSpacing) ||
+            options.GroupedPaletteMinimumMedianSpacing is < 0 or > 10000 ||
+            !double.IsFinite(options.GroupedPaletteMaximumExemplarRatio) ||
+            options.GroupedPaletteMaximumExemplarRatio is < 0 or > 100 ||
+            !double.IsFinite(options.GroupedPaletteMinimumLightnessGain) ||
+            options.GroupedPaletteMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -606,7 +636,8 @@ public static class DarkContourNoiseCleaner
         if (options.UseRepeatedDarkColorRescue || options.UseRepeatedDiagonalBridgeRescue ||
             options.UseSparseDarkPaletteRescue || options.UseSparseDarkPaletteExtendedRescue ||
             options.UseSparsePaletteConsensusRescue || options.UseSparsePaletteThreeNeighborRescue ||
-            options.UseSparsePaletteExclusiveRescue || options.UseExemplarRescue)
+            options.UseSparsePaletteExclusiveRescue || options.UseExemplarRescue ||
+            options.UseGroupedPaletteRescue)
             for (int q = 0; q < original.Length; q++)
             {
                 if (!dark[q]) continue;
@@ -745,7 +776,8 @@ public static class DarkContourNoiseCleaner
                     CountNearDarkPalette(original[index], darkColorOccurrences,
                         options.ExemplarNearColorDistance) : int.MaxValue;
                 bool exemplarRescue = exemplarNearPixels <= options.ExemplarMaximumNearPixels &&
-                    HasBrightExemplar(original, width, height, x, y, options);
+                    HasBrightExemplar(original, width, height, x, y, options,
+                        options.ExemplarMaximumBrightToDarkRatio);
                 bool exemplarEarlyRescue = exemplarRescue &&
                     exemplarNearPixels <= options.ExemplarEarlyMaximumNearPixels;
                 bool noOtherPatchEntry = !colorPatchMatch && !options.UseColorPatchEnergyRescue &&
@@ -1141,10 +1173,13 @@ public static class DarkContourNoiseCleaner
             audit?.Invoke(x, y, proposal.RepeatedDarkRescue ? "accepted-repeated-dark" : "accepted");
         }
 
+        int groupedChanges = options.UseGroupedPaletteRescue ?
+            ApplyGroupedPaletteRescue(original, output, dark, darkColorOccurrences,
+                width, height, options, protectedPixels, audit) : 0;
         var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++) result.SetPixel(x, y, output[y * width + x]);
-        return new Result(result, accepted.Count);
+        return new Result(result, accepted.Count + groupedChanges);
     }
 
     private static bool HasAlphaClearance(Color[] original, int width, int height, int x, int y, int radius)
@@ -1406,7 +1441,7 @@ public static class DarkContourNoiseCleaner
     }
 
     private static bool HasBrightExemplar(Color[] colors, int width, int height, int x, int y,
-        Options options)
+        Options options, double maximumRatio)
     {
         double bestBright = double.PositiveInfinity, bestDark = double.PositiveInfinity;
         for (int sampleY = 1; sampleY < height - 1; sampleY++)
@@ -1440,7 +1475,121 @@ public static class DarkContourNoiseCleaner
                 else bestDark = Math.Min(bestDark, difference);
             }
         return double.IsFinite(bestBright) && double.IsFinite(bestDark) && bestDark > 0 &&
-            bestBright <= bestDark * options.ExemplarMaximumBrightToDarkRatio;
+            bestBright <= bestDark * maximumRatio;
+    }
+
+    private static int ApplyGroupedPaletteRescue(Color[] original, Color[] output, bool[] dark,
+        Dictionary<int, int> darkColorOccurrences, int width, int height, Options options,
+        bool[]? protectedPixels, Action<int, int, string>? audit)
+    {
+        var groups = new Dictionary<int, List<(int X, int Y)>>();
+        for (int y = 1; y < height - 1; y++)
+            for (int x = 1; x < width - 1; x++)
+            {
+                int index = y * width + x;
+                Color color = original[index];
+                if (!dark[index] || color.A != 255 ||
+                    Math.Max(color.R, Math.Max(color.G, color.B)) >
+                        options.GroupedPaletteMaximumChannel) continue;
+                int key = color.ToArgb();
+                if (!groups.TryGetValue(key, out List<(int X, int Y)>? points))
+                {
+                    points = new List<(int X, int Y)>();
+                    groups.Add(key, points);
+                }
+                points.Add((x, y));
+            }
+
+        int changed = 0;
+        foreach (KeyValuePair<int, List<(int X, int Y)>> group in groups)
+        {
+            List<(int X, int Y)> points = group.Value;
+            if (points.Count < options.GroupedPaletteMinimumOccurrences ||
+                points.Count > options.GroupedPaletteMaximumOccurrences) continue;
+            Color color = Color.FromArgb(group.Key);
+            if (CountNearDarkPalette(color, darkColorOccurrences,
+                    options.GroupedPaletteNearColorDistance) >
+                options.GroupedPaletteMaximumNearPixels) continue;
+
+            var supported = new bool[points.Count];
+            double totalBright = 0;
+            int supportedCount = 0;
+            for (int q = 0; q < points.Count; q++)
+            {
+                (int x, int y) = points[q];
+                int brightNeighbors = 0, darkNeighbors = 0;
+                bool visible = true;
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        Color neighbor = original[(y + dy) * width + x + dx];
+                        if (neighbor.A != 255) { visible = false; continue; }
+                        int maximumChannel = Math.Max(neighbor.R,
+                            Math.Max(neighbor.G, neighbor.B));
+                        if (maximumChannel > options.ExemplarMinimumBrightChannel) brightNeighbors++;
+                        if (maximumChannel <= options.ExemplarMaximumDarkChannel) darkNeighbors++;
+                    }
+                if (!visible) continue;
+                totalBright += brightNeighbors;
+                supported[q] = brightNeighbors >= options.GroupedPaletteMinimumBrightNeighbors &&
+                    darkNeighbors <= options.GroupedPaletteMaximumDarkNeighbors;
+                if (supported[q]) supportedCount++;
+            }
+            if (supportedCount < options.GroupedPaletteMinimumSupportedPixels ||
+                totalBright / points.Count <
+                    options.GroupedPaletteMinimumAverageBrightNeighbors) continue;
+
+            var nearest = new double[points.Count];
+            for (int q = 0; q < points.Count; q++)
+            {
+                double distanceSquared = double.PositiveInfinity;
+                for (int e = 0; e < points.Count; e++)
+                {
+                    if (q == e) continue;
+                    int dx = points[q].X - points[e].X;
+                    int dy = points[q].Y - points[e].Y;
+                    distanceSquared = Math.Min(distanceSquared, dx * dx + dy * dy);
+                }
+                nearest[q] = Math.Sqrt(distanceSquared);
+            }
+            Array.Sort(nearest);
+            double medianSpacing = points.Count % 2 == 0 ?
+                (nearest[points.Count / 2 - 1] + nearest[points.Count / 2]) / 2 :
+                nearest[points.Count / 2];
+            if (medianSpacing < options.GroupedPaletteMinimumMedianSpacing) continue;
+
+            for (int q = 0; q < points.Count; q++)
+            {
+                if (!supported[q]) continue;
+                (int x, int y) = points[q];
+                int index = y * width + x;
+                if (output[index].ToArgb() != original[index].ToArgb() ||
+                    protectedPixels is not null && protectedPixels[index] ||
+                    !HasAlphaClearance(original, width, height, x, y, options.AlphaClearance) ||
+                    !HasBrightExemplar(original, width, height, x, y, options,
+                        options.GroupedPaletteMaximumExemplarRatio)) continue;
+                var surrounding = new List<NeighborColor>(8);
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        Color neighbor = original[(y + dy) * width + x + dx];
+                        if (Math.Max(neighbor.R, Math.Max(neighbor.G, neighbor.B)) <=
+                            options.ExemplarMinimumBrightChannel) continue;
+                        surrounding.Add(new NeighborColor(neighbor,
+                            dx == 0 || dy == 0 ? options.CardinalColorWeight : 1));
+                    }
+                Color replacement = BrightRepresentative(surrounding, options.BrightColorTolerance);
+                if (Lab(replacement).L - Lab(original[index]).L <
+                    options.GroupedPaletteMinimumLightnessGain) continue;
+                output[index] = Color.FromArgb(original[index].A,
+                    replacement.R, replacement.G, replacement.B);
+                changed++;
+                audit?.Invoke(x, y, "accepted-grouped-palette");
+            }
+        }
+        return changed;
     }
 
     private static bool HasSparseDarkPalette(Color color, Dictionary<int, int> occurrences,
