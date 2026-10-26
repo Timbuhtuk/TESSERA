@@ -135,6 +135,7 @@ param(
     [double]$ColorPatchTolerance = 15,
     [int]$ColorPatchMinimumBright = 1,
     [double]$ColorPatchRatio = 3,
+    [int]$ColorPatchMaxDifferences = 0,
     [int]$Passes = 1
 )
 
@@ -260,7 +261,7 @@ foreach ($kind in @('clean', 'noisy'))
             --common-magnitude-ratio $CommonMagnitudeRatio --common-min-agreement $CommonMinimumAgreement `
             --common-min-opposition $CommonMinimumOpposition `
             --color-patch-tolerance $ColorPatchTolerance --color-patch-min-bright $ColorPatchMinimumBright `
-            --color-patch-ratio $ColorPatchRatio `
+            --color-patch-ratio $ColorPatchRatio --color-patch-max-differences $ColorPatchMaxDifferences `
             $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)

@@ -146,6 +146,7 @@ internal static class CleanDarkContoursCommand
           --color-patch-tolerance N   RMS расстояние цветов окружения в LAB: 0–100 (15).
           --color-patch-min-bright N  Минимум повторов со светлым центром: 0–10000 (1).
           --color-patch-ratio N       Светлых повторов к тёмным: 0–100 (3).
+          --color-patch-max-differences N  Допуск несовпадений в окружении 3×3: 0–2 (0).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -219,7 +220,7 @@ internal static class CleanDarkContoursCommand
                 mainSparseMinimumNeighbors = 10, brightCornerMaxDark = 2,
                 brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
                 verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4,
-                colorPatchMinBright = 1;
+                colorPatchMinBright = 1, colorPatchMaxDifferences = 0;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -387,6 +388,7 @@ internal static class CleanDarkContoursCommand
                     case "--color-patch-tolerance": colorPatchTolerance = NextDouble(); break;
                     case "--color-patch-min-bright": colorPatchMinBright = NextInt(); break;
                     case "--color-patch-ratio": colorPatchRatio = NextDouble(); break;
+                    case "--color-patch-max-differences": colorPatchMaxDifferences = NextInt(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -567,7 +569,8 @@ internal static class CleanDarkContoursCommand
                 RequireColorMatchedPatch = requireColorPatch,
                 ColorMatchedPatchTolerance = colorPatchTolerance,
                 ColorMatchedPatchMinimumBrightMatches = colorPatchMinBright,
-                ColorMatchedPatchBrightRatio = colorPatchRatio
+                ColorMatchedPatchBrightRatio = colorPatchRatio,
+                ColorMatchedPatchMaximumPatternDifferences = colorPatchMaxDifferences
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,

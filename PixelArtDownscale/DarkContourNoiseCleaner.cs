@@ -85,6 +85,7 @@ public static class DarkContourNoiseCleaner
         public double ColorMatchedPatchTolerance { get; init; } = 15;
         public int ColorMatchedPatchMinimumBrightMatches { get; init; } = 1;
         public double ColorMatchedPatchBrightRatio { get; init; } = 3;
+        public int ColorMatchedPatchMaximumPatternDifferences { get; init; }
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -114,6 +115,7 @@ public static class DarkContourNoiseCleaner
             !double.IsFinite(options.ColorMatchedPatchTolerance) ||
             options.ColorMatchedPatchTolerance is < 0 or > 100 ||
             options.ColorMatchedPatchMinimumBrightMatches is < 0 or > 10000 ||
+            options.ColorMatchedPatchMaximumPatternDifferences is < 0 or > 2 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -308,7 +310,8 @@ public static class DarkContourNoiseCleaner
             options.TwoCardinalMinimumBrightPatternMatches > 0 ?
             BuildPatchCounts(original, dark, width, height, 1) : new();
         Dictionary<UInt128, List<ColorPatchSample>> colorPatchIndex =
-            options.RequireColorMatchedPatch ? BuildColorPatchIndex(original, dark, width, height) : new();
+            options.RequireColorMatchedPatch ? BuildColorPatchIndex(original, dark, width, height,
+                options.ColorMatchedPatchMaximumPatternDifferences) : new();
 
         var output = (Color[])original.Clone();
         var proposals = new List<Proposal>();
@@ -683,7 +686,7 @@ public static class DarkContourNoiseCleaner
     }
 
     private static Dictionary<UInt128, List<ColorPatchSample>> BuildColorPatchIndex(
-        Color[] colors, bool[] dark, int width, int height)
+        Color[] colors, bool[] dark, int width, int height, int maximumDifferences)
     {
         var candidatePatterns = new HashSet<UInt128>();
         for (int y = 1; y < height - 1; y++)
@@ -691,22 +694,69 @@ public static class DarkContourNoiseCleaner
                 if (dark[y * width + x])
                     candidatePatterns.Add(PatchPattern(colors, dark, width, x, y, 1));
 
-        var index = new Dictionary<UInt128, List<ColorPatchSample>>();
+        var exact = new Dictionary<UInt128, List<ColorPatchSample>>();
         for (int y = 1; y < height - 1; y++)
             for (int x = 1; x < width - 1; x++)
             {
                 int pixel = y * width + x;
                 if (colors[pixel].A == 0) continue;
                 UInt128 pattern = PatchPattern(colors, dark, width, x, y, 1);
-                if (!candidatePatterns.Contains(pattern)) continue;
-                if (!index.TryGetValue(pattern, out List<ColorPatchSample>? matches))
+                if (maximumDifferences == 0 && !candidatePatterns.Contains(pattern)) continue;
+                if (!exact.TryGetValue(pattern, out List<ColorPatchSample>? matches))
                 {
                     matches = new List<ColorPatchSample>();
-                    index.Add(pattern, matches);
+                    exact.Add(pattern, matches);
                 }
                 matches.Add(new ColorPatchSample(dark[pixel], ColorPatchRing(colors, width, x, y)));
             }
+        if (maximumDifferences == 0) return exact;
+
+        var index = new Dictionary<UInt128, List<ColorPatchSample>>();
+        foreach (UInt128 candidate in candidatePatterns)
+        {
+            var matches = new List<ColorPatchSample>();
+            if (exact.TryGetValue(candidate, out List<ColorPatchSample>? same))
+                matches.AddRange(same);
+            UInt128 rest = candidate, place = 1;
+            for (int q = 0; q < 8; q++)
+            {
+                int digit = (int)(rest % 3);
+                rest /= 3;
+                UInt128 nextRest = rest, nextPlace = place * 3;
+                for (int replacement = 0; replacement < 3; replacement++)
+                {
+                    if (replacement == digit) continue;
+                    UInt128 oneDifference = ReplacePatchDigit(candidate, digit, replacement, place);
+                    if (exact.TryGetValue(oneDifference, out List<ColorPatchSample>? one))
+                        matches.AddRange(one);
+                    if (maximumDifferences < 2) continue;
+                    UInt128 laterRest = nextRest, laterPlace = nextPlace;
+                    for (int e = q + 1; e < 8; e++)
+                    {
+                        int laterDigit = (int)(laterRest % 3);
+                        laterRest /= 3;
+                        for (int laterReplacement = 0; laterReplacement < 3; laterReplacement++)
+                        {
+                            if (laterReplacement == laterDigit) continue;
+                            UInt128 twoDifferences = ReplacePatchDigit(oneDifference,
+                                laterDigit, laterReplacement, laterPlace);
+                            if (exact.TryGetValue(twoDifferences, out List<ColorPatchSample>? two))
+                                matches.AddRange(two);
+                        }
+                        laterPlace *= 3;
+                    }
+                }
+                place = nextPlace;
+            }
+            if (matches.Count > 0) index.Add(candidate, matches);
+        }
         return index;
+    }
+
+    private static UInt128 ReplacePatchDigit(UInt128 pattern, int oldDigit, int newDigit, UInt128 place)
+    {
+        return newDigit > oldDigit ? pattern + (uint)(newDigit - oldDigit) * place :
+            pattern - (uint)(oldDigit - newDigit) * place;
     }
 
     private static bool HasColorMatchedPatch(Color[] colors, bool[] dark, int width, int x, int y,
