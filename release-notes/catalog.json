@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Контуры: окно 3 × 3 и отдельные пороги",
+        "en": "Contours: 3 × 3 windows and individual thresholds"
+      },
+      "notes": {
+        "ru": "- Контуры: область анализа теперь начинается с 3 × 3. Вместо общей строгости отдельно настраиваются похожесть цветов, сила перепада пикселя и соседей, число похожих соседей, согласие и противоположность направлений.\n- Карта контуров: кандидаты выбираются по направлению перепада относительно похожих соседей. Близкие оттенки слабее влияют на фон карты, контрастные — сильнее. Некоторые ранее отмечавшиеся пиксели могут больше не быть кандидатами.\n- Настройки Контуров: пороги обновляют живую карту, сохраняются с результатом и восстанавливаются при открытии истории.\n- CLI: новые пороги доступны в clean-contours. Карта показывает всех найденных кандидатов, а исправляются только те, для которых удалось выбрать подходящую замену; число кандидатов и число замен могут различаться.",
+        "en": "- Contours: the analysis window now starts at 3 × 3. Replace the general strictness selector with separate controls for color similarity, pixel and neighbor gradient strength, similar-neighbor count, directional agreement and opposition.\n- Contour map: candidates are selected by the direction of a color change relative to similar neighbors. Nearby shades contribute less to the map background and contrasting colors contribute more. Some previously marked pixels may no longer be candidates.\n- Contour settings: thresholds update the live map, are saved with results and are restored from history.\n- CLI: clean-contours exposes the new thresholds. The mask contains every detected candidate, while only candidates with a suitable replacement are changed; candidate and change counts can differ."
+      }
+    },
+    {
+      "version": "2.7.0",
+      "title": {
         "ru": "Контуры: карта кандидатов и градиентов",
         "en": "Contours: candidate and gradient maps"
       },

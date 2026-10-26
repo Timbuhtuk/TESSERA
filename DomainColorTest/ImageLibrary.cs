@@ -24,6 +24,12 @@ public sealed class EditorSettings
     public int ContourWindowSize { get; set; } = 15;
     public ContourCleanStrictness ContourStrictness { get; set; } = ContourCleanStrictness.Strong;
     public bool ContourProtectDetails { get; set; }
+    public int ContourSimilarColorDistance { get; set; } = 24;
+    public int ContourMinimumPixelGradient { get; set; } = 120;
+    public int ContourMinimumNeighborGradient { get; set; } = 80;
+    public int ContourMinimumSimilarNeighbors { get; set; } = 2;
+    public int ContourMinimumAgreement { get; set; } = 35;
+    public int ContourMinimumOpposition { get; set; } = 10;
     public bool AspectLock { get; set; }
 }
 

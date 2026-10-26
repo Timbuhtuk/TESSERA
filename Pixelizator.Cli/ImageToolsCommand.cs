@@ -42,20 +42,27 @@ internal static class ImageToolsCommand
         """;
 
     internal const string ContourHelp = """
-        Tessera clean-contours — исправить уверенные ошибки цвета вдоль границ пиксель-арта.
+        Tessera clean-contours — найти градиентных кандидатов и осторожно исправить часть из них.
         Использование: tessera clean-contours input.png [-o output.png] [параметры]
 
           -i, --input PATH          Изображение после предварительной очистки.
           -o, --output PATH         PNG; по умолчанию <имя>_contours.png.
-          --window-size N           Размер области анализа: 5, 7, 9, 11, 13 или 15 (7).
-          --strictness VALUE        cautious, normal, strong (cautious).
+          --window-size N           Размер области анализа: 3, 5, 7, 9, 11, 13 или 15 (7).
+          --similar-color-distance N Допуск похожих цветов в LAB: 0–100 (24).
+          --min-pixel-gradient N    Минимальный градиент пикселя в ΔE²: 0–20000 (120).
+          --min-neighbor-gradient N Минимальный градиент соседа в ΔE²: 0–20000 (80).
+          --min-similar-neighbors N Минимум похожих соседей: 1–224 (2).
+          --min-agreement N         Согласие направлений соседей: 0–100% (35).
+          --min-opposition N        Противоположность градиентов: 0–100% (10).
+          --strictness VALUE        Строгость последующей замены: cautious, normal, strong (cautious).
           --no-detail-guard         Отключить защиту тонких линий и перемычек.
           --candidates-output PATH  PNG-карта предложенных изменений.
           --overwrite              Разрешить замену существующих результатов.
           --json                   Отчёт JSON.
           -h, --help                Эта справка.
 
-        Один проход; однородные участки не очищаются. Размер и альфа сохраняются.
+        Кандидат имеет сильный градиент против общего градиента соседей похожего цвета.
+        Кандидат может остаться без замены, если модель границы не уверена. Размер и альфа сохраняются.
         Для замены используются только цвета исходного изображения.
         """;
 
@@ -175,7 +182,9 @@ internal static class ImageToolsCommand
         if (ShowHelp(args, ContourHelp, output)) return 0;
         try
         {
-            var parsed = Parse(args, ["--input", "--output", "--window-size", "--strictness", "--candidates-output"],
+            var parsed = Parse(args, ["--input", "--output", "--window-size", "--strictness", "--candidates-output",
+                    "--similar-color-distance", "--min-pixel-gradient", "--min-neighbor-gradient",
+                    "--min-similar-neighbors", "--min-agreement", "--min-opposition"],
                 ["--overwrite", "--json", "--no-detail-guard"]);
             string target = GetImageOutput(parsed, "_contours.png");
             string? candidates = parsed.Value("--candidates-output");
@@ -186,7 +195,7 @@ internal static class ImageToolsCommand
                     throw new CliUsageException("--candidates-output должен иметь расширение .png.");
             }
             ValidateOutputs(parsed.Input, parsed.Flag("--overwrite"), target, candidates);
-            int windowSize = parsed.Integer("--window-size", 7, 5, 15);
+            int windowSize = parsed.Integer("--window-size", 7, 3, 15);
             if (windowSize % 2 == 0) throw new CliUsageException("--window-size должен быть нечётным.");
             string strictness = parsed.Choice("--strictness", "cautious", "cautious", "normal", "strong");
             var options = new ContourCleanOptions
@@ -198,7 +207,13 @@ internal static class ImageToolsCommand
                     "strong" => ContourCleanStrictness.Strong,
                     _ => ContourCleanStrictness.Cautious
                 },
-                ProtectDetails = !parsed.Flag("--no-detail-guard")
+                ProtectDetails = !parsed.Flag("--no-detail-guard"),
+                SimilarColorDistance = parsed.Integer("--similar-color-distance", 24, 0, 100),
+                MinimumPixelGradient = parsed.Integer("--min-pixel-gradient", 120, 0, 20000),
+                MinimumNeighborGradient = parsed.Integer("--min-neighbor-gradient", 80, 0, 20000),
+                MinimumSimilarNeighbors = parsed.Integer("--min-similar-neighbors", 2, 1, 224),
+                MinimumAgreement = parsed.Integer("--min-agreement", 35, 0, 100) / 100.0,
+                MinimumOpposition = parsed.Integer("--min-opposition", 10, 0, 100) / 100.0
             };
             using var source = Load(parsed.Input);
             var timer = Stopwatch.StartNew();
@@ -216,7 +231,10 @@ internal static class ImageToolsCommand
                 {
                     process = "clean-contours", input = parsed.Input, output = target,
                     candidatesOutput = candidates, windowSize, strictness,
-                    protectDetails = options.ProtectDetails, result.CandidateCount, result.ChangedPixels,
+                    protectDetails = options.ProtectDetails, options.SimilarColorDistance,
+                    options.MinimumPixelGradient, options.MinimumNeighborGradient,
+                    options.MinimumSimilarNeighbors, options.MinimumAgreement, options.MinimumOpposition,
+                    result.CandidateCount, result.ChangedPixels,
                     elapsedSeconds = timer.Elapsed.TotalSeconds
                 }));
             else output.WriteLine($"Сохранено: {target}; кандидатов {result.CandidateCount}, изменений {result.ChangedPixels}; {Seconds(timer)} с.");
