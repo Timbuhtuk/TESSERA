@@ -1,6 +1,7 @@
 param(
     [string]$CliDll = (Join-Path $PSScriptRoot '..\..\Pixelizator.Cli\bin\Release\net8.0-windows\tessera.dll'),
     [string]$CorpusRoot = (Join-Path $PSScriptRoot 'corpus'),
+    [double]$DarkLightness = 5,
     [double]$MinGain = 20,
     [double]$Consensus = 60,
     [int]$AlphaClearance = 1,
@@ -227,6 +228,7 @@ foreach ($kind in @('clean', 'noisy'))
     {
         $target = Join-Path $outputDir $file.Name
         $line = & dotnet $cli clean-dark-contours $file.FullName -o $target --json --overwrite `
+            --dark-lightness $DarkLightness `
             --min-lightness-gain $MinGain --min-bright-consensus $Consensus `
             --alpha-clearance $AlphaClearance --max-cardinal-dark $MaxCardinalDark `
             --two-cardinal-dark5 $TwoCardinalDark5 --two-cardinal-component $TwoCardinalComponent `
