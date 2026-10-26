@@ -349,6 +349,48 @@ internal static class CleanDarkContoursCommand
           --confirmed-group-gradient-agreement N Согласие градиентов соседей: 0–1 (0.08).
           --confirmed-group-gradient-opposition N Противоположность центра: 0–1 (0.9).
           --confirmed-group-gradient-error N Максимальная ошибка окружения образца: 0–100000000 (50000).
+          --confirmed-group-gradient-close-radius N Радиус для светлого луча: 1–15 (3).
+          --confirmed-group-gradient-close-ratio N Модуль центра к среднему на малом радиусе: 0–10 (1.1).
+          --confirmed-group-gradient-ray-color N Допуск двух пикселей светлого луча LAB: 0–100 (15).
+          --confirmed-group-square        Проверять три согласованных соседа в квадрате 2×2 (включено).
+          --no-confirmed-group-square     Выключить эту проверку.
+          --confirmed-group-square-prior N Минимум ранее исправленных точек цвета: 1–1000000 (1).
+          --confirmed-group-square-color N Допуск цвета трёх соседей LAB: 0–100 (15).
+          --confirmed-group-square-gain N Минимальный прирост LAB L: 0–100 (20).
+          --confirmed-group-late-cardinal Повторить проверку контура после исправлений группы (включено).
+          --no-confirmed-group-late-cardinal Выключить повторную проверку.
+          --confirmed-group-late-prior N Минимум ранее исправленных точек цвета: 1–1000000 (3).
+          --confirmed-group-late-ratio N Отношение ошибок образцов при двух тёмных соседях: 0–100 (0.2).
+          --confirmed-group-late-error N Ошибка окружения образца: 0–100000000 (25000).
+          --rich-palette-material-veto   Беречь продолжение исходного тёмного материала в богатой палитре (включено).
+          --no-rich-palette-material-veto Выключить эту защиту.
+          --rich-palette-min-colors N    Минимум различных цветов PNG: 1–100000000 (513).
+          --rich-palette-dark-channel N  Максимальный RGB-канал защищаемого пикселя: 0–255 (20).
+          --rich-palette-neighbor-color N Допуск похожего тёмного соседа LAB: 0–100 (5).
+          --rich-palette-suspicious-min N Нижняя граница повторов возможного шума: 1–1000000 (4).
+          --rich-palette-suspicious-max N Верхняя граница повторов возможного шума: 1–1000000 (8).
+          --chromatic-exemplar          Выбирать цветной образец вместо нейтральной замены (включено).
+          --no-chromatic-exemplar       Выключить выбор цветного образца.
+          --chromatic-exemplar-neutral N Максимальная цветность предлагаемой замены LAB: 0–100 (5).
+          --chromatic-exemplar-color N  Минимальная цветность образца и соседа LAB: 0–150 (20).
+          --chromatic-exemplar-error N  Максимальная ошибка окружения образца: 0–100000000 (50000).
+          --chromatic-exemplar-ratio N  Отношение ошибок светлого и тёмного образцов: 0–100 (0.4).
+          --neutral-exemplar            Восстанавливать тёмно-серую границу по образцу (включено).
+          --no-neutral-exemplar         Выключить этот выбор цвета.
+          --neutral-exemplar-proposed N Максимальная цветность замены LAB: 0–100 (5).
+          --neutral-exemplar-sample N   Максимальная цветность образца LAB: 0–100 (5).
+          --neutral-exemplar-drop N     Минимальная разница яркости замены и образца LAB L: 0–100 (40).
+          --neutral-exemplar-error N    Максимальная ошибка окружения образца: 0–100000000 (10000).
+          --neutral-exemplar-ratio N    Отношение ошибок светлого и тёмного образцов: 0–100 (0.3).
+          --neutral-exemplar-blend      Усреднять спорную светло-серую замену с образцом (включено).
+          --no-neutral-exemplar-blend   Выключить усреднение.
+          --neutral-blend-min-colors N  Минимум различных цветов PNG: 1–100000000 (513).
+          --neutral-blend-proposed N    Максимальная цветность замены LAB: 0–100 (5).
+          --neutral-blend-sample N      Максимальная цветность образца LAB: 0–100 (10).
+          --neutral-blend-drop N        Минимальная разница LAB L: 0–100 (40).
+          --neutral-blend-error N       Максимальная ошибка окружения: 0–100000000 (50000).
+          --neutral-blend-ratio N       Отношение ошибок образцов: 0–100 (1).
+          --neutral-blend-weight N      Вес цвета образца: 0–1 (0.5).
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
           --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
@@ -462,7 +504,19 @@ internal static class CleanDarkContoursCommand
                 confirmedGroupGradientColor = 24,
                 confirmedGroupGradientRatio = 1.05,
                 confirmedGroupGradientAgreement = 0.08,
-                confirmedGroupGradientOpposition = 0.9;
+                confirmedGroupGradientOpposition = 0.9,
+                confirmedGroupGradientCloseRatio = 1.1,
+                confirmedGroupGradientRayColor = 15,
+                confirmedGroupSquareColor = 15, confirmedGroupSquareGain = 20,
+                confirmedGroupLateRatio = 0.2,
+                richPaletteNeighborColor = 5,
+                chromaticExemplarNeutral = 5, chromaticExemplarColor = 20,
+                chromaticExemplarRatio = 0.4,
+                neutralExemplarProposed = 5, neutralExemplarSample = 5,
+                neutralExemplarDrop = 40, neutralExemplarRatio = 0.3,
+                neutralBlendProposed = 5, neutralBlendSample = 10,
+                neutralBlendDrop = 40, neutralBlendRatio = 1,
+                neutralBlendWeight = 0.5;
             double gridColorTolerance = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 gridCellSize = 1,
@@ -523,6 +577,13 @@ internal static class CleanDarkContoursCommand
                 confirmedGroupCardinalExemplarError = 10000,
                 confirmedGroupGradientPrior = 1, confirmedGroupGradientRadius = 5,
                 confirmedGroupGradientNeighbors = 5, confirmedGroupGradientError = 50000,
+                confirmedGroupGradientCloseRadius = 3,
+                confirmedGroupSquarePrior = 1,
+                confirmedGroupLatePrior = 3, confirmedGroupLateError = 25000,
+                richPaletteMinColors = 513, richPaletteDarkChannel = 20,
+                richPaletteSuspiciousMin = 4, richPaletteSuspiciousMax = 8,
+                chromaticExemplarError = 50000, neutralExemplarError = 10000,
+                neutralBlendMinColors = 513, neutralBlendError = 50000,
                 localMaterialNeighbors = 3,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
                 groupedPaletteDark = 3, exemplarMaterialError = 20000,
@@ -549,7 +610,12 @@ internal static class CleanDarkContoursCommand
                 gridCellSizeSet = false, exemplarMaterialInterpass = true,
                 confirmedGroupExemplar = true, confirmedGroupCardinal = true,
                 confirmedGroupCardinalMaterialVeto = false,
-                confirmedGroupGradient = true;
+                confirmedGroupGradient = true,
+                confirmedGroupSquare = true,
+                confirmedGroupLateCardinal = true,
+                richPaletteMaterialVeto = true,
+                chromaticExemplar = true, neutralExemplar = true,
+                neutralBlend = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -915,6 +981,48 @@ internal static class CleanDarkContoursCommand
                     case "--confirmed-group-gradient-agreement": confirmedGroupGradientAgreement = NextDouble(); break;
                     case "--confirmed-group-gradient-opposition": confirmedGroupGradientOpposition = NextDouble(); break;
                     case "--confirmed-group-gradient-error": confirmedGroupGradientError = NextInt(); break;
+                    case "--confirmed-group-gradient-close-radius": confirmedGroupGradientCloseRadius = NextInt(); break;
+                    case "--confirmed-group-gradient-close-ratio": confirmedGroupGradientCloseRatio = NextDouble(); break;
+                    case "--confirmed-group-gradient-ray-color": confirmedGroupGradientRayColor = NextDouble(); break;
+                    case "--confirmed-group-square": confirmedGroupSquare = true; break;
+                    case "--no-confirmed-group-square": confirmedGroupSquare = false; break;
+                    case "--confirmed-group-square-prior": confirmedGroupSquarePrior = NextInt(); break;
+                    case "--confirmed-group-square-color": confirmedGroupSquareColor = NextDouble(); break;
+                    case "--confirmed-group-square-gain": confirmedGroupSquareGain = NextDouble(); break;
+                    case "--confirmed-group-late-cardinal": confirmedGroupLateCardinal = true; break;
+                    case "--no-confirmed-group-late-cardinal": confirmedGroupLateCardinal = false; break;
+                    case "--confirmed-group-late-prior": confirmedGroupLatePrior = NextInt(); break;
+                    case "--confirmed-group-late-ratio": confirmedGroupLateRatio = NextDouble(); break;
+                    case "--confirmed-group-late-error": confirmedGroupLateError = NextInt(); break;
+                    case "--rich-palette-material-veto": richPaletteMaterialVeto = true; break;
+                    case "--no-rich-palette-material-veto": richPaletteMaterialVeto = false; break;
+                    case "--rich-palette-min-colors": richPaletteMinColors = NextInt(); break;
+                    case "--rich-palette-dark-channel": richPaletteDarkChannel = NextInt(); break;
+                    case "--rich-palette-neighbor-color": richPaletteNeighborColor = NextDouble(); break;
+                    case "--rich-palette-suspicious-min": richPaletteSuspiciousMin = NextInt(); break;
+                    case "--rich-palette-suspicious-max": richPaletteSuspiciousMax = NextInt(); break;
+                    case "--chromatic-exemplar": chromaticExemplar = true; break;
+                    case "--no-chromatic-exemplar": chromaticExemplar = false; break;
+                    case "--chromatic-exemplar-neutral": chromaticExemplarNeutral = NextDouble(); break;
+                    case "--chromatic-exemplar-color": chromaticExemplarColor = NextDouble(); break;
+                    case "--chromatic-exemplar-error": chromaticExemplarError = NextInt(); break;
+                    case "--chromatic-exemplar-ratio": chromaticExemplarRatio = NextDouble(); break;
+                    case "--neutral-exemplar": neutralExemplar = true; break;
+                    case "--no-neutral-exemplar": neutralExemplar = false; break;
+                    case "--neutral-exemplar-proposed": neutralExemplarProposed = NextDouble(); break;
+                    case "--neutral-exemplar-sample": neutralExemplarSample = NextDouble(); break;
+                    case "--neutral-exemplar-drop": neutralExemplarDrop = NextDouble(); break;
+                    case "--neutral-exemplar-error": neutralExemplarError = NextInt(); break;
+                    case "--neutral-exemplar-ratio": neutralExemplarRatio = NextDouble(); break;
+                    case "--neutral-exemplar-blend": neutralBlend = true; break;
+                    case "--no-neutral-exemplar-blend": neutralBlend = false; break;
+                    case "--neutral-blend-min-colors": neutralBlendMinColors = NextInt(); break;
+                    case "--neutral-blend-proposed": neutralBlendProposed = NextDouble(); break;
+                    case "--neutral-blend-sample": neutralBlendSample = NextDouble(); break;
+                    case "--neutral-blend-drop": neutralBlendDrop = NextDouble(); break;
+                    case "--neutral-blend-error": neutralBlendError = NextInt(); break;
+                    case "--neutral-blend-ratio": neutralBlendRatio = NextDouble(); break;
+                    case "--neutral-blend-weight": neutralBlendWeight = NextDouble(); break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
                     case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
@@ -1286,6 +1394,42 @@ internal static class CleanDarkContoursCommand
                 ConfirmedGroupGradientMinimumAgreement = confirmedGroupGradientAgreement,
                 ConfirmedGroupGradientMinimumOpposition = confirmedGroupGradientOpposition,
                 ConfirmedGroupGradientMaximumExemplarRingError = confirmedGroupGradientError,
+                ConfirmedGroupGradientCloseRadius = confirmedGroupGradientCloseRadius,
+                ConfirmedGroupGradientCloseMinimumMagnitudeRatio = confirmedGroupGradientCloseRatio,
+                ConfirmedGroupGradientRayColorTolerance = confirmedGroupGradientRayColor,
+                UseConfirmedGroupSquareRescue = confirmedGroupSquare,
+                ConfirmedGroupSquareMinimumPriorChanges = confirmedGroupSquarePrior,
+                ConfirmedGroupSquareColorTolerance = confirmedGroupSquareColor,
+                ConfirmedGroupSquareMinimumLightnessGain = confirmedGroupSquareGain,
+                UseConfirmedGroupLateCardinalRescue = confirmedGroupLateCardinal,
+                ConfirmedGroupLateCardinalMinimumPriorChanges = confirmedGroupLatePrior,
+                ConfirmedGroupLateCardinalExtraDarkMaximumExemplarRatio = confirmedGroupLateRatio,
+                ConfirmedGroupLateCardinalExtraDarkMaximumRingError = confirmedGroupLateError,
+                UseRichPaletteConnectedMaterialVeto = richPaletteMaterialVeto,
+                RichPaletteMinimumColors = richPaletteMinColors,
+                RichPaletteMaterialMaximumChannel = richPaletteDarkChannel,
+                RichPaletteMaterialNeighborColorTolerance = richPaletteNeighborColor,
+                RichPaletteSuspiciousMinimumOccurrences = richPaletteSuspiciousMin,
+                RichPaletteSuspiciousMaximumOccurrences = richPaletteSuspiciousMax,
+                UseChromaticExemplarColorRescue = chromaticExemplar,
+                ChromaticExemplarMaximumProposedChroma = chromaticExemplarNeutral,
+                ChromaticExemplarMinimumChroma = chromaticExemplarColor,
+                ChromaticExemplarMaximumRingError = chromaticExemplarError,
+                ChromaticExemplarMaximumBrightToDarkRatio = chromaticExemplarRatio,
+                UseNeutralExemplarColorRescue = neutralExemplar,
+                NeutralExemplarMaximumProposedChroma = neutralExemplarProposed,
+                NeutralExemplarMaximumSampleChroma = neutralExemplarSample,
+                NeutralExemplarMinimumLightnessDrop = neutralExemplarDrop,
+                NeutralExemplarMaximumRingError = neutralExemplarError,
+                NeutralExemplarMaximumBrightToDarkRatio = neutralExemplarRatio,
+                UseNeutralExemplarBlend = neutralBlend,
+                NeutralExemplarBlendMinimumPaletteColors = neutralBlendMinColors,
+                NeutralExemplarBlendMaximumProposedChroma = neutralBlendProposed,
+                NeutralExemplarBlendMaximumSampleChroma = neutralBlendSample,
+                NeutralExemplarBlendMinimumLightnessDrop = neutralBlendDrop,
+                NeutralExemplarBlendMaximumRingError = neutralBlendError,
+                NeutralExemplarBlendMaximumBrightToDarkRatio = neutralBlendRatio,
+                NeutralExemplarBlendSampleWeight = neutralBlendWeight,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
                 SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
@@ -1416,13 +1560,17 @@ internal static class CleanDarkContoursCommand
                     var result = DarkContourNoiseCleaner.Clean(current, passOptions,
                         auditWriter is null && !repeatedDarkRescue &&
                         !(exemplarMaterialVeto && exemplarMaterialInterpass) &&
-                        !confirmedGroupExemplar && !confirmedGroupCardinal && !confirmedGroupGradient ? null : (x, y, decision) =>
+                        !confirmedGroupExemplar && !confirmedGroupCardinal && !confirmedGroupGradient &&
+                        !confirmedGroupSquare && !confirmedGroupLateCardinal ? null : (x, y, decision) =>
                         {
                             auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
                             if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
                             if (decision is "accepted-confirmed-group-exemplar" or
                                 "accepted-confirmed-group-cardinal" or
-                                "accepted-confirmed-group-gradient")
+                                "accepted-confirmed-group-gradient" or
+                                "accepted-confirmed-group-gradient-ray" or
+                                "accepted-confirmed-group-square" or
+                                "accepted-confirmed-group-late-cardinal")
                                 confirmedGroupAccepted.Add((x, y));
                             if (q == 0 && exemplarMaterialInterpass && decision == "exemplar-material-veto")
                                 firstPassMaterialVetoes.Add((x, y));
