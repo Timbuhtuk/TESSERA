@@ -181,6 +181,12 @@ public static class DarkContourNoiseCleaner
         public int SparseDarkPaletteMaximumSimilarPixels { get; init; } = 5;
         public double SparseDarkPaletteMinimumLightnessGain { get; init; } = 20;
         public double SparseDarkPaletteMinimumEnergyDrop { get; init; }
+        public bool UseSparseDarkPaletteExtendedRescue { get; init; } = true;
+        public double SparseDarkPaletteExtendedColorTolerance { get; init; } = 0.5;
+        public int SparseDarkPaletteExtendedMaximumSimilarPixels { get; init; } = 10;
+        public double SparseDarkPaletteExtendedMaximumConsensus { get; init; } = 0.5;
+        public double SparseDarkPaletteExtendedMinimumLightnessGain { get; init; } = 20;
+        public double SparseDarkPaletteExtendedMinimumEnergyDrop { get; init; }
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -369,6 +375,15 @@ public static class DarkContourNoiseCleaner
             options.SparseDarkPaletteMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparseDarkPaletteMinimumEnergyDrop) ||
             options.SparseDarkPaletteMinimumEnergyDrop is < 0 or > 1 ||
+            options.SparseDarkPaletteExtendedMaximumSimilarPixels is < 0 or > 1000000 ||
+            !double.IsFinite(options.SparseDarkPaletteExtendedColorTolerance) ||
+            options.SparseDarkPaletteExtendedColorTolerance is < 0 or > 100 ||
+            !double.IsFinite(options.SparseDarkPaletteExtendedMaximumConsensus) ||
+            options.SparseDarkPaletteExtendedMaximumConsensus is < 0 or > 1 ||
+            !double.IsFinite(options.SparseDarkPaletteExtendedMinimumLightnessGain) ||
+            options.SparseDarkPaletteExtendedMinimumLightnessGain is < 0 or > 100 ||
+            !double.IsFinite(options.SparseDarkPaletteExtendedMinimumEnergyDrop) ||
+            options.SparseDarkPaletteExtendedMinimumEnergyDrop is < 0 or > 1 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -1028,15 +1043,26 @@ public static class DarkContourNoiseCleaner
                         HasSparseDarkPalette(original[index], darkColorOccurrences,
                             options.SparseDarkPaletteColorTolerance,
                             options.SparseDarkPaletteMaximumSimilarPixels);
+                    bool sparseDarkPaletteExtendedRescue = repeatedDarkColor &&
+                        options.UseSparseDarkPaletteExtendedRescue &&
+                        colorConsensus <= options.SparseDarkPaletteExtendedMaximumConsensus &&
+                        Lab(replacement).L - Lab(original[index]).L >=
+                            options.SparseDarkPaletteExtendedMinimumLightnessGain &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.SparseDarkPaletteExtendedMinimumEnergyDrop) &&
+                        HasSparseDarkPalette(original[index], darkColorOccurrences,
+                            options.SparseDarkPaletteExtendedColorTolerance,
+                            options.SparseDarkPaletteExtendedMaximumSimilarPixels);
                     repeatedDarkOnly |= repeatedDarkRescue && !globalEnergyRescue && !localEnergyRescue &&
                         !texturedRescue && !singleDiagonalGradientRescue &&
                         !threeNeighborGradientAllowed && !extendedTexturedAllowed &&
                         !symmetricPatchAllowed && !highContrastRescue;
-                    repeatedDarkOnly |= sparseDarkPaletteRescue;
+                    repeatedDarkOnly |= sparseDarkPaletteRescue || sparseDarkPaletteExtendedRescue;
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
                         !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue &&
                         !repeatedDarkRescue && !sparseDarkPaletteRescue &&
+                        !sparseDarkPaletteExtendedRescue &&
                         !sparsePaletteThreeNeighborRescue)
                     { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }

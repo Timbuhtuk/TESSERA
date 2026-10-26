@@ -248,6 +248,13 @@ param(
     [int]$SparseDarkPaletteMax = 5,
     [double]$SparseDarkPaletteGain = 20,
     [double]$SparseDarkPaletteEnergy = 0,
+    [switch]$SparseDarkPaletteExtended = $true,
+    [switch]$NoSparseDarkPaletteExtended,
+    [int]$SparseDarkPaletteExtendedMax = 10,
+    [double]$SparseDarkPaletteExtendedConsensus = 50,
+    [double]$SparseDarkPaletteExtendedTolerance = 0.5,
+    [double]$SparseDarkPaletteExtendedGain = 20,
+    [double]$SparseDarkPaletteExtendedEnergy = 0,
     [switch]$SparsePaletteConsensus = $true,
     [switch]$NoSparsePaletteConsensus,
     [double]$SparsePaletteConsensusTolerance = 0.5,
@@ -310,6 +317,7 @@ $repeatedDarkFlag = if ($NoRepeatedDarkRescue -or !$RepeatedDarkRescue) { @('--n
 $repeatedDarkPassFlag = if ($RepeatedDarkAllPasses) { @('--repeated-dark-all-passes') } else { @('--repeated-dark-first-pass') }
 $repeatedBridgeFlag = if ($NoRepeatedBridgeRescue -or !$RepeatedBridgeRescue) { @('--no-repeated-bridge-rescue') } else { @('--repeated-bridge-rescue') }
 $sparseDarkPaletteFlag = if ($NoSparseDarkPaletteRescue -or !$SparseDarkPaletteRescue) { @('--no-sparse-dark-palette-rescue') } else { @('--sparse-dark-palette-rescue') }
+$sparseDarkPaletteExtendedFlag = if ($NoSparseDarkPaletteExtended -or !$SparseDarkPaletteExtended) { @('--no-sparse-dark-palette-extended') } else { @('--sparse-dark-palette-extended') }
 $sparsePaletteConsensusFlag = if ($NoSparsePaletteConsensus -or !$SparsePaletteConsensus) { @('--no-sparse-palette-consensus') } else { @('--sparse-palette-consensus') }
 $sparsePaletteThreeFlag = if ($NoSparsePaletteThreeNeighbor -or !$SparsePaletteThreeNeighbor) { @('--no-sparse-palette-three-neighbor') } else { @('--sparse-palette-three-neighbor') }
 
@@ -465,11 +473,16 @@ foreach ($kind in @('clean', 'noisy'))
             --repeated-bridge-neighbors $RepeatedBridgeNeighbors --repeated-bridge-opposition $RepeatedBridgeOpposition `
             --sparse-dark-palette-tolerance $SparseDarkPaletteTolerance --sparse-dark-palette-max $SparseDarkPaletteMax `
             --sparse-dark-palette-gain $SparseDarkPaletteGain --sparse-dark-palette-energy $SparseDarkPaletteEnergy `
+            --sparse-dark-palette-extended-max $SparseDarkPaletteExtendedMax `
+            --sparse-dark-palette-extended-consensus $SparseDarkPaletteExtendedConsensus `
+            --sparse-dark-palette-extended-tolerance $SparseDarkPaletteExtendedTolerance `
+            --sparse-dark-palette-extended-gain $SparseDarkPaletteExtendedGain `
+            --sparse-dark-palette-extended-energy $SparseDarkPaletteExtendedEnergy `
             --sparse-palette-consensus-tolerance $SparsePaletteConsensusTolerance --sparse-palette-consensus-max $SparsePaletteConsensusMax `
             --sparse-palette-consensus-gain $SparsePaletteConsensusGain --sparse-palette-consensus-energy $SparsePaletteConsensusEnergy `
             --sparse-palette-three-tolerance $SparsePaletteThreeTolerance --sparse-palette-three-max $SparsePaletteThreeMax `
             --sparse-palette-three-gain $SparsePaletteThreeGain --sparse-palette-three-energy $SparsePaletteThreeEnergy `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $sparsePaletteConsensusFlag $sparsePaletteThreeFlag $auditArgs --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $sparseDarkPaletteExtendedFlag $sparsePaletteConsensusFlag $sparsePaletteThreeFlag $auditArgs --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"
