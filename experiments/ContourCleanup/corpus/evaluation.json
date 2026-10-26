@@ -3,14 +3,14 @@
     "images": 50,
     "injected": 400,
     "corrected": 400,
-    "recoveredExactly": 399,
-    "wrongColor": 1,
+    "recoveredExactly": 400,
+    "wrongColor": 0,
     "otherChanges": 0,
     "cleanDamage": 0,
     "errorBefore": 2279162.4,
-    "errorAfter": 635.2,
+    "errorAfter": 0,
     "imagesWithCleanDamage": 0,
-    "imagesWithWrongColor": 1,
+    "imagesWithWrongColor": 0,
     "imagesWithMissedNoise": 0
   },
   "scores": [
@@ -115,12 +115,12 @@
       "Motif": "shield",
       "Injected": 8,
       "Corrected": 8,
-      "RecoveredExactly": 7,
-      "WrongColor": 1,
+      "RecoveredExactly": 8,
+      "WrongColor": 0,
       "OtherChanges": 0,
       "CleanDamage": 0,
       "ErrorBefore": 44585.9,
-      "ErrorAfter": 635.2
+      "ErrorAfter": 0
     },
     {
       "Id": "02-shield-05",

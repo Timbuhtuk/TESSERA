@@ -77,6 +77,58 @@ internal static class CleanDarkContoursCommand
           --soft-color-spread N       Максимальный разброс светлых соседей в LAB: 0–100 (40).
           --soft-max-dark-neighbors N Максимум тёмных соседей из восьми: 0–8 (2).
           --soft-max-dark5 N          Максимум тёмных соседей в 5×5: 0–24 (6).
+          --no-coherent-gradient      Выключить допуск выступа по согласованному сильному градиенту.
+          --coherent-dark5 N          Минимум тёмной поддержки в 5×5: 0–24 (10).
+          --coherent-radius N         Радиус сравнения с похожими пикселями: 1–15 (5).
+          --coherent-color-tolerance N  Допуск похожего цвета в LAB: 0–100 (24).
+          --coherent-min-neighbors N  Минимум похожих соседей: 1–1000 (10).
+          --coherent-magnitude-ratio N  Модуль центра к среднему: 0–10 (1.2).
+          --coherent-min-agreement N  Согласие градиентов соседей: 0–100% (90).
+          --coherent-min-alignment N  Совпадение центра с их градиентом: 0–100% (90).
+          --no-divergent-gradient     Выключить допуск резкого выступа при расходящихся градиентах.
+          --divergent-dark5 N         Тёмная поддержка в 5×5: 0–24 (7).
+          --divergent-radius N        Радиус поиска похожих пикселей: 1–15 (5).
+          --divergent-color-tolerance N  Допуск похожего цвета в LAB: 0–100 (24).
+          --divergent-min-neighbors N Минимум похожих соседей: 1–1000 (10).
+          --divergent-magnitude-ratio N  Модуль центра к среднему: 0–10 (1.4).
+          --divergent-max-agreement N  Максимальное согласие градиентов соседей: 0–100% (15).
+          --no-patch-gradient        Выключить совместную проверку окружения и градиента.
+          --patch-gradient-dark5-min N  Нижняя граница поддержки 5×5: 0–24 (8).
+          --patch-gradient-dark5-max N  Верхняя граница поддержки 5×5: 0–24 (10).
+          --patch-gradient-bright N  Минимум светлых повторов 3×3: 0–10000 (6).
+          --patch-gradient-ratio N   Светлых повторов к тёмным: 0–100 (3).
+          --patch-gradient-radius N  Радиус поиска похожих цветов: 1–15 (5).
+          --patch-gradient-color-tolerance N  Допуск цвета в LAB: 0–100 (24).
+          --patch-gradient-min-neighbors N  Минимум похожих соседей: 1–1000 (10).
+          --patch-gradient-magnitude-min N  Модуль к среднему, минимум: 0–10 (1.18).
+          --patch-gradient-magnitude-max N  Модуль к среднему, максимум: 0–10 (1.4).
+          --patch-gradient-max-agreement N  Максимальное согласие градиентов: 0–100% (50).
+          --no-main-sparse            Выключить повтор окружения на основном контуре.
+          --main-sparse-dark5 N       Максимальная поддержка 5×5: 0–24 (6).
+          --main-sparse-bright N      Минимум светлых повторов 3×3: 0–10000 (8).
+          --main-sparse-ratio N       Светлых повторов к тёмным: 0–100 (5).
+          --main-sparse-gradient-radius N  Радиус градиентов: 1–15 (5).
+          --main-sparse-color-tolerance N  Допуск цвета в LAB: 0–100 (24).
+          --main-sparse-min-neighbors N  Минимум похожих соседей: 1–1000 (10).
+          --main-sparse-max-magnitude N  Максимальный модуль к среднему: 0–10 (1).
+          --no-bright-corner          Выключить продолжение светлого угла.
+          --bright-corner-max-dark N  Максимум тёмных соседей: 0–8 (2).
+          --bright-corner-max-cardinal N  Максимум прямых тёмных соседей: 0–4 (1).
+          --bright-corner-dark5 N     Максимум тёмной поддержки 5×5: 0–24 (6).
+          --bright-corner-component N  Максимальная доля главного контура: 0–100% (50).
+          --bright-corner-run N       Минимальная длина светлых плеч: 1–15 (3).
+          --bright-corner-color-tolerance N  Допуск цвета в LAB: 0–100 (8).
+          --no-vertical-shade         Выключить выбор оттенка по вертикальной полосе.
+          --vertical-medium-dark5 N  Поддержка 5×5 для близких оттенков: 0–24 (10).
+          --vertical-medium-component-min N  Минимальная доля главного контура: 0–100% (25).
+          --vertical-medium-component-max N  Максимальная доля главного контура: 0–100% (50).
+          --vertical-medium-color-spread N  Максимальный разброс в LAB: 0–100 (30).
+          --vertical-wide-dark5 N    Поддержка 5×5 для далёких цветов: 0–24 (11).
+          --vertical-wide-component-min N  Минимальная доля главного контура: 0–100% (50).
+          --vertical-wide-color-spread-min N  Минимальный разброс в LAB: 0–100 (50).
+          --vertical-wide-color-spread-max N  Максимальный разброс в LAB: 0–100 (80).
+          --vertical-run-radius N     Длина поиска вертикальной полосы: 1–15 (4).
+          --vertical-color-tolerance N  Допуск цвета полосы в LAB: 0–100 (8).
           --conflict-radius N          Радиус выбора одного из соседних кандидатов: 0–4 (2).
           --require-common-gradient    Требовать противоположность общему градиенту похожих цветов.
           --common-gradient-radius N   Радиус поиска похожих цветов: 1–15 (5).
@@ -125,7 +177,19 @@ internal static class CleanDarkContoursCommand
                 sparsePatchRatio = 5, commonColorTolerance = 24,
                 commonMinimumMagnitude = 0, commonMagnitudeRatio = 1.2,
                 commonMinimumAgreement = 20, commonMinimumOpposition = 80,
-                secondarySparseComponent = 50, softConsensus = 50, softColorSpread = 40;
+                secondarySparseComponent = 50, softConsensus = 50, softColorSpread = 40,
+                coherentColorTolerance = 24, coherentMagnitudeRatio = 1.2,
+                coherentAgreement = 90, coherentAlignment = 90,
+                divergentColorTolerance = 24, divergentMagnitudeRatio = 1.4,
+                divergentMaximumAgreement = 15, patchGradientBrightRatio = 3,
+                patchGradientColorTolerance = 24, patchGradientMagnitudeMinimum = 1.18,
+                patchGradientMagnitudeMaximum = 1.4, patchGradientMaximumAgreement = 50,
+                mainSparseBrightRatio = 5, mainSparseColorTolerance = 24,
+                mainSparseMaximumMagnitude = 1, brightCornerComponent = 50,
+                brightCornerColorTolerance = 8, verticalMediumComponentMin = 25,
+                verticalMediumComponentMax = 50, verticalMediumColorSpread = 30,
+                verticalWideComponentMin = 50, verticalWideColorSpreadMin = 50,
+                verticalWideColorSpreadMax = 80, verticalColorTolerance = 8;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3,
                 repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
@@ -138,11 +202,21 @@ internal static class CleanDarkContoursCommand
                 taperedInsideLength = 8, taperedMinShrink = 6, taperedBright = 4,
                 sparsePatchMaxDark5 = 5, sparsePatchMaxCardinal = 1, sparsePatchBright = 20,
                 conflictRadius = 2, commonGradientRadius = 5, commonMinimumNeighbors = 5,
-                secondarySparseDark5 = 8, softMaxDarkNeighbors = 2, softMaxDark5 = 6;
+                secondarySparseDark5 = 8, softMaxDarkNeighbors = 2, softMaxDark5 = 6,
+                coherentDark5 = 10, coherentRadius = 5, coherentMinimumNeighbors = 10,
+                divergentDark5 = 7, divergentRadius = 5, divergentMinimumNeighbors = 10,
+                patchGradientDark5Minimum = 8, patchGradientDark5Maximum = 10,
+                patchGradientBright = 6, patchGradientRadius = 5, patchGradientMinimumNeighbors = 10,
+                mainSparseDark5 = 6, mainSparseBright = 8, mainSparseGradientRadius = 5,
+                mainSparseMinimumNeighbors = 10, brightCornerMaxDark = 2,
+                brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
+                verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
-                requireCommonGradient = false, useSecondarySparse = true, useSoftColorConsensus = true;
+                requireCommonGradient = false, useSecondarySparse = true, useSoftColorConsensus = true,
+                useCoherentGradient = true, useDivergentGradient = true, usePatchGradient = true,
+                useMainSparse = true, useBrightCorner = true, useVerticalShade = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -234,6 +308,58 @@ internal static class CleanDarkContoursCommand
                     case "--soft-color-spread": softColorSpread = NextDouble(); break;
                     case "--soft-max-dark-neighbors": softMaxDarkNeighbors = NextInt(); break;
                     case "--soft-max-dark5": softMaxDark5 = NextInt(); break;
+                    case "--no-coherent-gradient": useCoherentGradient = false; break;
+                    case "--coherent-dark5": coherentDark5 = NextInt(); break;
+                    case "--coherent-radius": coherentRadius = NextInt(); break;
+                    case "--coherent-color-tolerance": coherentColorTolerance = NextDouble(); break;
+                    case "--coherent-min-neighbors": coherentMinimumNeighbors = NextInt(); break;
+                    case "--coherent-magnitude-ratio": coherentMagnitudeRatio = NextDouble(); break;
+                    case "--coherent-min-agreement": coherentAgreement = NextDouble(); break;
+                    case "--coherent-min-alignment": coherentAlignment = NextDouble(); break;
+                    case "--no-divergent-gradient": useDivergentGradient = false; break;
+                    case "--divergent-dark5": divergentDark5 = NextInt(); break;
+                    case "--divergent-radius": divergentRadius = NextInt(); break;
+                    case "--divergent-color-tolerance": divergentColorTolerance = NextDouble(); break;
+                    case "--divergent-min-neighbors": divergentMinimumNeighbors = NextInt(); break;
+                    case "--divergent-magnitude-ratio": divergentMagnitudeRatio = NextDouble(); break;
+                    case "--divergent-max-agreement": divergentMaximumAgreement = NextDouble(); break;
+                    case "--no-patch-gradient": usePatchGradient = false; break;
+                    case "--patch-gradient-dark5-min": patchGradientDark5Minimum = NextInt(); break;
+                    case "--patch-gradient-dark5-max": patchGradientDark5Maximum = NextInt(); break;
+                    case "--patch-gradient-bright": patchGradientBright = NextInt(); break;
+                    case "--patch-gradient-ratio": patchGradientBrightRatio = NextDouble(); break;
+                    case "--patch-gradient-radius": patchGradientRadius = NextInt(); break;
+                    case "--patch-gradient-color-tolerance": patchGradientColorTolerance = NextDouble(); break;
+                    case "--patch-gradient-min-neighbors": patchGradientMinimumNeighbors = NextInt(); break;
+                    case "--patch-gradient-magnitude-min": patchGradientMagnitudeMinimum = NextDouble(); break;
+                    case "--patch-gradient-magnitude-max": patchGradientMagnitudeMaximum = NextDouble(); break;
+                    case "--patch-gradient-max-agreement": patchGradientMaximumAgreement = NextDouble(); break;
+                    case "--no-main-sparse": useMainSparse = false; break;
+                    case "--main-sparse-dark5": mainSparseDark5 = NextInt(); break;
+                    case "--main-sparse-bright": mainSparseBright = NextInt(); break;
+                    case "--main-sparse-ratio": mainSparseBrightRatio = NextDouble(); break;
+                    case "--main-sparse-gradient-radius": mainSparseGradientRadius = NextInt(); break;
+                    case "--main-sparse-color-tolerance": mainSparseColorTolerance = NextDouble(); break;
+                    case "--main-sparse-min-neighbors": mainSparseMinimumNeighbors = NextInt(); break;
+                    case "--main-sparse-max-magnitude": mainSparseMaximumMagnitude = NextDouble(); break;
+                    case "--no-bright-corner": useBrightCorner = false; break;
+                    case "--bright-corner-max-dark": brightCornerMaxDark = NextInt(); break;
+                    case "--bright-corner-max-cardinal": brightCornerMaxCardinal = NextInt(); break;
+                    case "--bright-corner-dark5": brightCornerDark5 = NextInt(); break;
+                    case "--bright-corner-component": brightCornerComponent = NextDouble(); break;
+                    case "--bright-corner-run": brightCornerRun = NextInt(); break;
+                    case "--bright-corner-color-tolerance": brightCornerColorTolerance = NextDouble(); break;
+                    case "--no-vertical-shade": useVerticalShade = false; break;
+                    case "--vertical-medium-dark5": verticalMediumDark5 = NextInt(); break;
+                    case "--vertical-medium-component-min": verticalMediumComponentMin = NextDouble(); break;
+                    case "--vertical-medium-component-max": verticalMediumComponentMax = NextDouble(); break;
+                    case "--vertical-medium-color-spread": verticalMediumColorSpread = NextDouble(); break;
+                    case "--vertical-wide-dark5": verticalWideDark5 = NextInt(); break;
+                    case "--vertical-wide-component-min": verticalWideComponentMin = NextDouble(); break;
+                    case "--vertical-wide-color-spread-min": verticalWideColorSpreadMin = NextDouble(); break;
+                    case "--vertical-wide-color-spread-max": verticalWideColorSpreadMax = NextDouble(); break;
+                    case "--vertical-run-radius": verticalRunRadius = NextInt(); break;
+                    case "--vertical-color-tolerance": verticalColorTolerance = NextDouble(); break;
                     case "--conflict-radius": conflictRadius = NextInt(); break;
                     case "--require-common-gradient": requireCommonGradient = true; break;
                     case "--common-gradient-radius": commonGradientRadius = NextInt(); break;
@@ -311,6 +437,43 @@ internal static class CleanDarkContoursCommand
             if (softConsensus is < 0 or > 100 || softColorSpread is < 0 or > 100 ||
                 softMaxDarkNeighbors is < 0 or > 8 || softMaxDark5 is < 0 or > 24)
                 throw new ArgumentException("Некорректные параметры мягкого согласия цветов.");
+            if (coherentDark5 is < 0 or > 24 || coherentRadius is < 1 or > 15 ||
+                coherentColorTolerance is < 0 or > 100 || coherentMinimumNeighbors is < 1 or > 1000 ||
+                coherentMagnitudeRatio is < 0 or > 10 || coherentAgreement is < 0 or > 100 ||
+                coherentAlignment is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры согласованного градиента.");
+            if (divergentDark5 is < 0 or > 24 || divergentRadius is < 1 or > 15 ||
+                divergentColorTolerance is < 0 or > 100 || divergentMinimumNeighbors is < 1 or > 1000 ||
+                divergentMagnitudeRatio is < 0 or > 10 || divergentMaximumAgreement is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры расходящихся градиентов.");
+            if (patchGradientDark5Minimum is < 0 or > 24 || patchGradientDark5Maximum is < 0 or > 24 ||
+                patchGradientDark5Minimum > patchGradientDark5Maximum ||
+                patchGradientBright is < 0 or > 10000 || patchGradientBrightRatio is < 0 or > 100 ||
+                patchGradientRadius is < 1 or > 15 || patchGradientColorTolerance is < 0 or > 100 ||
+                patchGradientMinimumNeighbors is < 1 or > 1000 ||
+                patchGradientMagnitudeMinimum is < 0 or > 10 ||
+                patchGradientMagnitudeMaximum < patchGradientMagnitudeMinimum ||
+                patchGradientMagnitudeMaximum > 10 ||
+                patchGradientMaximumAgreement is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры окружения с градиентом.");
+            if (mainSparseDark5 is < 0 or > 24 || mainSparseBright is < 0 or > 10000 ||
+                mainSparseBrightRatio is < 0 or > 100 || mainSparseGradientRadius is < 1 or > 15 ||
+                mainSparseColorTolerance is < 0 or > 100 || mainSparseMinimumNeighbors is < 1 or > 1000 ||
+                mainSparseMaximumMagnitude is < 0 or > 10)
+                throw new ArgumentException("Некорректные параметры основного контура.");
+            if (brightCornerMaxDark is < 0 or > 8 || brightCornerMaxCardinal is < 0 or > 4 ||
+                brightCornerDark5 is < 0 or > 24 || brightCornerComponent is < 0 or > 100 ||
+                brightCornerRun is < 1 or > 15 || brightCornerColorTolerance is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры светлого угла.");
+            if (verticalMediumDark5 is < 0 or > 24 || verticalMediumComponentMin is < 0 or > 100 ||
+                verticalMediumComponentMax < verticalMediumComponentMin ||
+                verticalMediumComponentMax > 100 || verticalMediumColorSpread is < 0 or > 100 ||
+                verticalWideDark5 is < 0 or > 24 || verticalWideComponentMin is < 0 or > 100 ||
+                verticalWideColorSpreadMin is < 0 or > 100 ||
+                verticalWideColorSpreadMax < verticalWideColorSpreadMin ||
+                verticalWideColorSpreadMax > 100 || verticalRunRadius is < 1 or > 15 ||
+                verticalColorTolerance is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры вертикальной полосы.");
             if (conflictRadius is < 0 or > 4)
                 throw new ArgumentException("--conflict-radius должен быть от 0 до 4.");
             if (commonGradientRadius is < 1 or > 15 || commonColorTolerance is < 0 or > 100 ||
@@ -342,7 +505,44 @@ internal static class CleanDarkContoursCommand
                 commonMinimumMagnitude, commonMagnitudeRatio, commonMinimumAgreement / 100,
                 commonMinimumOpposition / 100, useSecondarySparse, secondarySparseDark5,
                 secondarySparseComponent / 100, useSoftColorConsensus, softConsensus / 100,
-                softColorSpread, softMaxDarkNeighbors, softMaxDark5);
+                softColorSpread, softMaxDarkNeighbors, softMaxDark5,
+                useCoherentGradient, coherentDark5, coherentRadius, coherentColorTolerance,
+                coherentMinimumNeighbors, coherentMagnitudeRatio, coherentAgreement / 100,
+                coherentAlignment / 100, useDivergentGradient, divergentDark5, divergentRadius,
+                divergentColorTolerance, divergentMinimumNeighbors, divergentMagnitudeRatio,
+                divergentMaximumAgreement / 100, usePatchGradient, patchGradientDark5Minimum,
+                patchGradientDark5Maximum, patchGradientBright, patchGradientBrightRatio,
+                patchGradientRadius, patchGradientColorTolerance, patchGradientMinimumNeighbors,
+                patchGradientMagnitudeMinimum, patchGradientMagnitudeMaximum,
+                patchGradientMaximumAgreement / 100) with
+            {
+                UseMainSparsePatch = useMainSparse,
+                MainSparseMaximumDark5 = mainSparseDark5,
+                MainSparseMinimumBrightMatches = mainSparseBright,
+                MainSparseBrightRatio = mainSparseBrightRatio,
+                MainSparseGradientRadius = mainSparseGradientRadius,
+                MainSparseColorTolerance = mainSparseColorTolerance,
+                MainSparseMinimumSimilarNeighbors = mainSparseMinimumNeighbors,
+                MainSparseMaximumMagnitudeRatio = mainSparseMaximumMagnitude,
+                UseBrightCornerContinuation = useBrightCorner,
+                BrightCornerMaximumDarkNeighbors = brightCornerMaxDark,
+                BrightCornerMaximumCardinalNeighbors = brightCornerMaxCardinal,
+                BrightCornerMaximumDark5 = brightCornerDark5,
+                BrightCornerMaximumComponentRatio = brightCornerComponent / 100,
+                BrightCornerMinimumRun = brightCornerRun,
+                BrightCornerColorTolerance = brightCornerColorTolerance,
+                UseVerticalShadeContinuation = useVerticalShade,
+                VerticalMediumDark5 = verticalMediumDark5,
+                VerticalMediumMinimumComponentRatio = verticalMediumComponentMin / 100,
+                VerticalMediumMaximumComponentRatio = verticalMediumComponentMax / 100,
+                VerticalMediumMaximumColorSpread = verticalMediumColorSpread,
+                VerticalWideDark5 = verticalWideDark5,
+                VerticalWideMinimumComponentRatio = verticalWideComponentMin / 100,
+                VerticalWideMinimumColorSpread = verticalWideColorSpreadMin,
+                VerticalWideMaximumColorSpread = verticalWideColorSpreadMax,
+                VerticalShadeSearchRadius = verticalRunRadius,
+                VerticalShadeColorTolerance = verticalColorTolerance
+            };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
                 Path.GetFileNameWithoutExtension(inputPath) + "_dark_contours.png"));

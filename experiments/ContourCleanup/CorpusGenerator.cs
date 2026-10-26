@@ -44,6 +44,59 @@ internal static class CorpusGenerator
         Console.WriteLine($"Generated {manifest.Count} clean/noisy pairs in {root}");
     }
 
+    internal static void GenerateVaried(string root, int seedOffset = 0)
+    {
+        string cleanDir = Path.Combine(root, "clean"), noisyDir = Path.Combine(root, "noisy");
+        Directory.CreateDirectory(cleanDir);
+        Directory.CreateDirectory(noisyDir);
+        var manifest = new List<object>();
+        for (int motif = 0; motif < Names.Length; motif++)
+            for (int variant = 0; variant < Palettes.Length; variant++)
+            {
+                string id = $"{motif + 1:D2}-{Names[motif]}-{variant + 1:D2}";
+                using var source = Draw(motif, variant);
+                using var clean = TransformVaried(source, motif, variant);
+                using var noisy = (Bitmap)clean.Clone();
+                var injected = InjectNoise(clean, noisy,
+                    motif * 1009 + variant * 37 + 20261026 + seedOffset, 2);
+                clean.Save(Path.Combine(cleanDir, id + ".png"), ImageFormat.Png);
+                noisy.Save(Path.Combine(noisyDir, id + ".png"), ImageFormat.Png);
+                manifest.Add(new { id, motif = Names[motif], variant = variant + 1,
+                    geometry = "mirrored-scaled-sheared", injected = injected.Select(point =>
+                        new { x = point.X, y = point.Y }).ToArray() });
+                Console.WriteLine($"{id} injected={injected.Count}");
+            }
+        File.WriteAllText(Path.Combine(root, "manifest.json"),
+            JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+        foreach (string name in Names) SaveContactSheet(root, name);
+        Console.WriteLine($"Generated {manifest.Count} geometry-varied clean/noisy pairs in {root}");
+    }
+
+    private static Bitmap TransformVaried(Bitmap source, int motif, int variant)
+    {
+        double[] widths = [0.86, 1.12, 0.93, 1.08, 0.89];
+        double[] heights = [1.12, 0.9, 1.05, 0.84, 1.16];
+        double[] shears = [-0.13, 0.11, -0.07, 0.16, 0.08];
+        double scaleX = widths[variant], scaleY = heights[variant], shear = shears[variant];
+        bool mirror = (motif + variant) % 2 == 0;
+        int offsetX = (motif * 3 + variant * 2) % 5 - 2;
+        int offsetY = (motif + variant * 3) % 5 - 2;
+        var result = new Bitmap(72, 72, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < result.Height; y++)
+            for (int x = 0; x < result.Width; x++)
+            {
+                double dy = y - 36 - offsetY;
+                double dx = x - 36 - offsetX;
+                double sourceX = (dx - shear * dy) / scaleX + 36;
+                double sourceY = dy / scaleY + 36;
+                if (mirror) sourceX = 71 - sourceX;
+                int px = (int)Math.Round(sourceX), py = (int)Math.Round(sourceY);
+                if (px < 0 || py < 0 || px >= source.Width || py >= source.Height) continue;
+                result.SetPixel(x, y, source.GetPixel(px, py));
+            }
+        return result;
+    }
+
     private static void SaveContactSheet(string root, string name)
     {
         string reviewDir = Path.Combine(root, "review");
@@ -93,7 +146,7 @@ internal static class CorpusGenerator
         return image;
     }
 
-    private static List<Point> InjectNoise(Bitmap clean, Bitmap noisy, int seed)
+    private static List<Point> InjectNoise(Bitmap clean, Bitmap noisy, int seed, int minimumSpacing = 4)
     {
         var candidates = new List<Point>();
         for (int y = 5; y < clean.Height - 5; y++)
@@ -121,8 +174,8 @@ internal static class CorpusGenerator
         var injected = new List<Point>();
         foreach (Point candidate in candidates)
         {
-            if (injected.Any(point => Math.Abs(point.X - candidate.X) <= 4 &&
-                Math.Abs(point.Y - candidate.Y) <= 4)) continue;
+            if (injected.Any(point => Math.Abs(point.X - candidate.X) <= minimumSpacing &&
+                Math.Abs(point.Y - candidate.Y) <= minimumSpacing)) continue;
             noisy.SetPixel(candidate.X, candidate.Y, injected.Count % 2 == 0 ? Ink : Color.FromArgb(7, 6, 9));
             injected.Add(candidate);
             if (injected.Count == 8) break;

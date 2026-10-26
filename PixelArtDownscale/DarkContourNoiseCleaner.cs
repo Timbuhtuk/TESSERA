@@ -48,18 +48,51 @@ public static class DarkContourNoiseCleaner
         double SecondarySparseMaximumComponentRatio = 0.5,
         bool UseSoftColorConsensus = true, double SoftMinimumConsensus = 0.5,
         double SoftMaximumColorSpread = 40, int SoftMaximumDarkNeighbors = 2,
-        int SoftMaximumDark5 = 6);
+        int SoftMaximumDark5 = 6,
+        bool UseCoherentGradientRescue = true, int CoherentGradientMinimumDark5 = 10,
+        int CoherentGradientRadius = 5, double CoherentGradientColorTolerance = 24,
+        int CoherentGradientMinimumNeighbors = 10, double CoherentGradientMagnitudeRatio = 1.2,
+        double CoherentGradientMinimumAgreement = 0.9,
+        double CoherentGradientMinimumAlignment = 0.9,
+        bool UseDivergentGradientRescue = true, int DivergentGradientDark5 = 7,
+        int DivergentGradientRadius = 5, double DivergentGradientColorTolerance = 24,
+        int DivergentGradientMinimumNeighbors = 10, double DivergentGradientMagnitudeRatio = 1.4,
+        double DivergentGradientMaximumAgreement = 0.15,
+        bool UsePatchGradientRescue = true, int PatchGradientMinimumDark5 = 8,
+        int PatchGradientMaximumDark5 = 10, int PatchGradientMinimumBrightMatches = 6,
+        double PatchGradientBrightRatio = 3, int PatchGradientRadius = 5,
+        double PatchGradientColorTolerance = 24, int PatchGradientMinimumNeighbors = 10,
+        double PatchGradientMagnitudeRatio = 1.18, double PatchGradientMaximumMagnitudeRatio = 1.4,
+        double PatchGradientMaximumAgreement = 0.5,
+        bool UseMainSparsePatch = true, int MainSparseMaximumDark5 = 6,
+        int MainSparseMinimumBrightMatches = 8, double MainSparseBrightRatio = 5,
+        int MainSparseGradientRadius = 5, double MainSparseColorTolerance = 24,
+        int MainSparseMinimumSimilarNeighbors = 10, double MainSparseMaximumMagnitudeRatio = 1,
+        bool UseBrightCornerContinuation = true, int BrightCornerMaximumDarkNeighbors = 2,
+        int BrightCornerMaximumCardinalNeighbors = 1, int BrightCornerMaximumDark5 = 6,
+        double BrightCornerMaximumComponentRatio = 0.5, int BrightCornerMinimumRun = 3,
+        double BrightCornerColorTolerance = 8,
+        bool UseVerticalShadeContinuation = true, int VerticalMediumDark5 = 10,
+        double VerticalMediumMinimumComponentRatio = 0.25,
+        double VerticalMediumMaximumComponentRatio = 0.5,
+        double VerticalMediumMaximumColorSpread = 30, int VerticalWideDark5 = 11,
+        double VerticalWideMinimumComponentRatio = 0.5,
+        double VerticalWideMinimumColorSpread = 50, double VerticalWideMaximumColorSpread = 80,
+        int VerticalShadeSearchRadius = 4, double VerticalShadeColorTolerance = 8);
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
     private readonly record struct PatchCounts(int Bright, int Dark);
     private readonly record struct RepeatEvidence(bool DarkPeer, bool BrightPeer);
     private readonly record struct Proposal(int Index, Color Color, int DarkNeighbors,
-        int CardinalDarkNeighbors, int Dark5Support, double Consensus, double LightnessGain);
+        int CardinalDarkNeighbors, int Dark5Support, double Consensus, double LightnessGain,
+        double LocalGradientRatio);
     private readonly record struct Gradient(double X, double Y)
     {
         public double Length => Math.Sqrt(X * X + Y * Y);
     }
+    private readonly record struct GradientEvidence(double MagnitudeRatio, double Agreement,
+        double Alignment);
     private sealed record DarkComponent(int[] Pixels, int MinX, int MinY, int MaxX, int MaxY);
 
     public static Result Clean(Bitmap source, Options options)
@@ -145,6 +178,80 @@ public static class DarkContourNoiseCleaner
             !double.IsFinite(options.SoftMaximumColorSpread) || options.SoftMaximumColorSpread is < 0 or > 100 ||
             options.SoftMaximumDarkNeighbors is < 0 or > 8 ||
             options.SoftMaximumDark5 is < 0 or > 24 ||
+            options.CoherentGradientMinimumDark5 is < 0 or > 24 ||
+            options.CoherentGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.CoherentGradientColorTolerance) ||
+            options.CoherentGradientColorTolerance is < 0 or > 100 ||
+            options.CoherentGradientMinimumNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.CoherentGradientMagnitudeRatio) ||
+            options.CoherentGradientMagnitudeRatio is < 0 or > 10 ||
+            !double.IsFinite(options.CoherentGradientMinimumAgreement) ||
+            options.CoherentGradientMinimumAgreement is < 0 or > 1 ||
+            !double.IsFinite(options.CoherentGradientMinimumAlignment) ||
+            options.CoherentGradientMinimumAlignment is < 0 or > 1 ||
+            options.DivergentGradientDark5 is < 0 or > 24 ||
+            options.DivergentGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.DivergentGradientColorTolerance) ||
+            options.DivergentGradientColorTolerance is < 0 or > 100 ||
+            options.DivergentGradientMinimumNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.DivergentGradientMagnitudeRatio) ||
+            options.DivergentGradientMagnitudeRatio is < 0 or > 10 ||
+            !double.IsFinite(options.DivergentGradientMaximumAgreement) ||
+            options.DivergentGradientMaximumAgreement is < 0 or > 1 ||
+            options.PatchGradientMinimumDark5 is < 0 or > 24 ||
+            options.PatchGradientMaximumDark5 is < 0 or > 24 ||
+            options.PatchGradientMinimumDark5 > options.PatchGradientMaximumDark5 ||
+            options.PatchGradientMinimumBrightMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.PatchGradientBrightRatio) ||
+            options.PatchGradientBrightRatio is < 0 or > 100 ||
+            options.PatchGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.PatchGradientColorTolerance) ||
+            options.PatchGradientColorTolerance is < 0 or > 100 ||
+            options.PatchGradientMinimumNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.PatchGradientMagnitudeRatio) ||
+            options.PatchGradientMagnitudeRatio is < 0 or > 10 ||
+            !double.IsFinite(options.PatchGradientMaximumMagnitudeRatio) ||
+            options.PatchGradientMaximumMagnitudeRatio is < 0 or > 10 ||
+            options.PatchGradientMaximumMagnitudeRatio < options.PatchGradientMagnitudeRatio ||
+            !double.IsFinite(options.PatchGradientMaximumAgreement) ||
+            options.PatchGradientMaximumAgreement is < 0 or > 1 ||
+            options.MainSparseMaximumDark5 is < 0 or > 24 ||
+            options.MainSparseMinimumBrightMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.MainSparseBrightRatio) ||
+            options.MainSparseBrightRatio is < 0 or > 100 ||
+            options.MainSparseGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.MainSparseColorTolerance) ||
+            options.MainSparseColorTolerance is < 0 or > 100 ||
+            options.MainSparseMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.MainSparseMaximumMagnitudeRatio) ||
+            options.MainSparseMaximumMagnitudeRatio is < 0 or > 10 ||
+            options.BrightCornerMaximumDarkNeighbors is < 0 or > 8 ||
+            options.BrightCornerMaximumCardinalNeighbors is < 0 or > 4 ||
+            options.BrightCornerMaximumDark5 is < 0 or > 24 ||
+            !double.IsFinite(options.BrightCornerMaximumComponentRatio) ||
+            options.BrightCornerMaximumComponentRatio is < 0 or > 1 ||
+            options.BrightCornerMinimumRun is < 1 or > 15 ||
+            !double.IsFinite(options.BrightCornerColorTolerance) ||
+            options.BrightCornerColorTolerance is < 0 or > 100 ||
+            options.VerticalMediumDark5 is < 0 or > 24 ||
+            !double.IsFinite(options.VerticalMediumMinimumComponentRatio) ||
+            options.VerticalMediumMinimumComponentRatio is < 0 or > 1 ||
+            !double.IsFinite(options.VerticalMediumMaximumComponentRatio) ||
+            options.VerticalMediumMaximumComponentRatio is < 0 or > 1 ||
+            options.VerticalMediumMinimumComponentRatio > options.VerticalMediumMaximumComponentRatio ||
+            !double.IsFinite(options.VerticalMediumMaximumColorSpread) ||
+            options.VerticalMediumMaximumColorSpread is < 0 or > 100 ||
+            options.VerticalWideDark5 is < 0 or > 24 ||
+            !double.IsFinite(options.VerticalWideMinimumComponentRatio) ||
+            options.VerticalWideMinimumComponentRatio is < 0 or > 1 ||
+            !double.IsFinite(options.VerticalWideMinimumColorSpread) ||
+            options.VerticalWideMinimumColorSpread is < 0 or > 100 ||
+            !double.IsFinite(options.VerticalWideMaximumColorSpread) ||
+            options.VerticalWideMaximumColorSpread is < 0 or > 100 ||
+            options.VerticalWideMinimumColorSpread > options.VerticalWideMaximumColorSpread ||
+            options.VerticalShadeSearchRadius is < 1 or > 15 ||
+            !double.IsFinite(options.VerticalShadeColorTolerance) ||
+            options.VerticalShadeColorTolerance is < 0 or > 100 ||
             options.DiagonalOppositionRadius is < 1 or > 15 ||
             !double.IsFinite(options.DiagonalMinimumOpposition) ||
             options.DiagonalMinimumOpposition is < 0 or > 1 ||
@@ -181,7 +288,9 @@ public static class DarkContourNoiseCleaner
         Dictionary<UInt128, PatchCounts> isolatedPatchCounts = options.IsolatedPatchRadius > 0 ?
             BuildPatchCounts(original, dark, width, height, options.IsolatedPatchRadius) : new();
         Dictionary<UInt128, PatchCounts> diagonalPatchCounts =
-            options.UseDiagonalGradientEvidence || options.UseTaperedRun || options.UseSparsePatchEvidence ?
+            options.UseDiagonalGradientEvidence || options.UseTaperedRun ||
+            options.UseSparsePatchEvidence || options.UsePatchGradientRescue ||
+            options.UseMainSparsePatch ?
             BuildPatchCounts(original, dark, width, height, 1) : new();
 
         var output = (Color[])original.Clone();
@@ -253,6 +362,17 @@ public static class DarkContourNoiseCleaner
                     patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
                         diagonalPatchCounts, 1, options.SparsePatchMinimumBrightMatches,
                         options.SparsePatchBrightRatio);
+                if (!patchSupport && options.UseMainSparsePatch &&
+                    dark5Support <= options.MainSparseMaximumDark5 &&
+                    cardinalDarkNeighbors <= options.SparsePatchMaximumCardinalDarkNeighbors &&
+                    componentSizes[index] >= largestComponent * options.SecondarySparseMaximumComponentRatio &&
+                    TryMeasureSimilarGradients(original, width, height, x, y,
+                        options.MainSparseGradientRadius, options.MainSparseColorTolerance,
+                        options.MainSparseMinimumSimilarNeighbors, out GradientEvidence sparseEvidence) &&
+                    sparseEvidence.MagnitudeRatio <= options.MainSparseMaximumMagnitudeRatio)
+                    patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
+                        diagonalPatchCounts, 1, options.MainSparseMinimumBrightMatches,
+                        options.MainSparseBrightRatio);
                 bool mediumComponent = darkNeighbors == 3 &&
                     componentSizes[index] >= largestComponent * options.ThreeNeighborProtectedMinimumComponentRatio &&
                     componentSizes[index] < largestComponent * options.ThreeNeighborProtectedComponentRatio;
@@ -277,28 +397,65 @@ public static class DarkContourNoiseCleaner
                     HasBrightPatchMajority(original, dark, width, height, x, y, diagonalPatchCounts,
                         1, options.TaperedRunMinimumBrightMatches, options.TaperedRunBrightRatio) &&
                     HasTaperedRun(dark, width, height, x, y, options);
+                bool divergentGradientRescue = darkNeighbors == 3 && cardinalDarkNeighbors == 2 &&
+                    options.UseDivergentGradientRescue &&
+                    dark5Support == options.DivergentGradientDark5 &&
+                    componentSizes[index] >= largestComponent * options.TwoCardinalMinimumComponentRatio &&
+                    cardinalComponentSizes[index] >= largestCardinalComponent *
+                        options.TwoCardinalMinimumComponentRatio &&
+                    HasDivergentStrongGradient(original, width, height, x, y, options);
+                bool patchGradientRescue = darkNeighbors == 3 && cardinalDarkNeighbors == 2 &&
+                    options.UsePatchGradientRescue &&
+                    dark5Support >= options.PatchGradientMinimumDark5 &&
+                    dark5Support <= options.PatchGradientMaximumDark5 &&
+                    componentSizes[index] >= largestComponent * options.TwoCardinalMinimumComponentRatio &&
+                    cardinalComponentSizes[index] >= largestCardinalComponent *
+                        options.TwoCardinalMinimumComponentRatio &&
+                    HasBrightPatchMajority(original, dark, width, height, x, y, diagonalPatchCounts,
+                        1, options.PatchGradientMinimumBrightMatches, options.PatchGradientBrightRatio) &&
+                    HasPatchGradientEvidence(original, width, height, x, y, options);
                 if (darkNeighbors == 3 &&
                     (dark5Support < options.ThreeNeighborMinimumDark5 ||
                      componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio) &&
                     !patchSupport && !straightSpur && !repeatedMismatch && !diagonalEvidence &&
-                    !taperedRun) continue;
+                    !taperedRun && !divergentGradientRescue && !patchGradientRescue) continue;
                 if (darkNeighbors == 3 && options.ThreeNeighborProtectedContinuation > 0 &&
                     DarkContinuation(dark, width, height, x, y) >= options.ThreeNeighborProtectedContinuation &&
                     repeated.DarkPeer) continue;
+                bool coherentGradientRescue = cardinalDarkNeighbors == 2 &&
+                    options.UseCoherentGradientRescue &&
+                    dark5Support >= options.CoherentGradientMinimumDark5 &&
+                    dark5Support < options.TwoCardinalMinimumDark5 &&
+                    !patchSupport && !repeatedMismatch && !diagonalEvidence && !taperedRun &&
+                    componentSizes[index] >= largestComponent * options.TwoCardinalMinimumComponentRatio &&
+                    cardinalComponentSizes[index] >= largestCardinalComponent *
+                        options.TwoCardinalMinimumComponentRatio &&
+                    HasCoherentStrongGradient(original, width, height, x, y, options);
                 if (cardinalDarkNeighbors == 2 &&
                     (dark5Support < options.TwoCardinalMinimumDark5 ||
                      componentSizes[index] < largestComponent * options.TwoCardinalMinimumComponentRatio ||
                      cardinalComponentSizes[index] < largestCardinalComponent *
                          options.TwoCardinalMinimumComponentRatio) && !patchSupport && !repeatedMismatch &&
-                    !diagonalEvidence && !taperedRun) continue;
+                    !diagonalEvidence && !taperedRun && !coherentGradientRescue &&
+                    !divergentGradientRescue && !patchGradientRescue) continue;
 
                 Color pairColor = default;
                 bool hasPair = options.UseOppositeBrightPair && TryOppositeBrightPair(original, dark,
                     width, height, x, y, options.PairColorTolerance, options.BrightColorTolerance,
                     options.MinimumPairExtension,
                     out pairColor);
+                Color cornerColor = default;
+                bool brightCorner = options.UseBrightCornerContinuation &&
+                    darkNeighbors <= options.BrightCornerMaximumDarkNeighbors &&
+                    cardinalDarkNeighbors <= options.BrightCornerMaximumCardinalNeighbors &&
+                    dark5Support <= options.BrightCornerMaximumDark5 &&
+                    componentSizes[index] < largestComponent *
+                        options.BrightCornerMaximumComponentRatio &&
+                    TryBrightCornerContinuation(original, dark, width, height, x, y,
+                        options.BrightCornerMinimumRun, options.BrightCornerColorTolerance,
+                        out cornerColor);
                 Color replacement = diagonalEvidence ? diagonalColor : hasPair ? pairColor :
-                    BrightRepresentative(surrounding, options.BrightColorTolerance);
+                    brightCorner ? cornerColor : BrightRepresentative(surrounding, options.BrightColorTolerance);
                 int matching = surrounding.Count(item => DistanceSquared(Lab(item.Color), Lab(replacement)) <=
                     options.BrightColorTolerance * options.BrightColorTolerance);
                 double colorConsensus = matching / (double)surrounding.Count;
@@ -308,7 +465,7 @@ public static class DarkContourNoiseCleaner
                     colorConsensus >= options.SoftMinimumConsensus &&
                     MaximumColorSpreadSquared(surrounding) <=
                         options.SoftMaximumColorSpread * options.SoftMaximumColorSpread;
-                if (!hasPair && !diagonalEvidence &&
+                if (!hasPair && !diagonalEvidence && !brightCorner &&
                     colorConsensus < options.MinimumBrightConsensus && !softColorConsensus &&
                     !(straightSpur && colorConsensus >=
                         options.StraightRunMinimumConsensus) &&
@@ -316,18 +473,45 @@ public static class DarkContourNoiseCleaner
                         options.IsolatedPatchMinimumConsensus)) continue;
                 if (diagonalBridge && colorConsensus <
                     options.DiagonalBridgeMinimumConsensus) continue;
+                double colorSpread = MaximumColorSpreadSquared(surrounding);
+                bool mediumShadeContinuation = darkNeighbors == 3 && cardinalDarkNeighbors == 1 &&
+                    dark5Support == options.VerticalMediumDark5 &&
+                    componentSizes[index] >= largestComponent *
+                        options.VerticalMediumMinimumComponentRatio &&
+                    componentSizes[index] < largestComponent *
+                        options.VerticalMediumMaximumComponentRatio &&
+                    colorSpread <= options.VerticalMediumMaximumColorSpread *
+                        options.VerticalMediumMaximumColorSpread;
+                bool wideShadeContinuation = darkNeighbors == 3 && cardinalDarkNeighbors == 2 &&
+                    dark5Support == options.VerticalWideDark5 &&
+                    componentSizes[index] >= largestComponent *
+                        options.VerticalWideMinimumComponentRatio &&
+                    colorSpread >= options.VerticalWideMinimumColorSpread *
+                        options.VerticalWideMinimumColorSpread &&
+                    colorSpread <= options.VerticalWideMaximumColorSpread *
+                        options.VerticalWideMaximumColorSpread;
+                if (options.UseVerticalShadeContinuation &&
+                    (mediumShadeContinuation || wideShadeContinuation) &&
+                    TryVerticalShadeContinuation(original, dark, width, height, x, y,
+                        options.VerticalShadeSearchRadius, options.VerticalShadeColorTolerance,
+                        out Color verticalColor))
+                    replacement = verticalColor;
                 if (options.RequireCommonGradient &&
                     !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
                 double lightnessGain = Lab(replacement).L - Lab(original[index]).L;
                 if (lightnessGain < options.MinimumLightnessGain) continue;
                 Color restored = Color.FromArgb(original[index].A, replacement.R, replacement.G, replacement.B);
+                double localGradientRatio = TryMeasureSimilarGradients(original, width, height, x, y,
+                    1, options.CommonColorTolerance, 1, out GradientEvidence localEvidence) ?
+                    localEvidence.MagnitudeRatio : 0;
                 proposals.Add(new Proposal(index, restored, darkNeighbors, cardinalDarkNeighbors,
-                    dark5Support, colorConsensus, lightnessGain));
+                    dark5Support, colorConsensus, lightnessGain, localGradientRatio));
             }
 
         var accepted = new List<Proposal>();
         foreach (Proposal proposal in proposals.OrderBy(item => item.DarkNeighbors)
                      .ThenBy(item => item.CardinalDarkNeighbors)
+                     .ThenByDescending(item => item.LocalGradientRatio)
                      .ThenBy(item => item.Dark5Support)
                      .ThenByDescending(item => item.Consensus)
                      .ThenByDescending(item => item.LightnessGain))
@@ -612,6 +796,77 @@ public static class DarkContourNoiseCleaner
         return differences;
     }
 
+    private static bool TryBrightCornerContinuation(Color[] original, bool[] dark,
+        int width, int height, int x, int y, int minimumRun, double tolerance, out Color color)
+    {
+        color = default;
+        double toleranceSquared = tolerance * tolerance;
+        foreach (int dy in new[] { -1, 1 })
+            foreach (int dx in new[] { -1, 1 })
+            {
+                if (x + dx * minimumRun < 0 || x + dx * minimumRun >= width ||
+                    y + dy * minimumRun < 0 || y + dy * minimumRun >= height) continue;
+                int first = y * width + x + dx;
+                Color candidate = original[first];
+                if (candidate.A == 0 || dark[first]) continue;
+                int corner = (y + dy) * width + x + dx;
+                if (original[corner].A != candidate.A || dark[corner] ||
+                    DistanceSquared(Lab(original[corner]), Lab(candidate)) > toleranceSquared) continue;
+                bool continuous = true;
+                for (int distance = 1; distance <= minimumRun; distance++)
+                {
+                    int horizontal = y * width + x + dx * distance;
+                    int vertical = (y + dy * distance) * width + x;
+                    if (original[horizontal].A != candidate.A || dark[horizontal] ||
+                        DistanceSquared(Lab(original[horizontal]), Lab(candidate)) > toleranceSquared ||
+                        original[vertical].A != candidate.A || dark[vertical] ||
+                        DistanceSquared(Lab(original[vertical]), Lab(candidate)) > toleranceSquared)
+                    {
+                        continuous = false;
+                        break;
+                    }
+                }
+                if (!continuous) continue;
+                color = candidate;
+                return true;
+            }
+        return false;
+    }
+
+    private static bool TryVerticalShadeContinuation(Color[] original, bool[] dark,
+        int width, int height, int x, int y, int searchRadius, double tolerance, out Color color)
+    {
+        color = default;
+        int bestRun = 1;
+        double bestLightness = double.NegativeInfinity;
+        foreach (int direction in new[] { -1, 1 })
+        {
+            int firstY = y + direction;
+            if (firstY < 0 || firstY >= height) continue;
+            int first = firstY * width + x;
+            Color candidate = original[first];
+            if (candidate.A == 0 || dark[first]) continue;
+            int run = 0;
+            for (int distance = 1; distance <= searchRadius; distance++)
+            {
+                int py = y + direction * distance;
+                if (py < 0 || py >= height) break;
+                int index = py * width + x;
+                if (original[index].A != candidate.A || dark[index] ||
+                    DistanceSquared(Lab(original[index]), Lab(candidate)) > tolerance * tolerance) break;
+                run++;
+            }
+            double lightness = Lab(candidate).L;
+            if (run > bestRun || run == bestRun && lightness > bestLightness)
+            {
+                bestRun = run;
+                bestLightness = lightness;
+                color = candidate;
+            }
+        }
+        return bestRun >= 2;
+    }
+
     private static bool TryOppositeBrightPair(Color[] original, bool[] dark, int width, int height,
         int x, int y, double pairTolerance, double extensionTolerance, int minimumExtension, out Color color)
     {
@@ -731,6 +986,76 @@ public static class DarkContourNoiseCleaner
         double opposition = -(center.X * commonX + center.Y * commonY) /
             (center.Length * commonLength);
         return opposition >= options.DiagonalMinimumOpposition;
+    }
+
+    private static bool HasCoherentStrongGradient(Color[] original, int width, int height,
+        int x, int y, Options options)
+    {
+        return TryMeasureSimilarGradients(original, width, height, x, y,
+            options.CoherentGradientRadius, options.CoherentGradientColorTolerance,
+            options.CoherentGradientMinimumNeighbors, out GradientEvidence evidence) &&
+            evidence.MagnitudeRatio >= options.CoherentGradientMagnitudeRatio &&
+            evidence.Agreement >= options.CoherentGradientMinimumAgreement &&
+            evidence.Alignment >= options.CoherentGradientMinimumAlignment;
+    }
+
+    private static bool HasPatchGradientEvidence(Color[] original, int width, int height,
+        int x, int y, Options options)
+    {
+        return TryMeasureSimilarGradients(original, width, height, x, y,
+            options.PatchGradientRadius, options.PatchGradientColorTolerance,
+            options.PatchGradientMinimumNeighbors, out GradientEvidence evidence) &&
+            evidence.MagnitudeRatio >= options.PatchGradientMagnitudeRatio &&
+            evidence.MagnitudeRatio <= options.PatchGradientMaximumMagnitudeRatio &&
+            evidence.Agreement <= options.PatchGradientMaximumAgreement;
+    }
+
+    private static bool HasDivergentStrongGradient(Color[] original, int width, int height,
+        int x, int y, Options options)
+    {
+        return TryMeasureSimilarGradients(original, width, height, x, y,
+            options.DivergentGradientRadius, options.DivergentGradientColorTolerance,
+            options.DivergentGradientMinimumNeighbors, out GradientEvidence evidence) &&
+            evidence.MagnitudeRatio >= options.DivergentGradientMagnitudeRatio &&
+            evidence.Agreement <= options.DivergentGradientMaximumAgreement;
+    }
+
+    private static bool TryMeasureSimilarGradients(Color[] original, int width, int height,
+        int x, int y, int radius, double colorTolerance, int minimumNeighbors,
+        out GradientEvidence evidence)
+    {
+        evidence = default;
+        Gradient center = GradientAt(original, width, height, x, y, -1, -1);
+        double centerLength = center.Length;
+        if (centerLength <= 1e-9) return false;
+
+        Color color = original[y * width + x];
+        var centerLab = Lab(color);
+        double toleranceSquared = colorTolerance * colorTolerance;
+        double unitX = 0, unitY = 0, magnitudeTotal = 0;
+        int count = 0;
+        for (int py = Math.Max(1, y - radius); py <= Math.Min(height - 2, y + radius); py++)
+            for (int px = Math.Max(1, x - radius); px <= Math.Min(width - 2, x + radius); px++)
+            {
+                if (px == x && py == y) continue;
+                Color peer = original[py * width + px];
+                if (peer.A != color.A || DistanceSquared(centerLab, Lab(peer)) > toleranceSquared) continue;
+                Gradient other = GradientAt(original, width, height, px, py, x, y);
+                double length = other.Length;
+                if (length <= 1e-9) continue;
+                unitX += other.X / length;
+                unitY += other.Y / length;
+                magnitudeTotal += length;
+                count++;
+            }
+
+        if (count < minimumNeighbors || magnitudeTotal <= 1e-9) return false;
+        double commonLength = Math.Sqrt(unitX * unitX + unitY * unitY);
+        double alignment = commonLength > 1e-9 ?
+            (center.X * unitX + center.Y * unitY) / (centerLength * commonLength) : 0;
+        evidence = new GradientEvidence(centerLength / (magnitudeTotal / count),
+            commonLength / count, alignment);
+        return true;
     }
 
     private static bool HasOpposedCommonGradient(Color[] original, int width, int height,

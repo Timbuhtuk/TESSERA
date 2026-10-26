@@ -10,6 +10,13 @@ if (args.Length > 0 && args[0] == "generate-corpus")
     CorpusGenerator.Generate(corpusRoot, seedOffset);
     return;
 }
+if (args.Length > 0 && args[0] == "generate-varied-corpus")
+{
+    if (args.Length < 2) throw new ArgumentException("generate-varied-corpus OUTPUT_DIRECTORY [SEED_OFFSET]");
+    int seedOffset = args.Length > 2 ? int.Parse(args[2]) : 0;
+    CorpusGenerator.GenerateVaried(Path.GetFullPath(args[1]), seedOffset);
+    return;
+}
 if (args.Length > 0 && args[0] == "evaluate-corpus")
 {
     string corpusRoot = args.Length > 1 ? Path.GetFullPath(args[1]) :

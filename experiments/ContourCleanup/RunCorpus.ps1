@@ -68,6 +68,58 @@ param(
     [double]$SoftColorSpread = 40,
     [int]$SoftMaxDarkNeighbors = 2,
     [int]$SoftMaxDark5 = 6,
+    [switch]$NoCoherentGradient,
+    [int]$CoherentDark5 = 10,
+    [int]$CoherentRadius = 5,
+    [double]$CoherentColorTolerance = 24,
+    [int]$CoherentMinimumNeighbors = 10,
+    [double]$CoherentMagnitudeRatio = 1.2,
+    [double]$CoherentMinimumAgreement = 90,
+    [double]$CoherentMinimumAlignment = 90,
+    [switch]$NoDivergentGradient,
+    [int]$DivergentDark5 = 7,
+    [int]$DivergentRadius = 5,
+    [double]$DivergentColorTolerance = 24,
+    [int]$DivergentMinimumNeighbors = 10,
+    [double]$DivergentMagnitudeRatio = 1.4,
+    [double]$DivergentMaximumAgreement = 15,
+    [switch]$NoPatchGradient,
+    [int]$PatchGradientDark5Minimum = 8,
+    [int]$PatchGradientDark5Maximum = 10,
+    [int]$PatchGradientBright = 6,
+    [double]$PatchGradientBrightRatio = 3,
+    [int]$PatchGradientRadius = 5,
+    [double]$PatchGradientColorTolerance = 24,
+    [int]$PatchGradientMinimumNeighbors = 10,
+    [double]$PatchGradientMagnitudeMinimum = 1.18,
+    [double]$PatchGradientMagnitudeMaximum = 1.4,
+    [double]$PatchGradientMaximumAgreement = 50,
+    [switch]$NoMainSparse,
+    [int]$MainSparseDark5 = 6,
+    [int]$MainSparseBright = 8,
+    [double]$MainSparseBrightRatio = 5,
+    [int]$MainSparseGradientRadius = 5,
+    [double]$MainSparseColorTolerance = 24,
+    [int]$MainSparseMinimumNeighbors = 10,
+    [double]$MainSparseMaximumMagnitude = 1,
+    [switch]$NoBrightCorner,
+    [int]$BrightCornerMaximumDark = 2,
+    [int]$BrightCornerMaximumCardinal = 1,
+    [int]$BrightCornerDark5 = 6,
+    [double]$BrightCornerComponent = 50,
+    [int]$BrightCornerRun = 3,
+    [double]$BrightCornerColorTolerance = 8,
+    [switch]$NoVerticalShade,
+    [int]$VerticalMediumDark5 = 10,
+    [double]$VerticalMediumComponentMinimum = 25,
+    [double]$VerticalMediumComponentMaximum = 50,
+    [double]$VerticalMediumColorSpread = 30,
+    [int]$VerticalWideDark5 = 11,
+    [double]$VerticalWideComponentMinimum = 50,
+    [double]$VerticalWideColorSpreadMinimum = 50,
+    [double]$VerticalWideColorSpreadMaximum = 80,
+    [int]$VerticalRunRadius = 4,
+    [double]$VerticalColorTolerance = 8,
     [int]$ConflictRadius = 2,
     [switch]$RequireCommonGradient,
     [int]$CommonGradientRadius = 5,
@@ -94,6 +146,12 @@ $taperedFlag = if ($NoTaperedRun) { @('--no-tapered-run') } else { @() }
 $sparseFlag = if ($NoSparsePatch) { @('--no-sparse-patch') } else { @() }
 $secondarySparseFlag = if ($NoSecondarySparse) { @('--no-secondary-sparse') } else { @() }
 $softColorFlag = if ($NoSoftColorConsensus) { @('--no-soft-color-consensus') } else { @() }
+$coherentFlag = if ($NoCoherentGradient) { @('--no-coherent-gradient') } else { @() }
+$divergentFlag = if ($NoDivergentGradient) { @('--no-divergent-gradient') } else { @() }
+$patchGradientFlag = if ($NoPatchGradient) { @('--no-patch-gradient') } else { @() }
+$mainSparseFlag = if ($NoMainSparse) { @('--no-main-sparse') } else { @() }
+$brightCornerFlag = if ($NoBrightCorner) { @('--no-bright-corner') } else { @() }
+$verticalShadeFlag = if ($NoVerticalShade) { @('--no-vertical-shade') } else { @() }
 $commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } else { @() }
 
 foreach ($kind in @('clean', 'noisy'))
@@ -144,12 +202,55 @@ foreach ($kind in @('clean', 'noisy'))
             --secondary-sparse-component $SecondarySparseComponent `
             --soft-consensus $SoftConsensus --soft-color-spread $SoftColorSpread `
             --soft-max-dark-neighbors $SoftMaxDarkNeighbors --soft-max-dark5 $SoftMaxDark5 `
+            --coherent-dark5 $CoherentDark5 --coherent-radius $CoherentRadius `
+            --coherent-color-tolerance $CoherentColorTolerance `
+            --coherent-min-neighbors $CoherentMinimumNeighbors `
+            --coherent-magnitude-ratio $CoherentMagnitudeRatio `
+            --coherent-min-agreement $CoherentMinimumAgreement `
+            --coherent-min-alignment $CoherentMinimumAlignment `
+            --divergent-dark5 $DivergentDark5 --divergent-radius $DivergentRadius `
+            --divergent-color-tolerance $DivergentColorTolerance `
+            --divergent-min-neighbors $DivergentMinimumNeighbors `
+            --divergent-magnitude-ratio $DivergentMagnitudeRatio `
+            --divergent-max-agreement $DivergentMaximumAgreement `
+            --patch-gradient-dark5-min $PatchGradientDark5Minimum `
+            --patch-gradient-dark5-max $PatchGradientDark5Maximum `
+            --patch-gradient-bright $PatchGradientBright `
+            --patch-gradient-ratio $PatchGradientBrightRatio `
+            --patch-gradient-radius $PatchGradientRadius `
+            --patch-gradient-color-tolerance $PatchGradientColorTolerance `
+            --patch-gradient-min-neighbors $PatchGradientMinimumNeighbors `
+            --patch-gradient-magnitude-min $PatchGradientMagnitudeMinimum `
+            --patch-gradient-magnitude-max $PatchGradientMagnitudeMaximum `
+            --patch-gradient-max-agreement $PatchGradientMaximumAgreement `
+            --main-sparse-dark5 $MainSparseDark5 --main-sparse-bright $MainSparseBright `
+            --main-sparse-ratio $MainSparseBrightRatio `
+            --main-sparse-gradient-radius $MainSparseGradientRadius `
+            --main-sparse-color-tolerance $MainSparseColorTolerance `
+            --main-sparse-min-neighbors $MainSparseMinimumNeighbors `
+            --main-sparse-max-magnitude $MainSparseMaximumMagnitude `
+            --bright-corner-max-dark $BrightCornerMaximumDark `
+            --bright-corner-max-cardinal $BrightCornerMaximumCardinal `
+            --bright-corner-dark5 $BrightCornerDark5 `
+            --bright-corner-component $BrightCornerComponent `
+            --bright-corner-run $BrightCornerRun `
+            --bright-corner-color-tolerance $BrightCornerColorTolerance `
+            --vertical-medium-dark5 $VerticalMediumDark5 `
+            --vertical-medium-component-min $VerticalMediumComponentMinimum `
+            --vertical-medium-component-max $VerticalMediumComponentMaximum `
+            --vertical-medium-color-spread $VerticalMediumColorSpread `
+            --vertical-wide-dark5 $VerticalWideDark5 `
+            --vertical-wide-component-min $VerticalWideComponentMinimum `
+            --vertical-wide-color-spread-min $VerticalWideColorSpreadMinimum `
+            --vertical-wide-color-spread-max $VerticalWideColorSpreadMaximum `
+            --vertical-run-radius $VerticalRunRadius `
+            --vertical-color-tolerance $VerticalColorTolerance `
             --conflict-radius $ConflictRadius `
             --common-gradient-radius $CommonGradientRadius --common-color-tolerance $CommonColorTolerance `
             --common-min-neighbors $CommonMinimumNeighbors --common-min-magnitude $CommonMinimumMagnitude `
             --common-magnitude-ratio $CommonMagnitudeRatio --common-min-agreement $CommonMinimumAgreement `
             --common-min-opposition $CommonMinimumOpposition `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $commonFlag --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"
