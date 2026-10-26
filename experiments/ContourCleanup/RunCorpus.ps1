@@ -130,10 +130,16 @@ param(
     [double]$CommonMagnitudeRatio = 1.2,
     [double]$CommonMinimumAgreement = 20,
     [double]$CommonMinimumOpposition = 80,
+    [switch]$RequireColorPatch,
+    [switch]$NoColorPatch,
+    [double]$ColorPatchTolerance = 15,
+    [int]$ColorPatchMinimumBright = 1,
+    [double]$ColorPatchRatio = 3,
     [int]$Passes = 1
 )
 
 $ErrorActionPreference = 'Stop'
+if ($RequireColorPatch -and $NoColorPatch) { throw 'Укажите только один из -RequireColorPatch и -NoColorPatch.' }
 $cli = (Resolve-Path -LiteralPath $CliDll).Path
 $corpus = (Resolve-Path -LiteralPath $CorpusRoot).Path
 $report = Join-Path $corpus 'cli-results.jsonl'
@@ -154,6 +160,7 @@ $mainSparseFlag = if ($NoMainSparse) { @('--no-main-sparse') } else { @() }
 $brightCornerFlag = if ($NoBrightCorner) { @('--no-bright-corner') } else { @() }
 $verticalShadeFlag = if ($NoVerticalShade) { @('--no-vertical-shade') } else { @() }
 $commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } else { @() }
+$colorPatchFlag = if ($NoColorPatch) { @('--no-color-patch') } else { @('--require-color-patch') }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -252,7 +259,9 @@ foreach ($kind in @('clean', 'noisy'))
             --common-min-neighbors $CommonMinimumNeighbors --common-min-magnitude $CommonMinimumMagnitude `
             --common-magnitude-ratio $CommonMagnitudeRatio --common-min-agreement $CommonMinimumAgreement `
             --common-min-opposition $CommonMinimumOpposition `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag --passes $Passes
+            --color-patch-tolerance $ColorPatchTolerance --color-patch-min-bright $ColorPatchMinimumBright `
+            --color-patch-ratio $ColorPatchRatio `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

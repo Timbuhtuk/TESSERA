@@ -81,11 +81,16 @@ public static class DarkContourNoiseCleaner
         int VerticalShadeSearchRadius = 4, double VerticalShadeColorTolerance = 8)
     {
         public int TwoCardinalMinimumBrightPatternMatches { get; init; }
+        public bool RequireColorMatchedPatch { get; init; }
+        public double ColorMatchedPatchTolerance { get; init; } = 15;
+        public int ColorMatchedPatchMinimumBrightMatches { get; init; } = 1;
+        public double ColorMatchedPatchBrightRatio { get; init; } = 3;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
     private readonly record struct PatchCounts(int Bright, int Dark);
+    private readonly record struct ColorPatchSample(bool Dark, (double L, double A, double B)[] Ring);
     private readonly record struct RepeatEvidence(bool DarkPeer, bool BrightPeer);
     private readonly record struct Proposal(int Index, Color Color, int DarkNeighbors,
         int CardinalDarkNeighbors, int Dark5Support, double Consensus, double LightnessGain,
@@ -106,6 +111,11 @@ public static class DarkContourNoiseCleaner
             options.MaximumDarkNeighbors is < 0 or > 8 ||
             options.MaximumCardinalDarkNeighbors is < 0 or > 4 ||
             options.TwoCardinalMinimumBrightPatternMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.ColorMatchedPatchTolerance) ||
+            options.ColorMatchedPatchTolerance is < 0 or > 100 ||
+            options.ColorMatchedPatchMinimumBrightMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
+            options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
             options.TwoCardinalMinimumDark5 is < 0 or > 24 ||
             !double.IsFinite(options.ThreeNeighborMinimumComponentRatio) ||
@@ -297,6 +307,8 @@ public static class DarkContourNoiseCleaner
             options.UseMainSparsePatch ||
             options.TwoCardinalMinimumBrightPatternMatches > 0 ?
             BuildPatchCounts(original, dark, width, height, 1) : new();
+        Dictionary<UInt128, List<ColorPatchSample>> colorPatchIndex =
+            options.RequireColorMatchedPatch ? BuildColorPatchIndex(original, dark, width, height) : new();
 
         var output = (Color[])original.Clone();
         var proposals = new List<Proposal>();
@@ -334,6 +346,11 @@ public static class DarkContourNoiseCleaner
                     if (!diagonalPatchCounts.TryGetValue(pattern, out PatchCounts matches) ||
                         matches.Bright < options.TwoCardinalMinimumBrightPatternMatches) continue;
                 }
+                if (options.RequireColorMatchedPatch &&
+                    !HasColorMatchedPatch(original, dark, width, x, y, colorPatchIndex,
+                        options.ColorMatchedPatchTolerance,
+                        options.ColorMatchedPatchMinimumBrightMatches,
+                        options.ColorMatchedPatchBrightRatio)) continue;
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
@@ -663,6 +680,68 @@ public static class DarkContourNoiseCleaner
         UInt128 key = PatchPattern(colors, dark, width, x, y, radius);
         return counts.TryGetValue(key, out PatchCounts match) &&
             match.Bright >= minimumBright && match.Bright > match.Dark * darkMultiplier;
+    }
+
+    private static Dictionary<UInt128, List<ColorPatchSample>> BuildColorPatchIndex(
+        Color[] colors, bool[] dark, int width, int height)
+    {
+        var candidatePatterns = new HashSet<UInt128>();
+        for (int y = 1; y < height - 1; y++)
+            for (int x = 1; x < width - 1; x++)
+                if (dark[y * width + x])
+                    candidatePatterns.Add(PatchPattern(colors, dark, width, x, y, 1));
+
+        var index = new Dictionary<UInt128, List<ColorPatchSample>>();
+        for (int y = 1; y < height - 1; y++)
+            for (int x = 1; x < width - 1; x++)
+            {
+                int pixel = y * width + x;
+                if (colors[pixel].A == 0) continue;
+                UInt128 pattern = PatchPattern(colors, dark, width, x, y, 1);
+                if (!candidatePatterns.Contains(pattern)) continue;
+                if (!index.TryGetValue(pattern, out List<ColorPatchSample>? matches))
+                {
+                    matches = new List<ColorPatchSample>();
+                    index.Add(pattern, matches);
+                }
+                matches.Add(new ColorPatchSample(dark[pixel], ColorPatchRing(colors, width, x, y)));
+            }
+        return index;
+    }
+
+    private static bool HasColorMatchedPatch(Color[] colors, bool[] dark, int width, int x, int y,
+        Dictionary<UInt128, List<ColorPatchSample>> index, double tolerance,
+        int minimumBright, double brightRatio)
+    {
+        UInt128 pattern = PatchPattern(colors, dark, width, x, y, 1);
+        if (!index.TryGetValue(pattern, out List<ColorPatchSample>? matches)) return false;
+        var ring = ColorPatchRing(colors, width, x, y);
+        double toleranceSquared = 8 * tolerance * tolerance;
+        int bright = 0, darkMatches = 0;
+        foreach (ColorPatchSample sample in matches)
+        {
+            double difference = 0;
+            for (int q = 0; q < ring.Length; q++)
+            {
+                difference += DistanceSquared(ring[q], sample.Ring[q]);
+                if (difference > toleranceSquared) break;
+            }
+            if (difference > toleranceSquared) continue;
+            if (sample.Dark) darkMatches++;
+            else bright++;
+        }
+        return bright >= minimumBright && bright > darkMatches * brightRatio;
+    }
+
+    private static (double L, double A, double B)[] ColorPatchRing(Color[] colors, int width, int x, int y)
+    {
+        var ring = new (double L, double A, double B)[8];
+        int q = 0;
+        for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (dx != 0 || dy != 0)
+                    ring[q++] = Lab(colors[(y + dy) * width + x + dx]);
+        return ring;
     }
 
     private static UInt128 PatchPattern(Color[] colors, bool[] dark, int width, int x, int y, int radius)

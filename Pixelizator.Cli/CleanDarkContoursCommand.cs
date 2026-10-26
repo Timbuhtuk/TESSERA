@@ -141,6 +141,11 @@ internal static class CleanDarkContoursCommand
           --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
           --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
           --two-cardinal-bright-pattern N  Минимум светлых повторов 3×3 для двух прямых тёмных соседей: 0–10000 (0).
+          --no-color-patch            Выключить проверку цветовых повторов 3×3 (включена).
+          --require-color-patch       Включить проверку цветовых повторов 3×3.
+          --color-patch-tolerance N   RMS расстояние цветов окружения в LAB: 0–100 (15).
+          --color-patch-min-bright N  Минимум повторов со светлым центром: 0–10000 (1).
+          --color-patch-ratio N       Светлых повторов к тёмным: 0–100 (3).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -190,7 +195,8 @@ internal static class CleanDarkContoursCommand
                 brightCornerColorTolerance = 8, verticalMediumComponentMin = 25,
                 verticalMediumComponentMax = 50, verticalMediumColorSpread = 30,
                 verticalWideComponentMin = 50, verticalWideColorSpreadMin = 50,
-                verticalWideColorSpreadMax = 80, verticalColorTolerance = 8;
+                verticalWideColorSpreadMax = 80, verticalColorTolerance = 8,
+                colorPatchTolerance = 15, colorPatchRatio = 3;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -212,13 +218,15 @@ internal static class CleanDarkContoursCommand
                 mainSparseDark5 = 6, mainSparseBright = 8, mainSparseGradientRadius = 5,
                 mainSparseMinimumNeighbors = 10, brightCornerMaxDark = 2,
                 brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
-                verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4;
+                verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4,
+                colorPatchMinBright = 1;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
                 requireCommonGradient = false, useSecondarySparse = true, useSoftColorConsensus = true,
                 useCoherentGradient = true, useDivergentGradient = true, usePatchGradient = true,
-                useMainSparse = true, useBrightCorner = true, useVerticalShade = true;
+                useMainSparse = true, useBrightCorner = true, useVerticalShade = true,
+                requireColorPatch = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -374,6 +382,11 @@ internal static class CleanDarkContoursCommand
                     case "--two-cardinal-dark5": twoCardinalDark5 = NextInt(); break;
                     case "--two-cardinal-component": twoCardinalComponent = NextDouble(); break;
                     case "--two-cardinal-bright-pattern": twoCardinalBrightPattern = NextInt(); break;
+                    case "--require-color-patch": requireColorPatch = true; break;
+                    case "--no-color-patch": requireColorPatch = false; break;
+                    case "--color-patch-tolerance": colorPatchTolerance = NextDouble(); break;
+                    case "--color-patch-min-bright": colorPatchMinBright = NextInt(); break;
+                    case "--color-patch-ratio": colorPatchRatio = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -488,6 +501,9 @@ internal static class CleanDarkContoursCommand
                 throw new ArgumentException("--two-cardinal-component должен быть от 0 до 100.");
             if (twoCardinalBrightPattern is < 0 or > 10000)
                 throw new ArgumentException("--two-cardinal-bright-pattern должен быть от 0 до 10000.");
+            if (colorPatchTolerance is < 0 or > 100 || colorPatchMinBright is < 0 or > 10000 ||
+                colorPatchRatio is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры цветового повтора 3×3.");
             var options = new DarkContourNoiseCleaner.Options(darkness, neighbors, tolerance, gain,
                 clearance, consensus / 100, cardinal, dark5, component / 100, cardinalWeight,
                 usePair, pairExtension, pairTolerance, twoCardinalDark5, twoCardinalComponent / 100,
@@ -547,7 +563,11 @@ internal static class CleanDarkContoursCommand
                 VerticalWideMaximumColorSpread = verticalWideColorSpreadMax,
                 VerticalShadeSearchRadius = verticalRunRadius,
                 VerticalShadeColorTolerance = verticalColorTolerance,
-                TwoCardinalMinimumBrightPatternMatches = twoCardinalBrightPattern
+                TwoCardinalMinimumBrightPatternMatches = twoCardinalBrightPattern,
+                RequireColorMatchedPatch = requireColorPatch,
+                ColorMatchedPatchTolerance = colorPatchTolerance,
+                ColorMatchedPatchMinimumBrightMatches = colorPatchMinBright,
+                ColorMatchedPatchBrightRatio = colorPatchRatio
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
