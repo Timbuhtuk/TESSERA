@@ -110,6 +110,15 @@ public static class DarkContourNoiseCleaner
         public double SingleDiagonalColorTolerance { get; init; } = 24;
         public int SingleDiagonalMinimumSimilarNeighbors { get; init; } = 5;
         public double SingleDiagonalMinimumOpposition { get; init; } = 0.2;
+        public bool UseThreeNeighborGradientRescue { get; init; }
+        public int ThreeNeighborGradientMinimumDistinctColors { get; init; } = 4;
+        public double ThreeNeighborGradientMaximumLightness { get; init; } = 2.5;
+        public double ThreeNeighborGradientMinimumEnergyDrop { get; init; } = 0.15;
+        public double ThreeNeighborGradientMinimumBrightWeight { get; init; } = 0.1;
+        public int ThreeNeighborGradientRadius { get; init; } = 3;
+        public double ThreeNeighborGradientColorTolerance { get; init; } = 24;
+        public int ThreeNeighborGradientMinimumSimilarNeighbors { get; init; } = 5;
+        public double ThreeNeighborGradientMinimumOpposition { get; init; } = 0.5;
         public bool UseWeightedColorPatchRescue { get; init; }
         public int WeightedColorPatchMaximumPatternDifferences { get; init; } = 2;
         public double WeightedColorPatchSigma { get; init; } = 5;
@@ -178,6 +187,19 @@ public static class DarkContourNoiseCleaner
             options.SingleDiagonalMinimumSimilarNeighbors is < 1 or > 1000 ||
             !double.IsFinite(options.SingleDiagonalMinimumOpposition) ||
             options.SingleDiagonalMinimumOpposition is < 0 or > 1 ||
+            options.ThreeNeighborGradientMinimumDistinctColors is < 1 or > 8 ||
+            !double.IsFinite(options.ThreeNeighborGradientMaximumLightness) ||
+            options.ThreeNeighborGradientMaximumLightness is < 0 or > 100 ||
+            !double.IsFinite(options.ThreeNeighborGradientMinimumEnergyDrop) ||
+            options.ThreeNeighborGradientMinimumEnergyDrop is < 0 or > 1 ||
+            !double.IsFinite(options.ThreeNeighborGradientMinimumBrightWeight) ||
+            options.ThreeNeighborGradientMinimumBrightWeight is < 0 or > 10000 ||
+            options.ThreeNeighborGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.ThreeNeighborGradientColorTolerance) ||
+            options.ThreeNeighborGradientColorTolerance is < 0 or > 100 ||
+            options.ThreeNeighborGradientMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.ThreeNeighborGradientMinimumOpposition) ||
+            options.ThreeNeighborGradientMinimumOpposition is < 0 or > 1 ||
             options.WeightedColorPatchMaximumPatternDifferences is < 0 or > 2 ||
             !double.IsFinite(options.WeightedColorPatchSigma) ||
             options.WeightedColorPatchSigma is <= 0 or > 100 ||
@@ -384,7 +406,8 @@ public static class DarkContourNoiseCleaner
         Dictionary<UInt128, List<ColorPatchSample>> weightedPatchIndex =
             options.RequireColorMatchedPatch &&
             (options.UseWeightedColorPatchRescue || options.UseThreeNeighborEnergyRescue ||
-             options.UseTexturedGradientRescue || options.UseSingleDiagonalGradientRescue) ?
+             options.UseTexturedGradientRescue || options.UseSingleDiagonalGradientRescue ||
+             options.UseThreeNeighborGradientRescue) ?
                 BuildColorPatchIndex(original, dark, width, height,
                     options.WeightedColorPatchMaximumPatternDifferences) : new();
 
@@ -445,9 +468,14 @@ public static class DarkContourNoiseCleaner
                     Lab(original[index]).L <= options.SingleDiagonalMaximumLightness &&
                     DistinctRingColors(original, width, x, y) >=
                         options.SingleDiagonalMinimumDistinctColors;
+                bool threeNeighborGradientRescue = options.UseThreeNeighborGradientRescue &&
+                    darkNeighbors == 3 && cardinalDarkNeighbors == 1 &&
+                    Lab(original[index]).L <= options.ThreeNeighborGradientMaximumLightness &&
+                    DistinctRingColors(original, width, x, y) >=
+                        options.ThreeNeighborGradientMinimumDistinctColors;
                 if (!colorPatchMatch && !options.UseColorPatchEnergyRescue &&
                     !threeNeighborEnergyRescue && !texturedGradientRescue &&
-                    !singleDiagonalRescue) continue;
+                    !singleDiagonalRescue && !threeNeighborGradientRescue) continue;
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
@@ -661,8 +689,19 @@ public static class DarkContourNoiseCleaner
                             options.SingleDiagonalColorTolerance,
                             options.SingleDiagonalMinimumSimilarNeighbors,
                             options.SingleDiagonalMinimumOpposition);
+                    bool threeNeighborGradientAllowed = threeNeighborGradientRescue &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.ThreeNeighborGradientMinimumEnergyDrop) &&
+                        WeightedBrightPatchWeight(original, dark, width, x, y,
+                            weightedPatchIndex, options.WeightedColorPatchSigma) >=
+                            options.ThreeNeighborGradientMinimumBrightWeight &&
+                        HasOpposedReplacementGradient(original, width, height, x, y,
+                            replacement, options.ThreeNeighborGradientRadius,
+                            options.ThreeNeighborGradientColorTolerance,
+                            options.ThreeNeighborGradientMinimumSimilarNeighbors,
+                            options.ThreeNeighborGradientMinimumOpposition);
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
-                        !singleDiagonalGradientRescue) continue;
+                        !singleDiagonalGradientRescue && !threeNeighborGradientAllowed) continue;
                 }
                 if (options.RequireCommonGradient &&
                     !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
