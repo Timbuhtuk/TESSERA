@@ -270,7 +270,7 @@ param(
     [int]$ExemplarDarkChannel = 15,
     [int]$ExemplarExclusion = 3,
     [switch]$NoExemplarMaterialVeto,
-    [int]$ExemplarMaterialError = 10000,
+    [int]$ExemplarMaterialError = 20000,
     [double]$ExemplarMaterialSource = 100,
     [double]$ExemplarMaterialBright = 40,
     [double]$ExemplarMaterialDrop = 20,
