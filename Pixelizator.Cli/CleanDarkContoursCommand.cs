@@ -164,6 +164,16 @@ internal static class CleanDarkContoursCommand
           --textured-gradient-tolerance N    Допуск похожих цветов LAB: 0–100 (24).
           --textured-gradient-neighbors N    Минимум похожих соседей: 1–1000 (5).
           --textured-gradient-opposition N   Минимальная противоположность: 0–100 % (20).
+          --single-diagonal-gradient-rescue  Проверять одиночного диагонального соседа по цвету и градиенту (включено).
+          --no-single-diagonal-gradient-rescue Выключить эту проверку.
+          --single-diagonal-colors N          Минимум разных цветов окружения: 1–8 (4).
+          --single-diagonal-lightness N       Максимальная светлота точки LAB L: 0–100 (2.5).
+          --single-diagonal-energy N          Минимальное снижение перепада: 0–100 % (50).
+          --single-diagonal-bright N          Минимальный вес светлых повторов: 0–10000 (0.1).
+          --single-diagonal-radius N          Радиус сравнения градиентов: 1–15 (3).
+          --single-diagonal-tolerance N       Допуск похожих цветов LAB: 0–100 (24).
+          --single-diagonal-neighbors N       Минимум похожих соседей: 1–1000 (5).
+          --single-diagonal-opposition N      Минимальная противоположность: 0–100 % (20).
           --color-patch-weighted-rescue  Дополнительно учитывать взвешенные цветовые повторы (включено).
           --no-color-patch-weighted-rescue Выключить взвешенные цветовые повторы.
           --weighted-patch-differences N Допуск несовпадений соседей: 0–2 (2).
@@ -225,6 +235,9 @@ internal static class CleanDarkContoursCommand
                 threeNeighborTexturedBright = 0, texturedGradientEnergy = 58,
                 texturedGradientBright = 0.1, texturedGradientTolerance = 24,
                 texturedGradientOpposition = 20,
+                singleDiagonalLightness = 2.5, singleDiagonalEnergy = 50,
+                singleDiagonalBright = 0.1,
+                singleDiagonalTolerance = 24, singleDiagonalOpposition = 20,
                 weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
@@ -251,7 +264,8 @@ internal static class CleanDarkContoursCommand
                 colorPatchMinBright = 1, colorPatchMaxDifferences = 0,
                 weightedPatchDifferences = 2, threeNeighborDistinctColors = 4,
                 texturedGradientColors = 4, texturedGradientRadius = 3,
-                texturedGradientNeighbors = 5;
+                texturedGradientNeighbors = 5, singleDiagonalColors = 4,
+                singleDiagonalRadius = 3, singleDiagonalNeighbors = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -260,6 +274,7 @@ internal static class CleanDarkContoursCommand
                 useMainSparse = true, useBrightCorner = true, useVerticalShade = true,
                 requireColorPatch = true, colorPatchEnergyRescue = false,
                 threeNeighborEnergyRescue = true, texturedGradientRescue = true,
+                singleDiagonalGradientRescue = true,
                 weightedPatchRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
@@ -439,6 +454,16 @@ internal static class CleanDarkContoursCommand
                     case "--textured-gradient-tolerance": texturedGradientTolerance = NextDouble(); break;
                     case "--textured-gradient-neighbors": texturedGradientNeighbors = NextInt(); break;
                     case "--textured-gradient-opposition": texturedGradientOpposition = NextDouble(); break;
+                    case "--single-diagonal-gradient-rescue": singleDiagonalGradientRescue = true; break;
+                    case "--no-single-diagonal-gradient-rescue": singleDiagonalGradientRescue = false; break;
+                    case "--single-diagonal-colors": singleDiagonalColors = NextInt(); break;
+                    case "--single-diagonal-lightness": singleDiagonalLightness = NextDouble(); break;
+                    case "--single-diagonal-energy": singleDiagonalEnergy = NextDouble(); break;
+                    case "--single-diagonal-bright": singleDiagonalBright = NextDouble(); break;
+                    case "--single-diagonal-radius": singleDiagonalRadius = NextInt(); break;
+                    case "--single-diagonal-tolerance": singleDiagonalTolerance = NextDouble(); break;
+                    case "--single-diagonal-neighbors": singleDiagonalNeighbors = NextInt(); break;
+                    case "--single-diagonal-opposition": singleDiagonalOpposition = NextDouble(); break;
                     case "--color-patch-weighted-rescue": weightedPatchRescue = true; break;
                     case "--no-color-patch-weighted-rescue": weightedPatchRescue = false; break;
                     case "--weighted-patch-differences": weightedPatchDifferences = NextInt(); break;
@@ -642,6 +667,15 @@ internal static class CleanDarkContoursCommand
                 TexturedGradientColorTolerance = texturedGradientTolerance,
                 TexturedGradientMinimumSimilarNeighbors = texturedGradientNeighbors,
                 TexturedGradientMinimumOpposition = texturedGradientOpposition / 100,
+                UseSingleDiagonalGradientRescue = singleDiagonalGradientRescue,
+                SingleDiagonalMinimumDistinctColors = singleDiagonalColors,
+                SingleDiagonalMaximumLightness = singleDiagonalLightness,
+                SingleDiagonalMinimumEnergyDrop = singleDiagonalEnergy / 100,
+                SingleDiagonalMinimumBrightWeight = singleDiagonalBright,
+                SingleDiagonalGradientRadius = singleDiagonalRadius,
+                SingleDiagonalColorTolerance = singleDiagonalTolerance,
+                SingleDiagonalMinimumSimilarNeighbors = singleDiagonalNeighbors,
+                SingleDiagonalMinimumOpposition = singleDiagonalOpposition / 100,
                 UseWeightedColorPatchRescue = weightedPatchRescue,
                 WeightedColorPatchMaximumPatternDifferences = weightedPatchDifferences,
                 WeightedColorPatchSigma = weightedPatchSigma,
