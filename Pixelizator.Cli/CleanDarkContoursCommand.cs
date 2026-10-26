@@ -281,6 +281,15 @@ internal static class CleanDarkContoursCommand
           --exemplar-bright-channel N   Нижняя граница светлого центра RGB: 0–255 (25).
           --exemplar-dark-channel N     Верхняя граница тёмного центра RGB: 0–255 (15).
           --exemplar-exclusion N        Радиус исключения близких образцов: 1–20 (3).
+          --no-exemplar-material-veto   Не отклонять слишком светлую замену при совпадении тёмного образца.
+          --exemplar-material-veto      Включить эту защиту (по умолчанию).
+          --exemplar-material-error N   Максимальная сумма квадратов RGB ошибок кольца 3×3: 0–100000000 (10000).
+          --exemplar-material-source N  Максимальное RGB расстояние образца от исходного пикселя: 0–442 (50).
+          --exemplar-material-bright N  Минимальная средняя яркость предлагаемой замены: 0–255 (180).
+          --exemplar-material-drop N    Минимальная разница яркости замены и образца: 0–255 (80).
+          --exemplar-material-agreement-distance N Допуск RGB между образцами: 0–442 (20).
+          --exemplar-material-agreement N Минимум согласных образцов: 1–100 (2).
+          --exemplar-material-neighbors N Число лучших образцов: 1–100 (10).
           --grouped-palette-rescue      Поиск групп одного редкого тёмного оттенка (включён).
           --no-grouped-palette-rescue   Выключить этот поиск.
           --grouped-palette-channel N   Максимальный канал тёмного оттенка RGB: 0–255 (10).
@@ -399,7 +408,9 @@ internal static class CleanDarkContoursCommand
                 exemplarRatio = 20, groupedPaletteAverage = 5, groupedPaletteHighAverage = 4,
                 groupedPaletteSpacing = 8, groupedPaletteRatio = 1.5,
                 groupedPaletteHighRatio = 1,
-                groupedPaletteGain = 20;
+                groupedPaletteGain = 20, exemplarMaterialSource = 50,
+                exemplarMaterialBright = 180, exemplarMaterialDrop = 80,
+                exemplarMaterialAgreementDistance = 20;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -449,7 +460,8 @@ internal static class CleanDarkContoursCommand
                 groupedPaletteHighNear = 40, groupedPalettePriorNear = 80,
                 groupedPalettePriorMin = 2,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
-                groupedPaletteDark = 3;
+                groupedPaletteDark = 3, exemplarMaterialError = 10000,
+                exemplarMaterialAgreement = 2, exemplarMaterialNeighbors = 10;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -467,7 +479,7 @@ internal static class CleanDarkContoursCommand
                 repeatedBridgeRescue = true, sparseDarkPaletteRescue = true,
                 sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
                 sparseDarkPaletteExtended = true, sparsePaletteExclusive = true,
-                exemplarRescue = true, groupedPaletteRescue = true;
+                exemplarRescue = true, groupedPaletteRescue = true, exemplarMaterialVeto = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -763,6 +775,15 @@ internal static class CleanDarkContoursCommand
                     case "--exemplar-bright-channel": exemplarBrightChannel = NextInt(); break;
                     case "--exemplar-dark-channel": exemplarDarkChannel = NextInt(); break;
                     case "--exemplar-exclusion": exemplarExclusion = NextInt(); break;
+                    case "--exemplar-material-veto": exemplarMaterialVeto = true; break;
+                    case "--no-exemplar-material-veto": exemplarMaterialVeto = false; break;
+                    case "--exemplar-material-error": exemplarMaterialError = NextInt(); break;
+                    case "--exemplar-material-source": exemplarMaterialSource = NextDouble(); break;
+                    case "--exemplar-material-bright": exemplarMaterialBright = NextDouble(); break;
+                    case "--exemplar-material-drop": exemplarMaterialDrop = NextDouble(); break;
+                    case "--exemplar-material-agreement-distance": exemplarMaterialAgreementDistance = NextDouble(); break;
+                    case "--exemplar-material-agreement": exemplarMaterialAgreement = NextInt(); break;
+                    case "--exemplar-material-neighbors": exemplarMaterialNeighbors = NextInt(); break;
                     case "--grouped-palette-rescue": groupedPaletteRescue = true; break;
                     case "--no-grouped-palette-rescue": groupedPaletteRescue = false; break;
                     case "--grouped-palette-channel": groupedPaletteChannel = NextInt(); break;
@@ -1089,6 +1110,14 @@ internal static class CleanDarkContoursCommand
                 ExemplarMinimumBrightChannel = exemplarBrightChannel,
                 ExemplarMaximumDarkChannel = exemplarDarkChannel,
                 ExemplarExclusionRadius = exemplarExclusion,
+                UseExemplarMaterialVeto = exemplarMaterialVeto,
+                ExemplarMaterialMaximumRingError = exemplarMaterialError,
+                ExemplarMaterialMaximumSourceDistance = exemplarMaterialSource,
+                ExemplarMaterialMinimumProposalBrightness = exemplarMaterialBright,
+                ExemplarMaterialMinimumBrightnessDrop = exemplarMaterialDrop,
+                ExemplarMaterialAgreementDistance = exemplarMaterialAgreementDistance,
+                ExemplarMaterialMinimumAgreement = exemplarMaterialAgreement,
+                ExemplarMaterialNeighborCount = exemplarMaterialNeighbors,
                 UseGroupedPaletteRescue = groupedPaletteRescue,
                 GroupedPaletteMaximumChannel = groupedPaletteChannel,
                 GroupedPaletteMinimumOccurrences = groupedPaletteMin,

@@ -199,6 +199,14 @@ public static class DarkContourNoiseCleaner
         public int ExemplarMinimumBrightChannel { get; init; } = 25;
         public int ExemplarMaximumDarkChannel { get; init; } = 15;
         public int ExemplarExclusionRadius { get; init; } = 3;
+        public bool UseExemplarMaterialVeto { get; init; } = true;
+        public int ExemplarMaterialMaximumRingError { get; init; } = 10000;
+        public double ExemplarMaterialMaximumSourceDistance { get; init; } = 50;
+        public double ExemplarMaterialMinimumProposalBrightness { get; init; } = 180;
+        public double ExemplarMaterialMinimumBrightnessDrop { get; init; } = 80;
+        public double ExemplarMaterialAgreementDistance { get; init; } = 20;
+        public int ExemplarMaterialMinimumAgreement { get; init; } = 2;
+        public int ExemplarMaterialNeighborCount { get; init; } = 10;
         public bool UseGroupedPaletteRescue { get; init; } = true;
         public int GroupedPaletteMaximumChannel { get; init; } = 10;
         public int GroupedPaletteMinimumOccurrences { get; init; } = 4;
@@ -428,6 +436,18 @@ public static class DarkContourNoiseCleaner
             options.ExemplarMaximumDarkChannel is < 0 or > 255 ||
             options.ExemplarMaximumDarkChannel >= options.ExemplarMinimumBrightChannel ||
             options.ExemplarExclusionRadius is < 1 or > 20 ||
+            options.ExemplarMaterialMaximumRingError is < 0 or > 100000000 ||
+            !double.IsFinite(options.ExemplarMaterialMaximumSourceDistance) ||
+            options.ExemplarMaterialMaximumSourceDistance is < 0 or > 442 ||
+            !double.IsFinite(options.ExemplarMaterialMinimumProposalBrightness) ||
+            options.ExemplarMaterialMinimumProposalBrightness is < 0 or > 255 ||
+            !double.IsFinite(options.ExemplarMaterialMinimumBrightnessDrop) ||
+            options.ExemplarMaterialMinimumBrightnessDrop is < 0 or > 255 ||
+            !double.IsFinite(options.ExemplarMaterialAgreementDistance) ||
+            options.ExemplarMaterialAgreementDistance is < 0 or > 442 ||
+            options.ExemplarMaterialMinimumAgreement is < 1 or > 100 ||
+            options.ExemplarMaterialNeighborCount is < 1 or > 100 ||
+            options.ExemplarMaterialMinimumAgreement > options.ExemplarMaterialNeighborCount ||
             options.GroupedPaletteMaximumChannel is < 0 or > 255 ||
             options.GroupedPaletteMinimumOccurrences is < 1 or > 1000000 ||
             options.GroupedPaletteMaximumOccurrences is < 1 or > 1000000 ||
@@ -1176,6 +1196,9 @@ public static class DarkContourNoiseCleaner
                      .ThenByDescending(item => item.LightnessGain))
         {
             int x = proposal.Index % width, y = proposal.Index / width;
+            if (options.UseExemplarMaterialVeto &&
+                HasOriginalMaterialExemplar(original, width, height, x, y, proposal.Color, options))
+            { audit?.Invoke(x, y, "exemplar-material-veto"); continue; }
             if (options.CandidateConflictRadius > 0 && accepted.Any(item =>
                     Math.Abs(item.Index % width - x) <= options.CandidateConflictRadius &&
                     Math.Abs(item.Index / width - y) <= options.CandidateConflictRadius))
@@ -1488,6 +1511,71 @@ public static class DarkContourNoiseCleaner
             }
         return double.IsFinite(bestBright) && double.IsFinite(bestDark) && bestDark > 0 &&
             bestBright <= bestDark * maximumRatio;
+    }
+
+    private static bool HasOriginalMaterialExemplar(Color[] colors, int width, int height,
+        int x, int y, Color proposal, Options options)
+    {
+        Color source = colors[y * width + x];
+        if (source.A != 255 || (proposal.R + proposal.G + proposal.B) / 3.0 <
+            options.ExemplarMaterialMinimumProposalBrightness) return false;
+        for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+                if ((dx != 0 || dy != 0) && colors[(y + dy) * width + x + dx].A != 255)
+                    return false;
+
+        var nearest = new List<(int Error, Color Color)>(options.ExemplarMaterialNeighborCount);
+        for (int sampleY = 1; sampleY < height - 1; sampleY++)
+            for (int sampleX = 1; sampleX < width - 1; sampleX++)
+            {
+                if (Math.Abs(sampleX - x) <= options.ExemplarExclusionRadius &&
+                    Math.Abs(sampleY - y) <= options.ExemplarExclusionRadius) continue;
+                Color sample = colors[sampleY * width + sampleX];
+                if (sample.A != 255 || Math.Max(sample.R, Math.Max(sample.G, sample.B)) <=
+                    options.ExemplarMinimumBrightChannel) continue;
+                int error = 0;
+                bool visible = true;
+                for (int dy = -1; dy <= 1 && visible; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        Color candidateNeighbor = colors[(y + dy) * width + x + dx];
+                        Color sampleNeighbor = colors[(sampleY + dy) * width + sampleX + dx];
+                        if (sampleNeighbor.A != 255) { visible = false; break; }
+                        int red = candidateNeighbor.R - sampleNeighbor.R;
+                        int green = candidateNeighbor.G - sampleNeighbor.G;
+                        int blue = candidateNeighbor.B - sampleNeighbor.B;
+                        error += red * red + green * green + blue * blue;
+                    }
+                if (!visible || nearest.Count == options.ExemplarMaterialNeighborCount &&
+                    error >= nearest[^1].Error) continue;
+                int position = nearest.FindIndex(item => item.Error > error);
+                if (position < 0) nearest.Add((error, sample));
+                else nearest.Insert(position, (error, sample));
+                if (nearest.Count > options.ExemplarMaterialNeighborCount)
+                    nearest.RemoveAt(nearest.Count - 1);
+            }
+
+        if (nearest.Count < options.ExemplarMaterialMinimumAgreement ||
+            nearest[0].Error > options.ExemplarMaterialMaximumRingError) return false;
+        Color exemplar = nearest[0].Color;
+        double sourceDistanceSquared = (exemplar.R - source.R) * (exemplar.R - source.R) +
+            (exemplar.G - source.G) * (exemplar.G - source.G) +
+            (exemplar.B - source.B) * (exemplar.B - source.B);
+        if (sourceDistanceSquared > options.ExemplarMaterialMaximumSourceDistance *
+            options.ExemplarMaterialMaximumSourceDistance ||
+            (proposal.R + proposal.G + proposal.B - exemplar.R - exemplar.G - exemplar.B) / 3.0 <
+            options.ExemplarMaterialMinimumBrightnessDrop) return false;
+        int agreement = 0;
+        foreach ((int _, Color color) in nearest)
+        {
+            double distanceSquared = (color.R - exemplar.R) * (color.R - exemplar.R) +
+                (color.G - exemplar.G) * (color.G - exemplar.G) +
+                (color.B - exemplar.B) * (color.B - exemplar.B);
+            if (distanceSquared <= options.ExemplarMaterialAgreementDistance *
+                options.ExemplarMaterialAgreementDistance) agreement++;
+        }
+        return agreement >= options.ExemplarMaterialMinimumAgreement;
     }
 
     private static int ApplyGroupedPaletteRescue(Color[] original, Color[] output, bool[] dark,
