@@ -140,6 +140,7 @@ internal static class CleanDarkContoursCommand
           --common-min-opposition N    Противоположность центра общему градиенту: 0–100% (80).
           --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
           --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
+          --two-cardinal-bright-pattern N  Минимум светлых повторов 3×3 для двух прямых тёмных соседей: 0–10000 (0).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -191,7 +192,8 @@ internal static class CleanDarkContoursCommand
                 verticalWideComponentMin = 50, verticalWideColorSpreadMin = 50,
                 verticalWideColorSpreadMax = 80, verticalColorTolerance = 8;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
-                pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3,
+                pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
+                protectedContinuation = 3,
                 repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
                 largePatchBright = 2, smallPatchRadius = 1, smallPatchBright = 10,
                 minimumStraightRun = 8, straightRunRadius = 15, straightRunDark5 = 9,
@@ -371,6 +373,7 @@ internal static class CleanDarkContoursCommand
                     case "--common-min-opposition": commonMinimumOpposition = NextDouble(); break;
                     case "--two-cardinal-dark5": twoCardinalDark5 = NextInt(); break;
                     case "--two-cardinal-component": twoCardinalComponent = NextDouble(); break;
+                    case "--two-cardinal-bright-pattern": twoCardinalBrightPattern = NextInt(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -483,6 +486,8 @@ internal static class CleanDarkContoursCommand
                 throw new ArgumentException("Некорректные параметры общего градиента.");
             if (twoCardinalComponent is < 0 or > 100)
                 throw new ArgumentException("--two-cardinal-component должен быть от 0 до 100.");
+            if (twoCardinalBrightPattern is < 0 or > 10000)
+                throw new ArgumentException("--two-cardinal-bright-pattern должен быть от 0 до 10000.");
             var options = new DarkContourNoiseCleaner.Options(darkness, neighbors, tolerance, gain,
                 clearance, consensus / 100, cardinal, dark5, component / 100, cardinalWeight,
                 usePair, pairExtension, pairTolerance, twoCardinalDark5, twoCardinalComponent / 100,
@@ -541,7 +546,8 @@ internal static class CleanDarkContoursCommand
                 VerticalWideMinimumColorSpread = verticalWideColorSpreadMin,
                 VerticalWideMaximumColorSpread = verticalWideColorSpreadMax,
                 VerticalShadeSearchRadius = verticalRunRadius,
-                VerticalShadeColorTolerance = verticalColorTolerance
+                VerticalShadeColorTolerance = verticalColorTolerance,
+                TwoCardinalMinimumBrightPatternMatches = twoCardinalBrightPattern
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,

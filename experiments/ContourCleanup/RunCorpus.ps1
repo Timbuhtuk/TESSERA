@@ -7,6 +7,7 @@ param(
     [int]$MaxCardinalDark = 2,
     [int]$TwoCardinalDark5 = 11,
     [double]$TwoCardinalComponent = 40,
+    [int]$TwoCardinalBrightPattern = 0,
     [double]$ThreeNeighborComponent = 10,
     [int]$ThreeNeighborDark5 = 9,
     [int]$ProtectedContinuation = 3,
@@ -167,6 +168,7 @@ foreach ($kind in @('clean', 'noisy'))
             --min-lightness-gain $MinGain --min-bright-consensus $Consensus `
             --alpha-clearance $AlphaClearance --max-cardinal-dark $MaxCardinalDark `
             --two-cardinal-dark5 $TwoCardinalDark5 --two-cardinal-component $TwoCardinalComponent `
+            --two-cardinal-bright-pattern $TwoCardinalBrightPattern `
             --three-neighbor-component $ThreeNeighborComponent --three-neighbor-dark5 $ThreeNeighborDark5 `
             --three-neighbor-continuation $ProtectedContinuation `
             --three-neighbor-protected-component $ProtectedComponent `

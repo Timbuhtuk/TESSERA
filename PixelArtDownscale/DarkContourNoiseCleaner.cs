@@ -78,7 +78,10 @@ public static class DarkContourNoiseCleaner
         double VerticalMediumMaximumColorSpread = 30, int VerticalWideDark5 = 11,
         double VerticalWideMinimumComponentRatio = 0.5,
         double VerticalWideMinimumColorSpread = 50, double VerticalWideMaximumColorSpread = 80,
-        int VerticalShadeSearchRadius = 4, double VerticalShadeColorTolerance = 8);
+        int VerticalShadeSearchRadius = 4, double VerticalShadeColorTolerance = 8)
+    {
+        public int TwoCardinalMinimumBrightPatternMatches { get; init; }
+    }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
@@ -102,6 +105,7 @@ public static class DarkContourNoiseCleaner
         if (!double.IsFinite(options.DarkLightness) || options.DarkLightness is < 0 or > 100 ||
             options.MaximumDarkNeighbors is < 0 or > 8 ||
             options.MaximumCardinalDarkNeighbors is < 0 or > 4 ||
+            options.TwoCardinalMinimumBrightPatternMatches is < 0 or > 10000 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
             options.TwoCardinalMinimumDark5 is < 0 or > 24 ||
             !double.IsFinite(options.ThreeNeighborMinimumComponentRatio) ||
@@ -290,7 +294,8 @@ public static class DarkContourNoiseCleaner
         Dictionary<UInt128, PatchCounts> diagonalPatchCounts =
             options.UseDiagonalGradientEvidence || options.UseTaperedRun ||
             options.UseSparsePatchEvidence || options.UsePatchGradientRescue ||
-            options.UseMainSparsePatch ?
+            options.UseMainSparsePatch ||
+            options.TwoCardinalMinimumBrightPatternMatches > 0 ?
             BuildPatchCounts(original, dark, width, height, 1) : new();
 
         var output = (Color[])original.Clone();
@@ -322,6 +327,13 @@ public static class DarkContourNoiseCleaner
                 if (!allVisible || darkNeighbors > options.MaximumDarkNeighbors ||
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
                     surrounding.Count < 5) continue;
+                if (cardinalDarkNeighbors == 2 &&
+                    options.TwoCardinalMinimumBrightPatternMatches > 0)
+                {
+                    UInt128 pattern = PatchPattern(original, dark, width, x, y, 1);
+                    if (!diagonalPatchCounts.TryGetValue(pattern, out PatchCounts matches) ||
+                        matches.Bright < options.TwoCardinalMinimumBrightPatternMatches) continue;
+                }
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
