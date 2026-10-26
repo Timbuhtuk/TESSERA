@@ -362,6 +362,8 @@ public partial class MainWindow
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
         Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
         ChannelAdjustment = _channelAdjustment,
+        ConnectedPalette = BuildConnectedOptions(),
+        ConnectedPaletteTileSize = connectedTileSizeInput.Value,
         ContourWindowSize = ContourWindowSize,
         ContourStrictness = ContourCleanStrictness.Strong,
         ContourProtectDetails = contourDetailGuardInput.IsChecked == true,
@@ -413,6 +415,15 @@ public partial class MainWindow
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
             RestoreChannelAdjustment(settings.ChannelAdjustment);
+            var connected = settings.ConnectedPalette ?? new ConnectivityPaletteOptions();
+            connectedColorsInput.Value = Math.Clamp(connected.TargetColors, 1, 4096);
+            connectedConnectivityInput.Value = Math.Clamp((int)Math.Round(connected.ConnectivityWeight * 100), 0, 100);
+            connectedTileSizeInput.Value = Math.Clamp(settings.ConnectedPaletteTileSize, 4, 256);
+            connectedTilesInput.IsChecked = connected.TileSize != 0;
+            connectedLocalInput.Value = Math.Clamp((int)Math.Round(connected.LocalWeight * 100), 0, 100);
+            connectedDetailInput.Value = Math.Clamp((int)Math.Round(connected.DetailWeight * 100), 0, 100);
+            connectedContextInput.Value = Math.Clamp((int)Math.Round(connected.ContextWeight * 100), 0, 100);
+            connectedSpaceInput.SelectedIndex = connected.DistanceSpace == PaletteDistanceSpace.CieLab ? 1 : 0;
             contourWindowInput.Value = settings.ContourWindowSize is >= 3 and <= 15 && settings.ContourWindowSize % 2 == 1 ? settings.ContourWindowSize : 15;
             contourDetailGuardInput.IsChecked = settings.ContourProtectDetails;
             contourSimilarityInput.Value = settings.ContourSimilarColorDistance;

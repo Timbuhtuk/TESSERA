@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Связная палитра: новый экспериментальный режим",
+        "en": "Connected palette: a new experimental mode"
+      },
+      "notes": {
+        "ru": "- Связная палитра: новый экспериментальный инструмент в «Инструменты → Цвет» и команда connected-palette в CLI. Сокращает число цветов с учётом связных пятен и их окружения, используя только цвета исходной палитры. Размер и прозрачность сохраняются.\n- Настройки: целевое число цветов, вес связности, локальная область и её вес, защита цветовых различий, влияние соседей и пространство Oklab или CIE Lab. Предпросмотр показывается в основном окне; результат сохраняется в истории вместе с настройками.\n- Входной лимит: до 4096 видимых RGB. Для более богатого изображения сначала выполните обычное квантование. Режим предназначен для сравнения результатов; улучшение контуров не гарантируется.",
+        "en": "- Connected palette: a new experimental tool under Tools → Color and the connected-palette CLI command. Reduces colors using connected patches and their surroundings, retaining colors from the original palette. Dimensions and transparency are preserved.\n- Settings include target colors, connectivity weight, local tile size and weight, color-difference protection, neighbor influence and Oklab or CIE Lab. The main pane shows the preview; the result and its settings are saved in history.\n- Input limit: up to 4096 visible RGB colors. Quantize richer images first. This mode is intended for comparison; better contours are not guaranteed."
+      }
+    },
+    {
+      "version": "2.9.0",
+      "title": {
         "ru": "CLI: очистка тёмных контуров и одиночных точек сетки",
         "en": "CLI: dark contour and grid speckle cleanup"
       },

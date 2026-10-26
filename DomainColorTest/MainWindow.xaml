@@ -243,6 +243,22 @@
 
                         </StackPanel>
                     </GroupBox>
+                    <GroupBox x:Name="connectedPaletteToolGroup" Header="{local:Translate Text35A8C3A4B388}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Translate TextFAAA51D6F0FB}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,10"/>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextD1A78C0E6549}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedColorsInput" Minimum="1" Maximum="4096" Value="128" AutomationProperties.Name="{local:Translate TextA9BB573279A7}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextCEE7678C601D}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedConnectivityInput" Minimum="0" Maximum="100" Value="70" AutomationProperties.Name="{local:Translate TextEA6371F1BF27}"/></DockPanel>
+                            <CheckBox x:Name="connectedTilesInput" Content="{local:Translate TextFCE991770BDE}" IsChecked="True" Margin="0,7,0,3"/>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextDE6AB5D79B0B}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedTileSizeInput" Minimum="4" Maximum="256" Value="32" AutomationProperties.Name="{local:Translate Text0B096F1F2507}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextEFCE107AB8DE}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedLocalInput" Minimum="0" Maximum="100" Value="40" AutomationProperties.Name="{local:Translate Text46ECED7F4D80}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextDFB36177C222}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedDetailInput" Minimum="0" Maximum="100" Value="50" AutomationProperties.Name="{local:Translate Text19C19B692B08}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text72B537176AD9}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedContextInput" Minimum="0" Maximum="100" Value="30" AutomationProperties.Name="{local:Translate Text17112A7034FD}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text0ADE853F6269}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><ComboBox x:Name="connectedSpaceInput" SelectedIndex="0" AutomationProperties.Name="{local:Translate Text0ADE853F6269}"><ComboBoxItem Content="Oklab"/><ComboBoxItem Content="CIE Lab"/></ComboBox></DockPanel>
+                            <TextBlock x:Name="connectedPreviewStatus" Text="{local:Translate Text633AD966C74E}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,10,0,0"/>
+                            <Button x:Name="connectedPreviewButton" Content="{local:Translate Text62B92AA4CE79}" Margin="0,10,0,0"/>
+                            <Button x:Name="connectedApplyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text2E5D40A1FF51}" IsEnabled="False" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
                     <GroupBox x:Name="channelToolGroup" />
                     <GroupBox x:Name="smoothingToolGroup" Header="{local:Translate Text60B95C88C072}">
                         <StackPanel>

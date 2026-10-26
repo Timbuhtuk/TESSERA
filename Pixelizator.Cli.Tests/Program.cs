@@ -13,6 +13,7 @@ int failed = 0;
 try
 {
     DarkContourChecks.Run(directory, Check);
+    ConnectedPaletteChecks.Run(directory, Check);
     string input = Path.Combine(directory, "исходное изображение.png");
     using (var fixture = new Bitmap(67, 61, PixelFormat.Format32bppArgb))
     {

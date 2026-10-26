@@ -62,7 +62,7 @@ internal static class NavigationChecks
                 {
                     ("processingMenu", new[] { "profileMenuItem", "macrosMenuItem" }),
                     ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem" }),
-                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "contoursMenuItem", "channelMenuItem", "replaceColorMenuItem", "infoMenuItem" }),
+                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "connectedPaletteMenuItem", "contoursMenuItem", "channelMenuItem", "replaceColorMenuItem", "infoMenuItem" }),
                     ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
                     ("materialsToolsMenu", new[] { "materialMapsMenuItem", "inspectTilesMenuItem", "addToBoardMenuItem" })
                 })

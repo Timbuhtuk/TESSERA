@@ -77,6 +77,7 @@ public partial class MainWindow
 
         var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
         colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Число цветов…", "color", 440, colorToolGroup);
+        AddTool(colorToolsMenu, "connectedPaletteMenuItem", "Связная палитра…", "connected-palette", 590, connectedPaletteToolGroup);
         smoothingMenuItem = AddTool(colorToolsMenu, "smoothingMenuItem", "Очистить цвета…", "smoothing", 470, smoothingToolGroup);
         AddTool(colorToolsMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
         AddTool(colorToolsMenu, "channelMenuItem", "Каналы RGBA…", "channel", 460, channelToolGroup);
@@ -165,7 +166,7 @@ public partial class MainWindow
         bool background = backgroundWorkspace.Visibility == Visibility.Visible;
         bool ico = iconWorkspace.Visibility == Visibility.Visible;
         bool tiles = _workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null;
-        bool canExport = image && !ContourPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
+        bool canExport = image && !ContourPreviewVisible && !ConnectedPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
         toolsMenu.IsEnabled = image && !busy;
@@ -175,7 +176,7 @@ public partial class MainWindow
         saveDocumentMenuItem.Header = Localization.Text(_workspaceReady ? "Сохранить проект" : "Сохранить документ");
         exportMenu.IsEnabled = !busy && canExport;
         saveMenuItem.Header = animation ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
-        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible);
+        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !ConnectedPreviewVisible);
         saveMenuItem.InputGestureText = image && !_workspaceReady ? "Ctrl+S" : "";
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;
         saveAllMenuItem.Visibility = image ? Visibility.Visible : Visibility.Collapsed;

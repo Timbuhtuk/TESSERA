@@ -143,6 +143,10 @@ Open **Remove background** from the home screen, drop or open an image, and comp
 Enable **Eraser on result**, choose its diameter in image pixels, and drag over unwanted edges. Zoom up to 1600% and scroll for precise corrections. **Undo stroke** / Ctrl+Z restores the last stroke; **Reset edits** clears the manual mask. Changing the removal color, tolerance or mode keeps the mask; loading another source clears it. Both PNG export and **To asset history** include the manual corrections, while the source remains unchanged. Hover over **From editor** to inspect and choose a saved source or result by thumbnail. The ICO workflow keeps its optional background removal setting.
 
 
+## Experimental connected palette
+
+Open **Tools → Color → Connected palette…** before grid downscaling. Choose the target color count, how strongly connected patches are protected, a local analysis size, local and color-difference weights, neighbor influence during replacement, and Oklab or CIE Lab. The left canvas previews the result; large inputs require **Refresh preview**. **Create result** adds an exportable history card. The tool preserves the image size and alpha and draws replacement colors only from the input palette. It works best on an image already brought to a manageable palette with Median Cut or K-means. See [CLI.md](CLI.md) for `connected-palette` and its experimental 4096-color input limit.
+
 ## Contours
 
 Open **Tools → Color → Contours…**. Choose an odd analysis window from **3×3 to 15×15** and adjust each threshold independently: LAB color tolerance, minimum pixel/neighbor gradients, minimum similar-neighbor count, agreement and opposition percentages. The old desktop strictness selector is replaced by these controls. Fine-detail protection remains separate.
@@ -150,3 +154,5 @@ Open **Tools → Color → Contours…**. Choose an odd analysis window from **3
 The main preview uses white-to-light-red for color-change strength and red for pixels whose gradient opposes the common direction of similar neighbors. Small color differences have less influence than large ones. Some pixels selected by the earlier boundary heuristic are no longer candidates. Small images update automatically; refresh large images manually. **Create map result** adds an exportable history card with the settings used, dimensions and alpha intact. Source/result selection chooses the input, and switching tools clears the temporary map.
 
 The map marks candidates independently of the safe replacement stage. The CLI can leave a candidate unchanged if it cannot choose a suitable replacement; its candidate mask and change count therefore describe different things. Existing saved images remain available.
+
+Connected palette settings are saved with each result, including the inactive local-tile size. The input limit is 4096 visible RGB colors; use the ordinary color-reduction tool first for richer images.
