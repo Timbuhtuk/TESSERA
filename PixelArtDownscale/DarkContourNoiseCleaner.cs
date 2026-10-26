@@ -204,8 +204,10 @@ public static class DarkContourNoiseCleaner
         public int GroupedPaletteMinimumOccurrences { get; init; } = 4;
         public int GroupedPaletteMaximumOccurrences { get; init; } = 8;
         public int GroupedPaletteNearColorDistance { get; init; } = 4;
-        public int GroupedPaletteMaximumNearPixels { get; init; } = 80;
+        public int GroupedPaletteMaximumNearPixels { get; init; } = 160;
         public int GroupedPaletteHighNearThreshold { get; init; } = 40;
+        public int GroupedPalettePriorChangesThreshold { get; init; } = 80;
+        public int GroupedPaletteMinimumPriorChanges { get; init; } = 2;
         public int GroupedPaletteMinimumSupportedPixels { get; init; } = 4;
         public int GroupedPaletteMinimumBrightNeighbors { get; init; } = 5;
         public int GroupedPaletteMaximumDarkNeighbors { get; init; } = 3;
@@ -432,7 +434,8 @@ public static class DarkContourNoiseCleaner
             options.GroupedPaletteNearColorDistance is < 0 or > 765 ||
             options.GroupedPaletteMaximumNearPixels is < 0 or > 1000000 ||
             options.GroupedPaletteHighNearThreshold is < 0 or > 1000000 ||
-            options.GroupedPaletteHighNearThreshold > options.GroupedPaletteMaximumNearPixels ||
+            options.GroupedPalettePriorChangesThreshold is < 0 or > 1000000 ||
+            options.GroupedPaletteMinimumPriorChanges is < 0 or > 1000000 ||
             options.GroupedPaletteMinimumSupportedPixels is < 1 or > 8 ||
             options.GroupedPaletteMinimumBrightNeighbors is < 0 or > 8 ||
             options.GroupedPaletteMaximumDarkNeighbors is < 0 or > 8 ||
@@ -1516,6 +1519,14 @@ public static class DarkContourNoiseCleaner
             int nearPixels = CountNearDarkPalette(color, darkColorOccurrences,
                 options.GroupedPaletteNearColorDistance);
             if (nearPixels > options.GroupedPaletteMaximumNearPixels) continue;
+            if (nearPixels > options.GroupedPalettePriorChangesThreshold)
+            {
+                int priorChanges = 0;
+                foreach ((int x, int y) in points)
+                    if (output[y * width + x].ToArgb() != original[y * width + x].ToArgb())
+                        priorChanges++;
+                if (priorChanges < options.GroupedPaletteMinimumPriorChanges) continue;
+            }
             double maximumExemplarRatio = nearPixels > options.GroupedPaletteHighNearThreshold ?
                 options.GroupedPaletteHighNearMaximumExemplarRatio :
                 options.GroupedPaletteMaximumExemplarRatio;

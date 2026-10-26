@@ -287,8 +287,10 @@ internal static class CleanDarkContoursCommand
           --grouped-palette-min N       Минимум точных повторов: 1–1000000 (4).
           --grouped-palette-max N       Максимум точных повторов: 1–1000000 (8).
           --grouped-palette-near-distance N Допуск других оттенков по сумме RGB: 0–765 (4).
-          --grouped-palette-near-max N  Максимум близких пикселей: 0–1000000 (80).
+          --grouped-palette-near-max N  Максимум близких пикселей: 0–1000000 (160).
           --grouped-palette-high-near N Порог строгого сравнения образцов: 0–1000000 (40).
+          --grouped-palette-prior-near N Порог проверки ранее исправленных точек группы: 0–1000000 (80).
+          --grouped-palette-prior-min N Минимум ранее исправленных точек группы: 0–1000000 (2).
           --grouped-palette-support N   Минимум подозрительных точек в группе: 1–8 (4).
           --grouped-palette-bright N    Минимум светлых соседей точки: 0–8 (5).
           --grouped-palette-dark N      Максимум тёмных соседей точки: 0–8 (3).
@@ -442,8 +444,9 @@ internal static class CleanDarkContoursCommand
                 exemplarBrightChannel = 25, exemplarDarkChannel = 15,
                 exemplarExclusion = 3, groupedPaletteChannel = 10,
                 groupedPaletteMin = 4, groupedPaletteMax = 8,
-                groupedPaletteNearDistance = 4, groupedPaletteNearMax = 80,
-                groupedPaletteHighNear = 40,
+                groupedPaletteNearDistance = 4, groupedPaletteNearMax = 160,
+                groupedPaletteHighNear = 40, groupedPalettePriorNear = 80,
+                groupedPalettePriorMin = 2,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
                 groupedPaletteDark = 3;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
@@ -767,6 +770,8 @@ internal static class CleanDarkContoursCommand
                     case "--grouped-palette-near-distance": groupedPaletteNearDistance = NextInt(); break;
                     case "--grouped-palette-near-max": groupedPaletteNearMax = NextInt(); break;
                     case "--grouped-palette-high-near": groupedPaletteHighNear = NextInt(); break;
+                    case "--grouped-palette-prior-near": groupedPalettePriorNear = NextInt(); break;
+                    case "--grouped-palette-prior-min": groupedPalettePriorMin = NextInt(); break;
                     case "--grouped-palette-support": groupedPaletteSupport = NextInt(); break;
                     case "--grouped-palette-bright": groupedPaletteBright = NextInt(); break;
                     case "--grouped-palette-dark": groupedPaletteDark = NextInt(); break;
@@ -1089,6 +1094,8 @@ internal static class CleanDarkContoursCommand
                 GroupedPaletteNearColorDistance = groupedPaletteNearDistance,
                 GroupedPaletteMaximumNearPixels = groupedPaletteNearMax,
                 GroupedPaletteHighNearThreshold = groupedPaletteHighNear,
+                GroupedPalettePriorChangesThreshold = groupedPalettePriorNear,
+                GroupedPaletteMinimumPriorChanges = groupedPalettePriorMin,
                 GroupedPaletteMinimumSupportedPixels = groupedPaletteSupport,
                 GroupedPaletteMinimumBrightNeighbors = groupedPaletteBright,
                 GroupedPaletteMaximumDarkNeighbors = groupedPaletteDark,
