@@ -272,6 +272,15 @@ internal static class CleanDarkContoursCommand
           --sparse-palette-exclusive-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
           --sparse-palette-exclusive-max N Максимум похожих пикселей: 0–1000000 (2).
           --sparse-palette-exclusive-gain N Минимальное увеличение LAB L: 0–100 (20).
+          --exemplar-rescue             Сравнение фрагментов 3×3 без центра (включено).
+          --no-exemplar-rescue          Выключить сравнение фрагментов.
+          --exemplar-near-distance N    Допуск других тёмных оттенков по сумме RGB: 0–765 (4).
+          --exemplar-near-max N         Максимум близких пикселей для поздних отказов: 0–1000000 (40).
+          --exemplar-early-near-max N   Максимум для раннего отказа по цвету: 0–1000000 (0).
+          --exemplar-ratio N            Максимальное отношение ошибок светлого и тёмного образца: 0–100 % (20).
+          --exemplar-bright-channel N   Нижняя граница светлого центра RGB: 0–255 (25).
+          --exemplar-dark-channel N     Верхняя граница тёмного центра RGB: 0–255 (15).
+          --exemplar-exclusion N        Радиус исключения близких образцов: 1–20 (3).
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
           --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
@@ -367,7 +376,8 @@ internal static class CleanDarkContoursCommand
                 sparsePaletteThreeEnergy = 30, sparseDarkPaletteExtendedConsensus = 50,
                 sparseDarkPaletteExtendedTolerance = 0.5,
                 sparseDarkPaletteExtendedGain = 20, sparseDarkPaletteExtendedEnergy = 0,
-                sparsePaletteExclusiveTolerance = 0.5, sparsePaletteExclusiveGain = 20;
+                sparsePaletteExclusiveTolerance = 0.5, sparsePaletteExclusiveGain = 20,
+                exemplarRatio = 20;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -408,7 +418,10 @@ internal static class CleanDarkContoursCommand
                 repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5,
                 sparseDarkPaletteMax = 5, sparsePaletteConsensusMax = 0,
                 sparsePaletteThreeMax = 5, sparseDarkPaletteExtendedMax = 10,
-                sparsePaletteExclusiveMax = 2;
+                sparsePaletteExclusiveMax = 2, exemplarNearDistance = 4,
+                exemplarNearMax = 40, exemplarEarlyNearMax = 0,
+                exemplarBrightChannel = 25, exemplarDarkChannel = 15,
+                exemplarExclusion = 3;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -425,7 +438,8 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkRescue = true, repeatedDarkFirstPass = true,
                 repeatedBridgeRescue = true, sparseDarkPaletteRescue = true,
                 sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
-                sparseDarkPaletteExtended = true, sparsePaletteExclusive = true;
+                sparseDarkPaletteExtended = true, sparsePaletteExclusive = true,
+                exemplarRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -712,6 +726,15 @@ internal static class CleanDarkContoursCommand
                     case "--sparse-palette-exclusive-tolerance": sparsePaletteExclusiveTolerance = NextDouble(); break;
                     case "--sparse-palette-exclusive-max": sparsePaletteExclusiveMax = NextInt(); break;
                     case "--sparse-palette-exclusive-gain": sparsePaletteExclusiveGain = NextDouble(); break;
+                    case "--exemplar-rescue": exemplarRescue = true; break;
+                    case "--no-exemplar-rescue": exemplarRescue = false; break;
+                    case "--exemplar-near-distance": exemplarNearDistance = NextInt(); break;
+                    case "--exemplar-near-max": exemplarNearMax = NextInt(); break;
+                    case "--exemplar-early-near-max": exemplarEarlyNearMax = NextInt(); break;
+                    case "--exemplar-ratio": exemplarRatio = NextDouble(); break;
+                    case "--exemplar-bright-channel": exemplarBrightChannel = NextInt(); break;
+                    case "--exemplar-dark-channel": exemplarDarkChannel = NextInt(); break;
+                    case "--exemplar-exclusion": exemplarExclusion = NextInt(); break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
                     case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
@@ -1011,6 +1034,14 @@ internal static class CleanDarkContoursCommand
                 SparsePaletteExclusiveColorTolerance = sparsePaletteExclusiveTolerance,
                 SparsePaletteExclusiveMaximumSimilarPixels = sparsePaletteExclusiveMax,
                 SparsePaletteExclusiveMinimumLightnessGain = sparsePaletteExclusiveGain,
+                UseExemplarRescue = exemplarRescue,
+                ExemplarNearColorDistance = exemplarNearDistance,
+                ExemplarMaximumNearPixels = exemplarNearMax,
+                ExemplarEarlyMaximumNearPixels = exemplarEarlyNearMax,
+                ExemplarMaximumBrightToDarkRatio = exemplarRatio / 100,
+                ExemplarMinimumBrightChannel = exemplarBrightChannel,
+                ExemplarMaximumDarkChannel = exemplarDarkChannel,
+                ExemplarExclusionRadius = exemplarExclusion,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
                 SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
@@ -1066,7 +1097,8 @@ internal static class CleanDarkContoursCommand
                             UseSparseDarkPaletteExtendedRescue = false,
                             UseSparsePaletteConsensusRescue = false,
                             UseSparsePaletteThreeNeighborRescue = false,
-                            UseSparsePaletteExclusiveRescue = false
+                            UseSparsePaletteExclusiveRescue = false,
+                            UseExemplarRescue = false
                         };
                     if (q == 1 && repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
                         repeatedDarkAccepted.Count > 0)

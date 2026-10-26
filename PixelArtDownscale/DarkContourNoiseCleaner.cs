@@ -191,6 +191,14 @@ public static class DarkContourNoiseCleaner
         public double SparsePaletteExclusiveColorTolerance { get; init; } = 0.5;
         public int SparsePaletteExclusiveMaximumSimilarPixels { get; init; } = 2;
         public double SparsePaletteExclusiveMinimumLightnessGain { get; init; } = 20;
+        public bool UseExemplarRescue { get; init; } = true;
+        public int ExemplarNearColorDistance { get; init; } = 4;
+        public int ExemplarMaximumNearPixels { get; init; } = 40;
+        public int ExemplarEarlyMaximumNearPixels { get; init; }
+        public double ExemplarMaximumBrightToDarkRatio { get; init; } = 0.2;
+        public int ExemplarMinimumBrightChannel { get; init; } = 25;
+        public int ExemplarMaximumDarkChannel { get; init; } = 15;
+        public int ExemplarExclusionRadius { get; init; } = 3;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -393,6 +401,15 @@ public static class DarkContourNoiseCleaner
             options.SparsePaletteExclusiveMaximumSimilarPixels is < 0 or > 1000000 ||
             !double.IsFinite(options.SparsePaletteExclusiveMinimumLightnessGain) ||
             options.SparsePaletteExclusiveMinimumLightnessGain is < 0 or > 100 ||
+            options.ExemplarNearColorDistance is < 0 or > 765 ||
+            options.ExemplarMaximumNearPixels is < 0 or > 1000000 ||
+            options.ExemplarEarlyMaximumNearPixels is < 0 or > 1000000 ||
+            !double.IsFinite(options.ExemplarMaximumBrightToDarkRatio) ||
+            options.ExemplarMaximumBrightToDarkRatio is < 0 or > 1 ||
+            options.ExemplarMinimumBrightChannel is < 0 or > 255 ||
+            options.ExemplarMaximumDarkChannel is < 0 or > 255 ||
+            options.ExemplarMaximumDarkChannel >= options.ExemplarMinimumBrightChannel ||
+            options.ExemplarExclusionRadius is < 1 or > 20 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -589,7 +606,7 @@ public static class DarkContourNoiseCleaner
         if (options.UseRepeatedDarkColorRescue || options.UseRepeatedDiagonalBridgeRescue ||
             options.UseSparseDarkPaletteRescue || options.UseSparseDarkPaletteExtendedRescue ||
             options.UseSparsePaletteConsensusRescue || options.UseSparsePaletteThreeNeighborRescue ||
-            options.UseSparsePaletteExclusiveRescue)
+            options.UseSparsePaletteExclusiveRescue || options.UseExemplarRescue)
             for (int q = 0; q < original.Length; q++)
             {
                 if (!dark[q]) continue;
@@ -724,17 +741,24 @@ public static class DarkContourNoiseCleaner
                     Lab(original[index]).L <= options.ThreeNeighborGradientMaximumLightness &&
                     DistinctRingColors(original, width, x, y) >=
                         options.ThreeNeighborGradientMinimumDistinctColors;
+                int exemplarNearPixels = options.UseExemplarRescue && rareDarkColor ?
+                    CountNearDarkPalette(original[index], darkColorOccurrences,
+                        options.ExemplarNearColorDistance) : int.MaxValue;
+                bool exemplarRescue = exemplarNearPixels <= options.ExemplarMaximumNearPixels &&
+                    HasBrightExemplar(original, width, height, x, y, options);
+                bool exemplarEarlyRescue = exemplarRescue &&
+                    exemplarNearPixels <= options.ExemplarEarlyMaximumNearPixels;
                 bool noOtherPatchEntry = !colorPatchMatch && !options.UseColorPatchEnergyRescue &&
                     !threeNeighborEnergyRescue && !texturedGradientRescue &&
                     !singleDiagonalRescue && !threeNeighborGradientRescue &&
                     !extendedTexturedPatch && !symmetricPatchRescue;
                 bool repeatedDarkEntry = noOtherPatchEntry && repeatedDarkColor;
-                if (noOtherPatchEntry && !repeatedDarkColor)
+                if (noOtherPatchEntry && !repeatedDarkColor && !exemplarEarlyRescue)
                 { audit?.Invoke(x, y, "color-patch"); continue; }
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
-                if (ringComponents > 1 && !diagonalBridge)
+                if (ringComponents > 1 && !diagonalBridge && !exemplarRescue)
                 { audit?.Invoke(x, y, "dark-ring-components"); continue; }
                 int dark5Support = Dark5Support(dark, width, height, x, y);
                 bool straightSpur = options.UseStraightRun && cardinalDarkNeighbors == 1 &&
@@ -843,7 +867,7 @@ public static class DarkContourNoiseCleaner
                      componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio) &&
                     !patchSupport && !straightSpur && !repeatedMismatch && !diagonalEvidence &&
                     !taperedRun && !divergentGradientRescue && !patchGradientRescue &&
-                    !sparsePaletteThreeNeighborRescue)
+                    !sparsePaletteThreeNeighborRescue && !exemplarRescue)
                 { audit?.Invoke(x, y, "three-neighbor-support"); continue; }
                 if (darkNeighbors == 3 && options.ThreeNeighborProtectedContinuation > 0 &&
                     DarkContinuation(dark, width, height, x, y) >= options.ThreeNeighborProtectedContinuation &&
@@ -915,7 +939,7 @@ public static class DarkContourNoiseCleaner
                 if (!hasPair && !diagonalEvidence && !brightCorner &&
                     colorConsensus < options.MinimumBrightConsensus && !softColorConsensus &&
                     !highContrastConsensus && !sparsePaletteConsensus &&
-                    !sparsePaletteThreeNeighborRescue &&
+                    !sparsePaletteThreeNeighborRescue && !exemplarRescue &&
                     !(straightSpur && colorConsensus >=
                         options.StraightRunMinimumConsensus) &&
                     !(isolatedEvidence && colorConsensus >=
@@ -959,7 +983,7 @@ public static class DarkContourNoiseCleaner
                         out Color verticalColor))
                     replacement = verticalColor;
                 bool repeatedDarkOnly = repeatedDarkEntry || repeatedBridgeRescue ||
-                    sparsePaletteConsensus || sparsePaletteThreeNeighborRescue;
+                    sparsePaletteConsensus || sparsePaletteThreeNeighborRescue || exemplarRescue;
                 if (!colorPatchMatch)
                 {
                     bool globalEnergyRescue = options.UseColorPatchEnergyRescue &&
@@ -1082,7 +1106,7 @@ public static class DarkContourNoiseCleaner
                         !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue &&
                         !repeatedDarkRescue && !sparseDarkPaletteRescue &&
                         !sparseDarkPaletteExtendedRescue && !sparsePaletteExclusiveRescue &&
-                        !sparsePaletteThreeNeighborRescue)
+                        !sparsePaletteThreeNeighborRescue && !exemplarRescue)
                     { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }
                 if (options.RequireCommonGradient &&
@@ -1363,6 +1387,60 @@ public static class DarkContourNoiseCleaner
             else bright++;
         }
         return bright >= minimumBright && bright > darkMatches * brightRatio;
+    }
+
+    private static int CountNearDarkPalette(Color color, Dictionary<int, int> occurrences,
+        int maximumRgbDistance)
+    {
+        int count = 0;
+        foreach (KeyValuePair<int, int> entry in occurrences)
+        {
+            if (entry.Key == color.ToArgb()) continue;
+            Color other = Color.FromArgb(entry.Key);
+            if (other.A != color.A) continue;
+            int distance = Math.Abs(color.R - other.R) + Math.Abs(color.G - other.G) +
+                Math.Abs(color.B - other.B);
+            if (distance <= maximumRgbDistance) count += entry.Value;
+        }
+        return count;
+    }
+
+    private static bool HasBrightExemplar(Color[] colors, int width, int height, int x, int y,
+        Options options)
+    {
+        double bestBright = double.PositiveInfinity, bestDark = double.PositiveInfinity;
+        for (int sampleY = 1; sampleY < height - 1; sampleY++)
+            for (int sampleX = 1; sampleX < width - 1; sampleX++)
+            {
+                if (Math.Abs(sampleX - x) <= options.ExemplarExclusionRadius &&
+                    Math.Abs(sampleY - y) <= options.ExemplarExclusionRadius) continue;
+                Color center = colors[sampleY * width + sampleX];
+                if (center.A != 255) continue;
+                int maximumChannel = Math.Max(center.R, Math.Max(center.G, center.B));
+                bool bright = maximumChannel > options.ExemplarMinimumBrightChannel;
+                bool dark = maximumChannel <= options.ExemplarMaximumDarkChannel;
+                if (!bright && !dark) continue;
+                double difference = 0;
+                bool visible = true;
+                for (int dy = -1; dy <= 1 && visible; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        Color candidateNeighbor = colors[(y + dy) * width + x + dx];
+                        Color sampleNeighbor = colors[(sampleY + dy) * width + sampleX + dx];
+                        if (candidateNeighbor.A != 255 || sampleNeighbor.A != 255)
+                        { visible = false; break; }
+                        int red = candidateNeighbor.R - sampleNeighbor.R;
+                        int green = candidateNeighbor.G - sampleNeighbor.G;
+                        int blue = candidateNeighbor.B - sampleNeighbor.B;
+                        difference += red * red + green * green + blue * blue;
+                    }
+                if (!visible) continue;
+                if (bright) bestBright = Math.Min(bestBright, difference);
+                else bestDark = Math.Min(bestDark, difference);
+            }
+        return double.IsFinite(bestBright) && double.IsFinite(bestDark) && bestDark > 0 &&
+            bestBright <= bestDark * options.ExemplarMaximumBrightToDarkRatio;
     }
 
     private static bool HasSparseDarkPalette(Color color, Dictionary<int, int> occurrences,
