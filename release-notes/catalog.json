@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "CLI: очистка тёмных контуров и одиночных точек сетки",
+        "en": "CLI: dark contour and grid speckle cleanup"
+      },
+      "notes": {
+        "ru": "- CLI: добавлена команда clean-dark-contours для очистки отдельных тёмных выбросов у контуров. Она сохраняет отдельный PNG; количество проходов и пороги можно настроить. Размеры изображения и прозрачность сохраняются.\n- CLI: для изображений с известным шагом пиксельной сетки от 2 пикселей добавлен режим --grid-cell-size. Он убирает одиночные точки по согласованным соседям, оставляя неоднозначные участки и края изображения. Допуск цвета регулируется отдельно.\n- Очистка сетки: полностью прозрачные пиксели остаются целыми; полупрозрачные точки исправляются только по соседям с той же альфой. Исходный файл защищён от перезаписи.",
+        "en": "- CLI: added clean-dark-contours to clean isolated dark outliers near contours. It saves a separate PNG and offers adjustable passes and thresholds. Image dimensions and transparency are retained.\n- CLI: images with a known pixel-grid step of at least 2 pixels can use --grid-cell-size. It removes singleton speckles using agreeing neighbors while retaining ambiguous areas and image borders. Color tolerance is adjustable separately.\n- Grid cleanup: fully transparent pixels remain intact; partially transparent points are corrected only from neighbors with the same alpha. The source file is protected from overwriting."
+      }
+    },
+    {
+      "version": "2.8.0",
+      "title": {
         "ru": "Контуры: окно 3 × 3 и отдельные пороги",
         "en": "Contours: 3 × 3 windows and individual thresholds"
       },
@@ -97,6 +108,83 @@
       "notes": {
         "ru": "- Библиотека и проекты: общие материалы можно размещать в проектах и вложенных папках, искать по названию и тегам, фильтровать по типу, размеру и прозрачности. Изображения сохраняют историю обработки.\n- История и ленты редактора: результаты показаны деревом с ответвлениями. Переставляйте ветки, меняйте высоту и ширину лент, прокручивайте их по обеим осям и просматривайте папки проекта. Раскладка сохраняется после перезапуска.\n- Макросы: сохраняйте поддерживаемую последовательность через ПКМ на результате. В «Инструменты → Макросы» можно посмотреть шаги, применить, переименовать или удалить макрос. Применение создаёт один итоговый результат; отмена не сохраняет промежуточные изображения. Макросы доступны также через CLI и Tessera для чата.\n- Карты Height / Normal / AO: создавайте карты рельефа, нормалей и затенения, рисуйте ручные правки и сравнивайте освещение в сетке 2×2 с общим масштабом и прокруткой. Карты появляются рядом с исходником в проекте; ручные слои сохраняются и восстанавливаются при повторном открытии. Экспорт PNG остаётся доступен.\n- Сетка: выравнивание лучше сохраняет тонкие тёмные контуры и мелкие детали на искажённом пиксель-арте, в том числе с шумом. Доступны автоматический и ручной размер ячейки.\n- Размер и кадр: изменение размера, обрезка и сохранение PNG сохраняют полупрозрачные пиксели. Область будущей обрезки видна в предпросмотре.\n- Тайлы: заливка связанной области и целого тайла сохраняет детали при тонировании. Кисть и заливка поддерживают полупрозрачность, отмену и повтор; соседние тайлы выбираются по миниатюрам.\n- Цвета и сведения: информация об изображении показывает размеры, число цветов и палитру. Цвет палитры можно сразу открыть для замены, выбрать новый пипеткой, по HEX или на цветовом поле. Палитры, очистка цветов, ASCII и удаление фона используют выбранные параметры и дают доступ к ручным правкам.\n- Предпросмотр: доступны четыре фона, общий масштаб и прокрутка исходника и результата. Альтернативный вид разворачивает результат на всю область; удерживайте Alt для сравнения с исходником.\n- Обновления: проверка выполняется при запуске и раз в 6 часов. Новая версия предлагается через окно «Обновить / Позже» после окончания обработки и закрытия других окон. После «Позже» та же версия не предлагается до перезапуска; без интернета работа продолжается.\n- Патчноуты и настройки: изменения открываются при первом запуске версии и доступны офлайн в отдельной вкладке настроек. Настройки также содержат темы, язык и ручную проверку обновлений.",
         "en": "- Library and projects: place shared assets in projects and nested folders, search names and tags, and filter by type, dimensions and transparency. Images retain their processing history.\n- History and editor trays: results form a branching tree. Rearrange branches, resize and scroll the trays in both directions, and browse project folders. Layout survives restarts.\n- Macros: save supported processing steps by right-clicking a result. Tools > Macros lets you inspect steps, apply, rename or delete macros. Applying a macro creates one final result; cancellation leaves no intermediate images. Macros are also available through the CLI and Tessera in chat.\n- Height / Normal / AO maps: generate relief, normal and occlusion maps, paint manual corrections and compare lighting in a 2×2 grid with synchronized zoom and scrolling. Maps appear beside the source in its project; manual layers survive reopening. PNG export remains available.\n- Grid alignment: thin dark outlines and small details are better preserved in distorted pixel art, including noisy images. Both automatic and manually selected cell sizes are available.\n- Size and crop: resizing, cropping and PNG saving preserve partially transparent pixels. The future crop area is visible in the preview.\n- Tiles: connected-region and whole-tile fills preserve detail when tinting. Brushes and fills support opacity, undo and redo; select neighboring tiles by thumbnail.\n- Colors and information: inspect dimensions, color counts and palettes, then open a palette color for replacement. Pick the new color with the eyedropper, HEX or color field. Palettes, color cleanup, ASCII and background removal follow the selected settings and offer manual adjustments.\n- Preview: choose four backgrounds and synchronize zoom and scrolling between source and result. Alternative preview fills the viewing area with the result; hold Alt to compare the original.\n- Updates: checks run at startup and every 6 hours. A new version offers Update or Later after processing and other windows finish. Later suppresses that version until restart; being offline does not interrupt work.\n- Patch notes and settings: changes open on the first launch of a version and remain available offline in a separate settings tab. Settings also contain themes, language and manual update checks."
+      }
+    },
+    {
+      "version": "1.0.57",
+      "title": {
+        "ru": "Сетка и сохранение контура",
+        "en": "Grid alignment and contour preservation"
+      },
+      "notes": {
+        "ru": "- Сетка: исправлено смещение отдельных ячеек при выравнивании искажённого пиксель-арта. Тонкие тёмные контуры и мелкие детали лучше сохраняются, в том числе на изображениях с шумом. Изменение действует при автоматическом и ручном выборе размера ячейки.",
+        "en": "- Grid alignment: corrected shifts of individual cells when straightening distorted pixel art. Thin dark outlines and small details are better preserved, including in noisy images. This applies with both automatic and manually selected cell sizes."
+      }
+    },
+    {
+      "version": "1.0.55",
+      "title": {
+        "ru": "Ветки, макросы и карты в проекте",
+        "en": "Branches, macros and maps in projects"
+      },
+      "notes": {
+        "ru": "- История результатов: обработка показана деревом с ответвлениями. Переставляйте ветки, не меняя их происхождение; удаление одной карточки сохраняет её дочерние результаты.\n- Ленты редактора: меняйте общую высоту и ширину лент, прокручивайте по обеим осям. Двойной щелчок по нижнему разделителю переключает компактную и развёрнутую высоту; раскладка и прокрутка сохраняются после перезапуска.\n- Исходники: просматривайте папки текущего проекта прямо в ленте. Переход между папками не закрывает открытое изображение.\n- Макросы: сохраняйте поддерживаемую последовательность обработки через ПКМ на результате → «Создать макрос…». В «Инструменты → Макросы» можно посмотреть шаги, применить, переименовать или удалить макрос. Применение к исходнику или результату создаёт одну итоговую карточку; отмена и ошибка не оставляют частичный результат.\n- Повтор обработки: макрос сохраняет свои шаги после удаления исходных карточек или другого макроса. Не все ручные правки можно повторить; для неподдерживаемой или неполной старой истории показывается объяснение.\n- CLI и Tessera для чата: доступны просмотр списка и применение сохранённых макросов к изображениям.\n- Предпросмотр карт: Height, Normal, AO и освещение расположены в сетке 2×2. Масштаб и прокрутка всех четырёх изображений синхронизированы; перемещайте свет мышью и сравнивайте с исходником.\n- Карты в проекте: Height, Normal и AO автоматически появляются рядом с исходником в текущей папке. Ручные слои сохраняются в библиотеке; возвращайтесь к ассету без выбора файла и продолжайте работу. Ctrl+S сохраняет проект, отдельный экспорт PNG остаётся доступен.",
+        "en": "- Result history: processing now appears as a tree with branches. Rearrange branches without changing their origin; deleting one card keeps its child results.\n- Editor trays: adjust their shared height and individual widths, and scroll in both directions. Double-click the lower divider to switch between compact and expanded heights; layout and scroll positions survive restarts.\n- Sources: browse the current project's folders directly in the tray. Changing folders keeps the current image open.\n- Macros: save supported processing steps by right-clicking a result and choosing Create macro. Tools > Macros lets you inspect steps, apply, rename or delete macros. Applying one to a source or result creates one final card; cancellation and errors leave no partial result.\n- Repeating processing: a macro keeps its steps after the original cards or another macro are deleted. Some manual edits cannot be repeated; unsupported or incomplete older history shows an explanation.\n- CLI and Tessera in chat: list saved macros and apply them to images.\n- Map preview: Height, Normal, AO and lighting use a 2×2 grid. Zoom and scrolling stay synchronized across all four images; move the light with the mouse and compare with the original.\n- Maps in projects: Height, Normal and AO automatically appear beside the source in its current folder. Manual layers stay in the library; return to the asset without choosing a file and resume editing. Ctrl+S saves the project; separate PNG export remains available."
+      }
+    },
+    {
+      "version": "1.0.51",
+      "title": {
+        "ru": "Заливка и полупрозрачная кисть для тайлов",
+        "en": "Tile fills and translucent painting"
+      },
+      "notes": {
+        "ru": "- Проверка тайлинга: добавлены заливка связанной области одного цвета и заливка всего выбранного тайла A или B.\n- Кисть и заливка: регулируйте непрозрачность от 0 до 100%, чтобы накладывать цвет поверх рисунка и сохранять различия тонов. Один мазок ложится равномерно, повторный усиливает цвет.\n- Проекты тайлов: непрозрачность краски сохраняется в .ttiles; заливка отменяется и повторяется одним действием.",
+        "en": "- Tile inspector: added flood fill for connected areas of the same color and whole-tile fill for the A or B tile you click.\n- Pencil and fills: adjust opacity from 0 to 100% to overlay color while retaining the image's tone differences. Each stroke applies evenly; another stroke strengthens the color.\n- Tile projects: paint opacity is saved in .ttiles; fills can be undone and redone in one step."
+      }
+    },
+    {
+      "version": "1.0.50",
+      "title": {
+        "ru": "Карты Height, Normal и AO",
+        "en": "Height, Normal and AO maps"
+      },
+      "notes": {
+        "ru": "- Карты материала: в меню «Инструменты» редактора ассета добавлен редактор Height, Normal и AO. Карты создаются автоматически при открытии изображения; на каждой можно рисовать кистью, пользоваться пипеткой, ластиком и отменой действий.\n- Height: изменение рельефа обновляет Normal и AO, сохраняя ручную доработку. Правки Normal и AO можно сбросить отдельно.\n- Предпросмотр карт: перемещайте свет мышью, включайте Normal и AO и сравнивайте с исходником. Доступны пиксельная сетка, масштаб и подложка исходного изображения.\n- Сохранение карт: экспортируйте PNG с исходной прозрачностью или сохраняйте редактируемый проект .tmaps. Для Normal доступны DirectX и OpenGL.",
+        "en": "- Material maps: the asset editor's Tools menu now opens a Height, Normal and AO editor. Maps are generated automatically when an image opens; paint on any map with a brush, eyedropper, eraser and undo.\n- Height: editing the relief updates Normal and AO while preserving manual work. Normal and AO edits can be reset separately.\n- Map preview: move the light with the mouse, toggle Normal and AO, and compare with the original. Pixel grid, zoom and source overlay are available.\n- Saving maps: export PNGs with source transparency or save an editable .tmaps project. Normal supports DirectX and OpenGL."
+      }
+    },
+    {
+      "version": "1.0.48",
+      "title": {
+        "ru": "Сохранение полупрозрачности",
+        "en": "Preserving partial transparency"
+      },
+      "notes": {
+        "ru": "- Изменение размера и обрезка: полупрозрачные пиксели сохраняют свою прозрачность и больше не исчезают из-за низкой непрозрачности.\n- Обработка цветов: квантование, палитры и дизеринг сохраняют полупрозрачность.\n- PNG и история: сохранённые результаты и увеличенный предпросмотр сохраняют альфа-канал, в том числе после повторного открытия.",
+        "en": "- Resize and crop: partially transparent pixels retain their opacity instead of disappearing because of low opacity.\n- Color processing: quantization, palettes and dithering preserve partial transparency.\n- PNG and history: saved results and enlarged previews retain alpha, including after reopening."
+      }
+    },
+    {
+      "version": "1.0.47",
+      "title": {
+        "ru": "Инструменты CLI",
+        "en": "CLI image tools"
+      },
+      "notes": {
+        "ru": "- Очистка цветов в CLI: настраивайте сходство оттенков, силу обработки и защиту мелких деталей и краёв.\n- Монохром и замена цвета в CLI: переводите изображение в оттенки серого или заменяйте выбранный цвет, сохраняя размер и прозрачность.\n- ASCII в CLI: сохраняйте текст, изображение или оба результата; выбирайте набор символов, инверсию и сохранение исходного размера.\n- Палитра в CLI: уменьшайте число цветов, применяйте готовую палитру или объединяйте оба действия.\n- Информация о цветах в CLI: смотрите число видимых цветов и их список. Список доступен до 1024 цветов; общее число показывается всегда.\n- Tessera для чата: новые операции доступны через skill и plugin без открытия графического редактора.",
+        "en": "- CLI color cleanup: adjust shade similarity, cleanup strength, and protection for small details and edges.\n- CLI monochrome and color replacement: convert images to grayscale or replace a selected color while preserving size and transparency.\n- CLI ASCII: save text, an image, or both; choose character sets, inversion and whether to retain the source size.\n- CLI palettes: reduce the color count, apply a preset palette, or combine both operations.\n- CLI color information: inspect visible color counts and lists. Lists are available for up to 1024 colors; the total count is always shown.\n- Tessera in chat: use the new operations through the skill and plugin without opening the graphical editor."
+      }
+    },
+    {
+      "version": "1.0.45",
+      "title": {
+        "ru": "Патчноуты",
+        "en": "Patch notes"
+      },
+      "notes": {
+        "ru": "- Патчноуты: описания показывают, какие инструменты изменились и что пользователь может ожидать от их работы.\n- История релизов: убраны служебные подробности; изменения сгруппированы по затронутым инструментам.",
+        "en": "- Patch notes: descriptions explain which tools changed and what users can expect them to do.\n- Release history: entries focus on affected tools and their behavior."
       }
     },
     {
