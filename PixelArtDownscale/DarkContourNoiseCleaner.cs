@@ -186,6 +186,11 @@ public static class DarkContourNoiseCleaner
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
         public double SparsePaletteConsensusMinimumLightnessGain { get; init; } = 20;
         public double SparsePaletteConsensusMinimumEnergyDrop { get; init; } = 0.3;
+        public bool UseSparsePaletteThreeNeighborRescue { get; init; } = true;
+        public double SparsePaletteThreeNeighborColorTolerance { get; init; } = 0.5;
+        public int SparsePaletteThreeNeighborMaximumSimilarPixels { get; init; } = 5;
+        public double SparsePaletteThreeNeighborMinimumLightnessGain { get; init; } = 20;
+        public double SparsePaletteThreeNeighborMinimumEnergyDrop { get; init; } = 0.3;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -371,6 +376,13 @@ public static class DarkContourNoiseCleaner
             options.SparsePaletteConsensusMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparsePaletteConsensusMinimumEnergyDrop) ||
             options.SparsePaletteConsensusMinimumEnergyDrop is < 0 or > 1 ||
+            !double.IsFinite(options.SparsePaletteThreeNeighborColorTolerance) ||
+            options.SparsePaletteThreeNeighborColorTolerance is < 0 or > 100 ||
+            options.SparsePaletteThreeNeighborMaximumSimilarPixels is < 0 or > 1000000 ||
+            !double.IsFinite(options.SparsePaletteThreeNeighborMinimumLightnessGain) ||
+            options.SparsePaletteThreeNeighborMinimumLightnessGain is < 0 or > 100 ||
+            !double.IsFinite(options.SparsePaletteThreeNeighborMinimumEnergyDrop) ||
+            options.SparsePaletteThreeNeighborMinimumEnergyDrop is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -624,13 +636,14 @@ public static class DarkContourNoiseCleaner
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
                     surrounding.Count < 5)
                 { audit?.Invoke(x, y, "dark-neighbors"); continue; }
-                bool repeatedDarkColor = options.UseRepeatedDarkColorRescue &&
+                bool rareDarkColor = options.UseRepeatedDarkColorRescue &&
                     Lab(original[index]).L <= options.RepeatedDarkColorMaximumLightness &&
-                    darkNeighbors >= options.RepeatedDarkColorMinimumDarkNeighbors &&
-                    darkNeighbors <= options.RepeatedDarkColorMaximumDarkNeighbors &&
                     darkColorOccurrences.TryGetValue(original[index].ToArgb(), out int occurrences) &&
                     occurrences >= options.RepeatedDarkColorMinimumOccurrences &&
                     occurrences <= options.RepeatedDarkColorMaximumOccurrences;
+                bool repeatedDarkColor = rareDarkColor &&
+                    darkNeighbors >= options.RepeatedDarkColorMinimumDarkNeighbors &&
+                    darkNeighbors <= options.RepeatedDarkColorMaximumDarkNeighbors;
                 if (cardinalDarkNeighbors == 2 &&
                     options.TwoCardinalMinimumBrightPatternMatches > 0)
                 {
@@ -785,11 +798,26 @@ public static class DarkContourNoiseCleaner
                     HasBrightPatchMajority(original, dark, width, height, x, y, diagonalPatchCounts,
                         1, options.PatchGradientMinimumBrightMatches, options.PatchGradientBrightRatio) &&
                     HasPatchGradientEvidence(original, width, height, x, y, options);
+                bool sparsePaletteThreeNeighborRescue = false;
+                if (options.UseSparsePaletteThreeNeighborRescue && darkNeighbors == 3 &&
+                    rareDarkColor && HasSparseDarkPalette(original[index], darkColorOccurrences,
+                        options.SparsePaletteThreeNeighborColorTolerance,
+                        options.SparsePaletteThreeNeighborMaximumSimilarPixels))
+                {
+                    Color provisionalColor = BrightRepresentative(surrounding,
+                        options.BrightColorTolerance);
+                    sparsePaletteThreeNeighborRescue =
+                        Lab(provisionalColor).L - Lab(original[index]).L >=
+                            options.SparsePaletteThreeNeighborMinimumLightnessGain &&
+                        HasColorPatchEnergyRescue(original, width, x, y, provisionalColor,
+                            options.SparsePaletteThreeNeighborMinimumEnergyDrop);
+                }
                 if (darkNeighbors == 3 &&
                     (dark5Support < options.ThreeNeighborMinimumDark5 ||
                      componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio) &&
                     !patchSupport && !straightSpur && !repeatedMismatch && !diagonalEvidence &&
-                    !taperedRun && !divergentGradientRescue && !patchGradientRescue)
+                    !taperedRun && !divergentGradientRescue && !patchGradientRescue &&
+                    !sparsePaletteThreeNeighborRescue)
                 { audit?.Invoke(x, y, "three-neighbor-support"); continue; }
                 if (darkNeighbors == 3 && options.ThreeNeighborProtectedContinuation > 0 &&
                     DarkContinuation(dark, width, height, x, y) >= options.ThreeNeighborProtectedContinuation &&
@@ -830,6 +858,11 @@ public static class DarkContourNoiseCleaner
                         out cornerColor);
                 Color replacement = diagonalEvidence ? diagonalColor : hasPair ? pairColor :
                     brightCorner ? cornerColor : BrightRepresentative(surrounding, options.BrightColorTolerance);
+                sparsePaletteThreeNeighborRescue &=
+                    Lab(replacement).L - Lab(original[index]).L >=
+                        options.SparsePaletteThreeNeighborMinimumLightnessGain &&
+                    HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                        options.SparsePaletteThreeNeighborMinimumEnergyDrop);
                 int matching = surrounding.Count(item => DistanceSquared(Lab(item.Color), Lab(replacement)) <=
                     options.BrightColorTolerance * options.BrightColorTolerance);
                 double colorConsensus = matching / (double)surrounding.Count;
@@ -856,6 +889,7 @@ public static class DarkContourNoiseCleaner
                 if (!hasPair && !diagonalEvidence && !brightCorner &&
                     colorConsensus < options.MinimumBrightConsensus && !softColorConsensus &&
                     !highContrastConsensus && !sparsePaletteConsensus &&
+                    !sparsePaletteThreeNeighborRescue &&
                     !(straightSpur && colorConsensus >=
                         options.StraightRunMinimumConsensus) &&
                     !(isolatedEvidence && colorConsensus >=
@@ -899,7 +933,7 @@ public static class DarkContourNoiseCleaner
                         out Color verticalColor))
                     replacement = verticalColor;
                 bool repeatedDarkOnly = repeatedDarkEntry || repeatedBridgeRescue ||
-                    sparsePaletteConsensus;
+                    sparsePaletteConsensus || sparsePaletteThreeNeighborRescue;
                 if (!colorPatchMatch)
                 {
                     bool globalEnergyRescue = options.UseColorPatchEnergyRescue &&
@@ -1002,7 +1036,8 @@ public static class DarkContourNoiseCleaner
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
                         !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue &&
-                        !repeatedDarkRescue && !sparseDarkPaletteRescue)
+                        !repeatedDarkRescue && !sparseDarkPaletteRescue &&
+                        !sparsePaletteThreeNeighborRescue)
                     { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }
                 if (options.RequireCommonGradient &&
