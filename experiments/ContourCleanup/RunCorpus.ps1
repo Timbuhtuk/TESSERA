@@ -138,6 +138,12 @@ param(
     [int]$ColorPatchMaxDifferences = 0,
     [switch]$ColorPatchEnergyRescue,
     [double]$ColorPatchEnergyDrop = 80,
+    [switch]$ThreeNeighborEnergyRescue,
+    [switch]$NoThreeNeighborEnergyRescue,
+    [double]$ThreeNeighborEnergyDrop = 40,
+    [int]$ThreeNeighborDistinctColors = 4,
+    [double]$ThreeNeighborFlatBright = 2.1,
+    [double]$ThreeNeighborTexturedBright = 0,
     [switch]$ColorPatchWeightedRescue,
     [switch]$NoColorPatchWeightedRescue,
     [int]$WeightedPatchDifferences = 2,
@@ -150,6 +156,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($RequireColorPatch -and $NoColorPatch) { throw 'Укажите только один из -RequireColorPatch и -NoColorPatch.' }
 if ($ColorPatchWeightedRescue -and $NoColorPatchWeightedRescue) { throw 'Укажите только один из -ColorPatchWeightedRescue и -NoColorPatchWeightedRescue.' }
+if ($ThreeNeighborEnergyRescue -and $NoThreeNeighborEnergyRescue) { throw 'Укажите только один из -ThreeNeighborEnergyRescue и -NoThreeNeighborEnergyRescue.' }
 $cli = (Resolve-Path -LiteralPath $CliDll).Path
 $corpus = (Resolve-Path -LiteralPath $CorpusRoot).Path
 $report = Join-Path $corpus 'cli-results.jsonl'
@@ -172,6 +179,7 @@ $verticalShadeFlag = if ($NoVerticalShade) { @('--no-vertical-shade') } else { @
 $commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } else { @() }
 $colorPatchFlag = if ($NoColorPatch) { @('--no-color-patch') } else { @('--require-color-patch') }
 $energyRescueFlag = if ($ColorPatchEnergyRescue) { @('--color-patch-energy-rescue') } else { @() }
+$threeNeighborEnergyRescueFlag = if ($NoThreeNeighborEnergyRescue) { @('--no-three-neighbor-energy-rescue') } else { @('--three-neighbor-energy-rescue') }
 $weightedRescueFlag = if ($NoColorPatchWeightedRescue) { @('--no-color-patch-weighted-rescue') } else { @('--color-patch-weighted-rescue') }
 
 foreach ($kind in @('clean', 'noisy'))
@@ -274,9 +282,13 @@ foreach ($kind in @('clean', 'noisy'))
             --color-patch-tolerance $ColorPatchTolerance --color-patch-min-bright $ColorPatchMinimumBright `
             --color-patch-ratio $ColorPatchRatio --color-patch-max-differences $ColorPatchMaxDifferences `
             --color-patch-energy-drop $ColorPatchEnergyDrop `
+            --three-neighbor-energy-drop $ThreeNeighborEnergyDrop `
+            --three-neighbor-distinct-colors $ThreeNeighborDistinctColors `
+            --three-neighbor-flat-bright $ThreeNeighborFlatBright `
+            --three-neighbor-textured-bright $ThreeNeighborTexturedBright `
             --weighted-patch-differences $WeightedPatchDifferences --weighted-patch-sigma $WeightedPatchSigma `
             --weighted-patch-min-bright $WeightedPatchMinimumBright --weighted-patch-ratio $WeightedPatchRatio `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $weightedRescueFlag --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

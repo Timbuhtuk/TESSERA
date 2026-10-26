@@ -149,6 +149,12 @@ internal static class CleanDarkContoursCommand
           --color-patch-max-differences N  Допуск несовпадений в окружении 3×3: 0–2 (0).
           --color-patch-energy-rescue    Пропускать цветовой порог при сильном снижении перепада.
           --color-patch-energy-drop N    Минимальное снижение локального перепада: 0–100 % (80).
+          --three-neighbor-energy-rescue Пропускать цветовой порог при 3 тёмных соседях, 1 прямом (включено).
+          --no-three-neighbor-energy-rescue Выключить этот узкий пропуск цветового порога.
+          --three-neighbor-energy-drop N Минимальное снижение перепада для этого случая: 0–100 % (40).
+          --three-neighbor-distinct-colors N  Сколько цветов считать текстурой: 1–8 (4).
+          --three-neighbor-flat-bright N      Минимальный вес светлых повторов на плоском участке: 0–10000 (2.1).
+          --three-neighbor-textured-bright N  То же для текстуры: 0–10000 (0).
           --color-patch-weighted-rescue  Дополнительно учитывать взвешенные цветовые повторы (включено).
           --no-color-patch-weighted-rescue Выключить взвешенные цветовые повторы.
           --weighted-patch-differences N Допуск несовпадений соседей: 0–2 (2).
@@ -206,6 +212,8 @@ internal static class CleanDarkContoursCommand
                 verticalWideComponentMin = 50, verticalWideColorSpreadMin = 50,
                 verticalWideColorSpreadMax = 80, verticalColorTolerance = 8,
                 colorPatchTolerance = 15, colorPatchRatio = 3, colorPatchEnergyDrop = 80,
+                threeNeighborEnergyDrop = 40, threeNeighborFlatBright = 2.1,
+                threeNeighborTexturedBright = 0,
                 weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
@@ -230,7 +238,7 @@ internal static class CleanDarkContoursCommand
                 brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
                 verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4,
                 colorPatchMinBright = 1, colorPatchMaxDifferences = 0,
-                weightedPatchDifferences = 2;
+                weightedPatchDifferences = 2, threeNeighborDistinctColors = 4;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -238,6 +246,7 @@ internal static class CleanDarkContoursCommand
                 useCoherentGradient = true, useDivergentGradient = true, usePatchGradient = true,
                 useMainSparse = true, useBrightCorner = true, useVerticalShade = true,
                 requireColorPatch = true, colorPatchEnergyRescue = false,
+                threeNeighborEnergyRescue = true,
                 weightedPatchRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
@@ -402,6 +411,12 @@ internal static class CleanDarkContoursCommand
                     case "--color-patch-max-differences": colorPatchMaxDifferences = NextInt(); break;
                     case "--color-patch-energy-rescue": colorPatchEnergyRescue = true; break;
                     case "--color-patch-energy-drop": colorPatchEnergyDrop = NextDouble(); break;
+                    case "--three-neighbor-energy-rescue": threeNeighborEnergyRescue = true; break;
+                    case "--no-three-neighbor-energy-rescue": threeNeighborEnergyRescue = false; break;
+                    case "--three-neighbor-energy-drop": threeNeighborEnergyDrop = NextDouble(); break;
+                    case "--three-neighbor-distinct-colors": threeNeighborDistinctColors = NextInt(); break;
+                    case "--three-neighbor-flat-bright": threeNeighborFlatBright = NextDouble(); break;
+                    case "--three-neighbor-textured-bright": threeNeighborTexturedBright = NextDouble(); break;
                     case "--color-patch-weighted-rescue": weightedPatchRescue = true; break;
                     case "--no-color-patch-weighted-rescue": weightedPatchRescue = false; break;
                     case "--weighted-patch-differences": weightedPatchDifferences = NextInt(); break;
@@ -592,6 +607,11 @@ internal static class CleanDarkContoursCommand
                 ColorMatchedPatchMaximumPatternDifferences = colorPatchMaxDifferences,
                 UseColorPatchEnergyRescue = colorPatchEnergyRescue,
                 ColorPatchEnergyRescueMinimumDrop = colorPatchEnergyDrop / 100,
+                UseThreeNeighborEnergyRescue = threeNeighborEnergyRescue,
+                ThreeNeighborEnergyRescueMinimumDrop = threeNeighborEnergyDrop / 100,
+                ThreeNeighborEnergyDistinctColors = threeNeighborDistinctColors,
+                ThreeNeighborEnergyFlatMinimumBrightWeight = threeNeighborFlatBright,
+                ThreeNeighborEnergyTexturedMinimumBrightWeight = threeNeighborTexturedBright,
                 UseWeightedColorPatchRescue = weightedPatchRescue,
                 WeightedColorPatchMaximumPatternDifferences = weightedPatchDifferences,
                 WeightedColorPatchSigma = weightedPatchSigma,
