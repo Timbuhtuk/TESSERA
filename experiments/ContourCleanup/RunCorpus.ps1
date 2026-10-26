@@ -144,6 +144,15 @@ param(
     [int]$ThreeNeighborDistinctColors = 4,
     [double]$ThreeNeighborFlatBright = 2.1,
     [double]$ThreeNeighborTexturedBright = 0,
+    [switch]$TexturedGradientRescue,
+    [switch]$NoTexturedGradientRescue,
+    [int]$TexturedGradientColors = 4,
+    [double]$TexturedGradientEnergy = 58,
+    [double]$TexturedGradientBright = 0.1,
+    [int]$TexturedGradientRadius = 3,
+    [double]$TexturedGradientTolerance = 24,
+    [int]$TexturedGradientNeighbors = 5,
+    [double]$TexturedGradientOpposition = 20,
     [switch]$ColorPatchWeightedRescue,
     [switch]$NoColorPatchWeightedRescue,
     [int]$WeightedPatchDifferences = 2,
@@ -157,6 +166,7 @@ $ErrorActionPreference = 'Stop'
 if ($RequireColorPatch -and $NoColorPatch) { throw 'Укажите только один из -RequireColorPatch и -NoColorPatch.' }
 if ($ColorPatchWeightedRescue -and $NoColorPatchWeightedRescue) { throw 'Укажите только один из -ColorPatchWeightedRescue и -NoColorPatchWeightedRescue.' }
 if ($ThreeNeighborEnergyRescue -and $NoThreeNeighborEnergyRescue) { throw 'Укажите только один из -ThreeNeighborEnergyRescue и -NoThreeNeighborEnergyRescue.' }
+if ($TexturedGradientRescue -and $NoTexturedGradientRescue) { throw 'Укажите только один из -TexturedGradientRescue и -NoTexturedGradientRescue.' }
 $cli = (Resolve-Path -LiteralPath $CliDll).Path
 $corpus = (Resolve-Path -LiteralPath $CorpusRoot).Path
 $report = Join-Path $corpus 'cli-results.jsonl'
@@ -180,6 +190,7 @@ $commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } els
 $colorPatchFlag = if ($NoColorPatch) { @('--no-color-patch') } else { @('--require-color-patch') }
 $energyRescueFlag = if ($ColorPatchEnergyRescue) { @('--color-patch-energy-rescue') } else { @() }
 $threeNeighborEnergyRescueFlag = if ($NoThreeNeighborEnergyRescue) { @('--no-three-neighbor-energy-rescue') } else { @('--three-neighbor-energy-rescue') }
+$texturedGradientRescueFlag = if ($NoTexturedGradientRescue) { @('--no-textured-gradient-rescue') } else { @('--textured-gradient-rescue') }
 $weightedRescueFlag = if ($NoColorPatchWeightedRescue) { @('--no-color-patch-weighted-rescue') } else { @('--color-patch-weighted-rescue') }
 
 foreach ($kind in @('clean', 'noisy'))
@@ -286,9 +297,13 @@ foreach ($kind in @('clean', 'noisy'))
             --three-neighbor-distinct-colors $ThreeNeighborDistinctColors `
             --three-neighbor-flat-bright $ThreeNeighborFlatBright `
             --three-neighbor-textured-bright $ThreeNeighborTexturedBright `
+            --textured-gradient-colors $TexturedGradientColors --textured-gradient-energy $TexturedGradientEnergy `
+            --textured-gradient-bright $TexturedGradientBright --textured-gradient-radius $TexturedGradientRadius `
+            --textured-gradient-tolerance $TexturedGradientTolerance --textured-gradient-neighbors $TexturedGradientNeighbors `
+            --textured-gradient-opposition $TexturedGradientOpposition `
             --weighted-patch-differences $WeightedPatchDifferences --weighted-patch-sigma $WeightedPatchSigma `
             --weighted-patch-min-bright $WeightedPatchMinimumBright --weighted-patch-ratio $WeightedPatchRatio `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $texturedGradientRescueFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

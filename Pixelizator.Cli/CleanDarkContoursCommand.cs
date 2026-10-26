@@ -155,6 +155,15 @@ internal static class CleanDarkContoursCommand
           --three-neighbor-distinct-colors N  Сколько цветов считать текстурой: 1–8 (4).
           --three-neighbor-flat-bright N      Минимальный вес светлых повторов на плоском участке: 0–10000 (2.1).
           --three-neighbor-textured-bright N  То же для текстуры: 0–10000 (0).
+          --textured-gradient-rescue         Проверять выступы 2/1 по градиенту восстановленного цвета (включено).
+          --no-textured-gradient-rescue      Выключить градиентную проверку этих выступов.
+          --textured-gradient-colors N       Минимум разных цветов окружения: 1–8 (4).
+          --textured-gradient-energy N       Минимальное снижение перепада: 0–100 % (58).
+          --textured-gradient-bright N       Минимальный вес светлых повторов: 0–10000 (0.1).
+          --textured-gradient-radius N       Радиус сравнения градиентов: 1–15 (3).
+          --textured-gradient-tolerance N    Допуск похожих цветов LAB: 0–100 (24).
+          --textured-gradient-neighbors N    Минимум похожих соседей: 1–1000 (5).
+          --textured-gradient-opposition N   Минимальная противоположность: 0–100 % (20).
           --color-patch-weighted-rescue  Дополнительно учитывать взвешенные цветовые повторы (включено).
           --no-color-patch-weighted-rescue Выключить взвешенные цветовые повторы.
           --weighted-patch-differences N Допуск несовпадений соседей: 0–2 (2).
@@ -213,7 +222,9 @@ internal static class CleanDarkContoursCommand
                 verticalWideColorSpreadMax = 80, verticalColorTolerance = 8,
                 colorPatchTolerance = 15, colorPatchRatio = 3, colorPatchEnergyDrop = 80,
                 threeNeighborEnergyDrop = 40, threeNeighborFlatBright = 2.1,
-                threeNeighborTexturedBright = 0,
+                threeNeighborTexturedBright = 0, texturedGradientEnergy = 58,
+                texturedGradientBright = 0.1, texturedGradientTolerance = 24,
+                texturedGradientOpposition = 20,
                 weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
@@ -238,7 +249,9 @@ internal static class CleanDarkContoursCommand
                 brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
                 verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4,
                 colorPatchMinBright = 1, colorPatchMaxDifferences = 0,
-                weightedPatchDifferences = 2, threeNeighborDistinctColors = 4;
+                weightedPatchDifferences = 2, threeNeighborDistinctColors = 4,
+                texturedGradientColors = 4, texturedGradientRadius = 3,
+                texturedGradientNeighbors = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -246,7 +259,7 @@ internal static class CleanDarkContoursCommand
                 useCoherentGradient = true, useDivergentGradient = true, usePatchGradient = true,
                 useMainSparse = true, useBrightCorner = true, useVerticalShade = true,
                 requireColorPatch = true, colorPatchEnergyRescue = false,
-                threeNeighborEnergyRescue = true,
+                threeNeighborEnergyRescue = true, texturedGradientRescue = true,
                 weightedPatchRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
@@ -417,6 +430,15 @@ internal static class CleanDarkContoursCommand
                     case "--three-neighbor-distinct-colors": threeNeighborDistinctColors = NextInt(); break;
                     case "--three-neighbor-flat-bright": threeNeighborFlatBright = NextDouble(); break;
                     case "--three-neighbor-textured-bright": threeNeighborTexturedBright = NextDouble(); break;
+                    case "--textured-gradient-rescue": texturedGradientRescue = true; break;
+                    case "--no-textured-gradient-rescue": texturedGradientRescue = false; break;
+                    case "--textured-gradient-colors": texturedGradientColors = NextInt(); break;
+                    case "--textured-gradient-energy": texturedGradientEnergy = NextDouble(); break;
+                    case "--textured-gradient-bright": texturedGradientBright = NextDouble(); break;
+                    case "--textured-gradient-radius": texturedGradientRadius = NextInt(); break;
+                    case "--textured-gradient-tolerance": texturedGradientTolerance = NextDouble(); break;
+                    case "--textured-gradient-neighbors": texturedGradientNeighbors = NextInt(); break;
+                    case "--textured-gradient-opposition": texturedGradientOpposition = NextDouble(); break;
                     case "--color-patch-weighted-rescue": weightedPatchRescue = true; break;
                     case "--no-color-patch-weighted-rescue": weightedPatchRescue = false; break;
                     case "--weighted-patch-differences": weightedPatchDifferences = NextInt(); break;
@@ -612,6 +634,14 @@ internal static class CleanDarkContoursCommand
                 ThreeNeighborEnergyDistinctColors = threeNeighborDistinctColors,
                 ThreeNeighborEnergyFlatMinimumBrightWeight = threeNeighborFlatBright,
                 ThreeNeighborEnergyTexturedMinimumBrightWeight = threeNeighborTexturedBright,
+                UseTexturedGradientRescue = texturedGradientRescue,
+                TexturedGradientMinimumDistinctColors = texturedGradientColors,
+                TexturedGradientMinimumEnergyDrop = texturedGradientEnergy / 100,
+                TexturedGradientMinimumBrightWeight = texturedGradientBright,
+                TexturedGradientRadius = texturedGradientRadius,
+                TexturedGradientColorTolerance = texturedGradientTolerance,
+                TexturedGradientMinimumSimilarNeighbors = texturedGradientNeighbors,
+                TexturedGradientMinimumOpposition = texturedGradientOpposition / 100,
                 UseWeightedColorPatchRescue = weightedPatchRescue,
                 WeightedColorPatchMaximumPatternDifferences = weightedPatchDifferences,
                 WeightedColorPatchSigma = weightedPatchSigma,
