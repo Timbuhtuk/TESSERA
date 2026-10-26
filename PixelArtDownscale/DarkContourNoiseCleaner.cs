@@ -248,6 +248,15 @@ public static class DarkContourNoiseCleaner
         public int ConfirmedGroupCardinalMinimumStrongNeighbors { get; init; } = 2;
         public int ConfirmedGroupCardinalMaximumExemplarRingError { get; init; } = 10000;
         public double ConfirmedGroupCardinalMaximumNeighborColorDistance { get; init; } = 40;
+        public bool UseConfirmedGroupGradientRescue { get; init; } = true;
+        public int ConfirmedGroupGradientMinimumPriorChanges { get; init; } = 1;
+        public int ConfirmedGroupGradientRadius { get; init; } = 5;
+        public double ConfirmedGroupGradientColorTolerance { get; init; } = 24;
+        public int ConfirmedGroupGradientMinimumSimilarNeighbors { get; init; } = 5;
+        public double ConfirmedGroupGradientMinimumMagnitudeRatio { get; init; } = 1.05;
+        public double ConfirmedGroupGradientMinimumAgreement { get; init; } = 0.08;
+        public double ConfirmedGroupGradientMinimumOpposition { get; init; } = 0.9;
+        public int ConfirmedGroupGradientMaximumExemplarRingError { get; init; } = 50000;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -524,6 +533,18 @@ public static class DarkContourNoiseCleaner
             options.ConfirmedGroupCardinalMaximumExemplarRingError is < 0 or > 100000000 ||
             !double.IsFinite(options.ConfirmedGroupCardinalMaximumNeighborColorDistance) ||
             options.ConfirmedGroupCardinalMaximumNeighborColorDistance is < 0 or > 100 ||
+            options.ConfirmedGroupGradientMinimumPriorChanges is < 1 or > 1000000 ||
+            options.ConfirmedGroupGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.ConfirmedGroupGradientColorTolerance) ||
+            options.ConfirmedGroupGradientColorTolerance is < 0 or > 100 ||
+            options.ConfirmedGroupGradientMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.ConfirmedGroupGradientMinimumMagnitudeRatio) ||
+            options.ConfirmedGroupGradientMinimumMagnitudeRatio is < 0 or > 10 ||
+            !double.IsFinite(options.ConfirmedGroupGradientMinimumAgreement) ||
+            options.ConfirmedGroupGradientMinimumAgreement is < 0 or > 1 ||
+            !double.IsFinite(options.ConfirmedGroupGradientMinimumOpposition) ||
+            options.ConfirmedGroupGradientMinimumOpposition is < 0 or > 1 ||
+            options.ConfirmedGroupGradientMaximumExemplarRingError is < 0 or > 100000000 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -1833,9 +1854,15 @@ public static class DarkContourNoiseCleaner
             }
         }
         if (!options.UseConfirmedGroupExemplarRescue)
-            return changed + (options.UseConfirmedGroupCardinalRescue ?
-                ApplyConfirmedGroupCardinalRescue(groups, original, output, width, height,
-                    options, protectedPixels, audit) : 0);
+        {
+            if (options.UseConfirmedGroupCardinalRescue)
+                changed += ApplyConfirmedGroupCardinalRescue(groups, original, output,
+                    width, height, options, protectedPixels, audit);
+            if (options.UseConfirmedGroupGradientRescue)
+                changed += ApplyConfirmedGroupGradientRescue(groups, original, output,
+                    width, height, options, protectedPixels, audit);
+            return changed;
+        }
 
         var uniqueColors = new HashSet<int>();
         foreach (Color color in original)
@@ -1897,6 +1924,9 @@ public static class DarkContourNoiseCleaner
         }
         if (options.UseConfirmedGroupCardinalRescue)
             changed += ApplyConfirmedGroupCardinalRescue(groups, original, output,
+                width, height, options, protectedPixels, audit);
+        if (options.UseConfirmedGroupGradientRescue)
+            changed += ApplyConfirmedGroupGradientRescue(groups, original, output,
                 width, height, options, protectedPixels, audit);
         return changed;
     }
@@ -2002,6 +2032,55 @@ public static class DarkContourNoiseCleaner
                     replacement.R, replacement.G, replacement.B);
                 changed++;
                 audit?.Invoke(x, y, "accepted-confirmed-group-cardinal");
+            }
+        }
+        return changed;
+    }
+
+    private static int ApplyConfirmedGroupGradientRescue(
+        Dictionary<int, List<(int X, int Y)>> groups, Color[] original, Color[] output,
+        int width, int height, Options options, bool[]? protectedPixels,
+        Action<int, int, string>? audit)
+    {
+        int changed = 0;
+        foreach (KeyValuePair<int, List<(int X, int Y)>> group in groups)
+        {
+            List<(int X, int Y)> points = group.Value;
+            if (points.Count < options.GroupedPaletteMinimumOccurrences ||
+                points.Count > options.GroupedPaletteMaximumOccurrences) continue;
+            int priorChanges = 0;
+            foreach ((int x, int y) in points)
+                if (original[y * width + x].ToArgb() != output[y * width + x].ToArgb())
+                    priorChanges++;
+            if (priorChanges < options.ConfirmedGroupGradientMinimumPriorChanges) continue;
+
+            foreach ((int x, int y) in points)
+            {
+                int index = y * width + x;
+                if (original[index].ToArgb() != output[index].ToArgb() ||
+                    protectedPixels is not null && protectedPixels[index] ||
+                    !HasAlphaClearance(original, width, height, x, y, options.AlphaClearance) ||
+                    !TryMeasureSimilarGradients(original, width, height, x, y,
+                        options.ConfirmedGroupGradientRadius,
+                        options.ConfirmedGroupGradientColorTolerance,
+                        options.ConfirmedGroupGradientMinimumSimilarNeighbors,
+                        out GradientEvidence evidence) ||
+                    evidence.MagnitudeRatio < options.ConfirmedGroupGradientMinimumMagnitudeRatio ||
+                    evidence.Agreement < options.ConfirmedGroupGradientMinimumAgreement ||
+                    evidence.Alignment > -options.ConfirmedGroupGradientMinimumOpposition)
+                    continue;
+
+                HasBrightExemplar(original, width, height, x, y, options,
+                    double.PositiveInfinity, out Color exemplar, out double ringError);
+                if (exemplar.A != 255 || !double.IsFinite(ringError) ||
+                    ringError > options.ConfirmedGroupGradientMaximumExemplarRingError) continue;
+                Color replacement = InterpolateAlongExemplar(original, width, x, y, exemplar);
+                if (Lab(replacement).L - Lab(original[index]).L <
+                    options.ConfirmedGroupExemplarMinimumLightnessGain) continue;
+                output[index] = Color.FromArgb(original[index].A,
+                    replacement.R, replacement.G, replacement.B);
+                changed++;
+                audit?.Invoke(x, y, "accepted-confirmed-group-gradient");
             }
         }
         return changed;

@@ -339,6 +339,16 @@ internal static class CleanDarkContoursCommand
           --confirmed-group-cardinal-color-distance N Допуск цвета соседа до образца LAB: 0–100 (40).
           --confirmed-group-cardinal-material-veto Защищать исходный материал на этом этапе (выключено).
           --no-confirmed-group-cardinal-material-veto Выключить эту защиту.
+          --confirmed-group-gradient      Проверять направление градиента остатка группы (включено).
+          --no-confirmed-group-gradient   Выключить эту проверку.
+          --confirmed-group-gradient-prior N Минимум ранее исправленных точек цвета: 1–1000000 (1).
+          --confirmed-group-gradient-radius N Радиус сравнения градиентов: 1–15 (5).
+          --confirmed-group-gradient-color N Допуск похожего цвета LAB: 0–100 (24).
+          --confirmed-group-gradient-neighbors N Минимум похожих соседей: 1–1000 (5).
+          --confirmed-group-gradient-ratio N Модуль центра к среднему: 0–10 (1.05).
+          --confirmed-group-gradient-agreement N Согласие градиентов соседей: 0–1 (0.08).
+          --confirmed-group-gradient-opposition N Противоположность центра: 0–1 (0.9).
+          --confirmed-group-gradient-error N Максимальная ошибка окружения образца: 0–100000000 (50000).
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
           --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
@@ -448,7 +458,11 @@ internal static class CleanDarkContoursCommand
                 localMaterialNeighborLightness = 12,
                 localMaterialHueAgreement = 0.85,
                 confirmedGroupCardinalColorDistance = 40,
-                confirmedGroupCardinalExtraRatio = 0.1;
+                confirmedGroupCardinalExtraRatio = 0.1,
+                confirmedGroupGradientColor = 24,
+                confirmedGroupGradientRatio = 1.05,
+                confirmedGroupGradientAgreement = 0.08,
+                confirmedGroupGradientOpposition = 0.9;
             double gridColorTolerance = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 gridCellSize = 1,
@@ -507,6 +521,8 @@ internal static class CleanDarkContoursCommand
                 confirmedGroupCardinalBright = 3,
                 confirmedGroupCardinalStrong = 2,
                 confirmedGroupCardinalExemplarError = 10000,
+                confirmedGroupGradientPrior = 1, confirmedGroupGradientRadius = 5,
+                confirmedGroupGradientNeighbors = 5, confirmedGroupGradientError = 50000,
                 localMaterialNeighbors = 3,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
                 groupedPaletteDark = 3, exemplarMaterialError = 20000,
@@ -532,7 +548,8 @@ internal static class CleanDarkContoursCommand
                 localMaterialHueVeto = true,
                 gridCellSizeSet = false, exemplarMaterialInterpass = true,
                 confirmedGroupExemplar = true, confirmedGroupCardinal = true,
-                confirmedGroupCardinalMaterialVeto = false;
+                confirmedGroupCardinalMaterialVeto = false,
+                confirmedGroupGradient = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -888,6 +905,16 @@ internal static class CleanDarkContoursCommand
                     case "--confirmed-group-cardinal-color-distance": confirmedGroupCardinalColorDistance = NextDouble(); break;
                     case "--confirmed-group-cardinal-material-veto": confirmedGroupCardinalMaterialVeto = true; break;
                     case "--no-confirmed-group-cardinal-material-veto": confirmedGroupCardinalMaterialVeto = false; break;
+                    case "--confirmed-group-gradient": confirmedGroupGradient = true; break;
+                    case "--no-confirmed-group-gradient": confirmedGroupGradient = false; break;
+                    case "--confirmed-group-gradient-prior": confirmedGroupGradientPrior = NextInt(); break;
+                    case "--confirmed-group-gradient-radius": confirmedGroupGradientRadius = NextInt(); break;
+                    case "--confirmed-group-gradient-color": confirmedGroupGradientColor = NextDouble(); break;
+                    case "--confirmed-group-gradient-neighbors": confirmedGroupGradientNeighbors = NextInt(); break;
+                    case "--confirmed-group-gradient-ratio": confirmedGroupGradientRatio = NextDouble(); break;
+                    case "--confirmed-group-gradient-agreement": confirmedGroupGradientAgreement = NextDouble(); break;
+                    case "--confirmed-group-gradient-opposition": confirmedGroupGradientOpposition = NextDouble(); break;
+                    case "--confirmed-group-gradient-error": confirmedGroupGradientError = NextInt(); break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
                     case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
@@ -1250,6 +1277,15 @@ internal static class CleanDarkContoursCommand
                 ConfirmedGroupCardinalMinimumStrongNeighbors = confirmedGroupCardinalStrong,
                 ConfirmedGroupCardinalMaximumExemplarRingError = confirmedGroupCardinalExemplarError,
                 ConfirmedGroupCardinalMaximumNeighborColorDistance = confirmedGroupCardinalColorDistance,
+                UseConfirmedGroupGradientRescue = confirmedGroupGradient,
+                ConfirmedGroupGradientMinimumPriorChanges = confirmedGroupGradientPrior,
+                ConfirmedGroupGradientRadius = confirmedGroupGradientRadius,
+                ConfirmedGroupGradientColorTolerance = confirmedGroupGradientColor,
+                ConfirmedGroupGradientMinimumSimilarNeighbors = confirmedGroupGradientNeighbors,
+                ConfirmedGroupGradientMinimumMagnitudeRatio = confirmedGroupGradientRatio,
+                ConfirmedGroupGradientMinimumAgreement = confirmedGroupGradientAgreement,
+                ConfirmedGroupGradientMinimumOpposition = confirmedGroupGradientOpposition,
+                ConfirmedGroupGradientMaximumExemplarRingError = confirmedGroupGradientError,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
                 SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
@@ -1380,12 +1416,13 @@ internal static class CleanDarkContoursCommand
                     var result = DarkContourNoiseCleaner.Clean(current, passOptions,
                         auditWriter is null && !repeatedDarkRescue &&
                         !(exemplarMaterialVeto && exemplarMaterialInterpass) &&
-                        !confirmedGroupExemplar && !confirmedGroupCardinal ? null : (x, y, decision) =>
+                        !confirmedGroupExemplar && !confirmedGroupCardinal && !confirmedGroupGradient ? null : (x, y, decision) =>
                         {
                             auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
                             if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
                             if (decision is "accepted-confirmed-group-exemplar" or
-                                "accepted-confirmed-group-cardinal")
+                                "accepted-confirmed-group-cardinal" or
+                                "accepted-confirmed-group-gradient")
                                 confirmedGroupAccepted.Add((x, y));
                             if (q == 0 && exemplarMaterialInterpass && decision == "exemplar-material-veto")
                                 firstPassMaterialVetoes.Add((x, y));
