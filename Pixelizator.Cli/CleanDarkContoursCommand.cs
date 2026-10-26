@@ -1,0 +1,1610 @@
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Globalization;
+using System.Text.Json;
+using PixelArtDownscale;
+
+namespace Pixelizator.Cli;
+
+internal static class CleanDarkContoursCommand
+{
+    private const string Help = """
+        Tessera clean-dark-contours — убрать короткие тёмные выступы на линиях.
+        Использование: tessera clean-dark-contours input.png [-o output.png] [параметры]
+
+          -o, --output PATH             PNG; по умолчанию <имя>_dark_contours.png.
+          --candidate-audit PATH        CSV с причиной решения для каждого тёмного пикселя и прохода.
+          --dark-lightness N            Верхняя граница LAB L для тёмного пикселя: 0–100 (5).
+          --max-dark-neighbors N        Максимум тёмных соседей из восьми: 0–8 (3).
+          --max-cardinal-dark N         Максимум тёмных соседей по сторонам: 0–4 (2).
+          --three-neighbor-dark5 N      Минимум тёмных пикселей в 5×5 при трёх соседях: 0–24 (9).
+          --three-neighbor-component N  Минимальная доля главного контура: 0–100% (10).
+          --three-neighbor-continuation N  Число продолжений линии для защиты детали: 0–8 (3; 0 выключает).
+          --three-neighbor-protected-component N  Защищать продолжения на компонентах меньше 0–100% (20).
+          --three-neighbor-protected-min N  Нижняя граница размера защищаемой компоненты: 0–100% (15).
+          --repeated-component-similarity N  Сходство двух повторяющихся деталей: 0–100% (80).
+          --repeated-patch-radius N    Радиус сравнения повторяющихся деталей: 0–4 (3; 0 выключает).
+          --repeated-patch-differences N  Допустимое число разных соседей: 0–80 (2).
+          --large-patch-radius N       Радиус поиска похожих окружений: 0–4 (3; 0 выключает).
+          --large-patch-bright N       Минимум повторений со светлым центром: 0–10000 (2).
+          --large-patch-ratio N        Светлых повторений к тёмным: 0–100 (1).
+          --small-patch-radius N       Радиус для малых компонентов: 0–4 (1; 0 выключает).
+          --small-patch-component N    Максимальный размер малой компоненты: 0–100% (6).
+          --small-patch-max-cardinal N Максимум её тёмных прямых соседей: 0–4 (1).
+          --small-patch-bright N       Минимум светлых повторений: 0–10000 (10).
+          --small-patch-ratio N        Светлых повторений к тёмным: 0–100 (3).
+          --no-diagonal-bridge         Сохранить тёмный пиксель между двумя диагональными областями.
+          --diagonal-bridge-consensus N  Согласие светлых соседей такого пикселя: 0–100% (90).
+          --no-straight-run            Выключить поиск выступа на прямой линии.
+          --min-straight-run N         Минимальная длина прямой линии: 1–101 (8).
+          --straight-run-radius N      Радиус поиска прямой линии: 1–50 (15).
+          --straight-run-dark5 N       Поддержка 5×5 при двух тёмных соседях: 0–24 (9).
+          --straight-run-consensus N   Согласие светлых соседей для выступа: 0–100% (50).
+          --isolated-patch-radius N     Радиус повтора для одиночной точки: 0–4 (2; 0 выключает).
+          --isolated-patch-bright N     Минимум светлых повторений: 0–10000 (3).
+          --isolated-patch-ratio N      Светлых повторений к тёмным: 0–100 (2).
+          --isolated-patch-consensus N  Согласие светлых соседей: 0–100% (50).
+          --no-repeated-mismatch        Выключить восстановление по отличию повторяющихся деталей.
+          --no-diagonal-gradient        Выключить проверку диагональной пары и градиента.
+          --diagonal-color-tolerance N  Допуск цвета диагональной пары в LAB: 0–100 (8).
+          --diagonal-bright N           Минимум светлых повторений окружения 3×3: 0–10000 (7).
+          --diagonal-bright-ratio N     Светлых повторений к тёмным: 0–100 (2).
+          --diagonal-gradient-ratio N   Модуль градиента точки к среднему соседей: 1–10 (1.22).
+          --diagonal-gradient-radius N  Радиус сравнения градиентов: 1–15 (3).
+          --diagonal-similar-color N    Допуск цвета похожих тёмных соседей в LAB: 0–100 (24).
+          --diagonal-similar-neighbors N  Минимум похожих соседей: 1–1000 (5).
+          --no-diagonal-opposition      Выключить сравнение направления градиентов.
+          --diagonal-opposition-radius N  Радиус сравнения направлений: 1–15 (5).
+          --diagonal-min-opposition N   Минимальная противоположность: 0–100% (80).
+          --diagonal-min-agreement N    Согласие градиентов похожих соседей: 0–100% (20).
+          --no-tapered-run             Выключить поиск резко сужающейся чёрной полосы.
+          --tapered-dark5-min N        Минимум тёмных соседей в 5×5: 0–24 (7).
+          --tapered-dark5-max N        Максимум тёмных соседей в 5×5: 0–24 (10).
+          --tapered-run-radius N       Радиус измерения длины полосы: 1–50 (20).
+          --tapered-inside-length N    Минимальная длина внутренней полосы: 1–101 (8).
+          --tapered-min-shrink N       Разница длин внешней и следующей внутренней полос: 1–100 (6).
+          --tapered-bright N           Минимум повторов 3×3 со светлым центром: 0–10000 (4).
+          --tapered-bright-ratio N     Светлых повторов к тёмным: 0–100 (1.5).
+          --no-sparse-patch            Выключить повтор 3×3 при слабой тёмной поддержке.
+          --sparse-patch-max-dark5 N   Максимум тёмных соседей в 5×5: 0–24 (5).
+          --sparse-patch-max-cardinal N Максимум прямых тёмных соседей: 0–4 (1).
+          --sparse-patch-bright N      Минимум повторов со светлым центром: 0–10000 (20).
+          --sparse-patch-ratio N       Светлых повторов к тёмным: 0–100 (5).
+          --no-secondary-sparse       Выключить расширение для второстепенных контуров.
+          --secondary-sparse-dark5 N  Максимум тёмных соседей в 5×5: 0–24 (8).
+          --secondary-sparse-component N  Максимальная доля главного контура: 0–100% (50).
+          --no-soft-color-consensus   Выключить мягкое согласие близких оттенков.
+          --soft-consensus N          Минимальное согласие: 0–100% (50).
+          --soft-color-spread N       Максимальный разброс светлых соседей в LAB: 0–100 (40).
+          --soft-max-dark-neighbors N Максимум тёмных соседей из восьми: 0–8 (2).
+          --soft-max-dark5 N          Максимум тёмных соседей в 5×5: 0–24 (6).
+          --no-coherent-gradient      Выключить допуск выступа по согласованному сильному градиенту.
+          --coherent-dark5 N          Минимум тёмной поддержки в 5×5: 0–24 (10).
+          --coherent-radius N         Радиус сравнения с похожими пикселями: 1–15 (5).
+          --coherent-color-tolerance N  Допуск похожего цвета в LAB: 0–100 (24).
+          --coherent-min-neighbors N  Минимум похожих соседей: 1–1000 (10).
+          --coherent-magnitude-ratio N  Модуль центра к среднему: 0–10 (1.2).
+          --coherent-min-agreement N  Согласие градиентов соседей: 0–100% (90).
+          --coherent-min-alignment N  Совпадение центра с их градиентом: 0–100% (90).
+          --no-divergent-gradient     Выключить допуск резкого выступа при расходящихся градиентах.
+          --divergent-dark5 N         Тёмная поддержка в 5×5: 0–24 (7).
+          --divergent-radius N        Радиус поиска похожих пикселей: 1–15 (5).
+          --divergent-color-tolerance N  Допуск похожего цвета в LAB: 0–100 (24).
+          --divergent-min-neighbors N Минимум похожих соседей: 1–1000 (10).
+          --divergent-magnitude-ratio N  Модуль центра к среднему: 0–10 (1.4).
+          --divergent-max-agreement N  Максимальное согласие градиентов соседей: 0–100% (15).
+          --no-patch-gradient        Выключить совместную проверку окружения и градиента.
+          --patch-gradient-dark5-min N  Нижняя граница поддержки 5×5: 0–24 (8).
+          --patch-gradient-dark5-max N  Верхняя граница поддержки 5×5: 0–24 (10).
+          --patch-gradient-bright N  Минимум светлых повторов 3×3: 0–10000 (6).
+          --patch-gradient-ratio N   Светлых повторов к тёмным: 0–100 (3).
+          --patch-gradient-radius N  Радиус поиска похожих цветов: 1–15 (5).
+          --patch-gradient-color-tolerance N  Допуск цвета в LAB: 0–100 (24).
+          --patch-gradient-min-neighbors N  Минимум похожих соседей: 1–1000 (10).
+          --patch-gradient-magnitude-min N  Модуль к среднему, минимум: 0–10 (1.18).
+          --patch-gradient-magnitude-max N  Модуль к среднему, максимум: 0–10 (1.4).
+          --patch-gradient-max-agreement N  Максимальное согласие градиентов: 0–100% (50).
+          --no-main-sparse            Выключить повтор окружения на основном контуре.
+          --main-sparse-dark5 N       Максимальная поддержка 5×5: 0–24 (6).
+          --main-sparse-bright N      Минимум светлых повторов 3×3: 0–10000 (8).
+          --main-sparse-ratio N       Светлых повторов к тёмным: 0–100 (5).
+          --main-sparse-gradient-radius N  Радиус градиентов: 1–15 (5).
+          --main-sparse-color-tolerance N  Допуск цвета в LAB: 0–100 (24).
+          --main-sparse-min-neighbors N  Минимум похожих соседей: 1–1000 (10).
+          --main-sparse-max-magnitude N  Максимальный модуль к среднему: 0–10 (1).
+          --no-bright-corner          Выключить продолжение светлого угла.
+          --bright-corner-max-dark N  Максимум тёмных соседей: 0–8 (2).
+          --bright-corner-max-cardinal N  Максимум прямых тёмных соседей: 0–4 (1).
+          --bright-corner-dark5 N     Максимум тёмной поддержки 5×5: 0–24 (6).
+          --bright-corner-component N  Максимальная доля главного контура: 0–100% (50).
+          --bright-corner-run N       Минимальная длина светлых плеч: 1–15 (3).
+          --bright-corner-color-tolerance N  Допуск цвета в LAB: 0–100 (8).
+          --no-vertical-shade         Выключить выбор оттенка по вертикальной полосе.
+          --vertical-medium-dark5 N  Поддержка 5×5 для близких оттенков: 0–24 (10).
+          --vertical-medium-component-min N  Минимальная доля главного контура: 0–100% (25).
+          --vertical-medium-component-max N  Максимальная доля главного контура: 0–100% (50).
+          --vertical-medium-color-spread N  Максимальный разброс в LAB: 0–100 (30).
+          --vertical-wide-dark5 N    Поддержка 5×5 для далёких цветов: 0–24 (11).
+          --vertical-wide-component-min N  Минимальная доля главного контура: 0–100% (50).
+          --vertical-wide-color-spread-min N  Минимальный разброс в LAB: 0–100 (50).
+          --vertical-wide-color-spread-max N  Максимальный разброс в LAB: 0–100 (80).
+          --vertical-run-radius N     Длина поиска вертикальной полосы: 1–15 (4).
+          --vertical-color-tolerance N  Допуск цвета полосы в LAB: 0–100 (8).
+          --conflict-radius N          Радиус выбора одного из соседних кандидатов: 0–4 (2).
+          --require-common-gradient    Требовать противоположность общему градиенту похожих цветов.
+          --common-gradient-radius N   Радиус поиска похожих цветов: 1–15 (5).
+          --common-color-tolerance N   Максимальное расстояние цветов в LAB: 0–100 (24).
+          --common-min-neighbors N     Минимум похожих соседей с градиентом: 1–1000 (5).
+          --common-min-magnitude N     Минимальный модуль градиента центра: 0–100000 (0).
+          --common-magnitude-ratio N   Модуль центра к среднему соседей: 0–10 (1.2).
+          --common-min-agreement N     Согласие направлений соседей: 0–100% (20).
+          --common-min-opposition N    Противоположность центра общему градиенту: 0–100% (80).
+          --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
+          --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
+          --two-cardinal-bright-pattern N  Минимум светлых повторов 3×3 для двух прямых тёмных соседей: 0–10000 (0).
+          --no-color-patch            Выключить проверку цветовых повторов 3×3 (включена).
+          --require-color-patch       Включить проверку цветовых повторов 3×3.
+          --color-patch-tolerance N   RMS расстояние цветов окружения в LAB: 0–100 (15).
+          --color-patch-min-bright N  Минимум повторов со светлым центром: 0–10000 (1).
+          --color-patch-ratio N       Светлых повторов к тёмным: 0–100 (3).
+          --color-patch-max-differences N  Допуск несовпадений в окружении 3×3: 0–2 (0).
+          --color-patch-energy-rescue    Пропускать цветовой порог при сильном снижении перепада.
+          --color-patch-energy-drop N    Минимальное снижение локального перепада: 0–100 % (80).
+          --three-neighbor-energy-rescue Пропускать цветовой порог при 3 тёмных соседях, 1 прямом (включено).
+          --no-three-neighbor-energy-rescue Выключить этот узкий пропуск цветового порога.
+          --three-neighbor-energy-drop N Минимальное снижение перепада для этого случая: 0–100 % (40).
+          --three-neighbor-distinct-colors N  Сколько цветов считать текстурой: 1–8 (4).
+          --three-neighbor-flat-bright N      Минимальный вес светлых повторов на плоском участке: 0–10000 (2.1).
+          --three-neighbor-textured-bright N  То же для текстуры: 0–10000 (0).
+          --textured-gradient-rescue         Проверять выступы 2/1 по градиенту восстановленного цвета (включено).
+          --no-textured-gradient-rescue      Выключить градиентную проверку этих выступов.
+          --textured-gradient-colors N       Минимум разных цветов окружения: 1–8 (4).
+          --textured-gradient-energy N       Минимальное снижение перепада: 0–100 % (58).
+          --textured-gradient-bright N       Минимальный вес светлых повторов: 0–10000 (0.1).
+          --textured-gradient-radius N       Радиус сравнения градиентов: 1–15 (3).
+          --textured-gradient-tolerance N    Допуск похожих цветов LAB: 0–100 (24).
+          --textured-gradient-neighbors N    Минимум похожих соседей: 1–1000 (5).
+          --textured-gradient-opposition N   Минимальная противоположность: 0–100 % (20).
+          --single-diagonal-gradient-rescue  Проверять одиночного диагонального соседа по цвету и градиенту (включено).
+          --no-single-diagonal-gradient-rescue Выключить эту проверку.
+          --single-diagonal-colors N          Минимум разных цветов окружения: 1–8 (4).
+          --single-diagonal-lightness N       Максимальная светлота точки LAB L: 0–100 (2.5).
+          --single-diagonal-energy N          Минимальное снижение перепада: 0–100 % (10).
+          --single-diagonal-bright N          Минимальный вес светлых повторов: 0–10000 (0.01).
+          --single-diagonal-radius N          Радиус сравнения градиентов: 1–15 (3).
+          --single-diagonal-tolerance N       Допуск похожих цветов LAB: 0–100 (24).
+          --single-diagonal-neighbors N       Минимум похожих соседей: 1–1000 (5).
+          --single-diagonal-opposition N      Минимальная противоположность: 0–100 % (20).
+          --three-gradient-rescue          Проверять 3 тёмных соседа и 1 прямого по градиенту (включено).
+          --no-three-gradient-rescue       Выключить эту проверку.
+          --three-gradient-colors N        Минимум разных цветов окружения: 1–8 (4).
+          --three-gradient-lightness N     Максимальная светлота точки LAB L: 0–100 (2.5).
+          --three-gradient-energy N        Минимальное снижение перепада: 0–100 % (15).
+          --three-gradient-bright N        Минимальный вес светлых повторов: 0–10000 (0.1).
+          --three-gradient-radius N        Радиус сравнения градиентов: 1–15 (3).
+          --three-gradient-tolerance N     Допуск похожих цветов LAB: 0–100 (24).
+          --three-gradient-neighbors N     Минимум похожих соседей: 1–1000 (5).
+          --three-gradient-opposition N    Минимальная противоположность: 0–100 % (50).
+          --color-patch-weighted-rescue  Дополнительно учитывать взвешенные цветовые повторы (включено).
+          --no-color-patch-weighted-rescue Выключить взвешенные цветовые повторы.
+          --weighted-patch-differences N Допуск несовпадений соседей: 0–2 (2).
+          --weighted-patch-sigma N       Ширина цветового ядра LAB: >0–100 (5).
+          --weighted-patch-min-bright N  Минимальный вес светлых повторов: 0–10000 (1).
+          --weighted-patch-ratio N       Отношение весов светлых к тёмным: 0–100 (5).
+          --extended-weighted-patch      Дополнительный поиск цветовых повторов LAB (включено).
+          --no-extended-weighted-patch   Выключить дополнительный поиск.
+          --extended-patch-sigma N       Ширина цветового ядра LAB: >0–100 (6).
+          --extended-patch-bright N      Минимальный вес светлых повторов: 0–10000 (1).
+          --extended-patch-ratio N       Отношение светлых к тёмным: 0–100 (5).
+          --extended-patch-colors N      Число цветов, начиная с которого нужна защита текстуры: 1–8 (4).
+          --extended-patch-lightness N   Максимальная светлота точки на текстуре: 0–100 (2.5).
+          --extended-patch-cardinal N    Минимум прямых тёмных соседей на текстуре: 0–4 (1).
+          --extended-patch-energy N      Минимальное снижение перепада на текстуре: 0–100 % (40).
+          --extended-patch-radius N      Радиус градиента на текстуре: 1–15 (3).
+          --extended-patch-tolerance N   Допуск похожих цветов LAB: 0–100 (24).
+          --extended-patch-neighbors N   Минимум похожих соседей: 1–1000 (5).
+          --extended-patch-opposition N  Минимальная противоположность: 0–100 % (50).
+          --symmetric-patch-rescue       Поиск цветовых повторов с поворотами/отражениями (включено).
+          --no-symmetric-patch-rescue    Выключить симметричный поиск.
+          --symmetric-patch-first-pass   Применять симметричный поиск только на первом проходе (включено).
+          --symmetric-patch-all-passes   Применять его на каждом проходе.
+          --symmetric-patch-colors N     Минимум цветов окружения: 1–8 (4).
+          --symmetric-patch-lightness N  Максимальная светлота точки LAB L: 0–100 (2.5).
+          --symmetric-patch-cardinal N   Минимум прямых тёмных соседей: 0–4 (1).
+          --symmetric-patch-sigma N      Ширина цветового ядра LAB: >0–100 (5).
+          --symmetric-patch-bright N     Минимальный вес светлых повторов: 0–10000 (0.5).
+          --symmetric-patch-dark N       Максимальный вес тёмных повторов: 0–10000 (0.05).
+          --symmetric-patch-ratio N      Отношение светлых к тёмным: 0–100 (5).
+          --symmetric-patch-energy N     Минимальное снижение перепада: 0–100 % (60).
+          --symmetric-patch-radius N     Радиус градиента: 1–15 (3).
+          --symmetric-patch-tolerance N  Допуск похожих цветов LAB: 0–100 (24).
+          --symmetric-patch-neighbors N  Минимум похожих соседей: 1–1000 (5).
+          --symmetric-patch-opposition N Минимальная противоположность: 0–100 % (50).
+          --high-contrast-rescue        Дополнительная проверка контрастного выброса (включена).
+          --no-high-contrast-rescue     Выключить эту проверку.
+          --high-contrast-max-dark N   Максимум тёмных соседей: 0–8 (2).
+          --high-contrast-gain N        Минимальное увеличение LAB L: 0–100 (45).
+          --high-contrast-energy N      Минимальное снижение перепада: 0–100 % (50).
+          --high-contrast-radius N      Радиус сравнения градиентов: 1–15 (3).
+          --high-contrast-tolerance N   Допуск похожих цветов LAB: 0–100 (24).
+          --high-contrast-neighbors N   Минимум похожих соседей: 1–1000 (5).
+          --high-contrast-opposition N  Минимальная противоположность: 0–100 % (50).
+          --contrast-consensus          Смягчить согласие светлых соседей при большом контрасте (включено).
+          --no-contrast-consensus       Выключить это смягчение.
+          --contrast-consensus-min N    Доля согласных светлых соседей: 0–100 % (40).
+          --contrast-consensus-gain N   Минимальное увеличение LAB L: 0–100 (60).
+          --contrast-consensus-max-dark N Максимум тёмных соседей: 0–8 (3).
+          --repeated-dark-rescue        Проверять редкий повторяющийся тёмный цвет (включено).
+          --no-repeated-dark-rescue     Выключить эту проверку.
+          --repeated-dark-first-pass    Применять проверку только на первом проходе (включено).
+          --repeated-dark-all-passes    Применять её на каждом проходе.
+          --repeated-dark-protect-radius N Защита вокруг исправленной точки на следующих проходах: 0–2 (1).
+          --repeated-dark-min N         Минимум повторов цвета в изображении: 1–1000000 (4).
+          --repeated-dark-max N         Максимум повторов цвета в изображении: 1–1000000 (8).
+          --repeated-dark-neighbors-min N Минимум тёмных соседей: 0–8 (1).
+          --repeated-dark-neighbors-max N Максимум тёмных соседей: 0–8 (2).
+          --repeated-dark-lightness N   Максимальная светлота точки LAB L: 0–100 (2.5).
+          --repeated-dark-gain N        Минимальное увеличение LAB L: 0–100 (40).
+          --repeated-dark-energy N      Минимальное снижение перепада: 0–100 % (50).
+          --repeated-bridge-rescue      Допуск диагонального моста по градиенту редкого цвета (включён).
+          --no-repeated-bridge-rescue   Выключить этот допуск.
+          --repeated-bridge-gain N      Минимальное увеличение LAB L: 0–100 (60).
+          --repeated-bridge-energy N    Минимальное снижение перепада: 0–100 % (45).
+          --repeated-bridge-radius N    Радиус сравнения градиентов: 1–15 (3).
+          --repeated-bridge-tolerance N Допуск похожих цветов LAB: 0–100 (24).
+          --repeated-bridge-neighbors N Минимум похожих соседей: 1–1000 (5).
+          --repeated-bridge-opposition N Минимальная противоположность: 0–100 % (70).
+          --sparse-dark-palette-rescue   Допуск для редкого тёмного оттенка без похожих цветов (включён).
+          --no-sparse-dark-palette-rescue Выключить этот допуск.
+          --sparse-dark-palette-tolerance N  Допуск похожих тёмных цветов LAB: 0–100 (0.5).
+          --sparse-dark-palette-max N    Максимум похожих пикселей другого оттенка: 0–1000000 (5).
+          --sparse-dark-palette-gain N   Минимальное увеличение LAB L: 0–100 (20).
+          --sparse-dark-palette-energy N Минимальное снижение перепада: 0–100 % (0).
+          --sparse-dark-palette-extended Допуск до 10 похожих пикселей при низком согласии (включён).
+          --no-sparse-dark-palette-extended Выключить этот допуск.
+          --sparse-dark-palette-extended-max N Максимум похожих пикселей: 0–1000000 (10).
+          --sparse-dark-palette-extended-consensus N Максимальное согласие: 0–100 % (50).
+          --sparse-dark-palette-extended-tolerance N Допуск цветов LAB: 0–100 (0.5).
+          --sparse-dark-palette-extended-gain N Минимальное увеличение LAB L: 0–100 (20).
+          --sparse-dark-palette-extended-energy N Минимальное снижение перепада: 0–100 % (0).
+          --sparse-palette-exclusive    Допуск исключительного тёмного оттенка без порога перепада (включён).
+          --no-sparse-palette-exclusive Выключить этот допуск.
+          --sparse-palette-exclusive-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
+          --sparse-palette-exclusive-max N Максимум похожих пикселей: 0–1000000 (2).
+          --sparse-palette-exclusive-gain N Минимальное увеличение LAB L: 0–100 (20).
+          --exemplar-rescue             Сравнение фрагментов 3×3 без центра (включено).
+          --no-exemplar-rescue          Выключить сравнение фрагментов.
+          --exemplar-near-distance N    Допуск других тёмных оттенков по сумме RGB: 0–765 (4).
+          --exemplar-near-max N         Максимум близких пикселей для поздних отказов: 0–1000000 (40).
+          --exemplar-early-near-max N   Максимум для раннего отказа по цвету: 0–1000000 (0).
+          --exemplar-ratio N            Максимальное отношение ошибок светлого и тёмного образца: 0–100 % (20).
+          --exemplar-bright-channel N   Нижняя граница светлого центра RGB: 0–255 (25).
+          --exemplar-dark-channel N     Верхняя граница тёмного центра RGB: 0–255 (15).
+          --exemplar-exclusion N        Радиус исключения близких образцов: 1–20 (3).
+          --no-exemplar-material-veto   Не отклонять слишком светлую замену при совпадении тёмного образца.
+          --exemplar-material-veto      Включить эту защиту (по умолчанию).
+          --exemplar-material-error N   Максимальная сумма квадратов RGB ошибок кольца 3×3: 0–100000000 (20000).
+          --exemplar-material-source N  Максимальное RGB расстояние образца от исходного пикселя: 0–442 (100).
+          --exemplar-material-bright N  Минимальная средняя яркость предлагаемой замены: 0–255 (40).
+          --exemplar-material-drop N    Минимальная разница яркости замены и образца: 0–255 (20).
+          --exemplar-material-agreement-distance N Допуск RGB между образцами: 0–442 (20).
+          --exemplar-material-agreement N Минимум согласных образцов: 1–100 (2).
+          --exemplar-material-neighbors N Число лучших образцов: 1–100 (10).
+          --local-material-hue-veto     Беречь тёмные оттенки, совпадающие по тону с соседями (включено).
+          --no-local-material-hue-veto  Выключить защиту по тону материала.
+          --local-material-chroma N     Минимальная цветность исходного пикселя LAB: 0–100 (2).
+          --local-material-neighbor-chroma N Минимальная цветность соседей LAB: 0–100 (4).
+          --local-material-neighbor-lightness N Минимальная яркость соседей LAB: 0–100 (12).
+          --local-material-hue-agreement N Минимальный косинус тонов: -1–1 (0.85).
+          --local-material-neighbors N  Минимум соседей того же тона: 1–8 (3).
+          --no-exemplar-material-interpass Не сохранять отказ по образцу на следующих проходах.
+          --exemplar-material-interpass  Сохранять отказ по образцу (по умолчанию).
+          --grouped-palette-rescue      Поиск групп одного редкого тёмного оттенка (включён).
+          --no-grouped-palette-rescue   Выключить этот поиск.
+          --grouped-palette-channel N   Максимальный канал тёмного оттенка RGB: 0–255 (10).
+          --grouped-palette-min N       Минимум точных повторов: 1–1000000 (4).
+          --grouped-palette-max N       Максимум точных повторов: 1–1000000 (8).
+          --grouped-palette-near-distance N Допуск других оттенков по сумме RGB: 0–765 (4).
+          --grouped-palette-near-max N  Максимум близких пикселей: 0–1000000 (160).
+          --grouped-palette-high-near N Порог строгого сравнения образцов: 0–1000000 (40).
+          --grouped-palette-prior-near N Порог проверки ранее исправленных точек группы: 0–1000000 (80).
+          --grouped-palette-prior-min N Минимум ранее исправленных точек группы: 0–1000000 (2).
+          --grouped-palette-support N   Минимум подозрительных точек в группе: 1–8 (4).
+          --grouped-palette-bright N    Минимум светлых соседей точки: 0–8 (5).
+          --grouped-palette-dark N      Максимум тёмных соседей точки: 0–8 (3).
+          --grouped-palette-average N   Минимум светлых соседей в среднем по группе: 0–8 (5).
+          --grouped-palette-high-average N Минимум среднего при числе близких оттенков выше порога ранее исправленных точек: 0–8 (4).
+          --grouped-palette-spacing N   Минимальная медиана расстояний между повторами: 0–10000 (8).
+          --grouped-palette-ratio N     Максимальное отношение ошибок образцов: 0–100 (1.5).
+          --grouped-palette-high-ratio N Отношение ошибок при числе близких пикселей выше порога: 0–100 (1).
+          --grouped-palette-gain N      Минимальный прирост LAB L: 0–100 (20).
+          --confirmed-group-exemplar    Сравнивать оставшиеся точки подтверждённой группы с образцами (включено).
+          --no-confirmed-group-exemplar Выключить дополнительную проверку группы.
+          --confirmed-group-prior N     Минимум уже исправленных точек цвета: 1–1000000 (3).
+          --confirmed-group-ratio N     Максимум отношения ошибок светлого и тёмного образца: 0–100 (0.4).
+          --confirmed-group-gain N      Минимальный прирост LAB L: 0–100 (20).
+          --confirmed-group-direct-error N Максимальная ошибка кольца для прямого выбора цвета: 0–100000000 (5000).
+          --confirmed-group-flat-colors N До скольких цветов сохранять оттенок образца: 1–1000000 (256).
+          --confirmed-group-protect-radius N Защита соседей после групповой замены: 0–2 (1).
+          --confirmed-group-cardinal       Проверять остаток группы с разорванным контуром (включено).
+          --no-confirmed-group-cardinal    Выключить проверку остатка группы.
+          --confirmed-group-cardinal-channel N Верхняя граница тёмного соседа: 0–255 (40).
+          --confirmed-group-cardinal-dark N Максимум тёмных соседей по сторонам: 0–4 (1).
+          --confirmed-group-cardinal-extra-dark N Предел при сильном светлом образце: 0–4 (2).
+          --confirmed-group-cardinal-extra-ratio N Отношение ошибок для такого образца: 0–100 (0.1).
+          --confirmed-group-cardinal-extra-error N Максимальная ошибка его окружения: 0–100000000 (5000).
+          --confirmed-group-cardinal-bright N Минимум светлых соседей из восьми: 0–8 (3).
+          --confirmed-group-cardinal-strong N Минимум соседей с достаточным приростом LAB L: 1–8 (2).
+          --confirmed-group-cardinal-exemplar-error N Допуск окружения образца: 0–100000000 (10000).
+          --confirmed-group-cardinal-color-distance N Допуск цвета соседа до образца LAB: 0–100 (40).
+          --confirmed-group-cardinal-material-veto Защищать исходный материал на этом этапе (выключено).
+          --no-confirmed-group-cardinal-material-veto Выключить эту защиту.
+          --confirmed-group-gradient      Проверять направление градиента остатка группы (включено).
+          --no-confirmed-group-gradient   Выключить эту проверку.
+          --confirmed-group-gradient-prior N Минимум ранее исправленных точек цвета: 1–1000000 (1).
+          --confirmed-group-gradient-radius N Радиус сравнения градиентов: 1–15 (5).
+          --confirmed-group-gradient-color N Допуск похожего цвета LAB: 0–100 (24).
+          --confirmed-group-gradient-neighbors N Минимум похожих соседей: 1–1000 (5).
+          --confirmed-group-gradient-ratio N Модуль центра к среднему: 0–10 (1.05).
+          --confirmed-group-gradient-agreement N Согласие градиентов соседей: 0–1 (0.08).
+          --confirmed-group-gradient-opposition N Противоположность центра: 0–1 (0.9).
+          --confirmed-group-gradient-error N Максимальная ошибка окружения образца: 0–100000000 (50000).
+          --confirmed-group-gradient-close-radius N Радиус для светлого луча: 1–15 (3).
+          --confirmed-group-gradient-close-ratio N Модуль центра к среднему на малом радиусе: 0–10 (1.1).
+          --confirmed-group-gradient-ray-color N Допуск двух пикселей светлого луча LAB: 0–100 (15).
+          --confirmed-group-square        Проверять три согласованных соседа в квадрате 2×2 (включено).
+          --no-confirmed-group-square     Выключить эту проверку.
+          --confirmed-group-square-prior N Минимум ранее исправленных точек цвета: 1–1000000 (1).
+          --confirmed-group-square-color N Допуск цвета трёх соседей LAB: 0–100 (15).
+          --confirmed-group-square-gain N Минимальный прирост LAB L: 0–100 (20).
+          --confirmed-group-late-cardinal Повторить проверку контура после исправлений группы (включено).
+          --no-confirmed-group-late-cardinal Выключить повторную проверку.
+          --confirmed-group-late-prior N Минимум ранее исправленных точек цвета: 1–1000000 (3).
+          --confirmed-group-late-ratio N Отношение ошибок образцов при двух тёмных соседях: 0–100 (0.2).
+          --confirmed-group-late-error N Ошибка окружения образца: 0–100000000 (25000).
+          --rich-palette-material-veto   Беречь продолжение исходного тёмного материала в богатой палитре (включено).
+          --no-rich-palette-material-veto Выключить эту защиту.
+          --rich-palette-min-colors N    Минимум различных цветов PNG: 1–100000000 (513).
+          --rich-palette-dark-channel N  Максимальный RGB-канал защищаемого пикселя: 0–255 (20).
+          --rich-palette-neighbor-color N Допуск похожего тёмного соседа LAB: 0–100 (5).
+          --rich-palette-suspicious-min N Нижняя граница повторов возможного шума: 1–1000000 (4).
+          --rich-palette-suspicious-max N Верхняя граница повторов возможного шума: 1–1000000 (8).
+          --chromatic-exemplar          Выбирать цветной образец вместо нейтральной замены (включено).
+          --no-chromatic-exemplar       Выключить выбор цветного образца.
+          --chromatic-exemplar-neutral N Максимальная цветность предлагаемой замены LAB: 0–100 (5).
+          --chromatic-exemplar-color N  Минимальная цветность образца и соседа LAB: 0–150 (20).
+          --chromatic-exemplar-error N  Максимальная ошибка окружения образца: 0–100000000 (50000).
+          --chromatic-exemplar-ratio N  Отношение ошибок светлого и тёмного образцов: 0–100 (0.4).
+          --neutral-exemplar            Восстанавливать тёмно-серую границу по образцу (включено).
+          --no-neutral-exemplar         Выключить этот выбор цвета.
+          --neutral-exemplar-proposed N Максимальная цветность замены LAB: 0–100 (5).
+          --neutral-exemplar-sample N   Максимальная цветность образца LAB: 0–100 (5).
+          --neutral-exemplar-drop N     Минимальная разница яркости замены и образца LAB L: 0–100 (40).
+          --neutral-exemplar-error N    Максимальная ошибка окружения образца: 0–100000000 (10000).
+          --neutral-exemplar-ratio N    Отношение ошибок светлого и тёмного образцов: 0–100 (0.3).
+          --neutral-exemplar-blend      Усреднять спорную светло-серую замену с образцом (включено).
+          --no-neutral-exemplar-blend   Выключить усреднение.
+          --neutral-blend-min-colors N  Минимум различных цветов PNG: 1–100000000 (513).
+          --neutral-blend-proposed N    Максимальная цветность замены LAB: 0–100 (5).
+          --neutral-blend-sample N      Максимальная цветность образца LAB: 0–100 (10).
+          --neutral-blend-drop N        Минимальная разница LAB L: 0–100 (40).
+          --neutral-blend-error N       Максимальная ошибка окружения: 0–100000000 (50000).
+          --neutral-blend-ratio N       Отношение ошибок образцов: 0–100 (1).
+          --neutral-blend-weight N      Вес цвета образца: 0–1 (0.5).
+          --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
+          --no-sparse-palette-consensus  Выключить этот допуск.
+          --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
+          --sparse-palette-consensus-max N Максимум похожих пикселей: 0–1000000 (0).
+          --sparse-palette-consensus-gain N Минимальное увеличение LAB L: 0–100 (20).
+          --sparse-palette-consensus-energy N Минимальное снижение перепада: 0–100 % (30).
+          --sparse-palette-three-neighbor     Допуск трёх тёмных соседей при редком оттенке (включён).
+          --no-sparse-palette-three-neighbor  Выключить этот допуск.
+          --sparse-palette-three-tolerance N  Допуск других оттенков LAB: 0–100 (0.5).
+          --sparse-palette-three-max N        Максимум похожих пикселей: 0–1000000 (5).
+          --sparse-palette-three-gain N       Минимальное увеличение LAB L: 0–100 (20).
+          --sparse-palette-three-energy N     Минимальное снижение перепада: 0–100 % (30).
+          --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
+          --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
+          --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
+          --min-bright-consensus N      Доля согласных светлых соседей: 0–100% (60).
+          --cardinal-color-weight N     Вес цветов соседей по сторонам: 1–10 (3).
+          --min-pair-extension N        Продолжение одинаковой пары через пиксель: 0–2 (1).
+          --pair-color-tolerance N      Допуск цвета противоположной пары в LAB: 0–100 (8).
+          --no-opposite-pair            Выключить восстановление по паре противоположных цветов.
+          --passes N                    Число последовательных проходов: 1–10 (1).
+          --grid-cell-size N            Сеточный режим для ячейки 2–256 px: одиночные выбросы.
+          --grid-color-tolerance N      Допуск похожего RGB при равной альфе: 0–442 (0).
+          --overwrite                   Разрешить замену существующего результата.
+          --json                        Отчёт JSON.
+          -h, --help                    Эта справка.
+        """;
+
+    internal static int Run(string[] args, TextWriter output, TextWriter error)
+    {
+        if (args is ["--help"] or ["-h"])
+        {
+            output.WriteLine(Help);
+            return 0;
+        }
+
+        try
+        {
+            string? input = null, target = null, candidateAudit = null;
+            double darkness = 5, tolerance = 28, gain = 20, consensus = 60, component = 10,
+                cardinalWeight = 3, pairTolerance = 8, twoCardinalComponent = 40,
+                protectedComponent = 20, protectedMinimum = 15, repeatSimilarity = 80,
+                largePatchRatio = 1, smallPatchComponent = 6, smallPatchRatio = 3,
+                diagonalBridgeConsensus = 90, straightRunConsensus = 50,
+                isolatedPatchRatio = 2, isolatedPatchConsensus = 50,
+                diagonalColorTolerance = 8, diagonalBrightRatio = 2,
+                diagonalGradientRatio = 1.22, diagonalSimilarColor = 24,
+                diagonalOpposition = 80, diagonalAgreement = 20, taperedBrightRatio = 1.5,
+                sparsePatchRatio = 5, commonColorTolerance = 24,
+                commonMinimumMagnitude = 0, commonMagnitudeRatio = 1.2,
+                commonMinimumAgreement = 20, commonMinimumOpposition = 80,
+                secondarySparseComponent = 50, softConsensus = 50, softColorSpread = 40,
+                coherentColorTolerance = 24, coherentMagnitudeRatio = 1.2,
+                coherentAgreement = 90, coherentAlignment = 90,
+                divergentColorTolerance = 24, divergentMagnitudeRatio = 1.4,
+                divergentMaximumAgreement = 15, patchGradientBrightRatio = 3,
+                patchGradientColorTolerance = 24, patchGradientMagnitudeMinimum = 1.18,
+                patchGradientMagnitudeMaximum = 1.4, patchGradientMaximumAgreement = 50,
+                mainSparseBrightRatio = 5, mainSparseColorTolerance = 24,
+                mainSparseMaximumMagnitude = 1, brightCornerComponent = 50,
+                brightCornerColorTolerance = 8, verticalMediumComponentMin = 25,
+                verticalMediumComponentMax = 50, verticalMediumColorSpread = 30,
+                verticalWideComponentMin = 50, verticalWideColorSpreadMin = 50,
+                verticalWideColorSpreadMax = 80, verticalColorTolerance = 8,
+                colorPatchTolerance = 15, colorPatchRatio = 3, colorPatchEnergyDrop = 80,
+                threeNeighborEnergyDrop = 40, threeNeighborFlatBright = 2.1,
+                threeNeighborTexturedBright = 0, texturedGradientEnergy = 58,
+                texturedGradientBright = 0.1, texturedGradientTolerance = 24,
+                texturedGradientOpposition = 20,
+                singleDiagonalLightness = 2.5, singleDiagonalEnergy = 10,
+                singleDiagonalBright = 0.01,
+                singleDiagonalTolerance = 24, singleDiagonalOpposition = 20,
+                threeGradientLightness = 2.5, threeGradientEnergy = 15,
+                threeGradientBright = 0.1, threeGradientTolerance = 24,
+                threeGradientOpposition = 50,
+                weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5,
+                extendedPatchSigma = 6, extendedPatchBright = 1, extendedPatchRatio = 5,
+                extendedPatchLightness = 2.5, extendedPatchEnergy = 40,
+                extendedPatchTolerance = 24, extendedPatchOpposition = 50,
+                symmetricPatchLightness = 2.5, symmetricPatchSigma = 5,
+                symmetricPatchBright = 0.5, symmetricPatchDark = 0.05,
+                symmetricPatchRatio = 5, symmetricPatchEnergy = 60,
+                symmetricPatchTolerance = 24, symmetricPatchOpposition = 50,
+                highContrastGain = 45, highContrastEnergy = 50,
+                highContrastTolerance = 24, highContrastOpposition = 50,
+                contrastConsensusMinimum = 40, contrastConsensusGain = 60,
+                repeatedDarkGain = 40, repeatedDarkEnergy = 50,
+                repeatedDarkLightness = 2.5, repeatedBridgeGain = 60,
+                repeatedBridgeEnergy = 45, repeatedBridgeTolerance = 24,
+                repeatedBridgeOpposition = 70, sparseDarkPaletteTolerance = 0.5,
+                sparseDarkPaletteGain = 20, sparseDarkPaletteEnergy = 0,
+                sparsePaletteConsensusTolerance = 0.5,
+                sparsePaletteConsensusGain = 20, sparsePaletteConsensusEnergy = 30,
+                sparsePaletteThreeTolerance = 0.5, sparsePaletteThreeGain = 20,
+                sparsePaletteThreeEnergy = 30, sparseDarkPaletteExtendedConsensus = 50,
+                sparseDarkPaletteExtendedTolerance = 0.5,
+                sparseDarkPaletteExtendedGain = 20, sparseDarkPaletteExtendedEnergy = 0,
+                sparsePaletteExclusiveTolerance = 0.5, sparsePaletteExclusiveGain = 20,
+                exemplarRatio = 20, groupedPaletteAverage = 5, groupedPaletteHighAverage = 4,
+                groupedPaletteSpacing = 8, groupedPaletteRatio = 1.5,
+                groupedPaletteHighRatio = 1,
+                groupedPaletteGain = 20, confirmedGroupRatio = 0.4,
+                confirmedGroupGain = 20, exemplarMaterialSource = 100,
+                exemplarMaterialBright = 40, exemplarMaterialDrop = 20,
+                exemplarMaterialAgreementDistance = 20,
+                localMaterialChroma = 2, localMaterialNeighborChroma = 4,
+                localMaterialNeighborLightness = 12,
+                localMaterialHueAgreement = 0.85,
+                confirmedGroupCardinalColorDistance = 40,
+                confirmedGroupCardinalExtraRatio = 0.1,
+                confirmedGroupGradientColor = 24,
+                confirmedGroupGradientRatio = 1.05,
+                confirmedGroupGradientAgreement = 0.08,
+                confirmedGroupGradientOpposition = 0.9,
+                confirmedGroupGradientCloseRatio = 1.1,
+                confirmedGroupGradientRayColor = 15,
+                confirmedGroupSquareColor = 15, confirmedGroupSquareGain = 20,
+                confirmedGroupLateRatio = 0.2,
+                richPaletteNeighborColor = 5,
+                chromaticExemplarNeutral = 5, chromaticExemplarColor = 20,
+                chromaticExemplarRatio = 0.4,
+                neutralExemplarProposed = 5, neutralExemplarSample = 5,
+                neutralExemplarDrop = 40, neutralExemplarRatio = 0.3,
+                neutralBlendProposed = 5, neutralBlendSample = 10,
+                neutralBlendDrop = 40, neutralBlendRatio = 1,
+                neutralBlendWeight = 0.5;
+            double gridColorTolerance = 0;
+            int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
+                gridCellSize = 1,
+                pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
+                protectedContinuation = 3,
+                repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
+                largePatchBright = 2, smallPatchRadius = 1, smallPatchBright = 10,
+                minimumStraightRun = 8, straightRunRadius = 15, straightRunDark5 = 9,
+                isolatedPatchRadius = 2, isolatedPatchBright = 3,
+                diagonalBright = 7, diagonalGradientRadius = 3, diagonalSimilarNeighbors = 5,
+                diagonalOppositionRadius = 5, smallPatchMaxCardinal = 1,
+                taperedDark5Min = 7, taperedDark5Max = 10, taperedRadius = 20,
+                taperedInsideLength = 8, taperedMinShrink = 6, taperedBright = 4,
+                sparsePatchMaxDark5 = 5, sparsePatchMaxCardinal = 1, sparsePatchBright = 20,
+                conflictRadius = 2, commonGradientRadius = 5, commonMinimumNeighbors = 5,
+                secondarySparseDark5 = 8, softMaxDarkNeighbors = 2, softMaxDark5 = 6,
+                coherentDark5 = 10, coherentRadius = 5, coherentMinimumNeighbors = 10,
+                divergentDark5 = 7, divergentRadius = 5, divergentMinimumNeighbors = 10,
+                patchGradientDark5Minimum = 8, patchGradientDark5Maximum = 10,
+                patchGradientBright = 6, patchGradientRadius = 5, patchGradientMinimumNeighbors = 10,
+                mainSparseDark5 = 6, mainSparseBright = 8, mainSparseGradientRadius = 5,
+                mainSparseMinimumNeighbors = 10, brightCornerMaxDark = 2,
+                brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
+                verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4,
+                colorPatchMinBright = 1, colorPatchMaxDifferences = 0,
+                weightedPatchDifferences = 2, threeNeighborDistinctColors = 4,
+                texturedGradientColors = 4, texturedGradientRadius = 3,
+                texturedGradientNeighbors = 5, singleDiagonalColors = 4,
+                singleDiagonalRadius = 3, singleDiagonalNeighbors = 5;
+            int threeGradientColors = 4, threeGradientRadius = 3,
+                threeGradientNeighbors = 5, extendedPatchColors = 4,
+                extendedPatchCardinal = 1, extendedPatchRadius = 3,
+                extendedPatchNeighbors = 5, symmetricPatchColors = 4,
+                symmetricPatchCardinal = 1, symmetricPatchRadius = 3,
+                symmetricPatchNeighbors = 5, highContrastRadius = 3,
+                highContrastNeighbors = 5, highContrastMaxDark = 2,
+                contrastConsensusMaxDark = 3, repeatedDarkMin = 4,
+                repeatedDarkMax = 8, repeatedDarkNeighborsMin = 1,
+                repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1,
+                repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5,
+                sparseDarkPaletteMax = 5, sparsePaletteConsensusMax = 0,
+                sparsePaletteThreeMax = 5, sparseDarkPaletteExtendedMax = 10,
+                sparsePaletteExclusiveMax = 2, exemplarNearDistance = 4,
+                exemplarNearMax = 40, exemplarEarlyNearMax = 0,
+                exemplarBrightChannel = 25, exemplarDarkChannel = 15,
+                exemplarExclusion = 3, groupedPaletteChannel = 10,
+                groupedPaletteMin = 4, groupedPaletteMax = 8,
+                groupedPaletteNearDistance = 4, groupedPaletteNearMax = 160,
+                groupedPaletteHighNear = 40, groupedPalettePriorNear = 80,
+                groupedPalettePriorMin = 2, confirmedGroupPrior = 3,
+                confirmedGroupDirectError = 5000, confirmedGroupFlatColors = 256,
+                confirmedGroupProtectRadius = 1,
+                confirmedGroupCardinalChannel = 40, confirmedGroupCardinalDark = 1,
+                confirmedGroupCardinalExtraDark = 2,
+                confirmedGroupCardinalExtraError = 5000,
+                confirmedGroupCardinalBright = 3,
+                confirmedGroupCardinalStrong = 2,
+                confirmedGroupCardinalExemplarError = 10000,
+                confirmedGroupGradientPrior = 1, confirmedGroupGradientRadius = 5,
+                confirmedGroupGradientNeighbors = 5, confirmedGroupGradientError = 50000,
+                confirmedGroupGradientCloseRadius = 3,
+                confirmedGroupSquarePrior = 1,
+                confirmedGroupLatePrior = 3, confirmedGroupLateError = 25000,
+                richPaletteMinColors = 513, richPaletteDarkChannel = 20,
+                richPaletteSuspiciousMin = 4, richPaletteSuspiciousMax = 8,
+                chromaticExemplarError = 50000, neutralExemplarError = 10000,
+                neutralBlendMinColors = 513, neutralBlendError = 50000,
+                localMaterialNeighbors = 3,
+                groupedPaletteSupport = 4, groupedPaletteBright = 5,
+                groupedPaletteDark = 3, exemplarMaterialError = 20000,
+                exemplarMaterialAgreement = 2, exemplarMaterialNeighbors = 10;
+            bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
+                useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
+                useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
+                requireCommonGradient = false, useSecondarySparse = true, useSoftColorConsensus = true,
+                useCoherentGradient = true, useDivergentGradient = true, usePatchGradient = true,
+                useMainSparse = true, useBrightCorner = true, useVerticalShade = true,
+                requireColorPatch = true, colorPatchEnergyRescue = false,
+                threeNeighborEnergyRescue = true, texturedGradientRescue = true,
+                singleDiagonalGradientRescue = true,
+                threeGradientRescue = true,
+                weightedPatchRescue = true, extendedWeightedPatch = true,
+                symmetricPatchRescue = true, symmetricPatchFirstPass = true,
+                highContrastRescue = true, contrastConsensus = true,
+                repeatedDarkRescue = true, repeatedDarkFirstPass = true,
+                repeatedBridgeRescue = true, sparseDarkPaletteRescue = true,
+                sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
+                sparseDarkPaletteExtended = true, sparsePaletteExclusive = true,
+                exemplarRescue = true, groupedPaletteRescue = true, exemplarMaterialVeto = true,
+                localMaterialHueVeto = true,
+                gridCellSizeSet = false, exemplarMaterialInterpass = true,
+                confirmedGroupExemplar = true, confirmedGroupCardinal = true,
+                confirmedGroupCardinalMaterialVeto = false,
+                confirmedGroupGradient = true,
+                confirmedGroupSquare = true,
+                confirmedGroupLateCardinal = true,
+                richPaletteMaterialVeto = true,
+                chromaticExemplar = true, neutralExemplar = true,
+                neutralBlend = true;
+            for (int q = 0; q < args.Length; q++)
+            {
+                string argument = args[q];
+                int equals = argument.IndexOf('=');
+                string name = equals < 0 ? argument : argument[..equals];
+                string? inlineValue = equals < 0 ? null : argument[(equals + 1)..];
+                string NextValue()
+                {
+                    if (inlineValue is not null) return inlineValue;
+                    if (++q >= args.Length) throw new ArgumentException($"Нет значения для {name}.");
+                    return args[q];
+                }
+                double NextDouble()
+                {
+                    if (!double.TryParse(NextValue(), NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+                        throw new ArgumentException($"Некорректное число для {name}.");
+                    return value;
+                }
+                int NextInt()
+                {
+                    if (!int.TryParse(NextValue(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int value))
+                        throw new ArgumentException($"Некорректное целое число для {name}.");
+                    return value;
+                }
+                switch (name)
+                {
+                    case "-o": case "--output": target = NextValue(); break;
+                    case "--candidate-audit": candidateAudit = NextValue(); break;
+                    case "--grid-cell-size": gridCellSize = NextInt(); gridCellSizeSet = true; break;
+                    case "--grid-color-tolerance": gridColorTolerance = NextDouble(); break;
+                    case "--dark-lightness": darkness = NextDouble(); break;
+                    case "--max-dark-neighbors": neighbors = NextInt(); break;
+                    case "--max-cardinal-dark": cardinal = NextInt(); break;
+                    case "--three-neighbor-dark5": dark5 = NextInt(); break;
+                    case "--three-neighbor-component": component = NextDouble(); break;
+                    case "--three-neighbor-continuation": protectedContinuation = NextInt(); break;
+                    case "--three-neighbor-protected-component": protectedComponent = NextDouble(); break;
+                    case "--three-neighbor-protected-min": protectedMinimum = NextDouble(); break;
+                    case "--repeated-component-similarity": repeatSimilarity = NextDouble(); break;
+                    case "--repeated-patch-radius": repeatedPatchRadius = NextInt(); break;
+                    case "--repeated-patch-differences": repeatedPatchDifferences = NextInt(); break;
+                    case "--large-patch-radius": largePatchRadius = NextInt(); break;
+                    case "--large-patch-bright": largePatchBright = NextInt(); break;
+                    case "--large-patch-ratio": largePatchRatio = NextDouble(); break;
+                    case "--small-patch-radius": smallPatchRadius = NextInt(); break;
+                    case "--small-patch-component": smallPatchComponent = NextDouble(); break;
+                    case "--small-patch-max-cardinal": smallPatchMaxCardinal = NextInt(); break;
+                    case "--small-patch-bright": smallPatchBright = NextInt(); break;
+                    case "--small-patch-ratio": smallPatchRatio = NextDouble(); break;
+                    case "--no-diagonal-bridge": allowDiagonalBridge = false; break;
+                    case "--diagonal-bridge-consensus": diagonalBridgeConsensus = NextDouble(); break;
+                    case "--no-straight-run": useStraightRun = false; break;
+                    case "--min-straight-run": minimumStraightRun = NextInt(); break;
+                    case "--straight-run-radius": straightRunRadius = NextInt(); break;
+                    case "--straight-run-dark5": straightRunDark5 = NextInt(); break;
+                    case "--straight-run-consensus": straightRunConsensus = NextDouble(); break;
+                    case "--isolated-patch-radius": isolatedPatchRadius = NextInt(); break;
+                    case "--isolated-patch-bright": isolatedPatchBright = NextInt(); break;
+                    case "--isolated-patch-ratio": isolatedPatchRatio = NextDouble(); break;
+                    case "--isolated-patch-consensus": isolatedPatchConsensus = NextDouble(); break;
+                    case "--no-repeated-mismatch": useRepeatedMismatch = false; break;
+                    case "--no-diagonal-gradient": useDiagonalGradient = false; break;
+                    case "--diagonal-color-tolerance": diagonalColorTolerance = NextDouble(); break;
+                    case "--diagonal-bright": diagonalBright = NextInt(); break;
+                    case "--diagonal-bright-ratio": diagonalBrightRatio = NextDouble(); break;
+                    case "--diagonal-gradient-ratio": diagonalGradientRatio = NextDouble(); break;
+                    case "--diagonal-gradient-radius": diagonalGradientRadius = NextInt(); break;
+                    case "--diagonal-similar-color": diagonalSimilarColor = NextDouble(); break;
+                    case "--diagonal-similar-neighbors": diagonalSimilarNeighbors = NextInt(); break;
+                    case "--no-diagonal-opposition": useDiagonalOpposition = false; break;
+                    case "--diagonal-opposition-radius": diagonalOppositionRadius = NextInt(); break;
+                    case "--diagonal-min-opposition": diagonalOpposition = NextDouble(); break;
+                    case "--diagonal-min-agreement": diagonalAgreement = NextDouble(); break;
+                    case "--no-tapered-run": useTaperedRun = false; break;
+                    case "--tapered-dark5-min": taperedDark5Min = NextInt(); break;
+                    case "--tapered-dark5-max": taperedDark5Max = NextInt(); break;
+                    case "--tapered-run-radius": taperedRadius = NextInt(); break;
+                    case "--tapered-inside-length": taperedInsideLength = NextInt(); break;
+                    case "--tapered-min-shrink": taperedMinShrink = NextInt(); break;
+                    case "--tapered-bright": taperedBright = NextInt(); break;
+                    case "--tapered-bright-ratio": taperedBrightRatio = NextDouble(); break;
+                    case "--no-sparse-patch": useSparsePatch = false; break;
+                    case "--sparse-patch-max-dark5": sparsePatchMaxDark5 = NextInt(); break;
+                    case "--sparse-patch-max-cardinal": sparsePatchMaxCardinal = NextInt(); break;
+                    case "--sparse-patch-bright": sparsePatchBright = NextInt(); break;
+                    case "--sparse-patch-ratio": sparsePatchRatio = NextDouble(); break;
+                    case "--no-secondary-sparse": useSecondarySparse = false; break;
+                    case "--secondary-sparse-dark5": secondarySparseDark5 = NextInt(); break;
+                    case "--secondary-sparse-component": secondarySparseComponent = NextDouble(); break;
+                    case "--no-soft-color-consensus": useSoftColorConsensus = false; break;
+                    case "--soft-consensus": softConsensus = NextDouble(); break;
+                    case "--soft-color-spread": softColorSpread = NextDouble(); break;
+                    case "--soft-max-dark-neighbors": softMaxDarkNeighbors = NextInt(); break;
+                    case "--soft-max-dark5": softMaxDark5 = NextInt(); break;
+                    case "--no-coherent-gradient": useCoherentGradient = false; break;
+                    case "--coherent-dark5": coherentDark5 = NextInt(); break;
+                    case "--coherent-radius": coherentRadius = NextInt(); break;
+                    case "--coherent-color-tolerance": coherentColorTolerance = NextDouble(); break;
+                    case "--coherent-min-neighbors": coherentMinimumNeighbors = NextInt(); break;
+                    case "--coherent-magnitude-ratio": coherentMagnitudeRatio = NextDouble(); break;
+                    case "--coherent-min-agreement": coherentAgreement = NextDouble(); break;
+                    case "--coherent-min-alignment": coherentAlignment = NextDouble(); break;
+                    case "--no-divergent-gradient": useDivergentGradient = false; break;
+                    case "--divergent-dark5": divergentDark5 = NextInt(); break;
+                    case "--divergent-radius": divergentRadius = NextInt(); break;
+                    case "--divergent-color-tolerance": divergentColorTolerance = NextDouble(); break;
+                    case "--divergent-min-neighbors": divergentMinimumNeighbors = NextInt(); break;
+                    case "--divergent-magnitude-ratio": divergentMagnitudeRatio = NextDouble(); break;
+                    case "--divergent-max-agreement": divergentMaximumAgreement = NextDouble(); break;
+                    case "--no-patch-gradient": usePatchGradient = false; break;
+                    case "--patch-gradient-dark5-min": patchGradientDark5Minimum = NextInt(); break;
+                    case "--patch-gradient-dark5-max": patchGradientDark5Maximum = NextInt(); break;
+                    case "--patch-gradient-bright": patchGradientBright = NextInt(); break;
+                    case "--patch-gradient-ratio": patchGradientBrightRatio = NextDouble(); break;
+                    case "--patch-gradient-radius": patchGradientRadius = NextInt(); break;
+                    case "--patch-gradient-color-tolerance": patchGradientColorTolerance = NextDouble(); break;
+                    case "--patch-gradient-min-neighbors": patchGradientMinimumNeighbors = NextInt(); break;
+                    case "--patch-gradient-magnitude-min": patchGradientMagnitudeMinimum = NextDouble(); break;
+                    case "--patch-gradient-magnitude-max": patchGradientMagnitudeMaximum = NextDouble(); break;
+                    case "--patch-gradient-max-agreement": patchGradientMaximumAgreement = NextDouble(); break;
+                    case "--no-main-sparse": useMainSparse = false; break;
+                    case "--main-sparse-dark5": mainSparseDark5 = NextInt(); break;
+                    case "--main-sparse-bright": mainSparseBright = NextInt(); break;
+                    case "--main-sparse-ratio": mainSparseBrightRatio = NextDouble(); break;
+                    case "--main-sparse-gradient-radius": mainSparseGradientRadius = NextInt(); break;
+                    case "--main-sparse-color-tolerance": mainSparseColorTolerance = NextDouble(); break;
+                    case "--main-sparse-min-neighbors": mainSparseMinimumNeighbors = NextInt(); break;
+                    case "--main-sparse-max-magnitude": mainSparseMaximumMagnitude = NextDouble(); break;
+                    case "--no-bright-corner": useBrightCorner = false; break;
+                    case "--bright-corner-max-dark": brightCornerMaxDark = NextInt(); break;
+                    case "--bright-corner-max-cardinal": brightCornerMaxCardinal = NextInt(); break;
+                    case "--bright-corner-dark5": brightCornerDark5 = NextInt(); break;
+                    case "--bright-corner-component": brightCornerComponent = NextDouble(); break;
+                    case "--bright-corner-run": brightCornerRun = NextInt(); break;
+                    case "--bright-corner-color-tolerance": brightCornerColorTolerance = NextDouble(); break;
+                    case "--no-vertical-shade": useVerticalShade = false; break;
+                    case "--vertical-medium-dark5": verticalMediumDark5 = NextInt(); break;
+                    case "--vertical-medium-component-min": verticalMediumComponentMin = NextDouble(); break;
+                    case "--vertical-medium-component-max": verticalMediumComponentMax = NextDouble(); break;
+                    case "--vertical-medium-color-spread": verticalMediumColorSpread = NextDouble(); break;
+                    case "--vertical-wide-dark5": verticalWideDark5 = NextInt(); break;
+                    case "--vertical-wide-component-min": verticalWideComponentMin = NextDouble(); break;
+                    case "--vertical-wide-color-spread-min": verticalWideColorSpreadMin = NextDouble(); break;
+                    case "--vertical-wide-color-spread-max": verticalWideColorSpreadMax = NextDouble(); break;
+                    case "--vertical-run-radius": verticalRunRadius = NextInt(); break;
+                    case "--vertical-color-tolerance": verticalColorTolerance = NextDouble(); break;
+                    case "--conflict-radius": conflictRadius = NextInt(); break;
+                    case "--require-common-gradient": requireCommonGradient = true; break;
+                    case "--common-gradient-radius": commonGradientRadius = NextInt(); break;
+                    case "--common-color-tolerance": commonColorTolerance = NextDouble(); break;
+                    case "--common-min-neighbors": commonMinimumNeighbors = NextInt(); break;
+                    case "--common-min-magnitude": commonMinimumMagnitude = NextDouble(); break;
+                    case "--common-magnitude-ratio": commonMagnitudeRatio = NextDouble(); break;
+                    case "--common-min-agreement": commonMinimumAgreement = NextDouble(); break;
+                    case "--common-min-opposition": commonMinimumOpposition = NextDouble(); break;
+                    case "--two-cardinal-dark5": twoCardinalDark5 = NextInt(); break;
+                    case "--two-cardinal-component": twoCardinalComponent = NextDouble(); break;
+                    case "--two-cardinal-bright-pattern": twoCardinalBrightPattern = NextInt(); break;
+                    case "--require-color-patch": requireColorPatch = true; break;
+                    case "--no-color-patch": requireColorPatch = false; break;
+                    case "--color-patch-tolerance": colorPatchTolerance = NextDouble(); break;
+                    case "--color-patch-min-bright": colorPatchMinBright = NextInt(); break;
+                    case "--color-patch-ratio": colorPatchRatio = NextDouble(); break;
+                    case "--color-patch-max-differences": colorPatchMaxDifferences = NextInt(); break;
+                    case "--color-patch-energy-rescue": colorPatchEnergyRescue = true; break;
+                    case "--color-patch-energy-drop": colorPatchEnergyDrop = NextDouble(); break;
+                    case "--three-neighbor-energy-rescue": threeNeighborEnergyRescue = true; break;
+                    case "--no-three-neighbor-energy-rescue": threeNeighborEnergyRescue = false; break;
+                    case "--three-neighbor-energy-drop": threeNeighborEnergyDrop = NextDouble(); break;
+                    case "--three-neighbor-distinct-colors": threeNeighborDistinctColors = NextInt(); break;
+                    case "--three-neighbor-flat-bright": threeNeighborFlatBright = NextDouble(); break;
+                    case "--three-neighbor-textured-bright": threeNeighborTexturedBright = NextDouble(); break;
+                    case "--textured-gradient-rescue": texturedGradientRescue = true; break;
+                    case "--no-textured-gradient-rescue": texturedGradientRescue = false; break;
+                    case "--textured-gradient-colors": texturedGradientColors = NextInt(); break;
+                    case "--textured-gradient-energy": texturedGradientEnergy = NextDouble(); break;
+                    case "--textured-gradient-bright": texturedGradientBright = NextDouble(); break;
+                    case "--textured-gradient-radius": texturedGradientRadius = NextInt(); break;
+                    case "--textured-gradient-tolerance": texturedGradientTolerance = NextDouble(); break;
+                    case "--textured-gradient-neighbors": texturedGradientNeighbors = NextInt(); break;
+                    case "--textured-gradient-opposition": texturedGradientOpposition = NextDouble(); break;
+                    case "--single-diagonal-gradient-rescue": singleDiagonalGradientRescue = true; break;
+                    case "--no-single-diagonal-gradient-rescue": singleDiagonalGradientRescue = false; break;
+                    case "--single-diagonal-colors": singleDiagonalColors = NextInt(); break;
+                    case "--single-diagonal-lightness": singleDiagonalLightness = NextDouble(); break;
+                    case "--single-diagonal-energy": singleDiagonalEnergy = NextDouble(); break;
+                    case "--single-diagonal-bright": singleDiagonalBright = NextDouble(); break;
+                    case "--single-diagonal-radius": singleDiagonalRadius = NextInt(); break;
+                    case "--single-diagonal-tolerance": singleDiagonalTolerance = NextDouble(); break;
+                    case "--single-diagonal-neighbors": singleDiagonalNeighbors = NextInt(); break;
+                    case "--single-diagonal-opposition": singleDiagonalOpposition = NextDouble(); break;
+                    case "--three-gradient-rescue": threeGradientRescue = true; break;
+                    case "--no-three-gradient-rescue": threeGradientRescue = false; break;
+                    case "--three-gradient-colors": threeGradientColors = NextInt(); break;
+                    case "--three-gradient-lightness": threeGradientLightness = NextDouble(); break;
+                    case "--three-gradient-energy": threeGradientEnergy = NextDouble(); break;
+                    case "--three-gradient-bright": threeGradientBright = NextDouble(); break;
+                    case "--three-gradient-radius": threeGradientRadius = NextInt(); break;
+                    case "--three-gradient-tolerance": threeGradientTolerance = NextDouble(); break;
+                    case "--three-gradient-neighbors": threeGradientNeighbors = NextInt(); break;
+                    case "--three-gradient-opposition": threeGradientOpposition = NextDouble(); break;
+                    case "--color-patch-weighted-rescue": weightedPatchRescue = true; break;
+                    case "--no-color-patch-weighted-rescue": weightedPatchRescue = false; break;
+                    case "--weighted-patch-differences": weightedPatchDifferences = NextInt(); break;
+                    case "--weighted-patch-sigma": weightedPatchSigma = NextDouble(); break;
+                    case "--weighted-patch-min-bright": weightedPatchMinBright = NextDouble(); break;
+                    case "--weighted-patch-ratio": weightedPatchRatio = NextDouble(); break;
+                    case "--extended-weighted-patch": extendedWeightedPatch = true; break;
+                    case "--no-extended-weighted-patch": extendedWeightedPatch = false; break;
+                    case "--extended-patch-sigma": extendedPatchSigma = NextDouble(); break;
+                    case "--extended-patch-bright": extendedPatchBright = NextDouble(); break;
+                    case "--extended-patch-ratio": extendedPatchRatio = NextDouble(); break;
+                    case "--extended-patch-colors": extendedPatchColors = NextInt(); break;
+                    case "--extended-patch-lightness": extendedPatchLightness = NextDouble(); break;
+                    case "--extended-patch-cardinal": extendedPatchCardinal = NextInt(); break;
+                    case "--extended-patch-energy": extendedPatchEnergy = NextDouble(); break;
+                    case "--extended-patch-radius": extendedPatchRadius = NextInt(); break;
+                    case "--extended-patch-tolerance": extendedPatchTolerance = NextDouble(); break;
+                    case "--extended-patch-neighbors": extendedPatchNeighbors = NextInt(); break;
+                    case "--extended-patch-opposition": extendedPatchOpposition = NextDouble(); break;
+                    case "--symmetric-patch-rescue": symmetricPatchRescue = true; break;
+                    case "--no-symmetric-patch-rescue": symmetricPatchRescue = false; break;
+                    case "--symmetric-patch-first-pass": symmetricPatchFirstPass = true; break;
+                    case "--symmetric-patch-all-passes": symmetricPatchFirstPass = false; break;
+                    case "--symmetric-patch-colors": symmetricPatchColors = NextInt(); break;
+                    case "--symmetric-patch-lightness": symmetricPatchLightness = NextDouble(); break;
+                    case "--symmetric-patch-cardinal": symmetricPatchCardinal = NextInt(); break;
+                    case "--symmetric-patch-sigma": symmetricPatchSigma = NextDouble(); break;
+                    case "--symmetric-patch-bright": symmetricPatchBright = NextDouble(); break;
+                    case "--symmetric-patch-dark": symmetricPatchDark = NextDouble(); break;
+                    case "--symmetric-patch-ratio": symmetricPatchRatio = NextDouble(); break;
+                    case "--symmetric-patch-energy": symmetricPatchEnergy = NextDouble(); break;
+                    case "--symmetric-patch-radius": symmetricPatchRadius = NextInt(); break;
+                    case "--symmetric-patch-tolerance": symmetricPatchTolerance = NextDouble(); break;
+                    case "--symmetric-patch-neighbors": symmetricPatchNeighbors = NextInt(); break;
+                    case "--symmetric-patch-opposition": symmetricPatchOpposition = NextDouble(); break;
+                    case "--high-contrast-rescue": highContrastRescue = true; break;
+                    case "--no-high-contrast-rescue": highContrastRescue = false; break;
+                    case "--high-contrast-max-dark": highContrastMaxDark = NextInt(); break;
+                    case "--high-contrast-gain": highContrastGain = NextDouble(); break;
+                    case "--high-contrast-energy": highContrastEnergy = NextDouble(); break;
+                    case "--high-contrast-radius": highContrastRadius = NextInt(); break;
+                    case "--high-contrast-tolerance": highContrastTolerance = NextDouble(); break;
+                    case "--high-contrast-neighbors": highContrastNeighbors = NextInt(); break;
+                    case "--high-contrast-opposition": highContrastOpposition = NextDouble(); break;
+                    case "--contrast-consensus": contrastConsensus = true; break;
+                    case "--no-contrast-consensus": contrastConsensus = false; break;
+                    case "--contrast-consensus-min": contrastConsensusMinimum = NextDouble(); break;
+                    case "--contrast-consensus-gain": contrastConsensusGain = NextDouble(); break;
+                    case "--contrast-consensus-max-dark": contrastConsensusMaxDark = NextInt(); break;
+                    case "--repeated-dark-rescue": repeatedDarkRescue = true; break;
+                    case "--no-repeated-dark-rescue": repeatedDarkRescue = false; break;
+                    case "--repeated-dark-first-pass": repeatedDarkFirstPass = true; break;
+                    case "--repeated-dark-all-passes": repeatedDarkFirstPass = false; break;
+                    case "--repeated-dark-protect-radius": repeatedDarkProtectRadius = NextInt(); break;
+                    case "--repeated-dark-min": repeatedDarkMin = NextInt(); break;
+                    case "--repeated-dark-max": repeatedDarkMax = NextInt(); break;
+                    case "--repeated-dark-neighbors-min": repeatedDarkNeighborsMin = NextInt(); break;
+                    case "--repeated-dark-neighbors-max": repeatedDarkNeighborsMax = NextInt(); break;
+                    case "--repeated-dark-lightness": repeatedDarkLightness = NextDouble(); break;
+                    case "--repeated-dark-gain": repeatedDarkGain = NextDouble(); break;
+                    case "--repeated-dark-energy": repeatedDarkEnergy = NextDouble(); break;
+                    case "--repeated-bridge-rescue": repeatedBridgeRescue = true; break;
+                    case "--no-repeated-bridge-rescue": repeatedBridgeRescue = false; break;
+                    case "--repeated-bridge-gain": repeatedBridgeGain = NextDouble(); break;
+                    case "--repeated-bridge-energy": repeatedBridgeEnergy = NextDouble(); break;
+                    case "--repeated-bridge-radius": repeatedBridgeRadius = NextInt(); break;
+                    case "--repeated-bridge-tolerance": repeatedBridgeTolerance = NextDouble(); break;
+                    case "--repeated-bridge-neighbors": repeatedBridgeNeighbors = NextInt(); break;
+                    case "--repeated-bridge-opposition": repeatedBridgeOpposition = NextDouble(); break;
+                    case "--sparse-dark-palette-rescue": sparseDarkPaletteRescue = true; break;
+                    case "--no-sparse-dark-palette-rescue": sparseDarkPaletteRescue = false; break;
+                    case "--sparse-dark-palette-tolerance": sparseDarkPaletteTolerance = NextDouble(); break;
+                    case "--sparse-dark-palette-max": sparseDarkPaletteMax = NextInt(); break;
+                    case "--sparse-dark-palette-gain": sparseDarkPaletteGain = NextDouble(); break;
+                    case "--sparse-dark-palette-energy": sparseDarkPaletteEnergy = NextDouble(); break;
+                    case "--sparse-dark-palette-extended": sparseDarkPaletteExtended = true; break;
+                    case "--no-sparse-dark-palette-extended": sparseDarkPaletteExtended = false; break;
+                    case "--sparse-dark-palette-extended-max": sparseDarkPaletteExtendedMax = NextInt(); break;
+                    case "--sparse-dark-palette-extended-consensus": sparseDarkPaletteExtendedConsensus = NextDouble(); break;
+                    case "--sparse-dark-palette-extended-tolerance": sparseDarkPaletteExtendedTolerance = NextDouble(); break;
+                    case "--sparse-dark-palette-extended-gain": sparseDarkPaletteExtendedGain = NextDouble(); break;
+                    case "--sparse-dark-palette-extended-energy": sparseDarkPaletteExtendedEnergy = NextDouble(); break;
+                    case "--sparse-palette-exclusive": sparsePaletteExclusive = true; break;
+                    case "--no-sparse-palette-exclusive": sparsePaletteExclusive = false; break;
+                    case "--sparse-palette-exclusive-tolerance": sparsePaletteExclusiveTolerance = NextDouble(); break;
+                    case "--sparse-palette-exclusive-max": sparsePaletteExclusiveMax = NextInt(); break;
+                    case "--sparse-palette-exclusive-gain": sparsePaletteExclusiveGain = NextDouble(); break;
+                    case "--exemplar-rescue": exemplarRescue = true; break;
+                    case "--no-exemplar-rescue": exemplarRescue = false; break;
+                    case "--exemplar-near-distance": exemplarNearDistance = NextInt(); break;
+                    case "--exemplar-near-max": exemplarNearMax = NextInt(); break;
+                    case "--exemplar-early-near-max": exemplarEarlyNearMax = NextInt(); break;
+                    case "--exemplar-ratio": exemplarRatio = NextDouble(); break;
+                    case "--exemplar-bright-channel": exemplarBrightChannel = NextInt(); break;
+                    case "--exemplar-dark-channel": exemplarDarkChannel = NextInt(); break;
+                    case "--exemplar-exclusion": exemplarExclusion = NextInt(); break;
+                    case "--exemplar-material-veto": exemplarMaterialVeto = true; break;
+                    case "--no-exemplar-material-veto": exemplarMaterialVeto = false; break;
+                    case "--exemplar-material-interpass": exemplarMaterialInterpass = true; break;
+                    case "--no-exemplar-material-interpass": exemplarMaterialInterpass = false; break;
+                    case "--exemplar-material-error": exemplarMaterialError = NextInt(); break;
+                    case "--exemplar-material-source": exemplarMaterialSource = NextDouble(); break;
+                    case "--exemplar-material-bright": exemplarMaterialBright = NextDouble(); break;
+                    case "--exemplar-material-drop": exemplarMaterialDrop = NextDouble(); break;
+                    case "--exemplar-material-agreement-distance": exemplarMaterialAgreementDistance = NextDouble(); break;
+                    case "--exemplar-material-agreement": exemplarMaterialAgreement = NextInt(); break;
+                    case "--exemplar-material-neighbors": exemplarMaterialNeighbors = NextInt(); break;
+                    case "--local-material-hue-veto": localMaterialHueVeto = true; break;
+                    case "--no-local-material-hue-veto": localMaterialHueVeto = false; break;
+                    case "--local-material-chroma": localMaterialChroma = NextDouble(); break;
+                    case "--local-material-neighbor-chroma": localMaterialNeighborChroma = NextDouble(); break;
+                    case "--local-material-neighbor-lightness": localMaterialNeighborLightness = NextDouble(); break;
+                    case "--local-material-hue-agreement": localMaterialHueAgreement = NextDouble(); break;
+                    case "--local-material-neighbors": localMaterialNeighbors = NextInt(); break;
+                    case "--grouped-palette-rescue": groupedPaletteRescue = true; break;
+                    case "--no-grouped-palette-rescue": groupedPaletteRescue = false; break;
+                    case "--grouped-palette-channel": groupedPaletteChannel = NextInt(); break;
+                    case "--grouped-palette-min": groupedPaletteMin = NextInt(); break;
+                    case "--grouped-palette-max": groupedPaletteMax = NextInt(); break;
+                    case "--grouped-palette-near-distance": groupedPaletteNearDistance = NextInt(); break;
+                    case "--grouped-palette-near-max": groupedPaletteNearMax = NextInt(); break;
+                    case "--grouped-palette-high-near": groupedPaletteHighNear = NextInt(); break;
+                    case "--grouped-palette-prior-near": groupedPalettePriorNear = NextInt(); break;
+                    case "--grouped-palette-prior-min": groupedPalettePriorMin = NextInt(); break;
+                    case "--grouped-palette-support": groupedPaletteSupport = NextInt(); break;
+                    case "--grouped-palette-bright": groupedPaletteBright = NextInt(); break;
+                    case "--grouped-palette-dark": groupedPaletteDark = NextInt(); break;
+                    case "--grouped-palette-average": groupedPaletteAverage = NextDouble(); break;
+                    case "--grouped-palette-high-average": groupedPaletteHighAverage = NextDouble(); break;
+                    case "--grouped-palette-spacing": groupedPaletteSpacing = NextDouble(); break;
+                    case "--grouped-palette-ratio": groupedPaletteRatio = NextDouble(); break;
+                    case "--grouped-palette-high-ratio": groupedPaletteHighRatio = NextDouble(); break;
+                    case "--grouped-palette-gain": groupedPaletteGain = NextDouble(); break;
+                    case "--confirmed-group-exemplar": confirmedGroupExemplar = true; break;
+                    case "--no-confirmed-group-exemplar": confirmedGroupExemplar = false; break;
+                    case "--confirmed-group-prior": confirmedGroupPrior = NextInt(); break;
+                    case "--confirmed-group-ratio": confirmedGroupRatio = NextDouble(); break;
+                    case "--confirmed-group-gain": confirmedGroupGain = NextDouble(); break;
+                    case "--confirmed-group-direct-error": confirmedGroupDirectError = NextInt(); break;
+                    case "--confirmed-group-flat-colors": confirmedGroupFlatColors = NextInt(); break;
+                    case "--confirmed-group-protect-radius": confirmedGroupProtectRadius = NextInt(); break;
+                    case "--confirmed-group-cardinal": confirmedGroupCardinal = true; break;
+                    case "--no-confirmed-group-cardinal": confirmedGroupCardinal = false; break;
+                    case "--confirmed-group-cardinal-channel": confirmedGroupCardinalChannel = NextInt(); break;
+                    case "--confirmed-group-cardinal-dark": confirmedGroupCardinalDark = NextInt(); break;
+                    case "--confirmed-group-cardinal-extra-dark": confirmedGroupCardinalExtraDark = NextInt(); break;
+                    case "--confirmed-group-cardinal-extra-ratio": confirmedGroupCardinalExtraRatio = NextDouble(); break;
+                    case "--confirmed-group-cardinal-extra-error": confirmedGroupCardinalExtraError = NextInt(); break;
+                    case "--confirmed-group-cardinal-bright": confirmedGroupCardinalBright = NextInt(); break;
+                    case "--confirmed-group-cardinal-strong": confirmedGroupCardinalStrong = NextInt(); break;
+                    case "--confirmed-group-cardinal-exemplar-error": confirmedGroupCardinalExemplarError = NextInt(); break;
+                    case "--confirmed-group-cardinal-color-distance": confirmedGroupCardinalColorDistance = NextDouble(); break;
+                    case "--confirmed-group-cardinal-material-veto": confirmedGroupCardinalMaterialVeto = true; break;
+                    case "--no-confirmed-group-cardinal-material-veto": confirmedGroupCardinalMaterialVeto = false; break;
+                    case "--confirmed-group-gradient": confirmedGroupGradient = true; break;
+                    case "--no-confirmed-group-gradient": confirmedGroupGradient = false; break;
+                    case "--confirmed-group-gradient-prior": confirmedGroupGradientPrior = NextInt(); break;
+                    case "--confirmed-group-gradient-radius": confirmedGroupGradientRadius = NextInt(); break;
+                    case "--confirmed-group-gradient-color": confirmedGroupGradientColor = NextDouble(); break;
+                    case "--confirmed-group-gradient-neighbors": confirmedGroupGradientNeighbors = NextInt(); break;
+                    case "--confirmed-group-gradient-ratio": confirmedGroupGradientRatio = NextDouble(); break;
+                    case "--confirmed-group-gradient-agreement": confirmedGroupGradientAgreement = NextDouble(); break;
+                    case "--confirmed-group-gradient-opposition": confirmedGroupGradientOpposition = NextDouble(); break;
+                    case "--confirmed-group-gradient-error": confirmedGroupGradientError = NextInt(); break;
+                    case "--confirmed-group-gradient-close-radius": confirmedGroupGradientCloseRadius = NextInt(); break;
+                    case "--confirmed-group-gradient-close-ratio": confirmedGroupGradientCloseRatio = NextDouble(); break;
+                    case "--confirmed-group-gradient-ray-color": confirmedGroupGradientRayColor = NextDouble(); break;
+                    case "--confirmed-group-square": confirmedGroupSquare = true; break;
+                    case "--no-confirmed-group-square": confirmedGroupSquare = false; break;
+                    case "--confirmed-group-square-prior": confirmedGroupSquarePrior = NextInt(); break;
+                    case "--confirmed-group-square-color": confirmedGroupSquareColor = NextDouble(); break;
+                    case "--confirmed-group-square-gain": confirmedGroupSquareGain = NextDouble(); break;
+                    case "--confirmed-group-late-cardinal": confirmedGroupLateCardinal = true; break;
+                    case "--no-confirmed-group-late-cardinal": confirmedGroupLateCardinal = false; break;
+                    case "--confirmed-group-late-prior": confirmedGroupLatePrior = NextInt(); break;
+                    case "--confirmed-group-late-ratio": confirmedGroupLateRatio = NextDouble(); break;
+                    case "--confirmed-group-late-error": confirmedGroupLateError = NextInt(); break;
+                    case "--rich-palette-material-veto": richPaletteMaterialVeto = true; break;
+                    case "--no-rich-palette-material-veto": richPaletteMaterialVeto = false; break;
+                    case "--rich-palette-min-colors": richPaletteMinColors = NextInt(); break;
+                    case "--rich-palette-dark-channel": richPaletteDarkChannel = NextInt(); break;
+                    case "--rich-palette-neighbor-color": richPaletteNeighborColor = NextDouble(); break;
+                    case "--rich-palette-suspicious-min": richPaletteSuspiciousMin = NextInt(); break;
+                    case "--rich-palette-suspicious-max": richPaletteSuspiciousMax = NextInt(); break;
+                    case "--chromatic-exemplar": chromaticExemplar = true; break;
+                    case "--no-chromatic-exemplar": chromaticExemplar = false; break;
+                    case "--chromatic-exemplar-neutral": chromaticExemplarNeutral = NextDouble(); break;
+                    case "--chromatic-exemplar-color": chromaticExemplarColor = NextDouble(); break;
+                    case "--chromatic-exemplar-error": chromaticExemplarError = NextInt(); break;
+                    case "--chromatic-exemplar-ratio": chromaticExemplarRatio = NextDouble(); break;
+                    case "--neutral-exemplar": neutralExemplar = true; break;
+                    case "--no-neutral-exemplar": neutralExemplar = false; break;
+                    case "--neutral-exemplar-proposed": neutralExemplarProposed = NextDouble(); break;
+                    case "--neutral-exemplar-sample": neutralExemplarSample = NextDouble(); break;
+                    case "--neutral-exemplar-drop": neutralExemplarDrop = NextDouble(); break;
+                    case "--neutral-exemplar-error": neutralExemplarError = NextInt(); break;
+                    case "--neutral-exemplar-ratio": neutralExemplarRatio = NextDouble(); break;
+                    case "--neutral-exemplar-blend": neutralBlend = true; break;
+                    case "--no-neutral-exemplar-blend": neutralBlend = false; break;
+                    case "--neutral-blend-min-colors": neutralBlendMinColors = NextInt(); break;
+                    case "--neutral-blend-proposed": neutralBlendProposed = NextDouble(); break;
+                    case "--neutral-blend-sample": neutralBlendSample = NextDouble(); break;
+                    case "--neutral-blend-drop": neutralBlendDrop = NextDouble(); break;
+                    case "--neutral-blend-error": neutralBlendError = NextInt(); break;
+                    case "--neutral-blend-ratio": neutralBlendRatio = NextDouble(); break;
+                    case "--neutral-blend-weight": neutralBlendWeight = NextDouble(); break;
+                    case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
+                    case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
+                    case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
+                    case "--sparse-palette-consensus-max": sparsePaletteConsensusMax = NextInt(); break;
+                    case "--sparse-palette-consensus-gain": sparsePaletteConsensusGain = NextDouble(); break;
+                    case "--sparse-palette-consensus-energy": sparsePaletteConsensusEnergy = NextDouble(); break;
+                    case "--sparse-palette-three-neighbor": sparsePaletteThreeNeighbor = true; break;
+                    case "--no-sparse-palette-three-neighbor": sparsePaletteThreeNeighbor = false; break;
+                    case "--sparse-palette-three-tolerance": sparsePaletteThreeTolerance = NextDouble(); break;
+                    case "--sparse-palette-three-max": sparsePaletteThreeMax = NextInt(); break;
+                    case "--sparse-palette-three-gain": sparsePaletteThreeGain = NextDouble(); break;
+                    case "--sparse-palette-three-energy": sparsePaletteThreeEnergy = NextDouble(); break;
+                    case "--color-tolerance": tolerance = NextDouble(); break;
+                    case "--min-lightness-gain": gain = NextDouble(); break;
+                    case "--alpha-clearance": clearance = NextInt(); break;
+                    case "--min-bright-consensus": consensus = NextDouble(); break;
+                    case "--cardinal-color-weight": cardinalWeight = NextDouble(); break;
+                    case "--min-pair-extension": pairExtension = NextInt(); break;
+                    case "--pair-color-tolerance": pairTolerance = NextDouble(); break;
+                    case "--no-opposite-pair": usePair = false; break;
+                    case "--passes": passes = NextInt(); break;
+                    case "--overwrite": overwrite = true; break;
+                    case "--json": json = true; break;
+                    default:
+                        if (argument.StartsWith('-') || input is not null)
+                            throw new ArgumentException($"Неизвестный аргумент: {argument}");
+                        input = argument;
+                        break;
+                }
+            }
+            if (input is null) throw new ArgumentException("Не указан исходный PNG.");
+            if (passes is < 1 or > 10) throw new ArgumentException("--passes должен быть от 1 до 10.");
+            if (gridCellSizeSet && gridCellSize is < 2 or > 256)
+                throw new ArgumentException("--grid-cell-size должен быть от 2 до 256.");
+            if (!double.IsFinite(gridColorTolerance) || gridColorTolerance is < 0 or > 442)
+                throw new ArgumentException("--grid-color-tolerance должен быть от 0 до 442.");
+            if (!gridCellSizeSet && gridColorTolerance != 0)
+                throw new ArgumentException("--grid-color-tolerance требует --grid-cell-size.");
+            if (consensus is < 0 or > 100) throw new ArgumentException("--min-bright-consensus должен быть от 0 до 100.");
+            if (component is < 0 or > 100) throw new ArgumentException("--three-neighbor-component должен быть от 0 до 100.");
+            if (protectedContinuation is < 0 or > 8)
+                throw new ArgumentException("--three-neighbor-continuation должен быть от 0 до 8.");
+            if (protectedComponent is < 0 or > 100)
+                throw new ArgumentException("--three-neighbor-protected-component должен быть от 0 до 100.");
+            if (protectedMinimum < 0 || protectedMinimum > protectedComponent)
+                throw new ArgumentException("--three-neighbor-protected-min должен быть от 0 до верхней границы.");
+            if (repeatSimilarity is < 0 or > 100)
+                throw new ArgumentException("--repeated-component-similarity должен быть от 0 до 100.");
+            if (repeatedPatchRadius is < 0 or > 4 || largePatchRadius is < 0 or > 4 ||
+                smallPatchRadius is < 0 or > 4)
+                throw new ArgumentException("Радиусы сопоставления должны быть от 0 до 4.");
+            if (repeatedPatchDifferences is < 0 or > 80 || largePatchBright is < 0 or > 10000 ||
+                smallPatchBright is < 0 or > 10000)
+                throw new ArgumentException("Некорректный порог числа совпадений.");
+            if (largePatchRatio is < 0 or > 100 || smallPatchRatio is < 0 or > 100 ||
+                smallPatchComponent is < 0 or > 100 || smallPatchMaxCardinal is < 0 or > 4)
+                throw new ArgumentException("Некорректный порог повторяющихся областей.");
+            if (diagonalBridgeConsensus is < 0 or > 100)
+                throw new ArgumentException("--diagonal-bridge-consensus должен быть от 0 до 100.");
+            if (minimumStraightRun is < 1 or > 101 || straightRunRadius is < 1 or > 50 ||
+                straightRunDark5 is < 0 or > 24 || straightRunConsensus is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры прямой линии.");
+            if (isolatedPatchRadius is < 0 or > 4 || isolatedPatchBright is < 0 or > 10000 ||
+                isolatedPatchRatio is < 0 or > 100 || isolatedPatchConsensus is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры одиночной точки.");
+            if (diagonalColorTolerance is < 0 or > 100 || diagonalBright is < 0 or > 10000 ||
+                diagonalBrightRatio is < 0 or > 100 || diagonalGradientRatio is < 1 or > 10 ||
+                diagonalGradientRadius is < 1 or > 15 || diagonalSimilarColor is < 0 or > 100 ||
+                diagonalSimilarNeighbors is < 1 or > 1000 || diagonalOppositionRadius is < 1 or > 15 ||
+                diagonalOpposition is < 0 or > 100 || diagonalAgreement is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры диагонального градиента.");
+            if (taperedDark5Min is < 0 or > 24 || taperedDark5Max is < 0 or > 24 ||
+                taperedDark5Min > taperedDark5Max || taperedRadius is < 1 or > 50 ||
+                taperedInsideLength is < 1 or > 101 || taperedMinShrink is < 1 or > 100 ||
+                taperedBright is < 0 or > 10000 || taperedBrightRatio is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры сужающейся полосы.");
+            if (sparsePatchMaxDark5 is < 0 or > 24 || sparsePatchMaxCardinal is < 0 or > 4 ||
+                sparsePatchBright is < 0 or > 10000 || sparsePatchRatio is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры разреженного окружения.");
+            if (secondarySparseDark5 is < 0 or > 24 || secondarySparseComponent is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры второстепенного контура.");
+            if (softConsensus is < 0 or > 100 || softColorSpread is < 0 or > 100 ||
+                softMaxDarkNeighbors is < 0 or > 8 || softMaxDark5 is < 0 or > 24)
+                throw new ArgumentException("Некорректные параметры мягкого согласия цветов.");
+            if (coherentDark5 is < 0 or > 24 || coherentRadius is < 1 or > 15 ||
+                coherentColorTolerance is < 0 or > 100 || coherentMinimumNeighbors is < 1 or > 1000 ||
+                coherentMagnitudeRatio is < 0 or > 10 || coherentAgreement is < 0 or > 100 ||
+                coherentAlignment is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры согласованного градиента.");
+            if (divergentDark5 is < 0 or > 24 || divergentRadius is < 1 or > 15 ||
+                divergentColorTolerance is < 0 or > 100 || divergentMinimumNeighbors is < 1 or > 1000 ||
+                divergentMagnitudeRatio is < 0 or > 10 || divergentMaximumAgreement is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры расходящихся градиентов.");
+            if (patchGradientDark5Minimum is < 0 or > 24 || patchGradientDark5Maximum is < 0 or > 24 ||
+                patchGradientDark5Minimum > patchGradientDark5Maximum ||
+                patchGradientBright is < 0 or > 10000 || patchGradientBrightRatio is < 0 or > 100 ||
+                patchGradientRadius is < 1 or > 15 || patchGradientColorTolerance is < 0 or > 100 ||
+                patchGradientMinimumNeighbors is < 1 or > 1000 ||
+                patchGradientMagnitudeMinimum is < 0 or > 10 ||
+                patchGradientMagnitudeMaximum < patchGradientMagnitudeMinimum ||
+                patchGradientMagnitudeMaximum > 10 ||
+                patchGradientMaximumAgreement is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры окружения с градиентом.");
+            if (mainSparseDark5 is < 0 or > 24 || mainSparseBright is < 0 or > 10000 ||
+                mainSparseBrightRatio is < 0 or > 100 || mainSparseGradientRadius is < 1 or > 15 ||
+                mainSparseColorTolerance is < 0 or > 100 || mainSparseMinimumNeighbors is < 1 or > 1000 ||
+                mainSparseMaximumMagnitude is < 0 or > 10)
+                throw new ArgumentException("Некорректные параметры основного контура.");
+            if (brightCornerMaxDark is < 0 or > 8 || brightCornerMaxCardinal is < 0 or > 4 ||
+                brightCornerDark5 is < 0 or > 24 || brightCornerComponent is < 0 or > 100 ||
+                brightCornerRun is < 1 or > 15 || brightCornerColorTolerance is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры светлого угла.");
+            if (verticalMediumDark5 is < 0 or > 24 || verticalMediumComponentMin is < 0 or > 100 ||
+                verticalMediumComponentMax < verticalMediumComponentMin ||
+                verticalMediumComponentMax > 100 || verticalMediumColorSpread is < 0 or > 100 ||
+                verticalWideDark5 is < 0 or > 24 || verticalWideComponentMin is < 0 or > 100 ||
+                verticalWideColorSpreadMin is < 0 or > 100 ||
+                verticalWideColorSpreadMax < verticalWideColorSpreadMin ||
+                verticalWideColorSpreadMax > 100 || verticalRunRadius is < 1 or > 15 ||
+                verticalColorTolerance is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры вертикальной полосы.");
+            if (conflictRadius is < 0 or > 4)
+                throw new ArgumentException("--conflict-radius должен быть от 0 до 4.");
+            if (commonGradientRadius is < 1 or > 15 || commonColorTolerance is < 0 or > 100 ||
+                commonMinimumNeighbors is < 1 or > 1000 || commonMinimumMagnitude is < 0 or > 100000 ||
+                commonMagnitudeRatio is < 0 or > 10 || commonMinimumAgreement is < 0 or > 100 ||
+                commonMinimumOpposition is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры общего градиента.");
+            if (twoCardinalComponent is < 0 or > 100)
+                throw new ArgumentException("--two-cardinal-component должен быть от 0 до 100.");
+            if (twoCardinalBrightPattern is < 0 or > 10000)
+                throw new ArgumentException("--two-cardinal-bright-pattern должен быть от 0 до 10000.");
+            if (colorPatchTolerance is < 0 or > 100 || colorPatchMinBright is < 0 or > 10000 ||
+                colorPatchRatio is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры цветового повтора 3×3.");
+            var options = new DarkContourNoiseCleaner.Options(darkness, neighbors, tolerance, gain,
+                clearance, consensus / 100, cardinal, dark5, component / 100, cardinalWeight,
+                usePair, pairExtension, pairTolerance, twoCardinalDark5, twoCardinalComponent / 100,
+                protectedContinuation, protectedComponent / 100, protectedMinimum / 100, repeatSimilarity / 100,
+                repeatedPatchRadius, repeatedPatchDifferences, largePatchRadius, largePatchBright,
+                largePatchRatio, smallPatchRadius, smallPatchComponent / 100, smallPatchBright,
+                smallPatchRatio, allowDiagonalBridge, diagonalBridgeConsensus / 100,
+                useStraightRun, minimumStraightRun, straightRunRadius, straightRunDark5,
+                straightRunConsensus / 100, isolatedPatchRadius, isolatedPatchBright,
+                isolatedPatchRatio, isolatedPatchConsensus / 100, useRepeatedMismatch,
+                useDiagonalGradient, diagonalColorTolerance, diagonalBright, diagonalBrightRatio,
+                diagonalGradientRatio, diagonalGradientRadius, diagonalSimilarColor, diagonalSimilarNeighbors,
+                useDiagonalOpposition, diagonalOppositionRadius, diagonalOpposition / 100,
+                diagonalAgreement / 100, smallPatchMaxCardinal, useTaperedRun,
+                taperedDark5Min, taperedDark5Max, taperedRadius, taperedInsideLength,
+                taperedMinShrink, taperedBright, taperedBrightRatio,
+                useSparsePatch, sparsePatchMaxDark5, sparsePatchMaxCardinal,
+                sparsePatchBright, sparsePatchRatio, conflictRadius, requireCommonGradient,
+                commonGradientRadius, commonColorTolerance, commonMinimumNeighbors,
+                commonMinimumMagnitude, commonMagnitudeRatio, commonMinimumAgreement / 100,
+                commonMinimumOpposition / 100, useSecondarySparse, secondarySparseDark5,
+                secondarySparseComponent / 100, useSoftColorConsensus, softConsensus / 100,
+                softColorSpread, softMaxDarkNeighbors, softMaxDark5,
+                useCoherentGradient, coherentDark5, coherentRadius, coherentColorTolerance,
+                coherentMinimumNeighbors, coherentMagnitudeRatio, coherentAgreement / 100,
+                coherentAlignment / 100, useDivergentGradient, divergentDark5, divergentRadius,
+                divergentColorTolerance, divergentMinimumNeighbors, divergentMagnitudeRatio,
+                divergentMaximumAgreement / 100, usePatchGradient, patchGradientDark5Minimum,
+                patchGradientDark5Maximum, patchGradientBright, patchGradientBrightRatio,
+                patchGradientRadius, patchGradientColorTolerance, patchGradientMinimumNeighbors,
+                patchGradientMagnitudeMinimum, patchGradientMagnitudeMaximum,
+                patchGradientMaximumAgreement / 100) with
+            {
+                UseMainSparsePatch = useMainSparse,
+                MainSparseMaximumDark5 = mainSparseDark5,
+                MainSparseMinimumBrightMatches = mainSparseBright,
+                MainSparseBrightRatio = mainSparseBrightRatio,
+                MainSparseGradientRadius = mainSparseGradientRadius,
+                MainSparseColorTolerance = mainSparseColorTolerance,
+                MainSparseMinimumSimilarNeighbors = mainSparseMinimumNeighbors,
+                MainSparseMaximumMagnitudeRatio = mainSparseMaximumMagnitude,
+                UseBrightCornerContinuation = useBrightCorner,
+                BrightCornerMaximumDarkNeighbors = brightCornerMaxDark,
+                BrightCornerMaximumCardinalNeighbors = brightCornerMaxCardinal,
+                BrightCornerMaximumDark5 = brightCornerDark5,
+                BrightCornerMaximumComponentRatio = brightCornerComponent / 100,
+                BrightCornerMinimumRun = brightCornerRun,
+                BrightCornerColorTolerance = brightCornerColorTolerance,
+                UseVerticalShadeContinuation = useVerticalShade,
+                VerticalMediumDark5 = verticalMediumDark5,
+                VerticalMediumMinimumComponentRatio = verticalMediumComponentMin / 100,
+                VerticalMediumMaximumComponentRatio = verticalMediumComponentMax / 100,
+                VerticalMediumMaximumColorSpread = verticalMediumColorSpread,
+                VerticalWideDark5 = verticalWideDark5,
+                VerticalWideMinimumComponentRatio = verticalWideComponentMin / 100,
+                VerticalWideMinimumColorSpread = verticalWideColorSpreadMin,
+                VerticalWideMaximumColorSpread = verticalWideColorSpreadMax,
+                VerticalShadeSearchRadius = verticalRunRadius,
+                VerticalShadeColorTolerance = verticalColorTolerance,
+                TwoCardinalMinimumBrightPatternMatches = twoCardinalBrightPattern,
+                RequireColorMatchedPatch = requireColorPatch,
+                ColorMatchedPatchTolerance = colorPatchTolerance,
+                ColorMatchedPatchMinimumBrightMatches = colorPatchMinBright,
+                ColorMatchedPatchBrightRatio = colorPatchRatio,
+                ColorMatchedPatchMaximumPatternDifferences = colorPatchMaxDifferences,
+                UseColorPatchEnergyRescue = colorPatchEnergyRescue,
+                ColorPatchEnergyRescueMinimumDrop = colorPatchEnergyDrop / 100,
+                UseThreeNeighborEnergyRescue = threeNeighborEnergyRescue,
+                ThreeNeighborEnergyRescueMinimumDrop = threeNeighborEnergyDrop / 100,
+                ThreeNeighborEnergyDistinctColors = threeNeighborDistinctColors,
+                ThreeNeighborEnergyFlatMinimumBrightWeight = threeNeighborFlatBright,
+                ThreeNeighborEnergyTexturedMinimumBrightWeight = threeNeighborTexturedBright,
+                UseTexturedGradientRescue = texturedGradientRescue,
+                TexturedGradientMinimumDistinctColors = texturedGradientColors,
+                TexturedGradientMinimumEnergyDrop = texturedGradientEnergy / 100,
+                TexturedGradientMinimumBrightWeight = texturedGradientBright,
+                TexturedGradientRadius = texturedGradientRadius,
+                TexturedGradientColorTolerance = texturedGradientTolerance,
+                TexturedGradientMinimumSimilarNeighbors = texturedGradientNeighbors,
+                TexturedGradientMinimumOpposition = texturedGradientOpposition / 100,
+                UseSingleDiagonalGradientRescue = singleDiagonalGradientRescue,
+                SingleDiagonalMinimumDistinctColors = singleDiagonalColors,
+                SingleDiagonalMaximumLightness = singleDiagonalLightness,
+                SingleDiagonalMinimumEnergyDrop = singleDiagonalEnergy / 100,
+                SingleDiagonalMinimumBrightWeight = singleDiagonalBright,
+                SingleDiagonalGradientRadius = singleDiagonalRadius,
+                SingleDiagonalColorTolerance = singleDiagonalTolerance,
+                SingleDiagonalMinimumSimilarNeighbors = singleDiagonalNeighbors,
+                SingleDiagonalMinimumOpposition = singleDiagonalOpposition / 100,
+                UseThreeNeighborGradientRescue = threeGradientRescue,
+                ThreeNeighborGradientMinimumDistinctColors = threeGradientColors,
+                ThreeNeighborGradientMaximumLightness = threeGradientLightness,
+                ThreeNeighborGradientMinimumEnergyDrop = threeGradientEnergy / 100,
+                ThreeNeighborGradientMinimumBrightWeight = threeGradientBright,
+                ThreeNeighborGradientRadius = threeGradientRadius,
+                ThreeNeighborGradientColorTolerance = threeGradientTolerance,
+                ThreeNeighborGradientMinimumSimilarNeighbors = threeGradientNeighbors,
+                ThreeNeighborGradientMinimumOpposition = threeGradientOpposition / 100,
+                UseWeightedColorPatchRescue = weightedPatchRescue,
+                WeightedColorPatchMaximumPatternDifferences = weightedPatchDifferences,
+                WeightedColorPatchSigma = weightedPatchSigma,
+                WeightedColorPatchMinimumBrightWeight = weightedPatchMinBright,
+                WeightedColorPatchBrightRatio = weightedPatchRatio,
+                UseExtendedWeightedColorPatchRescue = extendedWeightedPatch,
+                ExtendedWeightedPatchSigma = extendedPatchSigma,
+                ExtendedWeightedPatchMinimumBrightWeight = extendedPatchBright,
+                ExtendedWeightedPatchBrightRatio = extendedPatchRatio,
+                ExtendedWeightedPatchTexturedDistinctColors = extendedPatchColors,
+                ExtendedWeightedPatchMaximumLightness = extendedPatchLightness,
+                ExtendedWeightedPatchMinimumCardinalDarkNeighbors = extendedPatchCardinal,
+                ExtendedWeightedPatchMinimumEnergyDrop = extendedPatchEnergy / 100,
+                ExtendedWeightedPatchGradientRadius = extendedPatchRadius,
+                ExtendedWeightedPatchColorTolerance = extendedPatchTolerance,
+                ExtendedWeightedPatchMinimumSimilarNeighbors = extendedPatchNeighbors,
+                ExtendedWeightedPatchMinimumOpposition = extendedPatchOpposition / 100,
+                UseSymmetricColorPatchRescue = symmetricPatchRescue,
+                SymmetricPatchMinimumDistinctColors = symmetricPatchColors,
+                SymmetricPatchMaximumLightness = symmetricPatchLightness,
+                SymmetricPatchMinimumCardinalDarkNeighbors = symmetricPatchCardinal,
+                SymmetricPatchSigma = symmetricPatchSigma,
+                SymmetricPatchMinimumBrightWeight = symmetricPatchBright,
+                SymmetricPatchMaximumDarkWeight = symmetricPatchDark,
+                SymmetricPatchBrightRatio = symmetricPatchRatio,
+                SymmetricPatchMinimumEnergyDrop = symmetricPatchEnergy / 100,
+                SymmetricPatchGradientRadius = symmetricPatchRadius,
+                SymmetricPatchColorTolerance = symmetricPatchTolerance,
+                SymmetricPatchMinimumSimilarNeighbors = symmetricPatchNeighbors,
+                SymmetricPatchMinimumOpposition = symmetricPatchOpposition / 100,
+                UseHighContrastGradientRescue = highContrastRescue,
+                HighContrastMaximumDarkNeighbors = highContrastMaxDark,
+                HighContrastMinimumLightnessGain = highContrastGain,
+                HighContrastMinimumEnergyDrop = highContrastEnergy / 100,
+                HighContrastGradientRadius = highContrastRadius,
+                HighContrastColorTolerance = highContrastTolerance,
+                HighContrastMinimumSimilarNeighbors = highContrastNeighbors,
+                HighContrastMinimumOpposition = highContrastOpposition / 100,
+                UseHighContrastConsensus = contrastConsensus,
+                HighContrastConsensusThreshold = contrastConsensusMinimum / 100,
+                HighContrastConsensusMinimumGain = contrastConsensusGain,
+                HighContrastConsensusMaximumDarkNeighbors = contrastConsensusMaxDark,
+                UseRepeatedDarkColorRescue = repeatedDarkRescue,
+                RepeatedDarkColorMinimumOccurrences = repeatedDarkMin,
+                RepeatedDarkColorMaximumOccurrences = repeatedDarkMax,
+                RepeatedDarkColorMinimumDarkNeighbors = repeatedDarkNeighborsMin,
+                RepeatedDarkColorMaximumDarkNeighbors = repeatedDarkNeighborsMax,
+                RepeatedDarkColorMaximumLightness = repeatedDarkLightness,
+                RepeatedDarkColorMinimumLightnessGain = repeatedDarkGain,
+                RepeatedDarkColorMinimumEnergyDrop = repeatedDarkEnergy / 100,
+                UseRepeatedDiagonalBridgeRescue = repeatedBridgeRescue,
+                RepeatedBridgeMinimumLightnessGain = repeatedBridgeGain,
+                RepeatedBridgeMinimumEnergyDrop = repeatedBridgeEnergy / 100,
+                RepeatedBridgeGradientRadius = repeatedBridgeRadius,
+                RepeatedBridgeColorTolerance = repeatedBridgeTolerance,
+                RepeatedBridgeMinimumSimilarNeighbors = repeatedBridgeNeighbors,
+                RepeatedBridgeMinimumOpposition = repeatedBridgeOpposition / 100,
+                UseSparseDarkPaletteRescue = sparseDarkPaletteRescue,
+                SparseDarkPaletteColorTolerance = sparseDarkPaletteTolerance,
+                SparseDarkPaletteMaximumSimilarPixels = sparseDarkPaletteMax,
+                SparseDarkPaletteMinimumLightnessGain = sparseDarkPaletteGain,
+                SparseDarkPaletteMinimumEnergyDrop = sparseDarkPaletteEnergy / 100,
+                UseSparseDarkPaletteExtendedRescue = sparseDarkPaletteExtended,
+                SparseDarkPaletteExtendedColorTolerance = sparseDarkPaletteExtendedTolerance,
+                SparseDarkPaletteExtendedMaximumSimilarPixels = sparseDarkPaletteExtendedMax,
+                SparseDarkPaletteExtendedMaximumConsensus = sparseDarkPaletteExtendedConsensus / 100,
+                SparseDarkPaletteExtendedMinimumLightnessGain = sparseDarkPaletteExtendedGain,
+                SparseDarkPaletteExtendedMinimumEnergyDrop = sparseDarkPaletteExtendedEnergy / 100,
+                UseSparsePaletteExclusiveRescue = sparsePaletteExclusive,
+                SparsePaletteExclusiveColorTolerance = sparsePaletteExclusiveTolerance,
+                SparsePaletteExclusiveMaximumSimilarPixels = sparsePaletteExclusiveMax,
+                SparsePaletteExclusiveMinimumLightnessGain = sparsePaletteExclusiveGain,
+                UseExemplarRescue = exemplarRescue,
+                ExemplarNearColorDistance = exemplarNearDistance,
+                ExemplarMaximumNearPixels = exemplarNearMax,
+                ExemplarEarlyMaximumNearPixels = exemplarEarlyNearMax,
+                ExemplarMaximumBrightToDarkRatio = exemplarRatio / 100,
+                ExemplarMinimumBrightChannel = exemplarBrightChannel,
+                ExemplarMaximumDarkChannel = exemplarDarkChannel,
+                ExemplarExclusionRadius = exemplarExclusion,
+                UseExemplarMaterialVeto = exemplarMaterialVeto,
+                UseLocalMaterialHueVeto = localMaterialHueVeto,
+                LocalMaterialMinimumChroma = localMaterialChroma,
+                LocalMaterialNeighborMinimumChroma = localMaterialNeighborChroma,
+                LocalMaterialNeighborMinimumLightness = localMaterialNeighborLightness,
+                LocalMaterialMinimumHueAgreement = localMaterialHueAgreement,
+                LocalMaterialMinimumMatchingNeighbors = localMaterialNeighbors,
+                ExemplarMaterialMaximumRingError = exemplarMaterialError,
+                ExemplarMaterialMaximumSourceDistance = exemplarMaterialSource,
+                ExemplarMaterialMinimumProposalBrightness = exemplarMaterialBright,
+                ExemplarMaterialMinimumBrightnessDrop = exemplarMaterialDrop,
+                ExemplarMaterialAgreementDistance = exemplarMaterialAgreementDistance,
+                ExemplarMaterialMinimumAgreement = exemplarMaterialAgreement,
+                ExemplarMaterialNeighborCount = exemplarMaterialNeighbors,
+                UseGroupedPaletteRescue = groupedPaletteRescue,
+                GroupedPaletteMaximumChannel = groupedPaletteChannel,
+                GroupedPaletteMinimumOccurrences = groupedPaletteMin,
+                GroupedPaletteMaximumOccurrences = groupedPaletteMax,
+                GroupedPaletteNearColorDistance = groupedPaletteNearDistance,
+                GroupedPaletteMaximumNearPixels = groupedPaletteNearMax,
+                GroupedPaletteHighNearThreshold = groupedPaletteHighNear,
+                GroupedPalettePriorChangesThreshold = groupedPalettePriorNear,
+                GroupedPaletteMinimumPriorChanges = groupedPalettePriorMin,
+                GroupedPaletteMinimumSupportedPixels = groupedPaletteSupport,
+                GroupedPaletteMinimumBrightNeighbors = groupedPaletteBright,
+                GroupedPaletteMaximumDarkNeighbors = groupedPaletteDark,
+                GroupedPaletteMinimumAverageBrightNeighbors = groupedPaletteAverage,
+                GroupedPaletteHighNearMinimumAverageBrightNeighbors = groupedPaletteHighAverage,
+                GroupedPaletteMinimumMedianSpacing = groupedPaletteSpacing,
+                GroupedPaletteMaximumExemplarRatio = groupedPaletteRatio,
+                GroupedPaletteHighNearMaximumExemplarRatio = groupedPaletteHighRatio,
+                GroupedPaletteMinimumLightnessGain = groupedPaletteGain,
+                UseConfirmedGroupExemplarRescue = confirmedGroupExemplar,
+                ConfirmedGroupExemplarMinimumPriorChanges = confirmedGroupPrior,
+                ConfirmedGroupExemplarMaximumRatio = confirmedGroupRatio,
+                ConfirmedGroupExemplarMinimumLightnessGain = confirmedGroupGain,
+                ConfirmedGroupExemplarMaximumRepresentativeRingError = confirmedGroupDirectError,
+                ConfirmedGroupExemplarMaximumFlatPaletteColors = confirmedGroupFlatColors,
+                UseConfirmedGroupCardinalRescue = confirmedGroupCardinal,
+                UseConfirmedGroupCardinalMaterialVeto = confirmedGroupCardinalMaterialVeto,
+                ConfirmedGroupCardinalDarkChannel = confirmedGroupCardinalChannel,
+                ConfirmedGroupCardinalMaximumDarkNeighbors = confirmedGroupCardinalDark,
+                ConfirmedGroupCardinalMaximumExemplarDarkNeighbors = confirmedGroupCardinalExtraDark,
+                ConfirmedGroupCardinalExtraDarkMaximumExemplarRatio = confirmedGroupCardinalExtraRatio,
+                ConfirmedGroupCardinalExtraDarkMaximumRingError = confirmedGroupCardinalExtraError,
+                ConfirmedGroupCardinalMinimumBrightNeighbors = confirmedGroupCardinalBright,
+                ConfirmedGroupCardinalMinimumStrongNeighbors = confirmedGroupCardinalStrong,
+                ConfirmedGroupCardinalMaximumExemplarRingError = confirmedGroupCardinalExemplarError,
+                ConfirmedGroupCardinalMaximumNeighborColorDistance = confirmedGroupCardinalColorDistance,
+                UseConfirmedGroupGradientRescue = confirmedGroupGradient,
+                ConfirmedGroupGradientMinimumPriorChanges = confirmedGroupGradientPrior,
+                ConfirmedGroupGradientRadius = confirmedGroupGradientRadius,
+                ConfirmedGroupGradientColorTolerance = confirmedGroupGradientColor,
+                ConfirmedGroupGradientMinimumSimilarNeighbors = confirmedGroupGradientNeighbors,
+                ConfirmedGroupGradientMinimumMagnitudeRatio = confirmedGroupGradientRatio,
+                ConfirmedGroupGradientMinimumAgreement = confirmedGroupGradientAgreement,
+                ConfirmedGroupGradientMinimumOpposition = confirmedGroupGradientOpposition,
+                ConfirmedGroupGradientMaximumExemplarRingError = confirmedGroupGradientError,
+                ConfirmedGroupGradientCloseRadius = confirmedGroupGradientCloseRadius,
+                ConfirmedGroupGradientCloseMinimumMagnitudeRatio = confirmedGroupGradientCloseRatio,
+                ConfirmedGroupGradientRayColorTolerance = confirmedGroupGradientRayColor,
+                UseConfirmedGroupSquareRescue = confirmedGroupSquare,
+                ConfirmedGroupSquareMinimumPriorChanges = confirmedGroupSquarePrior,
+                ConfirmedGroupSquareColorTolerance = confirmedGroupSquareColor,
+                ConfirmedGroupSquareMinimumLightnessGain = confirmedGroupSquareGain,
+                UseConfirmedGroupLateCardinalRescue = confirmedGroupLateCardinal,
+                ConfirmedGroupLateCardinalMinimumPriorChanges = confirmedGroupLatePrior,
+                ConfirmedGroupLateCardinalExtraDarkMaximumExemplarRatio = confirmedGroupLateRatio,
+                ConfirmedGroupLateCardinalExtraDarkMaximumRingError = confirmedGroupLateError,
+                UseRichPaletteConnectedMaterialVeto = richPaletteMaterialVeto,
+                RichPaletteMinimumColors = richPaletteMinColors,
+                RichPaletteMaterialMaximumChannel = richPaletteDarkChannel,
+                RichPaletteMaterialNeighborColorTolerance = richPaletteNeighborColor,
+                RichPaletteSuspiciousMinimumOccurrences = richPaletteSuspiciousMin,
+                RichPaletteSuspiciousMaximumOccurrences = richPaletteSuspiciousMax,
+                UseChromaticExemplarColorRescue = chromaticExemplar,
+                ChromaticExemplarMaximumProposedChroma = chromaticExemplarNeutral,
+                ChromaticExemplarMinimumChroma = chromaticExemplarColor,
+                ChromaticExemplarMaximumRingError = chromaticExemplarError,
+                ChromaticExemplarMaximumBrightToDarkRatio = chromaticExemplarRatio,
+                UseNeutralExemplarColorRescue = neutralExemplar,
+                NeutralExemplarMaximumProposedChroma = neutralExemplarProposed,
+                NeutralExemplarMaximumSampleChroma = neutralExemplarSample,
+                NeutralExemplarMinimumLightnessDrop = neutralExemplarDrop,
+                NeutralExemplarMaximumRingError = neutralExemplarError,
+                NeutralExemplarMaximumBrightToDarkRatio = neutralExemplarRatio,
+                UseNeutralExemplarBlend = neutralBlend,
+                NeutralExemplarBlendMinimumPaletteColors = neutralBlendMinColors,
+                NeutralExemplarBlendMaximumProposedChroma = neutralBlendProposed,
+                NeutralExemplarBlendMaximumSampleChroma = neutralBlendSample,
+                NeutralExemplarBlendMinimumLightnessDrop = neutralBlendDrop,
+                NeutralExemplarBlendMaximumRingError = neutralBlendError,
+                NeutralExemplarBlendMaximumBrightToDarkRatio = neutralBlendRatio,
+                NeutralExemplarBlendSampleWeight = neutralBlendWeight,
+                UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
+                SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
+                SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
+                SparsePaletteConsensusMinimumLightnessGain = sparsePaletteConsensusGain,
+                SparsePaletteConsensusMinimumEnergyDrop = sparsePaletteConsensusEnergy / 100,
+                UseSparsePaletteThreeNeighborRescue = sparsePaletteThreeNeighbor,
+                SparsePaletteThreeNeighborColorTolerance = sparsePaletteThreeTolerance,
+                SparsePaletteThreeNeighborMaximumSimilarPixels = sparsePaletteThreeMax,
+                SparsePaletteThreeNeighborMinimumLightnessGain = sparsePaletteThreeGain,
+                SparsePaletteThreeNeighborMinimumEnergyDrop = sparsePaletteThreeEnergy / 100
+            };
+            string inputPath = Path.GetFullPath(input);
+            string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
+                Path.GetFileNameWithoutExtension(inputPath) + "_dark_contours.png"));
+            if (!File.Exists(inputPath)) throw new IOException($"Исходный файл не найден: {inputPath}");
+            if (string.Equals(inputPath, outputPath, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Путь результата должен отличаться от исходника.");
+            if (Path.GetExtension(outputPath).ToLowerInvariant() != ".png")
+                throw new ArgumentException("Результат должен быть PNG.");
+            if (File.Exists(outputPath) && !overwrite)
+                throw new IOException($"Результат уже существует: {outputPath}. Используйте --overwrite.");
+            string? auditPath = candidateAudit is null ? null : Path.GetFullPath(candidateAudit);
+            if (auditPath is not null &&
+                (string.Equals(auditPath, inputPath, StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(auditPath, outputPath, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException("Путь аудита должен отличаться от исходника и PNG результата.");
+            if (auditPath is not null && File.Exists(auditPath) && !overwrite)
+                throw new IOException($"Файл аудита уже существует: {auditPath}. Используйте --overwrite.");
+            if (repeatedDarkProtectRadius is < 0 or > 2)
+                throw new ArgumentOutOfRangeException(nameof(repeatedDarkProtectRadius));
+            if (confirmedGroupProtectRadius is < 0 or > 2)
+                throw new ArgumentOutOfRangeException(nameof(confirmedGroupProtectRadius));
+            if (auditPath is not null) Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
+            using StreamWriter? auditWriter = auditPath is null ? null : new StreamWriter(auditPath, false);
+            auditWriter?.WriteLine("pass,x,y,decision");
+
+            using var source = new Bitmap(inputPath);
+            if (gridCellSize > 1)
+            {
+                if (gridCellSize > Math.Min(source.Width, source.Height))
+                    throw new ArgumentException("Ячейка сетки больше изображения.");
+                Bitmap gridCurrent = source;
+                int[] gridChanged = new int[passes];
+                try
+                {
+                    for (int q = 0; q < passes; q++)
+                    {
+                        int pass = q + 1;
+                        var result = GridSingletonNoiseCleaner.Clean(gridCurrent, gridCellSize,
+                            gridColorTolerance, auditWriter is null ? null : (x, y, decision) =>
+                                auditWriter.WriteLine($"{pass},{x},{y},{decision}"));
+                        if (!ReferenceEquals(gridCurrent, source)) gridCurrent.Dispose();
+                        gridCurrent = result.Image;
+                        gridChanged[q] = result.ChangedPixels;
+                        if (result.ChangedPixels == 0) break;
+                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+                    gridCurrent.Save(outputPath, ImageFormat.Png);
+                }
+                finally
+                {
+                    if (!ReferenceEquals(gridCurrent, source)) gridCurrent.Dispose();
+                }
+                if (json)
+                    output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours-grid",
+                        input = inputPath, output = outputPath, width = source.Width, height = source.Height,
+                        changedPixels = gridChanged.Sum(), changedPerPass = gridChanged,
+                        gridCellSize, gridColorTolerance }));
+                else
+                    output.WriteLine($"Сохранено: {outputPath}; исправлено сеточных выбросов: {gridChanged.Sum()}.");
+                return 0;
+            }
+            Bitmap current = source;
+            int[] changed = new int[passes];
+            var repeatedDarkAccepted = new List<(int X, int Y)>();
+            var confirmedGroupAccepted = new List<(int X, int Y)>();
+            var firstPassMaterialVetoes = new List<(int X, int Y)>();
+            bool[]? interPassProtection = null;
+            try
+            {
+                for (int q = 0; q < passes; q++)
+                {
+                    var passOptions = options;
+                    if (q > 0 && symmetricPatchFirstPass)
+                        passOptions = passOptions with { UseSymmetricColorPatchRescue = false };
+                    if (q > 0 && repeatedDarkFirstPass)
+                        passOptions = passOptions with
+                        {
+                            UseRepeatedDarkColorRescue = false,
+                            UseRepeatedDiagonalBridgeRescue = false,
+                            UseSparseDarkPaletteRescue = false,
+                            UseSparseDarkPaletteExtendedRescue = false,
+                            UseSparsePaletteConsensusRescue = false,
+                            UseSparsePaletteThreeNeighborRescue = false,
+                            UseSparsePaletteExclusiveRescue = false,
+                            UseExemplarRescue = false,
+                            UseGroupedPaletteRescue = false
+                        };
+                    if (q == 1 && ((repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
+                        repeatedDarkAccepted.Count > 0) ||
+                        (confirmedGroupProtectRadius > 0 && confirmedGroupAccepted.Count > 0) ||
+                        (exemplarMaterialInterpass && firstPassMaterialVetoes.Count > 0)))
+                    {
+                        interPassProtection = new bool[source.Width * source.Height];
+                        if (repeatedDarkFirstPass && repeatedDarkProtectRadius > 0)
+                            foreach ((int x, int y) in repeatedDarkAccepted)
+                                for (int dy = -repeatedDarkProtectRadius; dy <= repeatedDarkProtectRadius; dy++)
+                                    for (int dx = -repeatedDarkProtectRadius; dx <= repeatedDarkProtectRadius; dx++)
+                                    {
+                                        int px = x + dx, py = y + dy;
+                                        if (px >= 0 && py >= 0 && px < source.Width && py < source.Height)
+                                            interPassProtection[py * source.Width + px] = true;
+                                    }
+                        if (exemplarMaterialInterpass)
+                            foreach ((int x, int y) in firstPassMaterialVetoes)
+                                if (source.GetPixel(x, y).ToArgb() == current.GetPixel(x, y).ToArgb())
+                                    interPassProtection[y * source.Width + x] = true;
+                        if (confirmedGroupProtectRadius > 0)
+                            foreach ((int x, int y) in confirmedGroupAccepted)
+                                for (int dy = -confirmedGroupProtectRadius; dy <= confirmedGroupProtectRadius; dy++)
+                                    for (int dx = -confirmedGroupProtectRadius; dx <= confirmedGroupProtectRadius; dx++)
+                                    {
+                                        int px = x + dx, py = y + dy;
+                                        if (px >= 0 && py >= 0 && px < source.Width && py < source.Height)
+                                            interPassProtection[py * source.Width + px] = true;
+                                    }
+                    }
+                    var result = DarkContourNoiseCleaner.Clean(current, passOptions,
+                        auditWriter is null && !repeatedDarkRescue &&
+                        !(exemplarMaterialVeto && exemplarMaterialInterpass) &&
+                        !confirmedGroupExemplar && !confirmedGroupCardinal && !confirmedGroupGradient &&
+                        !confirmedGroupSquare && !confirmedGroupLateCardinal ? null : (x, y, decision) =>
+                        {
+                            auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
+                            if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
+                            if (decision is "accepted-confirmed-group-exemplar" or
+                                "accepted-confirmed-group-cardinal" or
+                                "accepted-confirmed-group-gradient" or
+                                "accepted-confirmed-group-gradient-ray" or
+                                "accepted-confirmed-group-square" or
+                                "accepted-confirmed-group-late-cardinal")
+                                confirmedGroupAccepted.Add((x, y));
+                            if (q == 0 && exemplarMaterialInterpass && decision == "exemplar-material-veto")
+                                firstPassMaterialVetoes.Add((x, y));
+                        }, interPassProtection);
+                    if (!ReferenceEquals(current, source)) current.Dispose();
+                    current = result.Image;
+                    changed[q] = result.ChangedPixels;
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+                current.Save(outputPath, ImageFormat.Png);
+            }
+            finally
+            {
+                if (!ReferenceEquals(current, source)) current.Dispose();
+            }
+            if (json)
+                output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours", input = inputPath,
+                    output = outputPath, width = source.Width, height = source.Height, changedPixels = changed.Sum(),
+                    changedPerPass = changed, symmetricPatchFirstPass, repeatedDarkFirstPass,
+                    repeatedDarkProtectRadius, confirmedGroupProtectRadius,
+                    exemplarMaterialInterpass, options }));
+            else
+                output.WriteLine($"Сохранено: {outputPath}; заменено пикселей: {changed.Sum()}.");
+            return 0;
+        }
+        catch (ArgumentException exception)
+        {
+            error.WriteLine(exception.Message);
+            return 2;
+        }
+        catch (Exception exception)
+        {
+            error.WriteLine(exception.Message);
+            return 1;
+        }
+    }
+}

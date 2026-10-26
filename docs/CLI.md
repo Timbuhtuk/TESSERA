@@ -216,3 +216,16 @@ For downscaling, the report includes absolute paths, source/crop/result dimensio
 ```powershell
 tessera clean-contours input.png -o result.png --window-size 3 --similar-color-distance 24 --min-pixel-gradient 120 --min-neighbor-gradient 80 --min-similar-neighbors 2 --min-agreement 35 --min-opposition 10 --candidates-output candidates.png --json
 ```
+
+## Dark contour and grid speckle cleanup (2.9+)
+
+`clean-dark-contours` is a CLI tool for isolated dark outliers near contours. It writes a separate PNG, retaining dimensions and every alpha value. Correction colors are estimates from neighboring material, rather than recovery of an unknown original. Review the output before using it as an asset.
+
+```powershell
+tessera clean-dark-contours input.png -o cleaned.png --passes 2 --json
+tessera clean-dark-contours enlarged.png -o cleaned-grid.png --grid-cell-size 2 --grid-color-tolerance 0 --json
+```
+
+With a known pixel-grid step of 2–256 pixels, `--grid-cell-size N` selects the singleton mode instead of dark contour analysis. This mode compares eight neighbors and accepts a color only when a 2×2 square has three agreeing neighbors with the same alpha as the center. Fully transparent pixels, image borders and ambiguous colors remain intact. `--grid-color-tolerance` allows RGB distances from 0 to 442 (default 0), requires the grid mode and never relaxes the alpha check. The grid step is supplied manually; it is not detected automatically. The image must be at least as large as the supplied step.
+
+`--passes` accepts 1–10 (default 1). Use `clean-dark-contours --help` for the individual contour thresholds and optional recovery rules. `--candidate-audit decisions.csv` records per-pass decisions, while `--json` returns the mode, dimensions, change count, per-pass counts and effective settings. Change counts count corrections across passes. The input, PNG output and audit file must have distinct paths; existing output or audit files require `--overwrite`. This command is independent of the desktop Contours analysis map and of `clean-contours`.
