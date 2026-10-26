@@ -10,6 +10,7 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES = ROOT.parent / "contour-black-lines" / "experiments" / "ContourCleanup" / "artifacts" / "fimoz-user-samples" / "pipeline-smooth-2x4"
+BASELINE = ROOT.parent / "contour-black-lines" / "experiments" / "ContourCleanup" / "artifacts" / "shape-research" / "finish-cli"
 OUTPUT = ROOT / "experiments" / "ContourCleanup" / "artifacts" / "shape-regions"
 INTERMEDIATE_SIZE = 314
 OUTPUT_SIZE = 157
@@ -72,6 +73,13 @@ def process(source: Path):
             output[y, x, 3] = 255
     target = OUTPUT / f"{source.name.removesuffix('-smooth.png')}-regions.png"
     Image.fromarray(output, "RGBA").save(target)
+    with Image.open(BASELINE / f"{source.name.removesuffix('-smooth.png')}.png") as opened:
+        reference = np.asarray(opened.convert("RGBA"), dtype=np.uint8)
+    protected = output.copy()
+    boundary = (reference[:, :, 3] < 255) | (output[:, :, 3] < 255)
+    protected[boundary] = reference[boundary]
+    protected_target = OUTPUT / f"{source.name.removesuffix('-smooth.png')}-regions-protected.png"
+    Image.fromarray(protected, "RGBA").save(protected_target)
     return {
         "file": source.name,
         "regions": len(sizes),
@@ -79,6 +87,8 @@ def process(source: Path):
         "tiedOutputCells": ties,
         "size": [OUTPUT_SIZE, OUTPUT_SIZE],
         "output": str(target),
+        "protectedOutput": str(protected_target),
+        "protectedChangedPixels": int(np.count_nonzero(np.any(protected != reference, axis=2))),
     }
 
 
