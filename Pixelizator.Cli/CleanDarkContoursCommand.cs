@@ -287,13 +287,15 @@ internal static class CleanDarkContoursCommand
           --grouped-palette-min N       Минимум точных повторов: 1–1000000 (4).
           --grouped-palette-max N       Максимум точных повторов: 1–1000000 (8).
           --grouped-palette-near-distance N Допуск других оттенков по сумме RGB: 0–765 (4).
-          --grouped-palette-near-max N  Максимум близких пикселей: 0–1000000 (40).
+          --grouped-palette-near-max N  Максимум близких пикселей: 0–1000000 (80).
+          --grouped-palette-high-near N Порог строгого сравнения образцов: 0–1000000 (40).
           --grouped-palette-support N   Минимум подозрительных точек в группе: 1–8 (4).
           --grouped-palette-bright N    Минимум светлых соседей точки: 0–8 (5).
           --grouped-palette-dark N      Максимум тёмных соседей точки: 0–8 (3).
           --grouped-palette-average N   Минимум светлых соседей в среднем по группе: 0–8 (5).
           --grouped-palette-spacing N   Минимальная медиана расстояний между повторами: 0–10000 (8).
           --grouped-palette-ratio N     Максимальное отношение ошибок образцов: 0–100 (1.5).
+          --grouped-palette-high-ratio N Отношение ошибок при числе близких пикселей выше порога: 0–100 (1).
           --grouped-palette-gain N      Минимальный прирост LAB L: 0–100 (20).
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
@@ -393,6 +395,7 @@ internal static class CleanDarkContoursCommand
                 sparsePaletteExclusiveTolerance = 0.5, sparsePaletteExclusiveGain = 20,
                 exemplarRatio = 20, groupedPaletteAverage = 5,
                 groupedPaletteSpacing = 8, groupedPaletteRatio = 1.5,
+                groupedPaletteHighRatio = 1,
                 groupedPaletteGain = 20;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
@@ -439,7 +442,8 @@ internal static class CleanDarkContoursCommand
                 exemplarBrightChannel = 25, exemplarDarkChannel = 15,
                 exemplarExclusion = 3, groupedPaletteChannel = 10,
                 groupedPaletteMin = 4, groupedPaletteMax = 8,
-                groupedPaletteNearDistance = 4, groupedPaletteNearMax = 40,
+                groupedPaletteNearDistance = 4, groupedPaletteNearMax = 80,
+                groupedPaletteHighNear = 40,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
                 groupedPaletteDark = 3;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
@@ -762,12 +766,14 @@ internal static class CleanDarkContoursCommand
                     case "--grouped-palette-max": groupedPaletteMax = NextInt(); break;
                     case "--grouped-palette-near-distance": groupedPaletteNearDistance = NextInt(); break;
                     case "--grouped-palette-near-max": groupedPaletteNearMax = NextInt(); break;
+                    case "--grouped-palette-high-near": groupedPaletteHighNear = NextInt(); break;
                     case "--grouped-palette-support": groupedPaletteSupport = NextInt(); break;
                     case "--grouped-palette-bright": groupedPaletteBright = NextInt(); break;
                     case "--grouped-palette-dark": groupedPaletteDark = NextInt(); break;
                     case "--grouped-palette-average": groupedPaletteAverage = NextDouble(); break;
                     case "--grouped-palette-spacing": groupedPaletteSpacing = NextDouble(); break;
                     case "--grouped-palette-ratio": groupedPaletteRatio = NextDouble(); break;
+                    case "--grouped-palette-high-ratio": groupedPaletteHighRatio = NextDouble(); break;
                     case "--grouped-palette-gain": groupedPaletteGain = NextDouble(); break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
@@ -1082,12 +1088,14 @@ internal static class CleanDarkContoursCommand
                 GroupedPaletteMaximumOccurrences = groupedPaletteMax,
                 GroupedPaletteNearColorDistance = groupedPaletteNearDistance,
                 GroupedPaletteMaximumNearPixels = groupedPaletteNearMax,
+                GroupedPaletteHighNearThreshold = groupedPaletteHighNear,
                 GroupedPaletteMinimumSupportedPixels = groupedPaletteSupport,
                 GroupedPaletteMinimumBrightNeighbors = groupedPaletteBright,
                 GroupedPaletteMaximumDarkNeighbors = groupedPaletteDark,
                 GroupedPaletteMinimumAverageBrightNeighbors = groupedPaletteAverage,
                 GroupedPaletteMinimumMedianSpacing = groupedPaletteSpacing,
                 GroupedPaletteMaximumExemplarRatio = groupedPaletteRatio,
+                GroupedPaletteHighNearMaximumExemplarRatio = groupedPaletteHighRatio,
                 GroupedPaletteMinimumLightnessGain = groupedPaletteGain,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,

@@ -204,13 +204,15 @@ public static class DarkContourNoiseCleaner
         public int GroupedPaletteMinimumOccurrences { get; init; } = 4;
         public int GroupedPaletteMaximumOccurrences { get; init; } = 8;
         public int GroupedPaletteNearColorDistance { get; init; } = 4;
-        public int GroupedPaletteMaximumNearPixels { get; init; } = 40;
+        public int GroupedPaletteMaximumNearPixels { get; init; } = 80;
+        public int GroupedPaletteHighNearThreshold { get; init; } = 40;
         public int GroupedPaletteMinimumSupportedPixels { get; init; } = 4;
         public int GroupedPaletteMinimumBrightNeighbors { get; init; } = 5;
         public int GroupedPaletteMaximumDarkNeighbors { get; init; } = 3;
         public double GroupedPaletteMinimumAverageBrightNeighbors { get; init; } = 5;
         public double GroupedPaletteMinimumMedianSpacing { get; init; } = 8;
         public double GroupedPaletteMaximumExemplarRatio { get; init; } = 1.5;
+        public double GroupedPaletteHighNearMaximumExemplarRatio { get; init; } = 1;
         public double GroupedPaletteMinimumLightnessGain { get; init; } = 20;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
@@ -429,6 +431,8 @@ public static class DarkContourNoiseCleaner
             options.GroupedPaletteMinimumOccurrences > options.GroupedPaletteMaximumOccurrences ||
             options.GroupedPaletteNearColorDistance is < 0 or > 765 ||
             options.GroupedPaletteMaximumNearPixels is < 0 or > 1000000 ||
+            options.GroupedPaletteHighNearThreshold is < 0 or > 1000000 ||
+            options.GroupedPaletteHighNearThreshold > options.GroupedPaletteMaximumNearPixels ||
             options.GroupedPaletteMinimumSupportedPixels is < 1 or > 8 ||
             options.GroupedPaletteMinimumBrightNeighbors is < 0 or > 8 ||
             options.GroupedPaletteMaximumDarkNeighbors is < 0 or > 8 ||
@@ -438,6 +442,8 @@ public static class DarkContourNoiseCleaner
             options.GroupedPaletteMinimumMedianSpacing is < 0 or > 10000 ||
             !double.IsFinite(options.GroupedPaletteMaximumExemplarRatio) ||
             options.GroupedPaletteMaximumExemplarRatio is < 0 or > 100 ||
+            !double.IsFinite(options.GroupedPaletteHighNearMaximumExemplarRatio) ||
+            options.GroupedPaletteHighNearMaximumExemplarRatio is < 0 or > 100 ||
             !double.IsFinite(options.GroupedPaletteMinimumLightnessGain) ||
             options.GroupedPaletteMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
@@ -1507,9 +1513,12 @@ public static class DarkContourNoiseCleaner
             if (points.Count < options.GroupedPaletteMinimumOccurrences ||
                 points.Count > options.GroupedPaletteMaximumOccurrences) continue;
             Color color = Color.FromArgb(group.Key);
-            if (CountNearDarkPalette(color, darkColorOccurrences,
-                    options.GroupedPaletteNearColorDistance) >
-                options.GroupedPaletteMaximumNearPixels) continue;
+            int nearPixels = CountNearDarkPalette(color, darkColorOccurrences,
+                options.GroupedPaletteNearColorDistance);
+            if (nearPixels > options.GroupedPaletteMaximumNearPixels) continue;
+            double maximumExemplarRatio = nearPixels > options.GroupedPaletteHighNearThreshold ?
+                options.GroupedPaletteHighNearMaximumExemplarRatio :
+                options.GroupedPaletteMaximumExemplarRatio;
 
             var supported = new bool[points.Count];
             double totalBright = 0;
@@ -1568,7 +1577,7 @@ public static class DarkContourNoiseCleaner
                     protectedPixels is not null && protectedPixels[index] ||
                     !HasAlphaClearance(original, width, height, x, y, options.AlphaClearance) ||
                     !HasBrightExemplar(original, width, height, x, y, options,
-                        options.GroupedPaletteMaximumExemplarRatio)) continue;
+                        maximumExemplarRatio)) continue;
                 var surrounding = new List<NeighborColor>(8);
                 for (int dy = -1; dy <= 1; dy++)
                     for (int dx = -1; dx <= 1; dx++)

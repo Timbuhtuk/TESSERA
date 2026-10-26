@@ -275,13 +275,15 @@ param(
     [int]$GroupedPaletteMin = 4,
     [int]$GroupedPaletteMax = 8,
     [int]$GroupedPaletteNearDistance = 4,
-    [int]$GroupedPaletteNearMax = 40,
+    [int]$GroupedPaletteNearMax = 80,
+    [int]$GroupedPaletteHighNear = 40,
     [int]$GroupedPaletteSupport = 4,
     [int]$GroupedPaletteBright = 5,
     [int]$GroupedPaletteDark = 3,
     [double]$GroupedPaletteAverage = 5,
     [double]$GroupedPaletteSpacing = 8,
     [double]$GroupedPaletteRatio = 1.5,
+    [double]$GroupedPaletteHighRatio = 1,
     [double]$GroupedPaletteGain = 20,
     [switch]$SparsePaletteConsensus = $true,
     [switch]$NoSparsePaletteConsensus,
@@ -518,6 +520,7 @@ foreach ($kind in @('clean', 'noisy'))
             --grouped-palette-channel $GroupedPaletteChannel --grouped-palette-min $GroupedPaletteMin `
             --grouped-palette-max $GroupedPaletteMax --grouped-palette-near-distance $GroupedPaletteNearDistance `
             --grouped-palette-near-max $GroupedPaletteNearMax --grouped-palette-support $GroupedPaletteSupport `
+            --grouped-palette-high-near $GroupedPaletteHighNear --grouped-palette-high-ratio $GroupedPaletteHighRatio `
             --grouped-palette-bright $GroupedPaletteBright --grouped-palette-dark $GroupedPaletteDark `
             --grouped-palette-average $GroupedPaletteAverage --grouped-palette-spacing $GroupedPaletteSpacing `
             --grouped-palette-ratio $GroupedPaletteRatio --grouped-palette-gain $GroupedPaletteGain `
