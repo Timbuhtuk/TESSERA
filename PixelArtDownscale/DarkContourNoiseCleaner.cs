@@ -88,6 +88,11 @@ public static class DarkContourNoiseCleaner
         public int ColorMatchedPatchMaximumPatternDifferences { get; init; }
         public bool UseColorPatchEnergyRescue { get; init; }
         public double ColorPatchEnergyRescueMinimumDrop { get; init; } = 0.8;
+        public bool UseWeightedColorPatchRescue { get; init; }
+        public int WeightedColorPatchMaximumPatternDifferences { get; init; } = 2;
+        public double WeightedColorPatchSigma { get; init; } = 5;
+        public double WeightedColorPatchMinimumBrightWeight { get; init; } = 1;
+        public double WeightedColorPatchBrightRatio { get; init; } = 5;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -120,6 +125,13 @@ public static class DarkContourNoiseCleaner
             options.ColorMatchedPatchMaximumPatternDifferences is < 0 or > 2 ||
             !double.IsFinite(options.ColorPatchEnergyRescueMinimumDrop) ||
             options.ColorPatchEnergyRescueMinimumDrop is < 0 or > 1 ||
+            options.WeightedColorPatchMaximumPatternDifferences is < 0 or > 2 ||
+            !double.IsFinite(options.WeightedColorPatchSigma) ||
+            options.WeightedColorPatchSigma is <= 0 or > 100 ||
+            !double.IsFinite(options.WeightedColorPatchMinimumBrightWeight) ||
+            options.WeightedColorPatchMinimumBrightWeight is < 0 or > 10000 ||
+            !double.IsFinite(options.WeightedColorPatchBrightRatio) ||
+            options.WeightedColorPatchBrightRatio is < 0 or > 100 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -316,6 +328,10 @@ public static class DarkContourNoiseCleaner
         Dictionary<UInt128, List<ColorPatchSample>> colorPatchIndex =
             options.RequireColorMatchedPatch ? BuildColorPatchIndex(original, dark, width, height,
                 options.ColorMatchedPatchMaximumPatternDifferences) : new();
+        Dictionary<UInt128, List<ColorPatchSample>> weightedPatchIndex =
+            options.RequireColorMatchedPatch && options.UseWeightedColorPatchRescue ?
+                BuildColorPatchIndex(original, dark, width, height,
+                    options.WeightedColorPatchMaximumPatternDifferences) : new();
 
         var output = (Color[])original.Clone();
         var proposals = new List<Proposal>();
@@ -358,6 +374,11 @@ public static class DarkContourNoiseCleaner
                         options.ColorMatchedPatchTolerance,
                         options.ColorMatchedPatchMinimumBrightMatches,
                         options.ColorMatchedPatchBrightRatio);
+                if (!colorPatchMatch && options.UseWeightedColorPatchRescue)
+                    colorPatchMatch = HasWeightedColorPatch(original, dark, width, x, y,
+                        weightedPatchIndex, options.WeightedColorPatchSigma,
+                        options.WeightedColorPatchMinimumBrightWeight,
+                        options.WeightedColorPatchBrightRatio);
                 if (!colorPatchMatch && !options.UseColorPatchEnergyRescue) continue;
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
@@ -807,6 +828,27 @@ public static class DarkContourNoiseCleaner
             }
         return originalEnergy > 1e-9 &&
             (originalEnergy - replacementEnergy) / originalEnergy > minimumDrop;
+    }
+
+    private static bool HasWeightedColorPatch(Color[] colors, bool[] dark, int width, int x, int y,
+        Dictionary<UInt128, List<ColorPatchSample>> index, double sigma,
+        double minimumBright, double brightRatio)
+    {
+        UInt128 pattern = PatchPattern(colors, dark, width, x, y, 1);
+        if (!index.TryGetValue(pattern, out List<ColorPatchSample>? matches)) return false;
+        var ring = ColorPatchRing(colors, width, x, y);
+        double scale = 16 * sigma * sigma;
+        double bright = 0, darkWeight = 0;
+        foreach (ColorPatchSample sample in matches)
+        {
+            double difference = 0;
+            for (int q = 0; q < ring.Length; q++)
+                difference += DistanceSquared(ring[q], sample.Ring[q]);
+            double weight = Math.Exp(-difference / scale);
+            if (sample.Dark) darkWeight += weight;
+            else bright += weight;
+        }
+        return bright >= minimumBright && bright > darkWeight * brightRatio;
     }
 
     private static (double L, double A, double B)[] ColorPatchRing(Color[] colors, int width, int x, int y)

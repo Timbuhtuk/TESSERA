@@ -149,6 +149,12 @@ internal static class CleanDarkContoursCommand
           --color-patch-max-differences N  Допуск несовпадений в окружении 3×3: 0–2 (0).
           --color-patch-energy-rescue    Пропускать цветовой порог при сильном снижении перепада.
           --color-patch-energy-drop N    Минимальное снижение локального перепада: 0–100 % (80).
+          --color-patch-weighted-rescue  Дополнительно учитывать взвешенные цветовые повторы (включено).
+          --no-color-patch-weighted-rescue Выключить взвешенные цветовые повторы.
+          --weighted-patch-differences N Допуск несовпадений соседей: 0–2 (2).
+          --weighted-patch-sigma N       Ширина цветового ядра LAB: >0–100 (5).
+          --weighted-patch-min-bright N  Минимальный вес светлых повторов: 0–10000 (1).
+          --weighted-patch-ratio N       Отношение весов светлых к тёмным: 0–100 (5).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -199,7 +205,8 @@ internal static class CleanDarkContoursCommand
                 verticalMediumComponentMax = 50, verticalMediumColorSpread = 30,
                 verticalWideComponentMin = 50, verticalWideColorSpreadMin = 50,
                 verticalWideColorSpreadMax = 80, verticalColorTolerance = 8,
-                colorPatchTolerance = 15, colorPatchRatio = 3, colorPatchEnergyDrop = 80;
+                colorPatchTolerance = 15, colorPatchRatio = 3, colorPatchEnergyDrop = 80,
+                weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -222,14 +229,16 @@ internal static class CleanDarkContoursCommand
                 mainSparseMinimumNeighbors = 10, brightCornerMaxDark = 2,
                 brightCornerMaxCardinal = 1, brightCornerDark5 = 6, brightCornerRun = 3,
                 verticalMediumDark5 = 10, verticalWideDark5 = 11, verticalRunRadius = 4,
-                colorPatchMinBright = 1, colorPatchMaxDifferences = 0;
+                colorPatchMinBright = 1, colorPatchMaxDifferences = 0,
+                weightedPatchDifferences = 2;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
                 requireCommonGradient = false, useSecondarySparse = true, useSoftColorConsensus = true,
                 useCoherentGradient = true, useDivergentGradient = true, usePatchGradient = true,
                 useMainSparse = true, useBrightCorner = true, useVerticalShade = true,
-                requireColorPatch = true, colorPatchEnergyRescue = false;
+                requireColorPatch = true, colorPatchEnergyRescue = false,
+                weightedPatchRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -393,6 +402,12 @@ internal static class CleanDarkContoursCommand
                     case "--color-patch-max-differences": colorPatchMaxDifferences = NextInt(); break;
                     case "--color-patch-energy-rescue": colorPatchEnergyRescue = true; break;
                     case "--color-patch-energy-drop": colorPatchEnergyDrop = NextDouble(); break;
+                    case "--color-patch-weighted-rescue": weightedPatchRescue = true; break;
+                    case "--no-color-patch-weighted-rescue": weightedPatchRescue = false; break;
+                    case "--weighted-patch-differences": weightedPatchDifferences = NextInt(); break;
+                    case "--weighted-patch-sigma": weightedPatchSigma = NextDouble(); break;
+                    case "--weighted-patch-min-bright": weightedPatchMinBright = NextDouble(); break;
+                    case "--weighted-patch-ratio": weightedPatchRatio = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -576,7 +591,12 @@ internal static class CleanDarkContoursCommand
                 ColorMatchedPatchBrightRatio = colorPatchRatio,
                 ColorMatchedPatchMaximumPatternDifferences = colorPatchMaxDifferences,
                 UseColorPatchEnergyRescue = colorPatchEnergyRescue,
-                ColorPatchEnergyRescueMinimumDrop = colorPatchEnergyDrop / 100
+                ColorPatchEnergyRescueMinimumDrop = colorPatchEnergyDrop / 100,
+                UseWeightedColorPatchRescue = weightedPatchRescue,
+                WeightedColorPatchMaximumPatternDifferences = weightedPatchDifferences,
+                WeightedColorPatchSigma = weightedPatchSigma,
+                WeightedColorPatchMinimumBrightWeight = weightedPatchMinBright,
+                WeightedColorPatchBrightRatio = weightedPatchRatio
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
