@@ -181,6 +181,11 @@ public static class DarkContourNoiseCleaner
         public int SparseDarkPaletteMaximumSimilarPixels { get; init; } = 5;
         public double SparseDarkPaletteMinimumLightnessGain { get; init; } = 20;
         public double SparseDarkPaletteMinimumEnergyDrop { get; init; }
+        public bool UseSparsePaletteConsensusRescue { get; init; } = true;
+        public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
+        public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
+        public double SparsePaletteConsensusMinimumLightnessGain { get; init; } = 20;
+        public double SparsePaletteConsensusMinimumEnergyDrop { get; init; } = 0.3;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -359,6 +364,13 @@ public static class DarkContourNoiseCleaner
             options.SparseDarkPaletteMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparseDarkPaletteMinimumEnergyDrop) ||
             options.SparseDarkPaletteMinimumEnergyDrop is < 0 or > 1 ||
+            !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
+            options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
+            options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
+            !double.IsFinite(options.SparsePaletteConsensusMinimumLightnessGain) ||
+            options.SparsePaletteConsensusMinimumLightnessGain is < 0 or > 100 ||
+            !double.IsFinite(options.SparsePaletteConsensusMinimumEnergyDrop) ||
+            options.SparsePaletteConsensusMinimumEnergyDrop is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -832,9 +844,18 @@ public static class DarkContourNoiseCleaner
                     colorConsensus >= options.HighContrastConsensusThreshold &&
                     Lab(replacement).L - Lab(original[index]).L >=
                         options.HighContrastConsensusMinimumGain;
+                bool sparsePaletteConsensus = options.UseSparsePaletteConsensusRescue &&
+                    repeatedDarkColor &&
+                    HasSparseDarkPalette(original[index], darkColorOccurrences,
+                        options.SparsePaletteConsensusColorTolerance,
+                        options.SparsePaletteConsensusMaximumSimilarPixels) &&
+                    Lab(replacement).L - Lab(original[index]).L >=
+                        options.SparsePaletteConsensusMinimumLightnessGain &&
+                    HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                        options.SparsePaletteConsensusMinimumEnergyDrop);
                 if (!hasPair && !diagonalEvidence && !brightCorner &&
                     colorConsensus < options.MinimumBrightConsensus && !softColorConsensus &&
-                    !highContrastConsensus &&
+                    !highContrastConsensus && !sparsePaletteConsensus &&
                     !(straightSpur && colorConsensus >=
                         options.StraightRunMinimumConsensus) &&
                     !(isolatedEvidence && colorConsensus >=
@@ -877,7 +898,8 @@ public static class DarkContourNoiseCleaner
                         options.VerticalShadeSearchRadius, options.VerticalShadeColorTolerance,
                         out Color verticalColor))
                     replacement = verticalColor;
-                bool repeatedDarkOnly = repeatedDarkEntry || repeatedBridgeRescue;
+                bool repeatedDarkOnly = repeatedDarkEntry || repeatedBridgeRescue ||
+                    sparsePaletteConsensus;
                 if (!colorPatchMatch)
                 {
                     bool globalEnergyRescue = options.UseColorPatchEnergyRescue &&

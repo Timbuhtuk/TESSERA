@@ -260,6 +260,12 @@ internal static class CleanDarkContoursCommand
           --sparse-dark-palette-max N    Максимум похожих пикселей другого оттенка: 0–1000000 (5).
           --sparse-dark-palette-gain N   Минимальное увеличение LAB L: 0–100 (20).
           --sparse-dark-palette-energy N Минимальное снижение перепада: 0–100 % (0).
+          --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
+          --no-sparse-palette-consensus  Выключить этот допуск.
+          --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
+          --sparse-palette-consensus-max N Максимум похожих пикселей: 0–1000000 (0).
+          --sparse-palette-consensus-gain N Минимальное увеличение LAB L: 0–100 (20).
+          --sparse-palette-consensus-energy N Минимальное снижение перепада: 0–100 % (30).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -336,7 +342,9 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkLightness = 2.5, repeatedBridgeGain = 60,
                 repeatedBridgeEnergy = 45, repeatedBridgeTolerance = 24,
                 repeatedBridgeOpposition = 70, sparseDarkPaletteTolerance = 0.5,
-                sparseDarkPaletteGain = 20, sparseDarkPaletteEnergy = 0;
+                sparseDarkPaletteGain = 20, sparseDarkPaletteEnergy = 0,
+                sparsePaletteConsensusTolerance = 0.5,
+                sparsePaletteConsensusGain = 20, sparsePaletteConsensusEnergy = 30;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -375,7 +383,7 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkMax = 8, repeatedDarkNeighborsMin = 1,
                 repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1,
                 repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5,
-                sparseDarkPaletteMax = 5;
+                sparseDarkPaletteMax = 5, sparsePaletteConsensusMax = 0;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -390,7 +398,8 @@ internal static class CleanDarkContoursCommand
                 symmetricPatchRescue = true, symmetricPatchFirstPass = true,
                 highContrastRescue = true, contrastConsensus = true,
                 repeatedDarkRescue = true, repeatedDarkFirstPass = true,
-                repeatedBridgeRescue = true, sparseDarkPaletteRescue = true;
+                repeatedBridgeRescue = true, sparseDarkPaletteRescue = true,
+                sparsePaletteConsensus = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -665,6 +674,12 @@ internal static class CleanDarkContoursCommand
                     case "--sparse-dark-palette-max": sparseDarkPaletteMax = NextInt(); break;
                     case "--sparse-dark-palette-gain": sparseDarkPaletteGain = NextDouble(); break;
                     case "--sparse-dark-palette-energy": sparseDarkPaletteEnergy = NextDouble(); break;
+                    case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
+                    case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
+                    case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
+                    case "--sparse-palette-consensus-max": sparsePaletteConsensusMax = NextInt(); break;
+                    case "--sparse-palette-consensus-gain": sparsePaletteConsensusGain = NextDouble(); break;
+                    case "--sparse-palette-consensus-energy": sparsePaletteConsensusEnergy = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -941,7 +956,12 @@ internal static class CleanDarkContoursCommand
                 SparseDarkPaletteColorTolerance = sparseDarkPaletteTolerance,
                 SparseDarkPaletteMaximumSimilarPixels = sparseDarkPaletteMax,
                 SparseDarkPaletteMinimumLightnessGain = sparseDarkPaletteGain,
-                SparseDarkPaletteMinimumEnergyDrop = sparseDarkPaletteEnergy / 100
+                SparseDarkPaletteMinimumEnergyDrop = sparseDarkPaletteEnergy / 100,
+                UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
+                SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
+                SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
+                SparsePaletteConsensusMinimumLightnessGain = sparsePaletteConsensusGain,
+                SparsePaletteConsensusMinimumEnergyDrop = sparsePaletteConsensusEnergy / 100
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
