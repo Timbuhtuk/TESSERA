@@ -95,6 +95,7 @@ public partial class MainWindow : Window
         InitializeImageActions();
         InitializeLiveToolPreviews();
         InitializeContourPreview();
+        InitializeStructurePreview();
         InitializeHome();
         InitializeIcons();
         InitializeAseprite();
@@ -331,7 +332,9 @@ public partial class MainWindow : Window
             !processing && _sourceImage is not null;
         trimTransparentButton.IsEnabled = !processing && _sourceImage is not null;
         contourApplyButton.IsEnabled = contourPreviewButton.IsEnabled = !processing && LivePreviewBasis is not null;
+        structureApplyButton.IsEnabled = structureMapButton.IsEnabled = structurePreviewButton.IsEnabled = !processing && LivePreviewBasis is not null;
         if (processing) ClearContourPreview();
+        if (processing) ClearStructurePreview();
         if (!processing) ScheduleLiveToolPreviews();
         if (_downscaledResult is null && ProcessingBasis == 1) ProcessingBasis = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;

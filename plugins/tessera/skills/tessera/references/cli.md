@@ -217,6 +217,17 @@ For downscaling, the report includes absolute paths, source/crop/result dimensio
 tessera clean-contours input.png -o result.png --window-size 3 --similar-color-distance 24 --min-pixel-gradient 120 --min-neighbor-gradient 80 --min-similar-neighbors 2 --min-agreement 35 --min-opposition 10 --candidates-output candidates.png --json
 ```
 
+## Experimental structure probe
+
+`structure-probe` finds small connected areas of similar colors and tests whether one neighboring color dominates their boundary. It can save a proposed cleaned image, a red candidate map, or both. It keeps the source dimensions and every alpha value. This is an experiment for already reduced images; it does not reconstruct a pixel grid or guarantee that a marked detail is noise.
+
+```powershell
+tessera structure-probe input.png -o structure.png --map-output candidates.png --json
+tessera structure-probe input.png -o candidates.png --map-only --max-component 16 --minimum-confidence 80
+```
+
+Eight-neighbor connectivity and LAB similarity form areas. Four-neighbor boundary votes select an existing replacement color. `--similar-color` (0–100, default 12) and `--max-component` (1–4096, default 8) control area formation. `--neighbor-agreement` (0–100%, default 70), `--max-replacement-distance` (1–150, default 60), and `--minimum-confidence` (0–100%, default 65) control replacement. `--detail-distance` (0–100, default 25) protects high-contrast areas of one or two pixels. Transparent boundaries and thin lines are protected by default; `--allow-alpha-edge` and `--allow-lines` disable those guards. Red on the map means a candidate, including candidates retained by the guards or confidence threshold. `--overwrite` is required for existing files; input and output paths must differ. The equivalent desktop tool is **Tools → Color → Structure probe…** and previews either the proposed image or candidate map.
+
 ## Dark contour and grid speckle cleanup (2.9+)
 
 `clean-dark-contours` is a CLI tool for isolated dark outliers near contours. It writes a separate PNG, retaining dimensions and every alpha value. Correction colors are estimates from neighboring material, rather than recovery of an unknown original. Review the output before using it as an asset.

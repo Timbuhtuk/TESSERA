@@ -44,6 +44,7 @@ Read the installed command's help before choosing unfamiliar flags. The bundled 
 | Change size independently | `resize` |
 | Quantize colors or apply a palette independently | `colors` |
 | Clean up nearby shades and protect details and edges | `smooth-colors` or `smooth` |
+| Probe small connected color areas and candidate replacements | `structure-probe` |
 | Convert visible pixels to grayscale | `monochrome` or `mono` |
 | Export ASCII text or a rendered ASCII image | `ascii` |
 | Count and list visible colors | `palette-info` |

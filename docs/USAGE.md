@@ -143,6 +143,10 @@ Open **Remove background** from the home screen, drop or open an image, and comp
 Enable **Eraser on result**, choose its diameter in image pixels, and drag over unwanted edges. Zoom up to 1600% and scroll for precise corrections. **Undo stroke** / Ctrl+Z restores the last stroke; **Reset edits** clears the manual mask. Changing the removal color, tolerance or mode keeps the mask; loading another source clears it. Both PNG export and **To asset history** include the manual corrections, while the source remains unchanged. Hover over **From editor** to inspect and choose a saved source or result by thumbnail. The ICO workflow keeps its optional background removal setting.
 
 
+## Experimental structure probe
+
+Open **Tools → Color → Structure probe…** to inspect small connected color areas. The right panel exposes LAB color similarity, maximum area size, agreement of the surrounding colors, replacement distance and confidence, plus separate guards for transparency edges, thin lines and high-contrast details. The left canvas previews the proposed replacement; **Show candidate map** switches it to a grayscale image with red candidate areas. **Create result** and **Create map result** add separate exportable history cards. Large images require **Refresh preview**. Source dimensions and alpha values are retained. This remains a trial cleanup for already reduced pixel art; inspect fine details before accepting its proposed colors. See [CLI.md](CLI.md) for the matching `structure-probe` command.
+
 ## Contours
 
 Open **Tools → Color → Contours…**. Choose an odd analysis window from **3×3 to 15×15** and adjust each threshold independently: LAB color tolerance, minimum pixel/neighbor gradients, minimum similar-neighbor count, agreement and opposition percentages. The old desktop strictness selector is replaced by these controls. Fine-detail protection remains separate.
