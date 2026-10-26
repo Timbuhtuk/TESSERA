@@ -277,6 +277,12 @@ param(
     [double]$ExemplarMaterialAgreementDistance = 20,
     [int]$ExemplarMaterialAgreement = 2,
     [int]$ExemplarMaterialNeighbors = 10,
+    [switch]$NoLocalMaterialHueVeto,
+    [double]$LocalMaterialChroma = 2,
+    [double]$LocalMaterialNeighborChroma = 4,
+    [double]$LocalMaterialNeighborLightness = 12,
+    [double]$LocalMaterialHueAgreement = 0.85,
+    [int]$LocalMaterialNeighbors = 3,
     [switch]$GroupedPaletteRescue = $true,
     [switch]$NoGroupedPaletteRescue,
     [int]$GroupedPaletteChannel = 10,
@@ -303,6 +309,14 @@ param(
     [int]$ConfirmedGroupDirectError = 5000,
     [int]$ConfirmedGroupFlatColors = 256,
     [int]$ConfirmedGroupProtectRadius = 1,
+    [switch]$NoConfirmedGroupCardinal,
+    [switch]$ConfirmedGroupCardinalMaterialVeto,
+    [int]$ConfirmedGroupCardinalChannel = 40,
+    [int]$ConfirmedGroupCardinalDark = 1,
+    [int]$ConfirmedGroupCardinalBright = 3,
+    [int]$ConfirmedGroupCardinalStrong = 2,
+    [int]$ConfirmedGroupCardinalExemplarError = 10000,
+    [double]$ConfirmedGroupCardinalColorDistance = 40,
     [switch]$SparsePaletteConsensus = $true,
     [switch]$NoSparsePaletteConsensus,
     [double]$SparsePaletteConsensusTolerance = 0.5,
@@ -369,8 +383,11 @@ $sparseDarkPaletteExtendedFlag = if ($NoSparseDarkPaletteExtended -or !$SparseDa
 $sparsePaletteExclusiveFlag = if ($NoSparsePaletteExclusive -or !$SparsePaletteExclusive) { @('--no-sparse-palette-exclusive') } else { @('--sparse-palette-exclusive') }
 $exemplarFlag = if ($NoExemplarRescue -or !$ExemplarRescue) { @('--no-exemplar-rescue') } else { @('--exemplar-rescue') }
 $exemplarMaterialFlag = if ($NoExemplarMaterialVeto) { @('--no-exemplar-material-veto') } else { @('--exemplar-material-veto') }
+$localMaterialHueFlag = if ($NoLocalMaterialHueVeto) { @('--no-local-material-hue-veto') } else { @('--local-material-hue-veto') }
 $groupedPaletteFlag = if ($NoGroupedPaletteRescue -or !$GroupedPaletteRescue) { @('--no-grouped-palette-rescue') } else { @('--grouped-palette-rescue') }
 $confirmedGroupFlag = if ($NoConfirmedGroupExemplar) { @('--no-confirmed-group-exemplar') } else { @('--confirmed-group-exemplar') }
+$confirmedGroupCardinalFlag = if ($NoConfirmedGroupCardinal) { @('--no-confirmed-group-cardinal') } else { @('--confirmed-group-cardinal') }
+$confirmedGroupCardinalMaterialFlag = if ($ConfirmedGroupCardinalMaterialVeto) { @('--confirmed-group-cardinal-material-veto') } else { @('--no-confirmed-group-cardinal-material-veto') }
 $sparsePaletteConsensusFlag = if ($NoSparsePaletteConsensus -or !$SparsePaletteConsensus) { @('--no-sparse-palette-consensus') } else { @('--sparse-palette-consensus') }
 $sparsePaletteThreeFlag = if ($NoSparsePaletteThreeNeighbor -or !$SparsePaletteThreeNeighbor) { @('--no-sparse-palette-three-neighbor') } else { @('--sparse-palette-three-neighbor') }
 
@@ -541,6 +558,9 @@ foreach ($kind in @('clean', 'noisy'))
             --exemplar-material-bright $ExemplarMaterialBright --exemplar-material-drop $ExemplarMaterialDrop `
             --exemplar-material-agreement-distance $ExemplarMaterialAgreementDistance `
             --exemplar-material-agreement $ExemplarMaterialAgreement --exemplar-material-neighbors $ExemplarMaterialNeighbors `
+            --local-material-chroma $LocalMaterialChroma --local-material-neighbor-chroma $LocalMaterialNeighborChroma `
+            --local-material-neighbor-lightness $LocalMaterialNeighborLightness `
+            --local-material-hue-agreement $LocalMaterialHueAgreement --local-material-neighbors $LocalMaterialNeighbors `
             --grouped-palette-channel $GroupedPaletteChannel --grouped-palette-min $GroupedPaletteMin `
             --grouped-palette-max $GroupedPaletteMax --grouped-palette-near-distance $GroupedPaletteNearDistance `
             --grouped-palette-near-max $GroupedPaletteNearMax --grouped-palette-support $GroupedPaletteSupport `
@@ -554,11 +574,17 @@ foreach ($kind in @('clean', 'noisy'))
             --confirmed-group-gain $ConfirmedGroupGain --confirmed-group-direct-error $ConfirmedGroupDirectError `
             --confirmed-group-flat-colors $ConfirmedGroupFlatColors `
             --confirmed-group-protect-radius $ConfirmedGroupProtectRadius `
+            --confirmed-group-cardinal-channel $ConfirmedGroupCardinalChannel `
+            --confirmed-group-cardinal-dark $ConfirmedGroupCardinalDark `
+            --confirmed-group-cardinal-bright $ConfirmedGroupCardinalBright `
+            --confirmed-group-cardinal-strong $ConfirmedGroupCardinalStrong `
+            --confirmed-group-cardinal-exemplar-error $ConfirmedGroupCardinalExemplarError `
+            --confirmed-group-cardinal-color-distance $ConfirmedGroupCardinalColorDistance `
             --sparse-palette-consensus-tolerance $SparsePaletteConsensusTolerance --sparse-palette-consensus-max $SparsePaletteConsensusMax `
             --sparse-palette-consensus-gain $SparsePaletteConsensusGain --sparse-palette-consensus-energy $SparsePaletteConsensusEnergy `
             --sparse-palette-three-tolerance $SparsePaletteThreeTolerance --sparse-palette-three-max $SparsePaletteThreeMax `
             --sparse-palette-three-gain $SparsePaletteThreeGain --sparse-palette-three-energy $SparsePaletteThreeEnergy `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $sparseDarkPaletteExtendedFlag $sparsePaletteExclusiveFlag $exemplarFlag $exemplarMaterialFlag $groupedPaletteFlag $confirmedGroupFlag $sparsePaletteConsensusFlag $sparsePaletteThreeFlag $auditArgs --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $sparseDarkPaletteExtendedFlag $sparsePaletteExclusiveFlag $exemplarFlag $exemplarMaterialFlag $localMaterialHueFlag $groupedPaletteFlag $confirmedGroupFlag $confirmedGroupCardinalFlag $confirmedGroupCardinalMaterialFlag $sparsePaletteConsensusFlag $sparsePaletteThreeFlag $auditArgs --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

@@ -290,6 +290,13 @@ internal static class CleanDarkContoursCommand
           --exemplar-material-agreement-distance N Допуск RGB между образцами: 0–442 (20).
           --exemplar-material-agreement N Минимум согласных образцов: 1–100 (2).
           --exemplar-material-neighbors N Число лучших образцов: 1–100 (10).
+          --local-material-hue-veto     Беречь тёмные оттенки, совпадающие по тону с соседями (включено).
+          --no-local-material-hue-veto  Выключить защиту по тону материала.
+          --local-material-chroma N     Минимальная цветность исходного пикселя LAB: 0–100 (2).
+          --local-material-neighbor-chroma N Минимальная цветность соседей LAB: 0–100 (4).
+          --local-material-neighbor-lightness N Минимальная яркость соседей LAB: 0–100 (12).
+          --local-material-hue-agreement N Минимальный косинус тонов: -1–1 (0.85).
+          --local-material-neighbors N  Минимум соседей того же тона: 1–8 (3).
           --no-exemplar-material-interpass Не сохранять отказ по образцу на следующих проходах.
           --exemplar-material-interpass  Сохранять отказ по образцу (по умолчанию).
           --grouped-palette-rescue      Поиск групп одного редкого тёмного оттенка (включён).
@@ -319,6 +326,16 @@ internal static class CleanDarkContoursCommand
           --confirmed-group-direct-error N Максимальная ошибка кольца для прямого выбора цвета: 0–100000000 (5000).
           --confirmed-group-flat-colors N До скольких цветов сохранять оттенок образца: 1–1000000 (256).
           --confirmed-group-protect-radius N Защита соседей после групповой замены: 0–2 (1).
+          --confirmed-group-cardinal       Проверять остаток группы с разорванным контуром (включено).
+          --no-confirmed-group-cardinal    Выключить проверку остатка группы.
+          --confirmed-group-cardinal-channel N Верхняя граница тёмного соседа: 0–255 (40).
+          --confirmed-group-cardinal-dark N Максимум тёмных соседей по сторонам: 0–4 (1).
+          --confirmed-group-cardinal-bright N Минимум светлых соседей из восьми: 0–8 (3).
+          --confirmed-group-cardinal-strong N Минимум соседей с достаточным приростом LAB L: 1–8 (2).
+          --confirmed-group-cardinal-exemplar-error N Допуск окружения образца: 0–100000000 (10000).
+          --confirmed-group-cardinal-color-distance N Допуск цвета соседа до образца LAB: 0–100 (40).
+          --confirmed-group-cardinal-material-veto Защищать исходный материал на этом этапе (выключено).
+          --no-confirmed-group-cardinal-material-veto Выключить эту защиту.
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
           --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
@@ -423,7 +440,11 @@ internal static class CleanDarkContoursCommand
                 groupedPaletteGain = 20, confirmedGroupRatio = 0.4,
                 confirmedGroupGain = 20, exemplarMaterialSource = 100,
                 exemplarMaterialBright = 40, exemplarMaterialDrop = 20,
-                exemplarMaterialAgreementDistance = 20;
+                exemplarMaterialAgreementDistance = 20,
+                localMaterialChroma = 2, localMaterialNeighborChroma = 4,
+                localMaterialNeighborLightness = 12,
+                localMaterialHueAgreement = 0.85,
+                confirmedGroupCardinalColorDistance = 40;
             double gridColorTolerance = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 gridCellSize = 1,
@@ -476,6 +497,11 @@ internal static class CleanDarkContoursCommand
                 groupedPalettePriorMin = 2, confirmedGroupPrior = 3,
                 confirmedGroupDirectError = 5000, confirmedGroupFlatColors = 256,
                 confirmedGroupProtectRadius = 1,
+                confirmedGroupCardinalChannel = 40, confirmedGroupCardinalDark = 1,
+                confirmedGroupCardinalBright = 3,
+                confirmedGroupCardinalStrong = 2,
+                confirmedGroupCardinalExemplarError = 10000,
+                localMaterialNeighbors = 3,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
                 groupedPaletteDark = 3, exemplarMaterialError = 20000,
                 exemplarMaterialAgreement = 2, exemplarMaterialNeighbors = 10;
@@ -497,8 +523,10 @@ internal static class CleanDarkContoursCommand
                 sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
                 sparseDarkPaletteExtended = true, sparsePaletteExclusive = true,
                 exemplarRescue = true, groupedPaletteRescue = true, exemplarMaterialVeto = true,
+                localMaterialHueVeto = true,
                 gridCellSizeSet = false, exemplarMaterialInterpass = true,
-                confirmedGroupExemplar = true;
+                confirmedGroupExemplar = true, confirmedGroupCardinal = true,
+                confirmedGroupCardinalMaterialVeto = false;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -807,6 +835,13 @@ internal static class CleanDarkContoursCommand
                     case "--exemplar-material-agreement-distance": exemplarMaterialAgreementDistance = NextDouble(); break;
                     case "--exemplar-material-agreement": exemplarMaterialAgreement = NextInt(); break;
                     case "--exemplar-material-neighbors": exemplarMaterialNeighbors = NextInt(); break;
+                    case "--local-material-hue-veto": localMaterialHueVeto = true; break;
+                    case "--no-local-material-hue-veto": localMaterialHueVeto = false; break;
+                    case "--local-material-chroma": localMaterialChroma = NextDouble(); break;
+                    case "--local-material-neighbor-chroma": localMaterialNeighborChroma = NextDouble(); break;
+                    case "--local-material-neighbor-lightness": localMaterialNeighborLightness = NextDouble(); break;
+                    case "--local-material-hue-agreement": localMaterialHueAgreement = NextDouble(); break;
+                    case "--local-material-neighbors": localMaterialNeighbors = NextInt(); break;
                     case "--grouped-palette-rescue": groupedPaletteRescue = true; break;
                     case "--no-grouped-palette-rescue": groupedPaletteRescue = false; break;
                     case "--grouped-palette-channel": groupedPaletteChannel = NextInt(); break;
@@ -834,6 +869,16 @@ internal static class CleanDarkContoursCommand
                     case "--confirmed-group-direct-error": confirmedGroupDirectError = NextInt(); break;
                     case "--confirmed-group-flat-colors": confirmedGroupFlatColors = NextInt(); break;
                     case "--confirmed-group-protect-radius": confirmedGroupProtectRadius = NextInt(); break;
+                    case "--confirmed-group-cardinal": confirmedGroupCardinal = true; break;
+                    case "--no-confirmed-group-cardinal": confirmedGroupCardinal = false; break;
+                    case "--confirmed-group-cardinal-channel": confirmedGroupCardinalChannel = NextInt(); break;
+                    case "--confirmed-group-cardinal-dark": confirmedGroupCardinalDark = NextInt(); break;
+                    case "--confirmed-group-cardinal-bright": confirmedGroupCardinalBright = NextInt(); break;
+                    case "--confirmed-group-cardinal-strong": confirmedGroupCardinalStrong = NextInt(); break;
+                    case "--confirmed-group-cardinal-exemplar-error": confirmedGroupCardinalExemplarError = NextInt(); break;
+                    case "--confirmed-group-cardinal-color-distance": confirmedGroupCardinalColorDistance = NextDouble(); break;
+                    case "--confirmed-group-cardinal-material-veto": confirmedGroupCardinalMaterialVeto = true; break;
+                    case "--no-confirmed-group-cardinal-material-veto": confirmedGroupCardinalMaterialVeto = false; break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
                     case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
@@ -1148,6 +1193,12 @@ internal static class CleanDarkContoursCommand
                 ExemplarMaximumDarkChannel = exemplarDarkChannel,
                 ExemplarExclusionRadius = exemplarExclusion,
                 UseExemplarMaterialVeto = exemplarMaterialVeto,
+                UseLocalMaterialHueVeto = localMaterialHueVeto,
+                LocalMaterialMinimumChroma = localMaterialChroma,
+                LocalMaterialNeighborMinimumChroma = localMaterialNeighborChroma,
+                LocalMaterialNeighborMinimumLightness = localMaterialNeighborLightness,
+                LocalMaterialMinimumHueAgreement = localMaterialHueAgreement,
+                LocalMaterialMinimumMatchingNeighbors = localMaterialNeighbors,
                 ExemplarMaterialMaximumRingError = exemplarMaterialError,
                 ExemplarMaterialMaximumSourceDistance = exemplarMaterialSource,
                 ExemplarMaterialMinimumProposalBrightness = exemplarMaterialBright,
@@ -1179,6 +1230,14 @@ internal static class CleanDarkContoursCommand
                 ConfirmedGroupExemplarMinimumLightnessGain = confirmedGroupGain,
                 ConfirmedGroupExemplarMaximumRepresentativeRingError = confirmedGroupDirectError,
                 ConfirmedGroupExemplarMaximumFlatPaletteColors = confirmedGroupFlatColors,
+                UseConfirmedGroupCardinalRescue = confirmedGroupCardinal,
+                UseConfirmedGroupCardinalMaterialVeto = confirmedGroupCardinalMaterialVeto,
+                ConfirmedGroupCardinalDarkChannel = confirmedGroupCardinalChannel,
+                ConfirmedGroupCardinalMaximumDarkNeighbors = confirmedGroupCardinalDark,
+                ConfirmedGroupCardinalMinimumBrightNeighbors = confirmedGroupCardinalBright,
+                ConfirmedGroupCardinalMinimumStrongNeighbors = confirmedGroupCardinalStrong,
+                ConfirmedGroupCardinalMaximumExemplarRingError = confirmedGroupCardinalExemplarError,
+                ConfirmedGroupCardinalMaximumNeighborColorDistance = confirmedGroupCardinalColorDistance,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
                 SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
@@ -1309,11 +1368,12 @@ internal static class CleanDarkContoursCommand
                     var result = DarkContourNoiseCleaner.Clean(current, passOptions,
                         auditWriter is null && !repeatedDarkRescue &&
                         !(exemplarMaterialVeto && exemplarMaterialInterpass) &&
-                        !confirmedGroupExemplar ? null : (x, y, decision) =>
+                        !confirmedGroupExemplar && !confirmedGroupCardinal ? null : (x, y, decision) =>
                         {
                             auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
                             if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
-                            if (decision == "accepted-confirmed-group-exemplar")
+                            if (decision is "accepted-confirmed-group-exemplar" or
+                                "accepted-confirmed-group-cardinal")
                                 confirmedGroupAccepted.Add((x, y));
                             if (q == 0 && exemplarMaterialInterpass && decision == "exemplar-material-veto")
                                 firstPassMaterialVetoes.Add((x, y));
