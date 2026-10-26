@@ -295,32 +295,38 @@ internal static class CorpusEvaluator
     private static void SaveMissedAtlas(string root, string review, List<(string Id, int X, int Y)> missed)
     {
         const int crop = 9, scale = 16, panel = crop * scale, gap = 12, row = 175;
-        using var sheet = new Bitmap(3 * panel + 4 * gap, Math.Max(1, missed.Count) * row,
-            PixelFormat.Format32bppArgb);
-        using var g = Graphics.FromImage(sheet);
-        using var font = new Font("Arial", 9);
-        g.Clear(Color.White);
-        g.InterpolationMode = InterpolationMode.NearestNeighbor;
-        g.PixelOffsetMode = PixelOffsetMode.Half;
-        for (int q = 0; q < missed.Count; q++)
+        const int pageSize = 40;
+        for (int page = 0; page < Math.Max(1, (missed.Count + pageSize - 1) / pageSize); page++)
         {
-            var point = missed[q];
-            using var clean = new Bitmap(Path.Combine(root, "clean", point.Id + ".png"));
-            using var noisy = new Bitmap(Path.Combine(root, "noisy", point.Id + ".png"));
-            using var result = new Bitmap(Path.Combine(root, "processed-noisy", point.Id + ".png"));
-            Bitmap[] images = [clean, noisy, result];
-            string[] labels = ["clean", "noisy", "Tessera"];
-            for (int e = 0; e < 3; e++)
+            var points = missed.Skip(page * pageSize).Take(pageSize).ToArray();
+            using var sheet = new Bitmap(3 * panel + 4 * gap, Math.Max(1, points.Length) * row,
+                PixelFormat.Format32bppArgb);
+            using var g = Graphics.FromImage(sheet);
+            using var font = new Font("Arial", 9);
+            g.Clear(Color.White);
+            g.InterpolationMode = InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = PixelOffsetMode.Half;
+            for (int q = 0; q < points.Length; q++)
             {
-                int left = gap + e * (panel + gap), top = q * row;
-                g.DrawString($"{point.Id} ({point.X},{point.Y}) {labels[e]}", font,
-                    Brushes.Black, left, top + 2);
-                g.DrawImage(images[e], new Rectangle(left, top + 22, panel, panel),
-                    new Rectangle(point.X - 4, point.Y - 4, crop, crop), GraphicsUnit.Pixel);
-                using var pen = new Pen(Color.Red, 2);
-                g.DrawRectangle(pen, left + 4 * scale, top + 22 + 4 * scale, scale, scale);
+                var point = points[q];
+                using var clean = new Bitmap(Path.Combine(root, "clean", point.Id + ".png"));
+                using var noisy = new Bitmap(Path.Combine(root, "noisy", point.Id + ".png"));
+                using var result = new Bitmap(Path.Combine(root, "processed-noisy", point.Id + ".png"));
+                Bitmap[] images = [clean, noisy, result];
+                string[] labels = ["clean", "noisy", "Tessera"];
+                for (int e = 0; e < 3; e++)
+                {
+                    int left = gap + e * (panel + gap), top = q * row;
+                    g.DrawString($"{point.Id} ({point.X},{point.Y}) {labels[e]}", font,
+                        Brushes.Black, left, top + 2);
+                    g.DrawImage(images[e], new Rectangle(left, top + 22, panel, panel),
+                        new Rectangle(point.X - 4, point.Y - 4, crop, crop), GraphicsUnit.Pixel);
+                    using var pen = new Pen(Color.Red, 2);
+                    g.DrawRectangle(pen, left + 4 * scale, top + 22 + 4 * scale, scale, scale);
+                }
             }
+            string name = missed.Count <= pageSize ? "missed-atlas.png" : $"missed-atlas-{page + 1:00}.png";
+            sheet.Save(Path.Combine(review, name), ImageFormat.Png);
         }
-        sheet.Save(Path.Combine(review, "missed-atlas.png"), ImageFormat.Png);
     }
 }

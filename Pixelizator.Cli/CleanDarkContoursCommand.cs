@@ -56,6 +56,28 @@ internal static class CleanDarkContoursCommand
           --diagonal-opposition-radius N  Радиус сравнения направлений: 1–15 (5).
           --diagonal-min-opposition N   Минимальная противоположность: 0–100% (80).
           --diagonal-min-agreement N    Согласие градиентов похожих соседей: 0–100% (20).
+          --no-tapered-run             Выключить поиск резко сужающейся чёрной полосы.
+          --tapered-dark5-min N        Минимум тёмных соседей в 5×5: 0–24 (7).
+          --tapered-dark5-max N        Максимум тёмных соседей в 5×5: 0–24 (10).
+          --tapered-run-radius N       Радиус измерения длины полосы: 1–50 (20).
+          --tapered-inside-length N    Минимальная длина внутренней полосы: 1–101 (8).
+          --tapered-min-shrink N       Разница длин внешней и следующей внутренней полос: 1–100 (6).
+          --tapered-bright N           Минимум повторов 3×3 со светлым центром: 0–10000 (4).
+          --tapered-bright-ratio N     Светлых повторов к тёмным: 0–100 (1.5).
+          --no-sparse-patch            Выключить повтор 3×3 при слабой тёмной поддержке.
+          --sparse-patch-max-dark5 N   Максимум тёмных соседей в 5×5: 0–24 (5).
+          --sparse-patch-max-cardinal N Максимум прямых тёмных соседей: 0–4 (1).
+          --sparse-patch-bright N      Минимум повторов со светлым центром: 0–10000 (20).
+          --sparse-patch-ratio N       Светлых повторов к тёмным: 0–100 (5).
+          --conflict-radius N          Радиус выбора одного из соседних кандидатов: 0–4 (2).
+          --require-common-gradient    Требовать противоположность общему градиенту похожих цветов.
+          --common-gradient-radius N   Радиус поиска похожих цветов: 1–15 (5).
+          --common-color-tolerance N   Максимальное расстояние цветов в LAB: 0–100 (24).
+          --common-min-neighbors N     Минимум похожих соседей с градиентом: 1–1000 (5).
+          --common-min-magnitude N     Минимальный модуль градиента центра: 0–100000 (0).
+          --common-magnitude-ratio N   Модуль центра к среднему соседей: 0–10 (1.2).
+          --common-min-agreement N     Согласие направлений соседей: 0–100% (20).
+          --common-min-opposition N    Противоположность центра общему градиенту: 0–100% (80).
           --two-cardinal-dark5 N        Минимум тёмных пикселей в 5×5 при двух прямых соседях: 0–24 (11).
           --two-cardinal-component N    Минимальная доля главного контура: 0–100% (40).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
@@ -91,7 +113,10 @@ internal static class CleanDarkContoursCommand
                 isolatedPatchRatio = 2, isolatedPatchConsensus = 50,
                 diagonalColorTolerance = 8, diagonalBrightRatio = 2,
                 diagonalGradientRatio = 1.22, diagonalSimilarColor = 24,
-                diagonalOpposition = 80, diagonalAgreement = 20;
+                diagonalOpposition = 80, diagonalAgreement = 20, taperedBrightRatio = 1.5,
+                sparsePatchRatio = 5, commonColorTolerance = 24,
+                commonMinimumMagnitude = 0, commonMagnitudeRatio = 1.2,
+                commonMinimumAgreement = 20, commonMinimumOpposition = 80;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3,
                 repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
@@ -99,10 +124,15 @@ internal static class CleanDarkContoursCommand
                 minimumStraightRun = 8, straightRunRadius = 15, straightRunDark5 = 9,
                 isolatedPatchRadius = 2, isolatedPatchBright = 3,
                 diagonalBright = 7, diagonalGradientRadius = 3, diagonalSimilarNeighbors = 5,
-                diagonalOppositionRadius = 5, smallPatchMaxCardinal = 1;
+                diagonalOppositionRadius = 5, smallPatchMaxCardinal = 1,
+                taperedDark5Min = 7, taperedDark5Max = 10, taperedRadius = 20,
+                taperedInsideLength = 8, taperedMinShrink = 6, taperedBright = 4,
+                sparsePatchMaxDark5 = 5, sparsePatchMaxCardinal = 1, sparsePatchBright = 20,
+                conflictRadius = 2, commonGradientRadius = 5, commonMinimumNeighbors = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
-                useDiagonalOpposition = true;
+                useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
+                requireCommonGradient = false;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -173,6 +203,28 @@ internal static class CleanDarkContoursCommand
                     case "--diagonal-opposition-radius": diagonalOppositionRadius = NextInt(); break;
                     case "--diagonal-min-opposition": diagonalOpposition = NextDouble(); break;
                     case "--diagonal-min-agreement": diagonalAgreement = NextDouble(); break;
+                    case "--no-tapered-run": useTaperedRun = false; break;
+                    case "--tapered-dark5-min": taperedDark5Min = NextInt(); break;
+                    case "--tapered-dark5-max": taperedDark5Max = NextInt(); break;
+                    case "--tapered-run-radius": taperedRadius = NextInt(); break;
+                    case "--tapered-inside-length": taperedInsideLength = NextInt(); break;
+                    case "--tapered-min-shrink": taperedMinShrink = NextInt(); break;
+                    case "--tapered-bright": taperedBright = NextInt(); break;
+                    case "--tapered-bright-ratio": taperedBrightRatio = NextDouble(); break;
+                    case "--no-sparse-patch": useSparsePatch = false; break;
+                    case "--sparse-patch-max-dark5": sparsePatchMaxDark5 = NextInt(); break;
+                    case "--sparse-patch-max-cardinal": sparsePatchMaxCardinal = NextInt(); break;
+                    case "--sparse-patch-bright": sparsePatchBright = NextInt(); break;
+                    case "--sparse-patch-ratio": sparsePatchRatio = NextDouble(); break;
+                    case "--conflict-radius": conflictRadius = NextInt(); break;
+                    case "--require-common-gradient": requireCommonGradient = true; break;
+                    case "--common-gradient-radius": commonGradientRadius = NextInt(); break;
+                    case "--common-color-tolerance": commonColorTolerance = NextDouble(); break;
+                    case "--common-min-neighbors": commonMinimumNeighbors = NextInt(); break;
+                    case "--common-min-magnitude": commonMinimumMagnitude = NextDouble(); break;
+                    case "--common-magnitude-ratio": commonMagnitudeRatio = NextDouble(); break;
+                    case "--common-min-agreement": commonMinimumAgreement = NextDouble(); break;
+                    case "--common-min-opposition": commonMinimumOpposition = NextDouble(); break;
                     case "--two-cardinal-dark5": twoCardinalDark5 = NextInt(); break;
                     case "--two-cardinal-component": twoCardinalComponent = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
@@ -228,6 +280,21 @@ internal static class CleanDarkContoursCommand
                 diagonalSimilarNeighbors is < 1 or > 1000 || diagonalOppositionRadius is < 1 or > 15 ||
                 diagonalOpposition is < 0 or > 100 || diagonalAgreement is < 0 or > 100)
                 throw new ArgumentException("Некорректные параметры диагонального градиента.");
+            if (taperedDark5Min is < 0 or > 24 || taperedDark5Max is < 0 or > 24 ||
+                taperedDark5Min > taperedDark5Max || taperedRadius is < 1 or > 50 ||
+                taperedInsideLength is < 1 or > 101 || taperedMinShrink is < 1 or > 100 ||
+                taperedBright is < 0 or > 10000 || taperedBrightRatio is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры сужающейся полосы.");
+            if (sparsePatchMaxDark5 is < 0 or > 24 || sparsePatchMaxCardinal is < 0 or > 4 ||
+                sparsePatchBright is < 0 or > 10000 || sparsePatchRatio is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры разреженного окружения.");
+            if (conflictRadius is < 0 or > 4)
+                throw new ArgumentException("--conflict-radius должен быть от 0 до 4.");
+            if (commonGradientRadius is < 1 or > 15 || commonColorTolerance is < 0 or > 100 ||
+                commonMinimumNeighbors is < 1 or > 1000 || commonMinimumMagnitude is < 0 or > 100000 ||
+                commonMagnitudeRatio is < 0 or > 10 || commonMinimumAgreement is < 0 or > 100 ||
+                commonMinimumOpposition is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры общего градиента.");
             if (twoCardinalComponent is < 0 or > 100)
                 throw new ArgumentException("--two-cardinal-component должен быть от 0 до 100.");
             var options = new DarkContourNoiseCleaner.Options(darkness, neighbors, tolerance, gain,
@@ -243,7 +310,14 @@ internal static class CleanDarkContoursCommand
                 useDiagonalGradient, diagonalColorTolerance, diagonalBright, diagonalBrightRatio,
                 diagonalGradientRatio, diagonalGradientRadius, diagonalSimilarColor, diagonalSimilarNeighbors,
                 useDiagonalOpposition, diagonalOppositionRadius, diagonalOpposition / 100,
-                diagonalAgreement / 100, smallPatchMaxCardinal);
+                diagonalAgreement / 100, smallPatchMaxCardinal, useTaperedRun,
+                taperedDark5Min, taperedDark5Max, taperedRadius, taperedInsideLength,
+                taperedMinShrink, taperedBright, taperedBrightRatio,
+                useSparsePatch, sparsePatchMaxDark5, sparsePatchMaxCardinal,
+                sparsePatchBright, sparsePatchRatio, conflictRadius, requireCommonGradient,
+                commonGradientRadius, commonColorTolerance, commonMinimumNeighbors,
+                commonMinimumMagnitude, commonMagnitudeRatio, commonMinimumAgreement / 100,
+                commonMinimumOpposition / 100);
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
                 Path.GetFileNameWithoutExtension(inputPath) + "_dark_contours.png"));

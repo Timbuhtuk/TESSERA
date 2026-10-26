@@ -47,6 +47,28 @@ param(
     [int]$DiagonalOppositionRadius = 5,
     [double]$DiagonalMinimumOpposition = 80,
     [double]$DiagonalMinimumAgreement = 20,
+    [switch]$NoTaperedRun,
+    [int]$TaperedDark5Min = 7,
+    [int]$TaperedDark5Max = 10,
+    [int]$TaperedRadius = 20,
+    [int]$TaperedInsideLength = 8,
+    [int]$TaperedMinShrink = 6,
+    [int]$TaperedBright = 4,
+    [double]$TaperedBrightRatio = 1.5,
+    [switch]$NoSparsePatch,
+    [int]$SparsePatchMaxDark5 = 5,
+    [int]$SparsePatchMaxCardinal = 1,
+    [int]$SparsePatchBright = 20,
+    [double]$SparsePatchRatio = 5,
+    [int]$ConflictRadius = 2,
+    [switch]$RequireCommonGradient,
+    [int]$CommonGradientRadius = 5,
+    [double]$CommonColorTolerance = 24,
+    [int]$CommonMinimumNeighbors = 5,
+    [double]$CommonMinimumMagnitude = 0,
+    [double]$CommonMagnitudeRatio = 1.2,
+    [double]$CommonMinimumAgreement = 20,
+    [double]$CommonMinimumOpposition = 80,
     [int]$Passes = 1
 )
 
@@ -60,6 +82,9 @@ $straightFlag = if ($NoStraightRun) { @('--no-straight-run') } else { @() }
 $mismatchFlag = if ($NoRepeatedMismatch) { @('--no-repeated-mismatch') } else { @() }
 $diagonalFlag = if ($NoDiagonalGradient) { @('--no-diagonal-gradient') } else { @() }
 $oppositionFlag = if ($NoDiagonalOpposition) { @('--no-diagonal-opposition') } else { @() }
+$taperedFlag = if ($NoTaperedRun) { @('--no-tapered-run') } else { @() }
+$sparseFlag = if ($NoSparsePatch) { @('--no-sparse-patch') } else { @() }
+$commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } else { @() }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -98,7 +123,19 @@ foreach ($kind in @('clean', 'noisy'))
             --diagonal-opposition-radius $DiagonalOppositionRadius `
             --diagonal-min-opposition $DiagonalMinimumOpposition `
             --diagonal-min-agreement $DiagonalMinimumAgreement `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag --passes $Passes
+            --tapered-dark5-min $TaperedDark5Min --tapered-dark5-max $TaperedDark5Max `
+            --tapered-run-radius $TaperedRadius --tapered-inside-length $TaperedInsideLength `
+            --tapered-min-shrink $TaperedMinShrink --tapered-bright $TaperedBright `
+            --tapered-bright-ratio $TaperedBrightRatio `
+            --sparse-patch-max-dark5 $SparsePatchMaxDark5 `
+            --sparse-patch-max-cardinal $SparsePatchMaxCardinal `
+            --sparse-patch-bright $SparsePatchBright --sparse-patch-ratio $SparsePatchRatio `
+            --conflict-radius $ConflictRadius `
+            --common-gradient-radius $CommonGradientRadius --common-color-tolerance $CommonColorTolerance `
+            --common-min-neighbors $CommonMinimumNeighbors --common-min-magnitude $CommonMinimumMagnitude `
+            --common-magnitude-ratio $CommonMagnitudeRatio --common-min-agreement $CommonMinimumAgreement `
+            --common-min-opposition $CommonMinimumOpposition `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $commonFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

@@ -19,7 +19,7 @@ internal static class CorpusGenerator
         new(Color.FromArgb(197, 141, 77), Color.FromArgb(105, 71, 49), Color.FromArgb(244, 212, 140), Color.FromArgb(114, 184, 218))
     ];
 
-    internal static void Generate(string root)
+    internal static void Generate(string root, int seedOffset = 0)
     {
         string cleanDir = Path.Combine(root, "clean"), noisyDir = Path.Combine(root, "noisy");
         Directory.CreateDirectory(cleanDir);
@@ -31,7 +31,7 @@ internal static class CorpusGenerator
                 string id = $"{motif + 1:D2}-{Names[motif]}-{variant + 1:D2}";
                 using var clean = Draw(motif, variant);
                 using var noisy = (Bitmap)clean.Clone();
-                var injected = InjectNoise(clean, noisy, motif * 1009 + variant * 37 + 20261026);
+                var injected = InjectNoise(clean, noisy, motif * 1009 + variant * 37 + 20261026 + seedOffset);
                 clean.Save(Path.Combine(cleanDir, id + ".png"), ImageFormat.Png);
                 noisy.Save(Path.Combine(noisyDir, id + ".png"), ImageFormat.Png);
                 manifest.Add(new { id, motif = Names[motif], variant = variant + 1,

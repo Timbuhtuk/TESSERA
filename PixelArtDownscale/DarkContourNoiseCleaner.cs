@@ -31,12 +31,26 @@ public static class DarkContourNoiseCleaner
         double DiagonalSimilarColorTolerance = 24, int DiagonalMinimumSimilarNeighbors = 5,
         bool UseDiagonalOppositionEvidence = true, int DiagonalOppositionRadius = 5,
         double DiagonalMinimumOpposition = 0.8, double DiagonalMinimumAgreement = 0.2,
-        int SmallPatchMaximumCardinalDarkNeighbors = 1);
+        int SmallPatchMaximumCardinalDarkNeighbors = 1,
+        bool UseTaperedRun = true, int TaperedRunMinimumDark5 = 7,
+        int TaperedRunMaximumDark5 = 10, int TaperedRunSearchRadius = 20,
+        int TaperedRunMinimumInsideLength = 8, int TaperedRunMinimumShrink = 6,
+        int TaperedRunMinimumBrightMatches = 4, double TaperedRunBrightRatio = 1.5,
+        bool UseSparsePatchEvidence = true, int SparsePatchMaximumDark5 = 5,
+        int SparsePatchMaximumCardinalDarkNeighbors = 1,
+        int SparsePatchMinimumBrightMatches = 20, double SparsePatchBrightRatio = 5,
+        int CandidateConflictRadius = 2,
+        bool RequireCommonGradient = false, int CommonGradientRadius = 5,
+        double CommonColorTolerance = 24, int CommonMinimumSimilarNeighbors = 5,
+        double CommonMinimumMagnitude = 0, double CommonMinimumMagnitudeRatio = 1.2,
+        double CommonMinimumAgreement = 0.2, double CommonMinimumOpposition = 0.8);
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
     private readonly record struct PatchCounts(int Bright, int Dark);
     private readonly record struct RepeatEvidence(bool DarkPeer, bool BrightPeer);
+    private readonly record struct Proposal(int Index, Color Color, int DarkNeighbors,
+        int CardinalDarkNeighbors, int Dark5Support, double Consensus, double LightnessGain);
     private readonly record struct Gradient(double X, double Y)
     {
         public double Length => Math.Sqrt(X * X + Y * Y);
@@ -97,6 +111,28 @@ public static class DarkContourNoiseCleaner
             options.DiagonalSimilarColorTolerance is < 0 or > 100 ||
             options.DiagonalMinimumSimilarNeighbors is < 1 or > 1000 ||
             options.SmallPatchMaximumCardinalDarkNeighbors is < 0 or > 4 ||
+            options.TaperedRunMinimumDark5 is < 0 or > 24 ||
+            options.TaperedRunMaximumDark5 is < 0 or > 24 ||
+            options.TaperedRunMinimumDark5 > options.TaperedRunMaximumDark5 ||
+            options.TaperedRunSearchRadius is < 1 or > 50 ||
+            options.TaperedRunMinimumInsideLength is < 1 or > 101 ||
+            options.TaperedRunMinimumShrink is < 1 or > 100 ||
+            options.TaperedRunMinimumBrightMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.TaperedRunBrightRatio) ||
+            options.TaperedRunBrightRatio is < 0 or > 100 ||
+            options.SparsePatchMaximumDark5 is < 0 or > 24 ||
+            options.SparsePatchMaximumCardinalDarkNeighbors is < 0 or > 4 ||
+            options.SparsePatchMinimumBrightMatches is < 0 or > 10000 ||
+            !double.IsFinite(options.SparsePatchBrightRatio) ||
+            options.SparsePatchBrightRatio is < 0 or > 100 ||
+            options.CandidateConflictRadius is < 0 or > 4 ||
+            options.CommonGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.CommonColorTolerance) || options.CommonColorTolerance is < 0 or > 100 ||
+            options.CommonMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.CommonMinimumMagnitude) || options.CommonMinimumMagnitude is < 0 or > 100000 ||
+            !double.IsFinite(options.CommonMinimumMagnitudeRatio) || options.CommonMinimumMagnitudeRatio is < 0 or > 10 ||
+            !double.IsFinite(options.CommonMinimumAgreement) || options.CommonMinimumAgreement is < 0 or > 1 ||
+            !double.IsFinite(options.CommonMinimumOpposition) || options.CommonMinimumOpposition is < 0 or > 1 ||
             options.DiagonalOppositionRadius is < 1 or > 15 ||
             !double.IsFinite(options.DiagonalMinimumOpposition) ||
             options.DiagonalMinimumOpposition is < 0 or > 1 ||
@@ -133,11 +169,11 @@ public static class DarkContourNoiseCleaner
         Dictionary<UInt128, PatchCounts> isolatedPatchCounts = options.IsolatedPatchRadius > 0 ?
             BuildPatchCounts(original, dark, width, height, options.IsolatedPatchRadius) : new();
         Dictionary<UInt128, PatchCounts> diagonalPatchCounts =
-            options.UseDiagonalGradientEvidence ?
+            options.UseDiagonalGradientEvidence || options.UseTaperedRun || options.UseSparsePatchEvidence ?
             BuildPatchCounts(original, dark, width, height, 1) : new();
 
         var output = (Color[])original.Clone();
-        int changed = 0;
+        var proposals = new List<Proposal>();
         for (int y = 1; y < height - 1; y++)
             for (int x = 1; x < width - 1; x++)
             {
@@ -190,6 +226,12 @@ public static class DarkContourNoiseCleaner
                     patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
                         shortPatchCounts, options.SmallPatchRadius,
                         options.SmallPatchMinimumBrightMatches, options.SmallPatchBrightRatio);
+                if (!patchSupport && options.UseSparsePatchEvidence &&
+                    dark5Support <= options.SparsePatchMaximumDark5 &&
+                    cardinalDarkNeighbors <= options.SparsePatchMaximumCardinalDarkNeighbors)
+                    patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
+                        diagonalPatchCounts, 1, options.SparsePatchMinimumBrightMatches,
+                        options.SparsePatchBrightRatio);
                 bool mediumComponent = darkNeighbors == 3 &&
                     componentSizes[index] >= largestComponent * options.ThreeNeighborProtectedMinimumComponentRatio &&
                     componentSizes[index] < largestComponent * options.ThreeNeighborProtectedComponentRatio;
@@ -208,10 +250,17 @@ public static class DarkContourNoiseCleaner
                     (HasStrongDiagonalGradient(original, dark, width, height, x, y, options) ||
                      options.UseDiagonalOppositionEvidence &&
                      HasOpposedDiagonalGradient(original, dark, width, height, x, y, options));
+                bool taperedRun = options.UseTaperedRun && darkNeighbors == 3 &&
+                    cardinalDarkNeighbors == 2 && dark5Support >= options.TaperedRunMinimumDark5 &&
+                    dark5Support <= options.TaperedRunMaximumDark5 &&
+                    HasBrightPatchMajority(original, dark, width, height, x, y, diagonalPatchCounts,
+                        1, options.TaperedRunMinimumBrightMatches, options.TaperedRunBrightRatio) &&
+                    HasTaperedRun(dark, width, height, x, y, options);
                 if (darkNeighbors == 3 &&
                     (dark5Support < options.ThreeNeighborMinimumDark5 ||
                      componentSizes[index] < largestComponent * options.ThreeNeighborMinimumComponentRatio) &&
-                    !patchSupport && !straightSpur && !repeatedMismatch && !diagonalEvidence) continue;
+                    !patchSupport && !straightSpur && !repeatedMismatch && !diagonalEvidence &&
+                    !taperedRun) continue;
                 if (darkNeighbors == 3 && options.ThreeNeighborProtectedContinuation > 0 &&
                     DarkContinuation(dark, width, height, x, y) >= options.ThreeNeighborProtectedContinuation &&
                     repeated.DarkPeer) continue;
@@ -220,7 +269,7 @@ public static class DarkContourNoiseCleaner
                      componentSizes[index] < largestComponent * options.TwoCardinalMinimumComponentRatio ||
                      cardinalComponentSizes[index] < largestCardinalComponent *
                          options.TwoCardinalMinimumComponentRatio) && !patchSupport && !repeatedMismatch &&
-                    !diagonalEvidence) continue;
+                    !diagonalEvidence && !taperedRun) continue;
 
                 Color pairColor = default;
                 bool hasPair = options.UseOppositeBrightPair && TryOppositeBrightPair(original, dark,
@@ -239,15 +288,34 @@ public static class DarkContourNoiseCleaner
                         options.IsolatedPatchMinimumConsensus)) continue;
                 if (diagonalBridge && matching / (double)surrounding.Count <
                     options.DiagonalBridgeMinimumConsensus) continue;
-                if (Lab(replacement).L - Lab(original[index]).L < options.MinimumLightnessGain) continue;
-                output[index] = Color.FromArgb(original[index].A, replacement.R, replacement.G, replacement.B);
-                changed++;
+                if (options.RequireCommonGradient &&
+                    !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
+                double lightnessGain = Lab(replacement).L - Lab(original[index]).L;
+                if (lightnessGain < options.MinimumLightnessGain) continue;
+                Color restored = Color.FromArgb(original[index].A, replacement.R, replacement.G, replacement.B);
+                proposals.Add(new Proposal(index, restored, darkNeighbors, cardinalDarkNeighbors,
+                    dark5Support, matching / (double)surrounding.Count, lightnessGain));
             }
+
+        var accepted = new List<Proposal>();
+        foreach (Proposal proposal in proposals.OrderBy(item => item.DarkNeighbors)
+                     .ThenBy(item => item.CardinalDarkNeighbors)
+                     .ThenBy(item => item.Dark5Support)
+                     .ThenByDescending(item => item.Consensus)
+                     .ThenByDescending(item => item.LightnessGain))
+        {
+            int x = proposal.Index % width, y = proposal.Index / width;
+            if (options.CandidateConflictRadius > 0 && accepted.Any(item =>
+                    Math.Abs(item.Index % width - x) <= options.CandidateConflictRadius &&
+                    Math.Abs(item.Index / width - y) <= options.CandidateConflictRadius)) continue;
+            accepted.Add(proposal);
+            output[proposal.Index] = proposal.Color;
+        }
 
         var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++) result.SetPixel(x, y, output[y * width + x]);
-        return new Result(result, changed);
+        return new Result(result, accepted.Count);
     }
 
     private static bool HasAlphaClearance(Color[] original, int width, int height, int x, int y, int radius)
@@ -308,6 +376,42 @@ public static class DarkContourNoiseCleaner
             return length;
         }
         return 0;
+    }
+
+    private static bool HasTaperedRun(bool[] dark, int width, int height, int x, int y, Options options)
+    {
+        for (int q = 0; q < 4; q++)
+        {
+            int dx = q == 0 ? 1 : q == 1 ? -1 : 0;
+            int dy = q == 2 ? 1 : q == 3 ? -1 : 0;
+            int neighborX = x + dx, neighborY = y + dy;
+            if (!dark[neighborY * width + neighborX]) continue;
+            int axisX = Math.Abs(dy), axisY = Math.Abs(dx);
+            int inside = DarkRunLength(dark, width, height, neighborX, neighborY,
+                axisX, axisY, options.TaperedRunSearchRadius);
+            if (inside < options.TaperedRunMinimumInsideLength) continue;
+            int outer = DarkRunLength(dark, width, height, x, y,
+                axisX, axisY, options.TaperedRunSearchRadius);
+            int other = DarkRunLength(dark, width, height, x + 2 * dx, y + 2 * dy,
+                axisX, axisY, options.TaperedRunSearchRadius);
+            if (other - outer >= options.TaperedRunMinimumShrink) return true;
+        }
+        return false;
+    }
+
+    private static int DarkRunLength(bool[] dark, int width, int height, int x, int y,
+        int axisX, int axisY, int maximumStep)
+    {
+        if (x < 0 || y < 0 || x >= width || y >= height || !dark[y * width + x]) return 0;
+        int length = 1;
+        for (int side = -1; side <= 1; side += 2)
+            for (int step = 1; step <= maximumStep; step++)
+            {
+                int px = x + side * axisX * step, py = y + side * axisY * step;
+                if (px < 0 || py < 0 || px >= width || py >= height || !dark[py * width + px]) break;
+                length++;
+            }
+        return length;
     }
 
     private static Dictionary<UInt128, PatchCounts> BuildPatchCounts(Color[] colors, bool[] dark,
@@ -599,6 +703,45 @@ public static class DarkContourNoiseCleaner
         double opposition = -(center.X * commonX + center.Y * commonY) /
             (center.Length * commonLength);
         return opposition >= options.DiagonalMinimumOpposition;
+    }
+
+    private static bool HasOpposedCommonGradient(Color[] original, int width, int height,
+        int x, int y, Options options)
+    {
+        Gradient center = GradientAt(original, width, height, x, y, -1, -1);
+        double centerLength = center.Length;
+        if (centerLength <= 1e-9 || centerLength < options.CommonMinimumMagnitude) return false;
+
+        Color color = original[y * width + x];
+        var centerLab = Lab(color);
+        double toleranceSquared = options.CommonColorTolerance * options.CommonColorTolerance;
+        double commonX = 0, commonY = 0, unitX = 0, unitY = 0, magnitudeTotal = 0;
+        int count = 0, radius = options.CommonGradientRadius;
+        for (int py = Math.Max(1, y - radius); py <= Math.Min(height - 2, y + radius); py++)
+            for (int px = Math.Max(1, x - radius); px <= Math.Min(width - 2, x + radius); px++)
+            {
+                if (px == x && py == y) continue;
+                int index = py * width + px;
+                Color peer = original[index];
+                if (peer.A != color.A || DistanceSquared(centerLab, Lab(peer)) > toleranceSquared) continue;
+                Gradient other = GradientAt(original, width, height, px, py, x, y);
+                double length = other.Length;
+                if (length <= 1e-9) continue;
+                commonX += other.X;
+                commonY += other.Y;
+                unitX += other.X / length;
+                unitY += other.Y / length;
+                magnitudeTotal += length;
+                count++;
+            }
+
+        if (count < options.CommonMinimumSimilarNeighbors ||
+            centerLength < magnitudeTotal / count * options.CommonMinimumMagnitudeRatio) return false;
+        double commonLength = Math.Sqrt(commonX * commonX + commonY * commonY);
+        if (commonLength <= 1e-9 ||
+            Math.Sqrt(unitX * unitX + unitY * unitY) / count < options.CommonMinimumAgreement) return false;
+        double opposition = -(center.X * commonX + center.Y * commonY) / (centerLength * commonLength);
+        return opposition >= options.CommonMinimumOpposition;
     }
 
     private static Gradient GradientAt(Color[] original, int width, int height, int x, int y,

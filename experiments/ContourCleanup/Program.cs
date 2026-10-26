@@ -6,7 +6,8 @@ if (args.Length > 0 && args[0] == "generate-corpus")
 {
     string corpusRoot = args.Length > 1 ? Path.GetFullPath(args[1]) :
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "corpus"));
-    CorpusGenerator.Generate(corpusRoot);
+    int seedOffset = args.Length > 2 ? int.Parse(args[2]) : 0;
+    CorpusGenerator.Generate(corpusRoot, seedOffset);
     return;
 }
 if (args.Length > 0 && args[0] == "evaluate-corpus")
