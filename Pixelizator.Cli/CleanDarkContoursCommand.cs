@@ -203,6 +203,22 @@ internal static class CleanDarkContoursCommand
           --extended-patch-tolerance N   Допуск похожих цветов LAB: 0–100 (24).
           --extended-patch-neighbors N   Минимум похожих соседей: 1–1000 (5).
           --extended-patch-opposition N  Минимальная противоположность: 0–100 % (50).
+          --symmetric-patch-rescue       Поиск цветовых повторов с поворотами/отражениями (включено).
+          --no-symmetric-patch-rescue    Выключить симметричный поиск.
+          --symmetric-patch-first-pass   Применять симметричный поиск только на первом проходе (включено).
+          --symmetric-patch-all-passes   Применять его на каждом проходе.
+          --symmetric-patch-colors N     Минимум цветов окружения: 1–8 (4).
+          --symmetric-patch-lightness N  Максимальная светлота точки LAB L: 0–100 (2.5).
+          --symmetric-patch-cardinal N   Минимум прямых тёмных соседей: 0–4 (1).
+          --symmetric-patch-sigma N      Ширина цветового ядра LAB: >0–100 (5).
+          --symmetric-patch-bright N     Минимальный вес светлых повторов: 0–10000 (0.5).
+          --symmetric-patch-dark N       Максимальный вес тёмных повторов: 0–10000 (0.05).
+          --symmetric-patch-ratio N      Отношение светлых к тёмным: 0–100 (5).
+          --symmetric-patch-energy N     Минимальное снижение перепада: 0–100 % (60).
+          --symmetric-patch-radius N     Радиус градиента: 1–15 (3).
+          --symmetric-patch-tolerance N  Допуск похожих цветов LAB: 0–100 (24).
+          --symmetric-patch-neighbors N  Минимум похожих соседей: 1–1000 (5).
+          --symmetric-patch-opposition N Минимальная противоположность: 0–100 % (50).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -267,7 +283,11 @@ internal static class CleanDarkContoursCommand
                 weightedPatchSigma = 5, weightedPatchMinBright = 1, weightedPatchRatio = 5,
                 extendedPatchSigma = 6, extendedPatchBright = 1, extendedPatchRatio = 5,
                 extendedPatchLightness = 2.5, extendedPatchEnergy = 40,
-                extendedPatchTolerance = 24, extendedPatchOpposition = 50;
+                extendedPatchTolerance = 24, extendedPatchOpposition = 50,
+                symmetricPatchLightness = 2.5, symmetricPatchSigma = 5,
+                symmetricPatchBright = 0.5, symmetricPatchDark = 0.05,
+                symmetricPatchRatio = 5, symmetricPatchEnergy = 60,
+                symmetricPatchTolerance = 24, symmetricPatchOpposition = 50;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -298,7 +318,9 @@ internal static class CleanDarkContoursCommand
             int threeGradientColors = 4, threeGradientRadius = 3,
                 threeGradientNeighbors = 5, extendedPatchColors = 4,
                 extendedPatchCardinal = 1, extendedPatchRadius = 3,
-                extendedPatchNeighbors = 5;
+                extendedPatchNeighbors = 5, symmetricPatchColors = 4,
+                symmetricPatchCardinal = 1, symmetricPatchRadius = 3,
+                symmetricPatchNeighbors = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -309,7 +331,8 @@ internal static class CleanDarkContoursCommand
                 threeNeighborEnergyRescue = true, texturedGradientRescue = true,
                 singleDiagonalGradientRescue = true,
                 threeGradientRescue = true,
-                weightedPatchRescue = true, extendedWeightedPatch = true;
+                weightedPatchRescue = true, extendedWeightedPatch = true,
+                symmetricPatchRescue = true, symmetricPatchFirstPass = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -527,6 +550,22 @@ internal static class CleanDarkContoursCommand
                     case "--extended-patch-tolerance": extendedPatchTolerance = NextDouble(); break;
                     case "--extended-patch-neighbors": extendedPatchNeighbors = NextInt(); break;
                     case "--extended-patch-opposition": extendedPatchOpposition = NextDouble(); break;
+                    case "--symmetric-patch-rescue": symmetricPatchRescue = true; break;
+                    case "--no-symmetric-patch-rescue": symmetricPatchRescue = false; break;
+                    case "--symmetric-patch-first-pass": symmetricPatchFirstPass = true; break;
+                    case "--symmetric-patch-all-passes": symmetricPatchFirstPass = false; break;
+                    case "--symmetric-patch-colors": symmetricPatchColors = NextInt(); break;
+                    case "--symmetric-patch-lightness": symmetricPatchLightness = NextDouble(); break;
+                    case "--symmetric-patch-cardinal": symmetricPatchCardinal = NextInt(); break;
+                    case "--symmetric-patch-sigma": symmetricPatchSigma = NextDouble(); break;
+                    case "--symmetric-patch-bright": symmetricPatchBright = NextDouble(); break;
+                    case "--symmetric-patch-dark": symmetricPatchDark = NextDouble(); break;
+                    case "--symmetric-patch-ratio": symmetricPatchRatio = NextDouble(); break;
+                    case "--symmetric-patch-energy": symmetricPatchEnergy = NextDouble(); break;
+                    case "--symmetric-patch-radius": symmetricPatchRadius = NextInt(); break;
+                    case "--symmetric-patch-tolerance": symmetricPatchTolerance = NextDouble(); break;
+                    case "--symmetric-patch-neighbors": symmetricPatchNeighbors = NextInt(); break;
+                    case "--symmetric-patch-opposition": symmetricPatchOpposition = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -758,7 +797,20 @@ internal static class CleanDarkContoursCommand
                 ExtendedWeightedPatchGradientRadius = extendedPatchRadius,
                 ExtendedWeightedPatchColorTolerance = extendedPatchTolerance,
                 ExtendedWeightedPatchMinimumSimilarNeighbors = extendedPatchNeighbors,
-                ExtendedWeightedPatchMinimumOpposition = extendedPatchOpposition / 100
+                ExtendedWeightedPatchMinimumOpposition = extendedPatchOpposition / 100,
+                UseSymmetricColorPatchRescue = symmetricPatchRescue,
+                SymmetricPatchMinimumDistinctColors = symmetricPatchColors,
+                SymmetricPatchMaximumLightness = symmetricPatchLightness,
+                SymmetricPatchMinimumCardinalDarkNeighbors = symmetricPatchCardinal,
+                SymmetricPatchSigma = symmetricPatchSigma,
+                SymmetricPatchMinimumBrightWeight = symmetricPatchBright,
+                SymmetricPatchMaximumDarkWeight = symmetricPatchDark,
+                SymmetricPatchBrightRatio = symmetricPatchRatio,
+                SymmetricPatchMinimumEnergyDrop = symmetricPatchEnergy / 100,
+                SymmetricPatchGradientRadius = symmetricPatchRadius,
+                SymmetricPatchColorTolerance = symmetricPatchTolerance,
+                SymmetricPatchMinimumSimilarNeighbors = symmetricPatchNeighbors,
+                SymmetricPatchMinimumOpposition = symmetricPatchOpposition / 100
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
@@ -778,7 +830,9 @@ internal static class CleanDarkContoursCommand
             {
                 for (int q = 0; q < passes; q++)
                 {
-                    var result = DarkContourNoiseCleaner.Clean(current, options);
+                    var passOptions = symmetricPatchFirstPass && q > 0 ?
+                        options with { UseSymmetricColorPatchRescue = false } : options;
+                    var result = DarkContourNoiseCleaner.Clean(current, passOptions);
                     if (!ReferenceEquals(current, source)) current.Dispose();
                     current = result.Image;
                     changed[q] = result.ChangedPixels;
@@ -793,7 +847,7 @@ internal static class CleanDarkContoursCommand
             if (json)
                 output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours", input = inputPath,
                     output = outputPath, width = source.Width, height = source.Height, changedPixels = changed.Sum(),
-                    changedPerPass = changed, options }));
+                    changedPerPass = changed, symmetricPatchFirstPass, options }));
             else
                 output.WriteLine($"Сохранено: {outputPath}; заменено пикселей: {changed.Sum()}.");
             return 0;

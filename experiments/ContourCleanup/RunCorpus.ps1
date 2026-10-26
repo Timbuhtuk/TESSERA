@@ -193,6 +193,22 @@ param(
     [double]$ExtendedPatchTolerance = 24,
     [int]$ExtendedPatchNeighbors = 5,
     [double]$ExtendedPatchOpposition = 50,
+    [switch]$SymmetricPatchRescue,
+    [switch]$NoSymmetricPatchRescue,
+    [switch]$SymmetricPatchFirstPass,
+    [switch]$SymmetricPatchAllPasses,
+    [int]$SymmetricPatchColors = 4,
+    [double]$SymmetricPatchLightness = 2.5,
+    [int]$SymmetricPatchCardinal = 1,
+    [double]$SymmetricPatchSigma = 5,
+    [double]$SymmetricPatchBright = 0.5,
+    [double]$SymmetricPatchDark = 0.05,
+    [double]$SymmetricPatchRatio = 5,
+    [double]$SymmetricPatchEnergy = 60,
+    [int]$SymmetricPatchRadius = 3,
+    [double]$SymmetricPatchTolerance = 24,
+    [int]$SymmetricPatchNeighbors = 5,
+    [double]$SymmetricPatchOpposition = 50,
     [int]$Passes = 1
 )
 
@@ -204,6 +220,8 @@ if ($TexturedGradientRescue -and $NoTexturedGradientRescue) { throw 'Укажи�
 if ($SingleDiagonalGradientRescue -and $NoSingleDiagonalGradientRescue) { throw 'Укажите только один из -SingleDiagonalGradientRescue и -NoSingleDiagonalGradientRescue.' }
 if ($ThreeGradientRescue -and $NoThreeGradientRescue) { throw 'Укажите только один из -ThreeGradientRescue и -NoThreeGradientRescue.' }
 if ($ExtendedWeightedPatch -and $NoExtendedWeightedPatch) { throw 'Укажите только один из -ExtendedWeightedPatch и -NoExtendedWeightedPatch.' }
+if ($SymmetricPatchRescue -and $NoSymmetricPatchRescue) { throw 'Укажите только один из -SymmetricPatchRescue и -NoSymmetricPatchRescue.' }
+if ($SymmetricPatchFirstPass -and $SymmetricPatchAllPasses) { throw 'Укажите только один из -SymmetricPatchFirstPass и -SymmetricPatchAllPasses.' }
 $cli = (Resolve-Path -LiteralPath $CliDll).Path
 $corpus = (Resolve-Path -LiteralPath $CorpusRoot).Path
 $report = Join-Path $corpus 'cli-results.jsonl'
@@ -232,6 +250,8 @@ $singleDiagonalFlag = if ($NoSingleDiagonalGradientRescue) { @('--no-single-diag
 $threeGradientFlag = if ($NoThreeGradientRescue) { @('--no-three-gradient-rescue') } else { @('--three-gradient-rescue') }
 $weightedRescueFlag = if ($NoColorPatchWeightedRescue) { @('--no-color-patch-weighted-rescue') } else { @('--color-patch-weighted-rescue') }
 $extendedWeightedFlag = if ($NoExtendedWeightedPatch) { @('--no-extended-weighted-patch') } else { @('--extended-weighted-patch') }
+$symmetricPatchFlag = if ($NoSymmetricPatchRescue) { @('--no-symmetric-patch-rescue') } else { @('--symmetric-patch-rescue') }
+$symmetricFirstPassFlag = if ($SymmetricPatchAllPasses) { @('--symmetric-patch-all-passes') } else { @('--symmetric-patch-first-pass') }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -359,7 +379,13 @@ foreach ($kind in @('clean', 'noisy'))
             --extended-patch-energy $ExtendedPatchEnergy --extended-patch-radius $ExtendedPatchRadius `
             --extended-patch-tolerance $ExtendedPatchTolerance --extended-patch-neighbors $ExtendedPatchNeighbors `
             --extended-patch-opposition $ExtendedPatchOpposition `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag --passes $Passes
+            --symmetric-patch-colors $SymmetricPatchColors --symmetric-patch-lightness $SymmetricPatchLightness `
+            --symmetric-patch-cardinal $SymmetricPatchCardinal --symmetric-patch-sigma $SymmetricPatchSigma `
+            --symmetric-patch-bright $SymmetricPatchBright --symmetric-patch-dark $SymmetricPatchDark `
+            --symmetric-patch-ratio $SymmetricPatchRatio --symmetric-patch-energy $SymmetricPatchEnergy `
+            --symmetric-patch-radius $SymmetricPatchRadius --symmetric-patch-tolerance $SymmetricPatchTolerance `
+            --symmetric-patch-neighbors $SymmetricPatchNeighbors --symmetric-patch-opposition $SymmetricPatchOpposition `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

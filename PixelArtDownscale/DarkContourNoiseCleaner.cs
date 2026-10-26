@@ -136,12 +136,36 @@ public static class DarkContourNoiseCleaner
         public double ExtendedWeightedPatchColorTolerance { get; init; } = 24;
         public int ExtendedWeightedPatchMinimumSimilarNeighbors { get; init; } = 5;
         public double ExtendedWeightedPatchMinimumOpposition { get; init; } = 0.5;
+        public bool UseSymmetricColorPatchRescue { get; init; }
+        public int SymmetricPatchMinimumDistinctColors { get; init; } = 4;
+        public double SymmetricPatchMaximumLightness { get; init; } = 2.5;
+        public int SymmetricPatchMinimumCardinalDarkNeighbors { get; init; } = 1;
+        public double SymmetricPatchSigma { get; init; } = 5;
+        public double SymmetricPatchMinimumBrightWeight { get; init; } = 0.5;
+        public double SymmetricPatchMaximumDarkWeight { get; init; } = 0.05;
+        public double SymmetricPatchBrightRatio { get; init; } = 5;
+        public double SymmetricPatchMinimumEnergyDrop { get; init; } = 0.6;
+        public int SymmetricPatchGradientRadius { get; init; } = 3;
+        public double SymmetricPatchColorTolerance { get; init; } = 24;
+        public int SymmetricPatchMinimumSimilarNeighbors { get; init; } = 5;
+        public double SymmetricPatchMinimumOpposition { get; init; } = 0.5;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
     private readonly record struct PatchCounts(int Bright, int Dark);
     private readonly record struct ColorPatchSample(bool Dark, (double L, double A, double B)[] Ring);
+    private static readonly int[][] PatchSymmetries =
+    [
+        [0, 1, 2, 3, 4, 5, 6, 7],
+        [5, 3, 0, 6, 1, 7, 4, 2],
+        [7, 6, 5, 4, 3, 2, 1, 0],
+        [2, 4, 7, 1, 6, 0, 3, 5],
+        [2, 1, 0, 4, 3, 7, 6, 5],
+        [7, 4, 2, 6, 1, 5, 3, 0],
+        [5, 6, 7, 3, 4, 0, 1, 2],
+        [0, 3, 5, 1, 6, 2, 4, 7]
+    ];
     private readonly record struct RepeatEvidence(bool DarkPeer, bool BrightPeer);
     private readonly record struct Proposal(int Index, Color Color, int DarkNeighbors,
         int CardinalDarkNeighbors, int Dark5Support, double Consensus, double LightnessGain,
@@ -237,6 +261,26 @@ public static class DarkContourNoiseCleaner
             options.ExtendedWeightedPatchMinimumSimilarNeighbors is < 1 or > 1000 ||
             !double.IsFinite(options.ExtendedWeightedPatchMinimumOpposition) ||
             options.ExtendedWeightedPatchMinimumOpposition is < 0 or > 1 ||
+            options.SymmetricPatchMinimumDistinctColors is < 1 or > 8 ||
+            !double.IsFinite(options.SymmetricPatchMaximumLightness) ||
+            options.SymmetricPatchMaximumLightness is < 0 or > 100 ||
+            options.SymmetricPatchMinimumCardinalDarkNeighbors is < 0 or > 4 ||
+            !double.IsFinite(options.SymmetricPatchSigma) ||
+            options.SymmetricPatchSigma is <= 0 or > 100 ||
+            !double.IsFinite(options.SymmetricPatchMinimumBrightWeight) ||
+            options.SymmetricPatchMinimumBrightWeight is < 0 or > 10000 ||
+            !double.IsFinite(options.SymmetricPatchMaximumDarkWeight) ||
+            options.SymmetricPatchMaximumDarkWeight is < 0 or > 10000 ||
+            !double.IsFinite(options.SymmetricPatchBrightRatio) ||
+            options.SymmetricPatchBrightRatio is < 0 or > 100 ||
+            !double.IsFinite(options.SymmetricPatchMinimumEnergyDrop) ||
+            options.SymmetricPatchMinimumEnergyDrop is < 0 or > 1 ||
+            options.SymmetricPatchGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.SymmetricPatchColorTolerance) ||
+            options.SymmetricPatchColorTolerance is < 0 or > 100 ||
+            options.SymmetricPatchMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.SymmetricPatchMinimumOpposition) ||
+            options.SymmetricPatchMinimumOpposition is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -441,6 +485,10 @@ public static class DarkContourNoiseCleaner
              options.UseThreeNeighborGradientRescue) ?
                 BuildColorPatchIndex(original, dark, width, height,
                     options.WeightedColorPatchMaximumPatternDifferences) : new();
+        Dictionary<UInt128, List<ColorPatchSample>> symmetricPatchIndex =
+            options.RequireColorMatchedPatch && options.UseSymmetricColorPatchRescue ?
+                BuildColorPatchIndex(original, dark, width, height,
+                    options.WeightedColorPatchMaximumPatternDifferences, true) : new();
 
         var output = (Color[])original.Clone();
         var proposals = new List<Proposal>();
@@ -498,6 +546,16 @@ public static class DarkContourNoiseCleaner
                     DistinctRingColors(original, width, x, y) >=
                         options.ExtendedWeightedPatchTexturedDistinctColors;
                 if (extendedWeightedPatch && !extendedTexturedPatch) colorPatchMatch = true;
+                bool symmetricPatchRescue = !colorPatchMatch &&
+                    options.UseSymmetricColorPatchRescue &&
+                    cardinalDarkNeighbors >= options.SymmetricPatchMinimumCardinalDarkNeighbors &&
+                    Lab(original[index]).L <= options.SymmetricPatchMaximumLightness &&
+                    DistinctRingColors(original, width, x, y) >=
+                        options.SymmetricPatchMinimumDistinctColors &&
+                    HasSymmetricWeightedColorPatch(original, dark, width, x, y, symmetricPatchIndex,
+                        options.SymmetricPatchSigma, options.SymmetricPatchMinimumBrightWeight,
+                        options.SymmetricPatchMaximumDarkWeight,
+                        options.SymmetricPatchBrightRatio);
                 bool threeNeighborEnergyRescue = options.UseThreeNeighborEnergyRescue &&
                     darkNeighbors == 3 && cardinalDarkNeighbors == 1;
                 bool texturedGradientRescue = options.UseTexturedGradientRescue &&
@@ -517,7 +575,7 @@ public static class DarkContourNoiseCleaner
                 if (!colorPatchMatch && !options.UseColorPatchEnergyRescue &&
                     !threeNeighborEnergyRescue && !texturedGradientRescue &&
                     !singleDiagonalRescue && !threeNeighborGradientRescue &&
-                    !extendedTexturedPatch) continue;
+                    !extendedTexturedPatch && !symmetricPatchRescue) continue;
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
@@ -753,9 +811,17 @@ public static class DarkContourNoiseCleaner
                             options.ExtendedWeightedPatchColorTolerance,
                             options.ExtendedWeightedPatchMinimumSimilarNeighbors,
                             options.ExtendedWeightedPatchMinimumOpposition);
+                    bool symmetricPatchAllowed = symmetricPatchRescue &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.SymmetricPatchMinimumEnergyDrop) &&
+                        HasOpposedReplacementGradient(original, width, height, x, y,
+                            replacement, options.SymmetricPatchGradientRadius,
+                            options.SymmetricPatchColorTolerance,
+                            options.SymmetricPatchMinimumSimilarNeighbors,
+                            options.SymmetricPatchMinimumOpposition);
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
-                        !extendedTexturedAllowed) continue;
+                        !extendedTexturedAllowed && !symmetricPatchAllowed) continue;
                 }
                 if (options.RequireCommonGradient &&
                     !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
@@ -915,13 +981,20 @@ public static class DarkContourNoiseCleaner
     }
 
     private static Dictionary<UInt128, List<ColorPatchSample>> BuildColorPatchIndex(
-        Color[] colors, bool[] dark, int width, int height, int maximumDifferences)
+        Color[] colors, bool[] dark, int width, int height, int maximumDifferences,
+        bool includeSymmetricCandidates = false)
     {
         var candidatePatterns = new HashSet<UInt128>();
         for (int y = 1; y < height - 1; y++)
             for (int x = 1; x < width - 1; x++)
                 if (dark[y * width + x])
-                    candidatePatterns.Add(PatchPattern(colors, dark, width, x, y, 1));
+                {
+                    UInt128 pattern = PatchPattern(colors, dark, width, x, y, 1);
+                    candidatePatterns.Add(pattern);
+                    if (includeSymmetricCandidates)
+                        for (int q = 1; q < PatchSymmetries.Length; q++)
+                            candidatePatterns.Add(TransformPatchPattern(pattern, PatchSymmetries[q]));
+                }
 
         var exact = new Dictionary<UInt128, List<ColorPatchSample>>();
         for (int y = 1; y < height - 1; y++)
@@ -988,6 +1061,20 @@ public static class DarkContourNoiseCleaner
             pattern - (uint)(oldDigit - newDigit) * place;
     }
 
+    private static UInt128 TransformPatchPattern(UInt128 pattern, int[] permutation)
+    {
+        Span<int> digits = stackalloc int[8];
+        for (int q = 7; q >= 0; q--)
+        {
+            digits[q] = (int)(pattern % 3);
+            pattern /= 3;
+        }
+        UInt128 transformed = 0;
+        for (int q = 0; q < 8; q++)
+            transformed = transformed * 3 + (uint)digits[permutation[q]];
+        return transformed;
+    }
+
     private static bool HasColorMatchedPatch(Color[] colors, bool[] dark, int width, int x, int y,
         Dictionary<UInt128, List<ColorPatchSample>> index, double tolerance,
         int minimumBright, double brightRatio)
@@ -1050,6 +1137,34 @@ public static class DarkContourNoiseCleaner
             else bright += weight;
         }
         return bright >= minimumBright && bright > darkWeight * brightRatio;
+    }
+
+    private static bool HasSymmetricWeightedColorPatch(Color[] colors, bool[] dark, int width, int x, int y,
+        Dictionary<UInt128, List<ColorPatchSample>> index, double sigma,
+        double minimumBright, double maximumDark, double brightRatio)
+    {
+        UInt128 pattern = PatchPattern(colors, dark, width, x, y, 1);
+        var ring = ColorPatchRing(colors, width, x, y);
+        double scale = 16 * sigma * sigma;
+        for (int orientation = 1; orientation < PatchSymmetries.Length; orientation++)
+        {
+            int[] permutation = PatchSymmetries[orientation];
+            UInt128 transformedPattern = TransformPatchPattern(pattern, permutation);
+            if (!index.TryGetValue(transformedPattern, out List<ColorPatchSample>? matches)) continue;
+            double bright = 0, darkWeight = 0;
+            foreach (ColorPatchSample sample in matches)
+            {
+                double difference = 0;
+                for (int q = 0; q < ring.Length; q++)
+                    difference += DistanceSquared(ring[permutation[q]], sample.Ring[q]);
+                double weight = Math.Exp(-difference / scale);
+                if (sample.Dark) darkWeight += weight;
+                else bright += weight;
+            }
+            if (bright >= minimumBright && darkWeight <= maximumDark &&
+                bright > darkWeight * brightRatio) return true;
+        }
+        return false;
     }
 
     private static double WeightedBrightPatchWeight(Color[] colors, bool[] dark, int width, int x, int y,
