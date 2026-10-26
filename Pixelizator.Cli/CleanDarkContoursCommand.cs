@@ -290,6 +290,8 @@ internal static class CleanDarkContoursCommand
           --exemplar-material-agreement-distance N Допуск RGB между образцами: 0–442 (20).
           --exemplar-material-agreement N Минимум согласных образцов: 1–100 (2).
           --exemplar-material-neighbors N Число лучших образцов: 1–100 (10).
+          --no-exemplar-material-interpass Не сохранять отказ по образцу на следующих проходах.
+          --exemplar-material-interpass  Сохранять отказ по образцу (по умолчанию).
           --grouped-palette-rescue      Поиск групп одного редкого тёмного оттенка (включён).
           --no-grouped-palette-rescue   Выключить этот поиск.
           --grouped-palette-channel N   Максимальный канал тёмного оттенка RGB: 0–255 (10).
@@ -484,7 +486,7 @@ internal static class CleanDarkContoursCommand
                 sparsePaletteConsensus = true, sparsePaletteThreeNeighbor = true,
                 sparseDarkPaletteExtended = true, sparsePaletteExclusive = true,
                 exemplarRescue = true, groupedPaletteRescue = true, exemplarMaterialVeto = true,
-                gridCellSizeSet = false;
+                gridCellSizeSet = false, exemplarMaterialInterpass = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -784,6 +786,8 @@ internal static class CleanDarkContoursCommand
                     case "--exemplar-exclusion": exemplarExclusion = NextInt(); break;
                     case "--exemplar-material-veto": exemplarMaterialVeto = true; break;
                     case "--no-exemplar-material-veto": exemplarMaterialVeto = false; break;
+                    case "--exemplar-material-interpass": exemplarMaterialInterpass = true; break;
+                    case "--no-exemplar-material-interpass": exemplarMaterialInterpass = false; break;
                     case "--exemplar-material-error": exemplarMaterialError = NextInt(); break;
                     case "--exemplar-material-source": exemplarMaterialSource = NextDouble(); break;
                     case "--exemplar-material-bright": exemplarMaterialBright = NextDouble(); break;
@@ -1222,7 +1226,8 @@ internal static class CleanDarkContoursCommand
             Bitmap current = source;
             int[] changed = new int[passes];
             var repeatedDarkAccepted = new List<(int X, int Y)>();
-            bool[]? repeatedDarkProtection = null;
+            var firstPassMaterialVetoes = new List<(int X, int Y)>();
+            bool[]? interPassProtection = null;
             try
             {
                 for (int q = 0; q < passes; q++)
@@ -1243,25 +1248,34 @@ internal static class CleanDarkContoursCommand
                             UseExemplarRescue = false,
                             UseGroupedPaletteRescue = false
                         };
-                    if (q == 1 && repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
-                        repeatedDarkAccepted.Count > 0)
+                    if (q == 1 && ((repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
+                        repeatedDarkAccepted.Count > 0) ||
+                        (exemplarMaterialInterpass && firstPassMaterialVetoes.Count > 0)))
                     {
-                        repeatedDarkProtection = new bool[source.Width * source.Height];
-                        foreach ((int x, int y) in repeatedDarkAccepted)
-                            for (int dy = -repeatedDarkProtectRadius; dy <= repeatedDarkProtectRadius; dy++)
-                                for (int dx = -repeatedDarkProtectRadius; dx <= repeatedDarkProtectRadius; dx++)
-                                {
-                                    int px = x + dx, py = y + dy;
-                                    if (px >= 0 && py >= 0 && px < source.Width && py < source.Height)
-                                        repeatedDarkProtection[py * source.Width + px] = true;
-                                }
+                        interPassProtection = new bool[source.Width * source.Height];
+                        if (repeatedDarkFirstPass && repeatedDarkProtectRadius > 0)
+                            foreach ((int x, int y) in repeatedDarkAccepted)
+                                for (int dy = -repeatedDarkProtectRadius; dy <= repeatedDarkProtectRadius; dy++)
+                                    for (int dx = -repeatedDarkProtectRadius; dx <= repeatedDarkProtectRadius; dx++)
+                                    {
+                                        int px = x + dx, py = y + dy;
+                                        if (px >= 0 && py >= 0 && px < source.Width && py < source.Height)
+                                            interPassProtection[py * source.Width + px] = true;
+                                    }
+                        if (exemplarMaterialInterpass)
+                            foreach ((int x, int y) in firstPassMaterialVetoes)
+                                if (source.GetPixel(x, y).ToArgb() == current.GetPixel(x, y).ToArgb())
+                                    interPassProtection[y * source.Width + x] = true;
                     }
                     var result = DarkContourNoiseCleaner.Clean(current, passOptions,
-                        auditWriter is null && !repeatedDarkRescue ? null : (x, y, decision) =>
+                        auditWriter is null && !repeatedDarkRescue &&
+                        !(exemplarMaterialVeto && exemplarMaterialInterpass) ? null : (x, y, decision) =>
                         {
                             auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
                             if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
-                        }, repeatedDarkProtection);
+                            if (q == 0 && exemplarMaterialInterpass && decision == "exemplar-material-veto")
+                                firstPassMaterialVetoes.Add((x, y));
+                        }, interPassProtection);
                     if (!ReferenceEquals(current, source)) current.Dispose();
                     current = result.Image;
                     changed[q] = result.ChangedPixels;
@@ -1277,7 +1291,7 @@ internal static class CleanDarkContoursCommand
                 output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours", input = inputPath,
                     output = outputPath, width = source.Width, height = source.Height, changedPixels = changed.Sum(),
                     changedPerPass = changed, symmetricPatchFirstPass, repeatedDarkFirstPass,
-                    repeatedDarkProtectRadius, options }));
+                    repeatedDarkProtectRadius, exemplarMaterialInterpass, options }));
             else
                 output.WriteLine($"Сохранено: {outputPath}; заменено пикселей: {changed.Sum()}.");
             return 0;
