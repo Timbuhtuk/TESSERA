@@ -285,8 +285,8 @@ internal static class CleanDarkContoursCommand
           --exemplar-material-veto      Включить эту защиту (по умолчанию).
           --exemplar-material-error N   Максимальная сумма квадратов RGB ошибок кольца 3×3: 0–100000000 (10000).
           --exemplar-material-source N  Максимальное RGB расстояние образца от исходного пикселя: 0–442 (50).
-          --exemplar-material-bright N  Минимальная средняя яркость предлагаемой замены: 0–255 (180).
-          --exemplar-material-drop N    Минимальная разница яркости замены и образца: 0–255 (80).
+          --exemplar-material-bright N  Минимальная средняя яркость предлагаемой замены: 0–255 (40).
+          --exemplar-material-drop N    Минимальная разница яркости замены и образца: 0–255 (20).
           --exemplar-material-agreement-distance N Допуск RGB между образцами: 0–442 (20).
           --exemplar-material-agreement N Минимум согласных образцов: 1–100 (2).
           --exemplar-material-neighbors N Число лучших образцов: 1–100 (10).
@@ -409,7 +409,7 @@ internal static class CleanDarkContoursCommand
                 groupedPaletteSpacing = 8, groupedPaletteRatio = 1.5,
                 groupedPaletteHighRatio = 1,
                 groupedPaletteGain = 20, exemplarMaterialSource = 50,
-                exemplarMaterialBright = 180, exemplarMaterialDrop = 80,
+                exemplarMaterialBright = 40, exemplarMaterialDrop = 20,
                 exemplarMaterialAgreementDistance = 20;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
