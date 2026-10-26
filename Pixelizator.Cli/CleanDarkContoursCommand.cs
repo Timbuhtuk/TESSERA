@@ -246,6 +246,14 @@ internal static class CleanDarkContoursCommand
           --repeated-dark-lightness N   Максимальная светлота точки LAB L: 0–100 (2.5).
           --repeated-dark-gain N        Минимальное увеличение LAB L: 0–100 (40).
           --repeated-dark-energy N      Минимальное снижение перепада: 0–100 % (50).
+          --repeated-bridge-rescue      Допуск диагонального моста по градиенту редкого цвета (включён).
+          --no-repeated-bridge-rescue   Выключить этот допуск.
+          --repeated-bridge-gain N      Минимальное увеличение LAB L: 0–100 (60).
+          --repeated-bridge-energy N    Минимальное снижение перепада: 0–100 % (45).
+          --repeated-bridge-radius N    Радиус сравнения градиентов: 1–15 (3).
+          --repeated-bridge-tolerance N Допуск похожих цветов LAB: 0–100 (24).
+          --repeated-bridge-neighbors N Минимум похожих соседей: 1–1000 (5).
+          --repeated-bridge-opposition N Минимальная противоположность: 0–100 % (70).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -319,7 +327,9 @@ internal static class CleanDarkContoursCommand
                 highContrastTolerance = 24, highContrastOpposition = 50,
                 contrastConsensusMinimum = 40, contrastConsensusGain = 60,
                 repeatedDarkGain = 40, repeatedDarkEnergy = 50,
-                repeatedDarkLightness = 2.5;
+                repeatedDarkLightness = 2.5, repeatedBridgeGain = 60,
+                repeatedBridgeEnergy = 45, repeatedBridgeTolerance = 24,
+                repeatedBridgeOpposition = 70;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -356,7 +366,8 @@ internal static class CleanDarkContoursCommand
                 highContrastNeighbors = 5, highContrastMaxDark = 2,
                 contrastConsensusMaxDark = 3, repeatedDarkMin = 4,
                 repeatedDarkMax = 8, repeatedDarkNeighborsMin = 1,
-                repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1;
+                repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1,
+                repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -370,7 +381,8 @@ internal static class CleanDarkContoursCommand
                 weightedPatchRescue = true, extendedWeightedPatch = true,
                 symmetricPatchRescue = true, symmetricPatchFirstPass = true,
                 highContrastRescue = true, contrastConsensus = true,
-                repeatedDarkRescue = true, repeatedDarkFirstPass = true;
+                repeatedDarkRescue = true, repeatedDarkFirstPass = true,
+                repeatedBridgeRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -631,6 +643,14 @@ internal static class CleanDarkContoursCommand
                     case "--repeated-dark-lightness": repeatedDarkLightness = NextDouble(); break;
                     case "--repeated-dark-gain": repeatedDarkGain = NextDouble(); break;
                     case "--repeated-dark-energy": repeatedDarkEnergy = NextDouble(); break;
+                    case "--repeated-bridge-rescue": repeatedBridgeRescue = true; break;
+                    case "--no-repeated-bridge-rescue": repeatedBridgeRescue = false; break;
+                    case "--repeated-bridge-gain": repeatedBridgeGain = NextDouble(); break;
+                    case "--repeated-bridge-energy": repeatedBridgeEnergy = NextDouble(); break;
+                    case "--repeated-bridge-radius": repeatedBridgeRadius = NextInt(); break;
+                    case "--repeated-bridge-tolerance": repeatedBridgeTolerance = NextDouble(); break;
+                    case "--repeated-bridge-neighbors": repeatedBridgeNeighbors = NextInt(); break;
+                    case "--repeated-bridge-opposition": repeatedBridgeOpposition = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -895,7 +915,14 @@ internal static class CleanDarkContoursCommand
                 RepeatedDarkColorMaximumDarkNeighbors = repeatedDarkNeighborsMax,
                 RepeatedDarkColorMaximumLightness = repeatedDarkLightness,
                 RepeatedDarkColorMinimumLightnessGain = repeatedDarkGain,
-                RepeatedDarkColorMinimumEnergyDrop = repeatedDarkEnergy / 100
+                RepeatedDarkColorMinimumEnergyDrop = repeatedDarkEnergy / 100,
+                UseRepeatedDiagonalBridgeRescue = repeatedBridgeRescue,
+                RepeatedBridgeMinimumLightnessGain = repeatedBridgeGain,
+                RepeatedBridgeMinimumEnergyDrop = repeatedBridgeEnergy / 100,
+                RepeatedBridgeGradientRadius = repeatedBridgeRadius,
+                RepeatedBridgeColorTolerance = repeatedBridgeTolerance,
+                RepeatedBridgeMinimumSimilarNeighbors = repeatedBridgeNeighbors,
+                RepeatedBridgeMinimumOpposition = repeatedBridgeOpposition / 100
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,

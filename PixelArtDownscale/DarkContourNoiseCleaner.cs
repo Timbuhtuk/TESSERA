@@ -169,6 +169,13 @@ public static class DarkContourNoiseCleaner
         public double RepeatedDarkColorMaximumLightness { get; init; } = 2.5;
         public double RepeatedDarkColorMinimumLightnessGain { get; init; } = 40;
         public double RepeatedDarkColorMinimumEnergyDrop { get; init; } = 0.5;
+        public bool UseRepeatedDiagonalBridgeRescue { get; init; } = true;
+        public double RepeatedBridgeMinimumLightnessGain { get; init; } = 60;
+        public double RepeatedBridgeMinimumEnergyDrop { get; init; } = 0.45;
+        public int RepeatedBridgeGradientRadius { get; init; } = 3;
+        public double RepeatedBridgeColorTolerance { get; init; } = 24;
+        public int RepeatedBridgeMinimumSimilarNeighbors { get; init; } = 5;
+        public double RepeatedBridgeMinimumOpposition { get; init; } = 0.7;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -330,6 +337,16 @@ public static class DarkContourNoiseCleaner
             options.RepeatedDarkColorMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.RepeatedDarkColorMinimumEnergyDrop) ||
             options.RepeatedDarkColorMinimumEnergyDrop is < 0 or > 1 ||
+            !double.IsFinite(options.RepeatedBridgeMinimumLightnessGain) ||
+            options.RepeatedBridgeMinimumLightnessGain is < 0 or > 100 ||
+            !double.IsFinite(options.RepeatedBridgeMinimumEnergyDrop) ||
+            options.RepeatedBridgeMinimumEnergyDrop is < 0 or > 1 ||
+            options.RepeatedBridgeGradientRadius is < 1 or > 15 ||
+            !double.IsFinite(options.RepeatedBridgeColorTolerance) ||
+            options.RepeatedBridgeColorTolerance is < 0 or > 100 ||
+            options.RepeatedBridgeMinimumSimilarNeighbors is < 1 or > 1000 ||
+            !double.IsFinite(options.RepeatedBridgeMinimumOpposition) ||
+            options.RepeatedBridgeMinimumOpposition is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -811,8 +828,19 @@ public static class DarkContourNoiseCleaner
                     !(isolatedEvidence && colorConsensus >=
                         options.IsolatedPatchMinimumConsensus))
                 { audit?.Invoke(x, y, "color-consensus"); continue; }
+                bool repeatedBridgeRescue = diagonalBridge && repeatedDarkColor &&
+                    options.UseRepeatedDiagonalBridgeRescue &&
+                    Lab(replacement).L - Lab(original[index]).L >=
+                        options.RepeatedBridgeMinimumLightnessGain &&
+                    HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                        options.RepeatedBridgeMinimumEnergyDrop) &&
+                    HasOpposedReplacementGradient(original, width, height, x, y,
+                        replacement, options.RepeatedBridgeGradientRadius,
+                        options.RepeatedBridgeColorTolerance,
+                        options.RepeatedBridgeMinimumSimilarNeighbors,
+                        options.RepeatedBridgeMinimumOpposition);
                 if (diagonalBridge && colorConsensus <
-                    options.DiagonalBridgeMinimumConsensus)
+                    options.DiagonalBridgeMinimumConsensus && !repeatedBridgeRescue)
                 { audit?.Invoke(x, y, "diagonal-bridge-consensus"); continue; }
                 double colorSpread = MaximumColorSpreadSquared(surrounding);
                 bool mediumShadeContinuation = darkNeighbors == 3 && cardinalDarkNeighbors == 1 &&
@@ -837,7 +865,7 @@ public static class DarkContourNoiseCleaner
                         options.VerticalShadeSearchRadius, options.VerticalShadeColorTolerance,
                         out Color verticalColor))
                     replacement = verticalColor;
-                bool repeatedDarkOnly = repeatedDarkEntry;
+                bool repeatedDarkOnly = repeatedDarkEntry || repeatedBridgeRescue;
                 if (!colorPatchMatch)
                 {
                     bool globalEnergyRescue = options.UseColorPatchEnergyRescue &&
