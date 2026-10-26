@@ -176,6 +176,11 @@ public static class DarkContourNoiseCleaner
         public double RepeatedBridgeColorTolerance { get; init; } = 24;
         public int RepeatedBridgeMinimumSimilarNeighbors { get; init; } = 5;
         public double RepeatedBridgeMinimumOpposition { get; init; } = 0.7;
+        public bool UseSparseDarkPaletteRescue { get; init; } = true;
+        public double SparseDarkPaletteColorTolerance { get; init; } = 0.5;
+        public int SparseDarkPaletteMaximumSimilarPixels { get; init; } = 5;
+        public double SparseDarkPaletteMinimumLightnessGain { get; init; } = 40;
+        public double SparseDarkPaletteMinimumEnergyDrop { get; init; }
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -347,6 +352,13 @@ public static class DarkContourNoiseCleaner
             options.RepeatedBridgeMinimumSimilarNeighbors is < 1 or > 1000 ||
             !double.IsFinite(options.RepeatedBridgeMinimumOpposition) ||
             options.RepeatedBridgeMinimumOpposition is < 0 or > 1 ||
+            !double.IsFinite(options.SparseDarkPaletteColorTolerance) ||
+            options.SparseDarkPaletteColorTolerance is < 0 or > 100 ||
+            options.SparseDarkPaletteMaximumSimilarPixels is < 0 or > 1000000 ||
+            !double.IsFinite(options.SparseDarkPaletteMinimumLightnessGain) ||
+            options.SparseDarkPaletteMinimumLightnessGain is < 0 or > 100 ||
+            !double.IsFinite(options.SparseDarkPaletteMinimumEnergyDrop) ||
+            options.SparseDarkPaletteMinimumEnergyDrop is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -951,14 +963,24 @@ public static class DarkContourNoiseCleaner
                             options.RepeatedDarkColorMinimumLightnessGain &&
                         HasColorPatchEnergyRescue(original, width, x, y, replacement,
                             options.RepeatedDarkColorMinimumEnergyDrop);
+                    bool sparseDarkPaletteRescue = repeatedDarkColor &&
+                        options.UseSparseDarkPaletteRescue &&
+                        Lab(replacement).L - Lab(original[index]).L >=
+                            options.SparseDarkPaletteMinimumLightnessGain &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.SparseDarkPaletteMinimumEnergyDrop) &&
+                        HasSparseDarkPalette(original[index], darkColorOccurrences,
+                            options.SparseDarkPaletteColorTolerance,
+                            options.SparseDarkPaletteMaximumSimilarPixels);
                     repeatedDarkOnly |= repeatedDarkRescue && !globalEnergyRescue && !localEnergyRescue &&
                         !texturedRescue && !singleDiagonalGradientRescue &&
                         !threeNeighborGradientAllowed && !extendedTexturedAllowed &&
                         !symmetricPatchAllowed && !highContrastRescue;
+                    repeatedDarkOnly |= sparseDarkPaletteRescue;
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
                         !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue &&
-                        !repeatedDarkRescue)
+                        !repeatedDarkRescue && !sparseDarkPaletteRescue)
                     { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }
                 if (options.RequireCommonGradient &&
@@ -1239,6 +1261,23 @@ public static class DarkContourNoiseCleaner
             else bright++;
         }
         return bright >= minimumBright && bright > darkMatches * brightRatio;
+    }
+
+    private static bool HasSparseDarkPalette(Color color, Dictionary<int, int> occurrences,
+        double tolerance, int maximumSimilarPixels)
+    {
+        int similarPixels = 0;
+        double toleranceSquared = tolerance * tolerance;
+        var center = Lab(color);
+        foreach (KeyValuePair<int, int> entry in occurrences)
+        {
+            if (entry.Key == color.ToArgb()) continue;
+            Color other = Color.FromArgb(entry.Key);
+            if (other.A != color.A || DistanceSquared(center, Lab(other)) > toleranceSquared) continue;
+            similarPixels += entry.Value;
+            if (similarPixels > maximumSimilarPixels) return false;
+        }
+        return true;
     }
 
     private static bool HasColorPatchEnergyRescue(Color[] colors, int width, int x, int y,

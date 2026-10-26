@@ -254,6 +254,12 @@ internal static class CleanDarkContoursCommand
           --repeated-bridge-tolerance N Допуск похожих цветов LAB: 0–100 (24).
           --repeated-bridge-neighbors N Минимум похожих соседей: 1–1000 (5).
           --repeated-bridge-opposition N Минимальная противоположность: 0–100 % (70).
+          --sparse-dark-palette-rescue   Допуск для редкого тёмного оттенка без похожих цветов (включён).
+          --no-sparse-dark-palette-rescue Выключить этот допуск.
+          --sparse-dark-palette-tolerance N  Допуск похожих тёмных цветов LAB: 0–100 (0.5).
+          --sparse-dark-palette-max N    Максимум похожих пикселей другого оттенка: 0–1000000 (5).
+          --sparse-dark-palette-gain N   Минимальное увеличение LAB L: 0–100 (40).
+          --sparse-dark-palette-energy N Минимальное снижение перепада: 0–100 % (0).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -329,7 +335,8 @@ internal static class CleanDarkContoursCommand
                 repeatedDarkGain = 40, repeatedDarkEnergy = 50,
                 repeatedDarkLightness = 2.5, repeatedBridgeGain = 60,
                 repeatedBridgeEnergy = 45, repeatedBridgeTolerance = 24,
-                repeatedBridgeOpposition = 70;
+                repeatedBridgeOpposition = 70, sparseDarkPaletteTolerance = 0.5,
+                sparseDarkPaletteGain = 40, sparseDarkPaletteEnergy = 0;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -367,7 +374,8 @@ internal static class CleanDarkContoursCommand
                 contrastConsensusMaxDark = 3, repeatedDarkMin = 4,
                 repeatedDarkMax = 8, repeatedDarkNeighborsMin = 1,
                 repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1,
-                repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5;
+                repeatedBridgeRadius = 3, repeatedBridgeNeighbors = 5,
+                sparseDarkPaletteMax = 5;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -382,7 +390,7 @@ internal static class CleanDarkContoursCommand
                 symmetricPatchRescue = true, symmetricPatchFirstPass = true,
                 highContrastRescue = true, contrastConsensus = true,
                 repeatedDarkRescue = true, repeatedDarkFirstPass = true,
-                repeatedBridgeRescue = true;
+                repeatedBridgeRescue = true, sparseDarkPaletteRescue = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -651,6 +659,12 @@ internal static class CleanDarkContoursCommand
                     case "--repeated-bridge-tolerance": repeatedBridgeTolerance = NextDouble(); break;
                     case "--repeated-bridge-neighbors": repeatedBridgeNeighbors = NextInt(); break;
                     case "--repeated-bridge-opposition": repeatedBridgeOpposition = NextDouble(); break;
+                    case "--sparse-dark-palette-rescue": sparseDarkPaletteRescue = true; break;
+                    case "--no-sparse-dark-palette-rescue": sparseDarkPaletteRescue = false; break;
+                    case "--sparse-dark-palette-tolerance": sparseDarkPaletteTolerance = NextDouble(); break;
+                    case "--sparse-dark-palette-max": sparseDarkPaletteMax = NextInt(); break;
+                    case "--sparse-dark-palette-gain": sparseDarkPaletteGain = NextDouble(); break;
+                    case "--sparse-dark-palette-energy": sparseDarkPaletteEnergy = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -922,7 +936,12 @@ internal static class CleanDarkContoursCommand
                 RepeatedBridgeGradientRadius = repeatedBridgeRadius,
                 RepeatedBridgeColorTolerance = repeatedBridgeTolerance,
                 RepeatedBridgeMinimumSimilarNeighbors = repeatedBridgeNeighbors,
-                RepeatedBridgeMinimumOpposition = repeatedBridgeOpposition / 100
+                RepeatedBridgeMinimumOpposition = repeatedBridgeOpposition / 100,
+                UseSparseDarkPaletteRescue = sparseDarkPaletteRescue,
+                SparseDarkPaletteColorTolerance = sparseDarkPaletteTolerance,
+                SparseDarkPaletteMaximumSimilarPixels = sparseDarkPaletteMax,
+                SparseDarkPaletteMinimumLightnessGain = sparseDarkPaletteGain,
+                SparseDarkPaletteMinimumEnergyDrop = sparseDarkPaletteEnergy / 100
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,

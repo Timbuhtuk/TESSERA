@@ -242,6 +242,12 @@ param(
     [double]$RepeatedBridgeTolerance = 24,
     [int]$RepeatedBridgeNeighbors = 5,
     [double]$RepeatedBridgeOpposition = 70,
+    [switch]$SparseDarkPaletteRescue = $true,
+    [switch]$NoSparseDarkPaletteRescue,
+    [double]$SparseDarkPaletteTolerance = 0.5,
+    [int]$SparseDarkPaletteMax = 5,
+    [double]$SparseDarkPaletteGain = 40,
+    [double]$SparseDarkPaletteEnergy = 0,
     [switch]$CandidateAudit,
     [int]$Passes = 1
 )
@@ -291,6 +297,7 @@ $contrastConsensusFlag = if ($NoContrastConsensus -or !$ContrastConsensus) { @('
 $repeatedDarkFlag = if ($NoRepeatedDarkRescue -or !$RepeatedDarkRescue) { @('--no-repeated-dark-rescue') } else { @('--repeated-dark-rescue') }
 $repeatedDarkPassFlag = if ($RepeatedDarkAllPasses) { @('--repeated-dark-all-passes') } else { @('--repeated-dark-first-pass') }
 $repeatedBridgeFlag = if ($NoRepeatedBridgeRescue -or !$RepeatedBridgeRescue) { @('--no-repeated-bridge-rescue') } else { @('--repeated-bridge-rescue') }
+$sparseDarkPaletteFlag = if ($NoSparseDarkPaletteRescue -or !$SparseDarkPaletteRescue) { @('--no-sparse-dark-palette-rescue') } else { @('--sparse-dark-palette-rescue') }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -442,7 +449,9 @@ foreach ($kind in @('clean', 'noisy'))
             --repeated-bridge-gain $RepeatedBridgeGain --repeated-bridge-energy $RepeatedBridgeEnergy `
             --repeated-bridge-radius $RepeatedBridgeRadius --repeated-bridge-tolerance $RepeatedBridgeTolerance `
             --repeated-bridge-neighbors $RepeatedBridgeNeighbors --repeated-bridge-opposition $RepeatedBridgeOpposition `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $auditArgs --passes $Passes
+            --sparse-dark-palette-tolerance $SparseDarkPaletteTolerance --sparse-dark-palette-max $SparseDarkPaletteMax `
+            --sparse-dark-palette-gain $SparseDarkPaletteGain --sparse-dark-palette-energy $SparseDarkPaletteEnergy `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $auditArgs --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"
