@@ -234,6 +234,18 @@ internal static class CleanDarkContoursCommand
           --contrast-consensus-min N    Доля согласных светлых соседей: 0–100 % (40).
           --contrast-consensus-gain N   Минимальное увеличение LAB L: 0–100 (60).
           --contrast-consensus-max-dark N Максимум тёмных соседей: 0–8 (3).
+          --repeated-dark-rescue        Проверять редкий повторяющийся тёмный цвет (включено).
+          --no-repeated-dark-rescue     Выключить эту проверку.
+          --repeated-dark-first-pass    Применять проверку только на первом проходе (включено).
+          --repeated-dark-all-passes    Применять её на каждом проходе.
+          --repeated-dark-protect-radius N Защита вокруг исправленной точки на следующих проходах: 0–2 (1).
+          --repeated-dark-min N         Минимум повторов цвета в изображении: 1–1000000 (4).
+          --repeated-dark-max N         Максимум повторов цвета в изображении: 1–1000000 (8).
+          --repeated-dark-neighbors-min N Минимум тёмных соседей: 0–8 (1).
+          --repeated-dark-neighbors-max N Максимум тёмных соседей: 0–8 (2).
+          --repeated-dark-lightness N   Максимальная светлота точки LAB L: 0–100 (2.5).
+          --repeated-dark-gain N        Минимальное увеличение LAB L: 0–100 (40).
+          --repeated-dark-energy N      Минимальное снижение перепада: 0–100 % (50).
           --color-tolerance N           Допуск светлых цветов в LAB: 0–100 (28).
           --min-lightness-gain N        Минимальное увеличение LAB L: 0–100 (20).
           --alpha-clearance N           Отступ от прозрачности в пикселях: 1–15 (1).
@@ -305,7 +317,9 @@ internal static class CleanDarkContoursCommand
                 symmetricPatchTolerance = 24, symmetricPatchOpposition = 50,
                 highContrastGain = 45, highContrastEnergy = 50,
                 highContrastTolerance = 24, highContrastOpposition = 50,
-                contrastConsensusMinimum = 40, contrastConsensusGain = 60;
+                contrastConsensusMinimum = 40, contrastConsensusGain = 60,
+                repeatedDarkGain = 40, repeatedDarkEnergy = 50,
+                repeatedDarkLightness = 2.5;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, twoCardinalBrightPattern = 0,
                 protectedContinuation = 3,
@@ -340,7 +354,9 @@ internal static class CleanDarkContoursCommand
                 symmetricPatchCardinal = 1, symmetricPatchRadius = 3,
                 symmetricPatchNeighbors = 5, highContrastRadius = 3,
                 highContrastNeighbors = 5, highContrastMaxDark = 2,
-                contrastConsensusMaxDark = 3;
+                contrastConsensusMaxDark = 3, repeatedDarkMin = 4,
+                repeatedDarkMax = 8, repeatedDarkNeighborsMin = 1,
+                repeatedDarkNeighborsMax = 2, repeatedDarkProtectRadius = 1;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
@@ -353,7 +369,8 @@ internal static class CleanDarkContoursCommand
                 threeGradientRescue = true,
                 weightedPatchRescue = true, extendedWeightedPatch = true,
                 symmetricPatchRescue = true, symmetricPatchFirstPass = true,
-                highContrastRescue = true, contrastConsensus = true;
+                highContrastRescue = true, contrastConsensus = true,
+                repeatedDarkRescue = true, repeatedDarkFirstPass = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -602,6 +619,18 @@ internal static class CleanDarkContoursCommand
                     case "--contrast-consensus-min": contrastConsensusMinimum = NextDouble(); break;
                     case "--contrast-consensus-gain": contrastConsensusGain = NextDouble(); break;
                     case "--contrast-consensus-max-dark": contrastConsensusMaxDark = NextInt(); break;
+                    case "--repeated-dark-rescue": repeatedDarkRescue = true; break;
+                    case "--no-repeated-dark-rescue": repeatedDarkRescue = false; break;
+                    case "--repeated-dark-first-pass": repeatedDarkFirstPass = true; break;
+                    case "--repeated-dark-all-passes": repeatedDarkFirstPass = false; break;
+                    case "--repeated-dark-protect-radius": repeatedDarkProtectRadius = NextInt(); break;
+                    case "--repeated-dark-min": repeatedDarkMin = NextInt(); break;
+                    case "--repeated-dark-max": repeatedDarkMax = NextInt(); break;
+                    case "--repeated-dark-neighbors-min": repeatedDarkNeighborsMin = NextInt(); break;
+                    case "--repeated-dark-neighbors-max": repeatedDarkNeighborsMax = NextInt(); break;
+                    case "--repeated-dark-lightness": repeatedDarkLightness = NextDouble(); break;
+                    case "--repeated-dark-gain": repeatedDarkGain = NextDouble(); break;
+                    case "--repeated-dark-energy": repeatedDarkEnergy = NextDouble(); break;
                     case "--color-tolerance": tolerance = NextDouble(); break;
                     case "--min-lightness-gain": gain = NextDouble(); break;
                     case "--alpha-clearance": clearance = NextInt(); break;
@@ -858,7 +887,15 @@ internal static class CleanDarkContoursCommand
                 UseHighContrastConsensus = contrastConsensus,
                 HighContrastConsensusThreshold = contrastConsensusMinimum / 100,
                 HighContrastConsensusMinimumGain = contrastConsensusGain,
-                HighContrastConsensusMaximumDarkNeighbors = contrastConsensusMaxDark
+                HighContrastConsensusMaximumDarkNeighbors = contrastConsensusMaxDark,
+                UseRepeatedDarkColorRescue = repeatedDarkRescue,
+                RepeatedDarkColorMinimumOccurrences = repeatedDarkMin,
+                RepeatedDarkColorMaximumOccurrences = repeatedDarkMax,
+                RepeatedDarkColorMinimumDarkNeighbors = repeatedDarkNeighborsMin,
+                RepeatedDarkColorMaximumDarkNeighbors = repeatedDarkNeighborsMax,
+                RepeatedDarkColorMaximumLightness = repeatedDarkLightness,
+                RepeatedDarkColorMinimumLightnessGain = repeatedDarkGain,
+                RepeatedDarkColorMinimumEnergyDrop = repeatedDarkEnergy / 100
             };
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
@@ -877,6 +914,8 @@ internal static class CleanDarkContoursCommand
                 throw new ArgumentException("Путь аудита должен отличаться от исходника и PNG результата.");
             if (auditPath is not null && File.Exists(auditPath) && !overwrite)
                 throw new IOException($"Файл аудита уже существует: {auditPath}. Используйте --overwrite.");
+            if (repeatedDarkProtectRadius is < 0 or > 2)
+                throw new ArgumentOutOfRangeException(nameof(repeatedDarkProtectRadius));
             if (auditPath is not null) Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
             using StreamWriter? auditWriter = auditPath is null ? null : new StreamWriter(auditPath, false);
             auditWriter?.WriteLine("pass,x,y,decision");
@@ -884,15 +923,36 @@ internal static class CleanDarkContoursCommand
             using var source = new Bitmap(inputPath);
             Bitmap current = source;
             int[] changed = new int[passes];
+            var repeatedDarkAccepted = new List<(int X, int Y)>();
+            bool[]? repeatedDarkProtection = null;
             try
             {
                 for (int q = 0; q < passes; q++)
                 {
-                    var passOptions = symmetricPatchFirstPass && q > 0 ?
-                        options with { UseSymmetricColorPatchRescue = false } : options;
+                    var passOptions = options;
+                    if (q > 0 && symmetricPatchFirstPass)
+                        passOptions = passOptions with { UseSymmetricColorPatchRescue = false };
+                    if (q > 0 && repeatedDarkFirstPass)
+                        passOptions = passOptions with { UseRepeatedDarkColorRescue = false };
+                    if (q == 1 && repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
+                        repeatedDarkAccepted.Count > 0)
+                    {
+                        repeatedDarkProtection = new bool[source.Width * source.Height];
+                        foreach ((int x, int y) in repeatedDarkAccepted)
+                            for (int dy = -repeatedDarkProtectRadius; dy <= repeatedDarkProtectRadius; dy++)
+                                for (int dx = -repeatedDarkProtectRadius; dx <= repeatedDarkProtectRadius; dx++)
+                                {
+                                    int px = x + dx, py = y + dy;
+                                    if (px >= 0 && py >= 0 && px < source.Width && py < source.Height)
+                                        repeatedDarkProtection[py * source.Width + px] = true;
+                                }
+                    }
                     var result = DarkContourNoiseCleaner.Clean(current, passOptions,
-                        auditWriter is null ? null : (x, y, decision) =>
-                            auditWriter.WriteLine($"{q + 1},{x},{y},{decision}"));
+                        auditWriter is null && !repeatedDarkRescue ? null : (x, y, decision) =>
+                        {
+                            auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
+                            if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
+                        }, repeatedDarkProtection);
                     if (!ReferenceEquals(current, source)) current.Dispose();
                     current = result.Image;
                     changed[q] = result.ChangedPixels;
@@ -907,7 +967,8 @@ internal static class CleanDarkContoursCommand
             if (json)
                 output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours", input = inputPath,
                     output = outputPath, width = source.Width, height = source.Height, changedPixels = changed.Sum(),
-                    changedPerPass = changed, symmetricPatchFirstPass, options }));
+                    changedPerPass = changed, symmetricPatchFirstPass, repeatedDarkFirstPass,
+                    repeatedDarkProtectRadius, options }));
             else
                 output.WriteLine($"Сохранено: {outputPath}; заменено пикселей: {changed.Sum()}.");
             return 0;

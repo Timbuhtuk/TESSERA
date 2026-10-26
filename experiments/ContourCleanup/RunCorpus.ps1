@@ -223,6 +223,17 @@ param(
     [double]$ContrastConsensusMin = 40,
     [double]$ContrastConsensusGain = 60,
     [int]$ContrastConsensusMaxDark = 3,
+    [switch]$RepeatedDarkRescue = $true,
+    [switch]$NoRepeatedDarkRescue,
+    [switch]$RepeatedDarkAllPasses,
+    [int]$RepeatedDarkProtectRadius = 1,
+    [int]$RepeatedDarkMin = 4,
+    [int]$RepeatedDarkMax = 8,
+    [int]$RepeatedDarkNeighborsMin = 1,
+    [int]$RepeatedDarkNeighborsMax = 2,
+    [double]$RepeatedDarkLightness = 2.5,
+    [double]$RepeatedDarkGain = 40,
+    [double]$RepeatedDarkEnergy = 50,
     [switch]$CandidateAudit,
     [int]$Passes = 1
 )
@@ -269,6 +280,8 @@ $symmetricPatchFlag = if ($NoSymmetricPatchRescue) { @('--no-symmetric-patch-res
 $symmetricFirstPassFlag = if ($SymmetricPatchAllPasses) { @('--symmetric-patch-all-passes') } else { @('--symmetric-patch-first-pass') }
 $highContrastFlag = if ($NoHighContrastRescue -or !$HighContrastRescue) { @('--no-high-contrast-rescue') } else { @('--high-contrast-rescue') }
 $contrastConsensusFlag = if ($NoContrastConsensus -or !$ContrastConsensus) { @('--no-contrast-consensus') } else { @('--contrast-consensus') }
+$repeatedDarkFlag = if ($NoRepeatedDarkRescue -or !$RepeatedDarkRescue) { @('--no-repeated-dark-rescue') } else { @('--repeated-dark-rescue') }
+$repeatedDarkPassFlag = if ($RepeatedDarkAllPasses) { @('--repeated-dark-all-passes') } else { @('--repeated-dark-first-pass') }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -411,7 +424,13 @@ foreach ($kind in @('clean', 'noisy'))
             --high-contrast-neighbors $HighContrastNeighbors --high-contrast-opposition $HighContrastOpposition `
             --contrast-consensus-min $ContrastConsensusMin --contrast-consensus-gain $ContrastConsensusGain `
             --contrast-consensus-max-dark $ContrastConsensusMaxDark `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $auditArgs --passes $Passes
+            --repeated-dark-min $RepeatedDarkMin --repeated-dark-max $RepeatedDarkMax `
+            --repeated-dark-neighbors-min $RepeatedDarkNeighborsMin `
+            --repeated-dark-neighbors-max $RepeatedDarkNeighborsMax `
+            --repeated-dark-lightness $RepeatedDarkLightness `
+            --repeated-dark-gain $RepeatedDarkGain --repeated-dark-energy $RepeatedDarkEnergy `
+            --repeated-dark-protect-radius $RepeatedDarkProtectRadius `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $auditArgs --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

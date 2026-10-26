@@ -161,6 +161,14 @@ public static class DarkContourNoiseCleaner
         public double HighContrastConsensusThreshold { get; init; } = 0.4;
         public double HighContrastConsensusMinimumGain { get; init; } = 60;
         public int HighContrastConsensusMaximumDarkNeighbors { get; init; } = 3;
+        public bool UseRepeatedDarkColorRescue { get; init; }
+        public int RepeatedDarkColorMinimumOccurrences { get; init; } = 4;
+        public int RepeatedDarkColorMaximumOccurrences { get; init; } = 8;
+        public int RepeatedDarkColorMinimumDarkNeighbors { get; init; } = 1;
+        public int RepeatedDarkColorMaximumDarkNeighbors { get; init; } = 2;
+        public double RepeatedDarkColorMaximumLightness { get; init; } = 2.5;
+        public double RepeatedDarkColorMinimumLightnessGain { get; init; } = 40;
+        public double RepeatedDarkColorMinimumEnergyDrop { get; init; } = 0.5;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -181,7 +189,7 @@ public static class DarkContourNoiseCleaner
     private readonly record struct RepeatEvidence(bool DarkPeer, bool BrightPeer);
     private readonly record struct Proposal(int Index, Color Color, int DarkNeighbors,
         int CardinalDarkNeighbors, int Dark5Support, double Consensus, double LightnessGain,
-        double LocalGradientRatio);
+        double LocalGradientRatio, bool RepeatedDarkRescue);
     private readonly record struct Gradient(double X, double Y)
     {
         public double Length => Math.Sqrt(X * X + Y * Y);
@@ -190,7 +198,8 @@ public static class DarkContourNoiseCleaner
         double Alignment);
     private sealed record DarkComponent(int[] Pixels, int MinX, int MinY, int MaxX, int MaxY);
 
-    public static Result Clean(Bitmap source, Options options, Action<int, int, string>? audit = null)
+    public static Result Clean(Bitmap source, Options options, Action<int, int, string>? audit = null,
+        bool[]? protectedPixels = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
@@ -309,6 +318,18 @@ public static class DarkContourNoiseCleaner
             !double.IsFinite(options.HighContrastConsensusMinimumGain) ||
             options.HighContrastConsensusMinimumGain is < 0 or > 100 ||
             options.HighContrastConsensusMaximumDarkNeighbors is < 0 or > 8 ||
+            options.RepeatedDarkColorMinimumOccurrences is < 1 or > 1000000 ||
+            options.RepeatedDarkColorMaximumOccurrences is < 1 or > 1000000 ||
+            options.RepeatedDarkColorMinimumOccurrences > options.RepeatedDarkColorMaximumOccurrences ||
+            options.RepeatedDarkColorMinimumDarkNeighbors is < 0 or > 8 ||
+            options.RepeatedDarkColorMaximumDarkNeighbors is < 0 or > 8 ||
+            options.RepeatedDarkColorMinimumDarkNeighbors > options.RepeatedDarkColorMaximumDarkNeighbors ||
+            !double.IsFinite(options.RepeatedDarkColorMaximumLightness) ||
+            options.RepeatedDarkColorMaximumLightness is < 0 or > 100 ||
+            !double.IsFinite(options.RepeatedDarkColorMinimumLightnessGain) ||
+            options.RepeatedDarkColorMinimumLightnessGain is < 0 or > 100 ||
+            !double.IsFinite(options.RepeatedDarkColorMinimumEnergyDrop) ||
+            options.RepeatedDarkColorMinimumEnergyDrop is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -475,6 +496,8 @@ public static class DarkContourNoiseCleaner
             !double.IsFinite(options.MinimumBrightConsensus) || options.MinimumBrightConsensus is < 0 or > 1)
             throw new ArgumentOutOfRangeException(nameof(options), "Некорректные параметры очистки тёмных контуров.");
         int width = source.Width, height = source.Height;
+        if (protectedPixels is not null && protectedPixels.Length != width * height)
+            throw new ArgumentException("Размер карты защищённых пикселей не совпадает с изображением.", nameof(protectedPixels));
         var original = new Color[width * height];
         var dark = new bool[original.Length];
         for (int y = 0; y < height; y++)
@@ -484,6 +507,15 @@ public static class DarkContourNoiseCleaner
                 Color color = source.GetPixel(x, y);
                 original[index] = color;
                 dark[index] = color.A > 0 && Lab(color).L < options.DarkLightness;
+            }
+        var darkColorOccurrences = new Dictionary<int, int>();
+        if (options.UseRepeatedDarkColorRescue)
+            for (int q = 0; q < original.Length; q++)
+            {
+                if (!dark[q]) continue;
+                int color = original[q].ToArgb();
+                darkColorOccurrences.TryGetValue(color, out int count);
+                darkColorOccurrences[color] = count + 1;
             }
         var (componentSizes, componentIds, components) = FindDarkComponents(dark, width, height);
         int largestComponent = componentSizes.Max();
@@ -525,6 +557,8 @@ public static class DarkContourNoiseCleaner
             {
                 int index = y * width + x;
                 if (!dark[index]) continue;
+                if (protectedPixels is not null && protectedPixels[index])
+                { audit?.Invoke(x, y, "inter-pass-protection"); continue; }
                 if (!HasAlphaClearance(original, width, height, x, y, options.AlphaClearance))
                 { audit?.Invoke(x, y, "alpha-clearance"); continue; }
                 var surrounding = new List<NeighborColor>(8);
@@ -549,6 +583,13 @@ public static class DarkContourNoiseCleaner
                     cardinalDarkNeighbors > options.MaximumCardinalDarkNeighbors ||
                     surrounding.Count < 5)
                 { audit?.Invoke(x, y, "dark-neighbors"); continue; }
+                bool repeatedDarkColor = options.UseRepeatedDarkColorRescue &&
+                    Lab(original[index]).L <= options.RepeatedDarkColorMaximumLightness &&
+                    darkNeighbors >= options.RepeatedDarkColorMinimumDarkNeighbors &&
+                    darkNeighbors <= options.RepeatedDarkColorMaximumDarkNeighbors &&
+                    darkColorOccurrences.TryGetValue(original[index].ToArgb(), out int occurrences) &&
+                    occurrences >= options.RepeatedDarkColorMinimumOccurrences &&
+                    occurrences <= options.RepeatedDarkColorMaximumOccurrences;
                 if (cardinalDarkNeighbors == 2 &&
                     options.TwoCardinalMinimumBrightPatternMatches > 0)
                 {
@@ -603,10 +644,12 @@ public static class DarkContourNoiseCleaner
                     Lab(original[index]).L <= options.ThreeNeighborGradientMaximumLightness &&
                     DistinctRingColors(original, width, x, y) >=
                         options.ThreeNeighborGradientMinimumDistinctColors;
-                if (!colorPatchMatch && !options.UseColorPatchEnergyRescue &&
+                bool noOtherPatchEntry = !colorPatchMatch && !options.UseColorPatchEnergyRescue &&
                     !threeNeighborEnergyRescue && !texturedGradientRescue &&
                     !singleDiagonalRescue && !threeNeighborGradientRescue &&
-                    !extendedTexturedPatch && !symmetricPatchRescue)
+                    !extendedTexturedPatch && !symmetricPatchRescue;
+                bool repeatedDarkEntry = noOtherPatchEntry && repeatedDarkColor;
+                if (noOtherPatchEntry && !repeatedDarkColor)
                 { audit?.Invoke(x, y, "color-patch"); continue; }
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
@@ -794,6 +837,7 @@ public static class DarkContourNoiseCleaner
                         options.VerticalShadeSearchRadius, options.VerticalShadeColorTolerance,
                         out Color verticalColor))
                     replacement = verticalColor;
+                bool repeatedDarkOnly = repeatedDarkEntry;
                 if (!colorPatchMatch)
                 {
                     bool globalEnergyRescue = options.UseColorPatchEnergyRescue &&
@@ -874,9 +918,19 @@ public static class DarkContourNoiseCleaner
                             options.HighContrastColorTolerance,
                             options.HighContrastMinimumSimilarNeighbors,
                             options.HighContrastMinimumOpposition);
+                    bool repeatedDarkRescue = repeatedDarkColor &&
+                        Lab(replacement).L - Lab(original[index]).L >=
+                            options.RepeatedDarkColorMinimumLightnessGain &&
+                        HasColorPatchEnergyRescue(original, width, x, y, replacement,
+                            options.RepeatedDarkColorMinimumEnergyDrop);
+                    repeatedDarkOnly |= repeatedDarkRescue && !globalEnergyRescue && !localEnergyRescue &&
+                        !texturedRescue && !singleDiagonalGradientRescue &&
+                        !threeNeighborGradientAllowed && !extendedTexturedAllowed &&
+                        !symmetricPatchAllowed && !highContrastRescue;
                     if (!globalEnergyRescue && !localEnergyRescue && !texturedRescue &&
                         !singleDiagonalGradientRescue && !threeNeighborGradientAllowed &&
-                        !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue)
+                        !extendedTexturedAllowed && !symmetricPatchAllowed && !highContrastRescue &&
+                        !repeatedDarkRescue)
                     { audit?.Invoke(x, y, "color-rescue-evidence"); continue; }
                 }
                 if (options.RequireCommonGradient &&
@@ -890,7 +944,7 @@ public static class DarkContourNoiseCleaner
                     1, options.CommonColorTolerance, 1, out GradientEvidence localEvidence) ?
                     localEvidence.MagnitudeRatio : 0;
                 proposals.Add(new Proposal(index, restored, darkNeighbors, cardinalDarkNeighbors,
-                    dark5Support, colorConsensus, lightnessGain, localGradientRatio));
+                    dark5Support, colorConsensus, lightnessGain, localGradientRatio, repeatedDarkOnly));
             }
 
         var accepted = new List<Proposal>();
@@ -908,7 +962,7 @@ public static class DarkContourNoiseCleaner
             { audit?.Invoke(x, y, "proposal-conflict"); continue; }
             accepted.Add(proposal);
             output[proposal.Index] = proposal.Color;
-            audit?.Invoke(x, y, "accepted");
+            audit?.Invoke(x, y, proposal.RepeatedDarkRescue ? "accepted-repeated-dark" : "accepted");
         }
 
         var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
