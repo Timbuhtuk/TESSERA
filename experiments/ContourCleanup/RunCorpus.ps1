@@ -271,7 +271,7 @@ param(
     [int]$ExemplarExclusion = 3,
     [switch]$NoExemplarMaterialVeto,
     [int]$ExemplarMaterialError = 10000,
-    [double]$ExemplarMaterialSource = 50,
+    [double]$ExemplarMaterialSource = 100,
     [double]$ExemplarMaterialBright = 40,
     [double]$ExemplarMaterialDrop = 20,
     [double]$ExemplarMaterialAgreementDistance = 20,

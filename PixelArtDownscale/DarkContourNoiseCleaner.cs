@@ -201,7 +201,7 @@ public static class DarkContourNoiseCleaner
         public int ExemplarExclusionRadius { get; init; } = 3;
         public bool UseExemplarMaterialVeto { get; init; } = true;
         public int ExemplarMaterialMaximumRingError { get; init; } = 10000;
-        public double ExemplarMaterialMaximumSourceDistance { get; init; } = 50;
+        public double ExemplarMaterialMaximumSourceDistance { get; init; } = 100;
         public double ExemplarMaterialMinimumProposalBrightness { get; init; } = 40;
         public double ExemplarMaterialMinimumBrightnessDrop { get; init; } = 20;
         public double ExemplarMaterialAgreementDistance { get; init; } = 20;
