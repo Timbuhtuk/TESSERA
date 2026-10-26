@@ -314,8 +314,11 @@ internal static class CleanDarkContoursCommand
           --confirmed-group-exemplar    Сравнивать оставшиеся точки подтверждённой группы с образцами (включено).
           --no-confirmed-group-exemplar Выключить дополнительную проверку группы.
           --confirmed-group-prior N     Минимум уже исправленных точек цвета: 1–1000000 (3).
-          --confirmed-group-ratio N     Максимум отношения ошибок светлого и тёмного образца: 0–100 (0.1).
+          --confirmed-group-ratio N     Максимум отношения ошибок светлого и тёмного образца: 0–100 (0.4).
           --confirmed-group-gain N      Минимальный прирост LAB L: 0–100 (20).
+          --confirmed-group-direct-error N Максимальная ошибка кольца для прямого выбора цвета: 0–100000000 (5000).
+          --confirmed-group-flat-colors N До скольких цветов сохранять оттенок образца: 1–1000000 (256).
+          --confirmed-group-protect-radius N Защита соседей после групповой замены: 0–2 (1).
           --sparse-palette-consensus     Допуск низкого согласия при редком оттенке (включён).
           --no-sparse-palette-consensus  Выключить этот допуск.
           --sparse-palette-consensus-tolerance N Допуск других оттенков LAB: 0–100 (0.5).
@@ -417,7 +420,7 @@ internal static class CleanDarkContoursCommand
                 exemplarRatio = 20, groupedPaletteAverage = 5, groupedPaletteHighAverage = 4,
                 groupedPaletteSpacing = 8, groupedPaletteRatio = 1.5,
                 groupedPaletteHighRatio = 1,
-                groupedPaletteGain = 20, confirmedGroupRatio = 0.1,
+                groupedPaletteGain = 20, confirmedGroupRatio = 0.4,
                 confirmedGroupGain = 20, exemplarMaterialSource = 100,
                 exemplarMaterialBright = 40, exemplarMaterialDrop = 20,
                 exemplarMaterialAgreementDistance = 20;
@@ -471,6 +474,8 @@ internal static class CleanDarkContoursCommand
                 groupedPaletteNearDistance = 4, groupedPaletteNearMax = 160,
                 groupedPaletteHighNear = 40, groupedPalettePriorNear = 80,
                 groupedPalettePriorMin = 2, confirmedGroupPrior = 3,
+                confirmedGroupDirectError = 5000, confirmedGroupFlatColors = 256,
+                confirmedGroupProtectRadius = 1,
                 groupedPaletteSupport = 4, groupedPaletteBright = 5,
                 groupedPaletteDark = 3, exemplarMaterialError = 20000,
                 exemplarMaterialAgreement = 2, exemplarMaterialNeighbors = 10;
@@ -826,6 +831,9 @@ internal static class CleanDarkContoursCommand
                     case "--confirmed-group-prior": confirmedGroupPrior = NextInt(); break;
                     case "--confirmed-group-ratio": confirmedGroupRatio = NextDouble(); break;
                     case "--confirmed-group-gain": confirmedGroupGain = NextDouble(); break;
+                    case "--confirmed-group-direct-error": confirmedGroupDirectError = NextInt(); break;
+                    case "--confirmed-group-flat-colors": confirmedGroupFlatColors = NextInt(); break;
+                    case "--confirmed-group-protect-radius": confirmedGroupProtectRadius = NextInt(); break;
                     case "--sparse-palette-consensus": sparsePaletteConsensus = true; break;
                     case "--no-sparse-palette-consensus": sparsePaletteConsensus = false; break;
                     case "--sparse-palette-consensus-tolerance": sparsePaletteConsensusTolerance = NextDouble(); break;
@@ -1169,6 +1177,8 @@ internal static class CleanDarkContoursCommand
                 ConfirmedGroupExemplarMinimumPriorChanges = confirmedGroupPrior,
                 ConfirmedGroupExemplarMaximumRatio = confirmedGroupRatio,
                 ConfirmedGroupExemplarMinimumLightnessGain = confirmedGroupGain,
+                ConfirmedGroupExemplarMaximumRepresentativeRingError = confirmedGroupDirectError,
+                ConfirmedGroupExemplarMaximumFlatPaletteColors = confirmedGroupFlatColors,
                 UseSparsePaletteConsensusRescue = sparsePaletteConsensus,
                 SparsePaletteConsensusColorTolerance = sparsePaletteConsensusTolerance,
                 SparsePaletteConsensusMaximumSimilarPixels = sparsePaletteConsensusMax,
@@ -1199,6 +1209,8 @@ internal static class CleanDarkContoursCommand
                 throw new IOException($"Файл аудита уже существует: {auditPath}. Используйте --overwrite.");
             if (repeatedDarkProtectRadius is < 0 or > 2)
                 throw new ArgumentOutOfRangeException(nameof(repeatedDarkProtectRadius));
+            if (confirmedGroupProtectRadius is < 0 or > 2)
+                throw new ArgumentOutOfRangeException(nameof(confirmedGroupProtectRadius));
             if (auditPath is not null) Directory.CreateDirectory(Path.GetDirectoryName(auditPath)!);
             using StreamWriter? auditWriter = auditPath is null ? null : new StreamWriter(auditPath, false);
             auditWriter?.WriteLine("pass,x,y,decision");
@@ -1242,6 +1254,7 @@ internal static class CleanDarkContoursCommand
             Bitmap current = source;
             int[] changed = new int[passes];
             var repeatedDarkAccepted = new List<(int X, int Y)>();
+            var confirmedGroupAccepted = new List<(int X, int Y)>();
             var firstPassMaterialVetoes = new List<(int X, int Y)>();
             bool[]? interPassProtection = null;
             try
@@ -1266,6 +1279,7 @@ internal static class CleanDarkContoursCommand
                         };
                     if (q == 1 && ((repeatedDarkFirstPass && repeatedDarkProtectRadius > 0 &&
                         repeatedDarkAccepted.Count > 0) ||
+                        (confirmedGroupProtectRadius > 0 && confirmedGroupAccepted.Count > 0) ||
                         (exemplarMaterialInterpass && firstPassMaterialVetoes.Count > 0)))
                     {
                         interPassProtection = new bool[source.Width * source.Height];
@@ -1282,13 +1296,25 @@ internal static class CleanDarkContoursCommand
                             foreach ((int x, int y) in firstPassMaterialVetoes)
                                 if (source.GetPixel(x, y).ToArgb() == current.GetPixel(x, y).ToArgb())
                                     interPassProtection[y * source.Width + x] = true;
+                        if (confirmedGroupProtectRadius > 0)
+                            foreach ((int x, int y) in confirmedGroupAccepted)
+                                for (int dy = -confirmedGroupProtectRadius; dy <= confirmedGroupProtectRadius; dy++)
+                                    for (int dx = -confirmedGroupProtectRadius; dx <= confirmedGroupProtectRadius; dx++)
+                                    {
+                                        int px = x + dx, py = y + dy;
+                                        if (px >= 0 && py >= 0 && px < source.Width && py < source.Height)
+                                            interPassProtection[py * source.Width + px] = true;
+                                    }
                     }
                     var result = DarkContourNoiseCleaner.Clean(current, passOptions,
                         auditWriter is null && !repeatedDarkRescue &&
-                        !(exemplarMaterialVeto && exemplarMaterialInterpass) ? null : (x, y, decision) =>
+                        !(exemplarMaterialVeto && exemplarMaterialInterpass) &&
+                        !confirmedGroupExemplar ? null : (x, y, decision) =>
                         {
                             auditWriter?.WriteLine($"{q + 1},{x},{y},{decision}");
                             if (decision == "accepted-repeated-dark") repeatedDarkAccepted.Add((x, y));
+                            if (decision == "accepted-confirmed-group-exemplar")
+                                confirmedGroupAccepted.Add((x, y));
                             if (q == 0 && exemplarMaterialInterpass && decision == "exemplar-material-veto")
                                 firstPassMaterialVetoes.Add((x, y));
                         }, interPassProtection);
@@ -1307,7 +1333,8 @@ internal static class CleanDarkContoursCommand
                 output.WriteLine(JsonSerializer.Serialize(new { process = "clean-dark-contours", input = inputPath,
                     output = outputPath, width = source.Width, height = source.Height, changedPixels = changed.Sum(),
                     changedPerPass = changed, symmetricPatchFirstPass, repeatedDarkFirstPass,
-                    repeatedDarkProtectRadius, exemplarMaterialInterpass, options }));
+                    repeatedDarkProtectRadius, confirmedGroupProtectRadius,
+                    exemplarMaterialInterpass, options }));
             else
                 output.WriteLine($"Сохранено: {outputPath}; заменено пикселей: {changed.Sum()}.");
             return 0;

@@ -298,8 +298,11 @@ param(
     [double]$GroupedPaletteGain = 20,
     [switch]$NoConfirmedGroupExemplar,
     [int]$ConfirmedGroupPrior = 3,
-    [double]$ConfirmedGroupRatio = 0.1,
+    [double]$ConfirmedGroupRatio = 0.4,
     [double]$ConfirmedGroupGain = 20,
+    [int]$ConfirmedGroupDirectError = 5000,
+    [int]$ConfirmedGroupFlatColors = 256,
+    [int]$ConfirmedGroupProtectRadius = 1,
     [switch]$SparsePaletteConsensus = $true,
     [switch]$NoSparsePaletteConsensus,
     [double]$SparsePaletteConsensusTolerance = 0.5,
@@ -548,7 +551,9 @@ foreach ($kind in @('clean', 'noisy'))
             --grouped-palette-spacing $GroupedPaletteSpacing `
             --grouped-palette-ratio $GroupedPaletteRatio --grouped-palette-gain $GroupedPaletteGain `
             --confirmed-group-prior $ConfirmedGroupPrior --confirmed-group-ratio $ConfirmedGroupRatio `
-            --confirmed-group-gain $ConfirmedGroupGain `
+            --confirmed-group-gain $ConfirmedGroupGain --confirmed-group-direct-error $ConfirmedGroupDirectError `
+            --confirmed-group-flat-colors $ConfirmedGroupFlatColors `
+            --confirmed-group-protect-radius $ConfirmedGroupProtectRadius `
             --sparse-palette-consensus-tolerance $SparsePaletteConsensusTolerance --sparse-palette-consensus-max $SparsePaletteConsensusMax `
             --sparse-palette-consensus-gain $SparsePaletteConsensusGain --sparse-palette-consensus-energy $SparsePaletteConsensusEnergy `
             --sparse-palette-three-tolerance $SparsePaletteThreeTolerance --sparse-palette-three-max $SparsePaletteThreeMax `

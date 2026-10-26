@@ -227,8 +227,10 @@ public static class DarkContourNoiseCleaner
         public double GroupedPaletteMinimumLightnessGain { get; init; } = 20;
         public bool UseConfirmedGroupExemplarRescue { get; init; } = true;
         public int ConfirmedGroupExemplarMinimumPriorChanges { get; init; } = 3;
-        public double ConfirmedGroupExemplarMaximumRatio { get; init; } = 0.1;
+        public double ConfirmedGroupExemplarMaximumRatio { get; init; } = 0.4;
         public double ConfirmedGroupExemplarMinimumLightnessGain { get; init; } = 20;
+        public int ConfirmedGroupExemplarMaximumRepresentativeRingError { get; init; } = 5000;
+        public int ConfirmedGroupExemplarMaximumFlatPaletteColors { get; init; } = 256;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -481,6 +483,8 @@ public static class DarkContourNoiseCleaner
             options.ConfirmedGroupExemplarMaximumRatio is < 0 or > 100 ||
             !double.IsFinite(options.ConfirmedGroupExemplarMinimumLightnessGain) ||
             options.ConfirmedGroupExemplarMinimumLightnessGain is < 0 or > 100 ||
+            options.ConfirmedGroupExemplarMaximumRepresentativeRingError is < 0 or > 100000000 ||
+            options.ConfirmedGroupExemplarMaximumFlatPaletteColors is < 1 or > 1000000 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -1486,8 +1490,14 @@ public static class DarkContourNoiseCleaner
 
     private static bool HasBrightExemplar(Color[] colors, int width, int height, int x, int y,
         Options options, double maximumRatio)
+        => HasBrightExemplar(colors, width, height, x, y, options, maximumRatio,
+            out _, out _);
+
+    private static bool HasBrightExemplar(Color[] colors, int width, int height, int x, int y,
+        Options options, double maximumRatio, out Color brightColor, out double brightError)
     {
         double bestBright = double.PositiveInfinity, bestDark = double.PositiveInfinity;
+        brightColor = Color.Empty;
         for (int sampleY = 1; sampleY < height - 1; sampleY++)
             for (int sampleX = 1; sampleX < width - 1; sampleX++)
             {
@@ -1515,11 +1525,49 @@ public static class DarkContourNoiseCleaner
                         difference += red * red + green * green + blue * blue;
                     }
                 if (!visible) continue;
-                if (bright) bestBright = Math.Min(bestBright, difference);
+                if (bright)
+                {
+                    if (difference < bestBright)
+                    {
+                        bestBright = difference;
+                        brightColor = center;
+                    }
+                }
                 else bestDark = Math.Min(bestDark, difference);
             }
+        brightError = bestBright;
         return double.IsFinite(bestBright) && double.IsFinite(bestDark) && bestDark > 0 &&
             bestBright <= bestDark * maximumRatio;
+    }
+
+    private static Color InterpolateAlongExemplar(Color[] colors, int width, int x, int y,
+        Color exemplar)
+    {
+        Color best = Color.Empty;
+        int bestDistance = int.MaxValue;
+        for (int q = 0; q < 4; q++)
+        {
+            (int dx, int dy) = q switch
+            {
+                0 => (1, 0),
+                1 => (0, 1),
+                2 => (1, 1),
+                _ => (1, -1)
+            };
+            Color a = colors[(y - dy) * width + x - dx];
+            Color b = colors[(y + dy) * width + x + dx];
+            Color middle = Color.FromArgb(255,
+                (int)Math.Round((a.R + b.R) / 2.0),
+                (int)Math.Round((a.G + b.G) / 2.0),
+                (int)Math.Round((a.B + b.B) / 2.0));
+            int dr = middle.R - exemplar.R, dg = middle.G - exemplar.G,
+                db = middle.B - exemplar.B;
+            int distance = dr * dr + dg * dg + db * db;
+            if (distance >= bestDistance) continue;
+            bestDistance = distance;
+            best = middle;
+        }
+        return best;
     }
 
     private static bool HasOriginalMaterialExemplar(Color[] colors, int width, int height,
@@ -1713,6 +1761,15 @@ public static class DarkContourNoiseCleaner
         }
         if (!options.UseConfirmedGroupExemplarRescue) return changed;
 
+        var uniqueColors = new HashSet<int>();
+        foreach (Color color in original)
+        {
+            if (color.A == 0) continue;
+            uniqueColors.Add(color.ToArgb());
+            if (uniqueColors.Count > options.ConfirmedGroupExemplarMaximumFlatPaletteColors) break;
+        }
+        bool flatPalette = uniqueColors.Count <= options.ConfirmedGroupExemplarMaximumFlatPaletteColors;
+
         foreach (KeyValuePair<int, List<(int X, int Y)>> group in groups)
         {
             List<(int X, int Y)> points = group.Value;
@@ -1734,7 +1791,8 @@ public static class DarkContourNoiseCleaner
                     protectedPixels is not null && protectedPixels[index] ||
                     !HasAlphaClearance(original, width, height, x, y, options.AlphaClearance) ||
                     !HasBrightExemplar(original, width, height, x, y, options,
-                        options.ConfirmedGroupExemplarMaximumRatio)) continue;
+                        options.ConfirmedGroupExemplarMaximumRatio,
+                        out Color exemplar, out double ringError)) continue;
                 var surrounding = new List<NeighborColor>(8);
                 for (int dy = -1; dy <= 1; dy++)
                     for (int dx = -1; dx <= 1; dx++)
@@ -1747,7 +1805,10 @@ public static class DarkContourNoiseCleaner
                             dx == 0 || dy == 0 ? options.CardinalColorWeight : 1));
                     }
                 if (surrounding.Count < 3) continue;
-                Color replacement = BrightRepresentative(surrounding, options.BrightColorTolerance);
+                Color replacement = ringError <=
+                    options.ConfirmedGroupExemplarMaximumRepresentativeRingError ?
+                    BrightRepresentative(surrounding, options.BrightColorTolerance) :
+                    flatPalette ? exemplar : InterpolateAlongExemplar(original, width, x, y, exemplar);
                 if (Lab(replacement).L - Lab(original[index]).L <
                     options.ConfirmedGroupExemplarMinimumLightnessGain ||
                     options.UseExemplarMaterialVeto && HasOriginalMaterialExemplar(original,
