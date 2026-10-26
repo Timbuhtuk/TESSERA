@@ -43,6 +43,7 @@ Read the installed command's help before choosing unfamiliar flags. The bundled 
 | One pixel per already aligned cell | `reduce-grid` or `compact-grid` |
 | Change size independently | `resize` |
 | Quantize colors or apply a palette independently | `colors` |
+| Reduce a prefiltered palette using connected color areas | `connected-palette` |
 | Clean up nearby shades and protect details and edges | `smooth-colors` or `smooth` |
 | Convert visible pixels to grayscale | `monochrome` or `mono` |
 | Export ASCII text or a rendered ASCII image | `ascii` |

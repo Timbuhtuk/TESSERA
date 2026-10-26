@@ -217,6 +217,17 @@ For downscaling, the report includes absolute paths, source/crop/result dimensio
 tessera clean-contours input.png -o result.png --window-size 3 --similar-color-distance 24 --min-pixel-gradient 120 --min-neighbor-gradient 80 --min-similar-neighbors 2 --min-agreement 35 --min-opposition 10 --candidates-output candidates.png --json
 ```
 
+## Experimental connected palette
+
+`connected-palette` reduces the visible RGB palette before grid downscaling, using connected color areas, spatial concentration and color difference to estimate the cost of removing a color. The result uses only colors from its input palette. It keeps width, height, pixel positions and every alpha value, and does not add dithering. A preliminary Median Cut or K-means pass is recommended for rich source images; this first implementation accepts up to 4096 visible RGB colors.
+
+```powershell
+tessera colors input.png -o intermediate.png --color-mode quantization --quantization median-cut --quantization-colors 1024
+tessera connected-palette intermediate.png -o palette128.png --colors 128 --connectivity 70 --tile-size 32 --local-weight 40 --detail-weight 50 --context-weight 30 --space oklab --json
+```
+
+`--colors` accepts 1–4096 (default 128). `--connectivity`, `--local-weight`, `--detail-weight`, and `--context-weight` accept 0–100 percent (defaults 70, 40, 50, 30). `--tile-size` accepts 0 to disable local analysis, or 4–256 pixels (default 32). `--space` selects `oklab` (default) or `lab`. Each exact RGB color is analyzed in eight-connected components. The removal cost combines pixel count, component concentration, local tile concentration, and the distance to the nearest remaining color. Removed components can choose different retained colors according to their four-neighbor boundary. This is a test tool: a rare eye, speckle and highlight can remain ambiguous; inspect the result before grid compression. The desktop equivalent is **Tools → Color → Connected palette…**, with native preview and a saved result.
+
 ## Dark contour and grid speckle cleanup (2.9+)
 
 `clean-dark-contours` is a CLI tool for isolated dark outliers near contours. It writes a separate PNG, retaining dimensions and every alpha value. Correction colors are estimates from neighboring material, rather than recovery of an unknown original. Review the output before using it as an asset.
