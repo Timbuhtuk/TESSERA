@@ -14,6 +14,7 @@ internal static class CorpusEvaluator
         using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(root, "manifest.json")));
         var scores = new List<Score>();
         var missed = new List<(string Id, int X, int Y)>();
+        var cleanDamagePoints = new List<(string Id, int X, int Y)>();
         var featureRows = new List<string> { "label,id,x,y,component,largest,component4,largest4,dark8,dark4,dark5,run2,opposite,clearance,trueGain,ring,expectedConsensus" };
         string review = Path.Combine(root, "review-after");
         Directory.CreateDirectory(review);
@@ -73,6 +74,7 @@ internal static class CorpusEvaluator
                     if (cleanResult.GetPixel(x, y).ToArgb() != expected.ToArgb())
                     {
                         cleanDamage++;
+                        cleanDamagePoints.Add((id, x, y));
                         featureRows.Add(Features("clean_damage", id, clean, x, y, cleanComponents, cleanComponents4, expected));
                     }
                 }
@@ -83,7 +85,8 @@ internal static class CorpusEvaluator
         }
         foreach (string motif in scores.Select(score => score.Motif).Distinct())
             SaveMotifReview(root, review, motif, scores.Where(score => score.Motif == motif).ToArray());
-        SaveMissedAtlas(root, review, missed);
+        SavePointAtlas(root, review, missed, false);
+        if (cleanDamagePoints.Count > 0) SavePointAtlas(root, review, cleanDamagePoints, true);
         var aggregate = new
         {
             images = scores.Count,
@@ -292,13 +295,14 @@ internal static class CorpusEvaluator
         sheet.Save(Path.Combine(review, motif + ".png"), ImageFormat.Png);
     }
 
-    private static void SaveMissedAtlas(string root, string review, List<(string Id, int X, int Y)> missed)
+    private static void SavePointAtlas(string root, string review,
+        List<(string Id, int X, int Y)> pointsToShow, bool cleanControl)
     {
         const int crop = 9, scale = 16, panel = crop * scale, gap = 12, row = 175;
         const int pageSize = 40;
-        for (int page = 0; page < Math.Max(1, (missed.Count + pageSize - 1) / pageSize); page++)
+        for (int page = 0; page < Math.Max(1, (pointsToShow.Count + pageSize - 1) / pageSize); page++)
         {
-            var points = missed.Skip(page * pageSize).Take(pageSize).ToArray();
+            var points = pointsToShow.Skip(page * pageSize).Take(pageSize).ToArray();
             using var sheet = new Bitmap(3 * panel + 4 * gap, Math.Max(1, points.Length) * row,
                 PixelFormat.Format32bppArgb);
             using var g = Graphics.FromImage(sheet);
@@ -310,10 +314,11 @@ internal static class CorpusEvaluator
             {
                 var point = points[q];
                 using var clean = new Bitmap(Path.Combine(root, "clean", point.Id + ".png"));
-                using var noisy = new Bitmap(Path.Combine(root, "noisy", point.Id + ".png"));
-                using var result = new Bitmap(Path.Combine(root, "processed-noisy", point.Id + ".png"));
+                using var noisy = new Bitmap(Path.Combine(root, cleanControl ? "clean" : "noisy", point.Id + ".png"));
+                using var result = new Bitmap(Path.Combine(root,
+                    cleanControl ? "processed-clean" : "processed-noisy", point.Id + ".png"));
                 Bitmap[] images = [clean, noisy, result];
-                string[] labels = ["clean", "noisy", "Tessera"];
+                string[] labels = ["clean", cleanControl ? "original" : "noisy", "Tessera"];
                 for (int e = 0; e < 3; e++)
                 {
                     int left = gap + e * (panel + gap), top = q * row;
@@ -325,7 +330,8 @@ internal static class CorpusEvaluator
                     g.DrawRectangle(pen, left + 4 * scale, top + 22 + 4 * scale, scale, scale);
                 }
             }
-            string name = missed.Count <= pageSize ? "missed-atlas.png" : $"missed-atlas-{page + 1:00}.png";
+            string prefix = cleanControl ? "clean-damage-atlas" : "missed-atlas";
+            string name = pointsToShow.Count <= pageSize ? prefix + ".png" : $"{prefix}-{page + 1:00}.png";
             sheet.Save(Path.Combine(review, name), ImageFormat.Png);
         }
     }

@@ -43,7 +43,12 @@ public static class DarkContourNoiseCleaner
         bool RequireCommonGradient = false, int CommonGradientRadius = 5,
         double CommonColorTolerance = 24, int CommonMinimumSimilarNeighbors = 5,
         double CommonMinimumMagnitude = 0, double CommonMinimumMagnitudeRatio = 1.2,
-        double CommonMinimumAgreement = 0.2, double CommonMinimumOpposition = 0.8);
+        double CommonMinimumAgreement = 0.2, double CommonMinimumOpposition = 0.8,
+        bool UseSecondarySparsePatch = true, int SecondarySparseMaximumDark5 = 8,
+        double SecondarySparseMaximumComponentRatio = 0.5,
+        bool UseSoftColorConsensus = true, double SoftMinimumConsensus = 0.5,
+        double SoftMaximumColorSpread = 40, int SoftMaximumDarkNeighbors = 2,
+        int SoftMaximumDark5 = 6);
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
     private readonly record struct NeighborColor(Color Color, double Weight);
@@ -133,6 +138,13 @@ public static class DarkContourNoiseCleaner
             !double.IsFinite(options.CommonMinimumMagnitudeRatio) || options.CommonMinimumMagnitudeRatio is < 0 or > 10 ||
             !double.IsFinite(options.CommonMinimumAgreement) || options.CommonMinimumAgreement is < 0 or > 1 ||
             !double.IsFinite(options.CommonMinimumOpposition) || options.CommonMinimumOpposition is < 0 or > 1 ||
+            options.SecondarySparseMaximumDark5 is < 0 or > 24 ||
+            !double.IsFinite(options.SecondarySparseMaximumComponentRatio) ||
+            options.SecondarySparseMaximumComponentRatio is < 0 or > 1 ||
+            !double.IsFinite(options.SoftMinimumConsensus) || options.SoftMinimumConsensus is < 0 or > 1 ||
+            !double.IsFinite(options.SoftMaximumColorSpread) || options.SoftMaximumColorSpread is < 0 or > 100 ||
+            options.SoftMaximumDarkNeighbors is < 0 or > 8 ||
+            options.SoftMaximumDark5 is < 0 or > 24 ||
             options.DiagonalOppositionRadius is < 1 or > 15 ||
             !double.IsFinite(options.DiagonalMinimumOpposition) ||
             options.DiagonalMinimumOpposition is < 0 or > 1 ||
@@ -232,6 +244,15 @@ public static class DarkContourNoiseCleaner
                     patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
                         diagonalPatchCounts, 1, options.SparsePatchMinimumBrightMatches,
                         options.SparsePatchBrightRatio);
+                if (!patchSupport && options.UseSecondarySparsePatch &&
+                    dark5Support > options.SparsePatchMaximumDark5 &&
+                    dark5Support <= options.SecondarySparseMaximumDark5 &&
+                    cardinalDarkNeighbors <= options.SparsePatchMaximumCardinalDarkNeighbors &&
+                    cardinalComponentSizes[index] < largestCardinalComponent *
+                        options.SecondarySparseMaximumComponentRatio)
+                    patchSupport = HasBrightPatchMajority(original, dark, width, height, x, y,
+                        diagonalPatchCounts, 1, options.SparsePatchMinimumBrightMatches,
+                        options.SparsePatchBrightRatio);
                 bool mediumComponent = darkNeighbors == 3 &&
                     componentSizes[index] >= largestComponent * options.ThreeNeighborProtectedMinimumComponentRatio &&
                     componentSizes[index] < largestComponent * options.ThreeNeighborProtectedComponentRatio;
@@ -280,13 +301,20 @@ public static class DarkContourNoiseCleaner
                     BrightRepresentative(surrounding, options.BrightColorTolerance);
                 int matching = surrounding.Count(item => DistanceSquared(Lab(item.Color), Lab(replacement)) <=
                     options.BrightColorTolerance * options.BrightColorTolerance);
+                double colorConsensus = matching / (double)surrounding.Count;
+                bool softColorConsensus = options.UseSoftColorConsensus &&
+                    darkNeighbors <= options.SoftMaximumDarkNeighbors &&
+                    cardinalDarkNeighbors <= 1 && dark5Support <= options.SoftMaximumDark5 &&
+                    colorConsensus >= options.SoftMinimumConsensus &&
+                    MaximumColorSpreadSquared(surrounding) <=
+                        options.SoftMaximumColorSpread * options.SoftMaximumColorSpread;
                 if (!hasPair && !diagonalEvidence &&
-                    matching / (double)surrounding.Count < options.MinimumBrightConsensus &&
-                    !(straightSpur && matching / (double)surrounding.Count >=
+                    colorConsensus < options.MinimumBrightConsensus && !softColorConsensus &&
+                    !(straightSpur && colorConsensus >=
                         options.StraightRunMinimumConsensus) &&
-                    !(isolatedEvidence && matching / (double)surrounding.Count >=
+                    !(isolatedEvidence && colorConsensus >=
                         options.IsolatedPatchMinimumConsensus)) continue;
-                if (diagonalBridge && matching / (double)surrounding.Count <
+                if (diagonalBridge && colorConsensus <
                     options.DiagonalBridgeMinimumConsensus) continue;
                 if (options.RequireCommonGradient &&
                     !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
@@ -294,7 +322,7 @@ public static class DarkContourNoiseCleaner
                 if (lightnessGain < options.MinimumLightnessGain) continue;
                 Color restored = Color.FromArgb(original[index].A, replacement.R, replacement.G, replacement.B);
                 proposals.Add(new Proposal(index, restored, darkNeighbors, cardinalDarkNeighbors,
-                    dark5Support, matching / (double)surrounding.Count, lightnessGain));
+                    dark5Support, colorConsensus, lightnessGain));
             }
 
         var accepted = new List<Proposal>();
@@ -787,6 +815,15 @@ public static class DarkContourNoiseCleaner
             if (support > best) { best = support; selected = q; }
         }
         return colors[selected].Color;
+    }
+
+    private static double MaximumColorSpreadSquared(List<NeighborColor> colors)
+    {
+        double maximum = 0;
+        for (int q = 0; q < colors.Count; q++)
+            for (int e = q + 1; e < colors.Count; e++)
+                maximum = Math.Max(maximum, DistanceSquared(Lab(colors[q].Color), Lab(colors[e].Color)));
+        return maximum;
     }
 
     private static int DarkRingComponents(bool[] dark, int width, int x, int y)

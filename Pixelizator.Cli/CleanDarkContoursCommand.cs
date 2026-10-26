@@ -69,6 +69,14 @@ internal static class CleanDarkContoursCommand
           --sparse-patch-max-cardinal N Максимум прямых тёмных соседей: 0–4 (1).
           --sparse-patch-bright N      Минимум повторов со светлым центром: 0–10000 (20).
           --sparse-patch-ratio N       Светлых повторов к тёмным: 0–100 (5).
+          --no-secondary-sparse       Выключить расширение для второстепенных контуров.
+          --secondary-sparse-dark5 N  Максимум тёмных соседей в 5×5: 0–24 (8).
+          --secondary-sparse-component N  Максимальная доля главного контура: 0–100% (50).
+          --no-soft-color-consensus   Выключить мягкое согласие близких оттенков.
+          --soft-consensus N          Минимальное согласие: 0–100% (50).
+          --soft-color-spread N       Максимальный разброс светлых соседей в LAB: 0–100 (40).
+          --soft-max-dark-neighbors N Максимум тёмных соседей из восьми: 0–8 (2).
+          --soft-max-dark5 N          Максимум тёмных соседей в 5×5: 0–24 (6).
           --conflict-radius N          Радиус выбора одного из соседних кандидатов: 0–4 (2).
           --require-common-gradient    Требовать противоположность общему градиенту похожих цветов.
           --common-gradient-radius N   Радиус поиска похожих цветов: 1–15 (5).
@@ -116,7 +124,8 @@ internal static class CleanDarkContoursCommand
                 diagonalOpposition = 80, diagonalAgreement = 20, taperedBrightRatio = 1.5,
                 sparsePatchRatio = 5, commonColorTolerance = 24,
                 commonMinimumMagnitude = 0, commonMagnitudeRatio = 1.2,
-                commonMinimumAgreement = 20, commonMinimumOpposition = 80;
+                commonMinimumAgreement = 20, commonMinimumOpposition = 80,
+                secondarySparseComponent = 50, softConsensus = 50, softColorSpread = 40;
             int neighbors = 3, cardinal = 2, dark5 = 9, clearance = 1, passes = 1,
                 pairExtension = 1, twoCardinalDark5 = 11, protectedContinuation = 3,
                 repeatedPatchRadius = 3, repeatedPatchDifferences = 2, largePatchRadius = 3,
@@ -128,11 +137,12 @@ internal static class CleanDarkContoursCommand
                 taperedDark5Min = 7, taperedDark5Max = 10, taperedRadius = 20,
                 taperedInsideLength = 8, taperedMinShrink = 6, taperedBright = 4,
                 sparsePatchMaxDark5 = 5, sparsePatchMaxCardinal = 1, sparsePatchBright = 20,
-                conflictRadius = 2, commonGradientRadius = 5, commonMinimumNeighbors = 5;
+                conflictRadius = 2, commonGradientRadius = 5, commonMinimumNeighbors = 5,
+                secondarySparseDark5 = 8, softMaxDarkNeighbors = 2, softMaxDark5 = 6;
             bool overwrite = false, json = false, usePair = true, allowDiagonalBridge = true,
                 useStraightRun = true, useRepeatedMismatch = true, useDiagonalGradient = true,
                 useDiagonalOpposition = true, useTaperedRun = true, useSparsePatch = true,
-                requireCommonGradient = false;
+                requireCommonGradient = false, useSecondarySparse = true, useSoftColorConsensus = true;
             for (int q = 0; q < args.Length; q++)
             {
                 string argument = args[q];
@@ -216,6 +226,14 @@ internal static class CleanDarkContoursCommand
                     case "--sparse-patch-max-cardinal": sparsePatchMaxCardinal = NextInt(); break;
                     case "--sparse-patch-bright": sparsePatchBright = NextInt(); break;
                     case "--sparse-patch-ratio": sparsePatchRatio = NextDouble(); break;
+                    case "--no-secondary-sparse": useSecondarySparse = false; break;
+                    case "--secondary-sparse-dark5": secondarySparseDark5 = NextInt(); break;
+                    case "--secondary-sparse-component": secondarySparseComponent = NextDouble(); break;
+                    case "--no-soft-color-consensus": useSoftColorConsensus = false; break;
+                    case "--soft-consensus": softConsensus = NextDouble(); break;
+                    case "--soft-color-spread": softColorSpread = NextDouble(); break;
+                    case "--soft-max-dark-neighbors": softMaxDarkNeighbors = NextInt(); break;
+                    case "--soft-max-dark5": softMaxDark5 = NextInt(); break;
                     case "--conflict-radius": conflictRadius = NextInt(); break;
                     case "--require-common-gradient": requireCommonGradient = true; break;
                     case "--common-gradient-radius": commonGradientRadius = NextInt(); break;
@@ -288,6 +306,11 @@ internal static class CleanDarkContoursCommand
             if (sparsePatchMaxDark5 is < 0 or > 24 || sparsePatchMaxCardinal is < 0 or > 4 ||
                 sparsePatchBright is < 0 or > 10000 || sparsePatchRatio is < 0 or > 100)
                 throw new ArgumentException("Некорректные параметры разреженного окружения.");
+            if (secondarySparseDark5 is < 0 or > 24 || secondarySparseComponent is < 0 or > 100)
+                throw new ArgumentException("Некорректные параметры второстепенного контура.");
+            if (softConsensus is < 0 or > 100 || softColorSpread is < 0 or > 100 ||
+                softMaxDarkNeighbors is < 0 or > 8 || softMaxDark5 is < 0 or > 24)
+                throw new ArgumentException("Некорректные параметры мягкого согласия цветов.");
             if (conflictRadius is < 0 or > 4)
                 throw new ArgumentException("--conflict-radius должен быть от 0 до 4.");
             if (commonGradientRadius is < 1 or > 15 || commonColorTolerance is < 0 or > 100 ||
@@ -317,7 +340,9 @@ internal static class CleanDarkContoursCommand
                 sparsePatchBright, sparsePatchRatio, conflictRadius, requireCommonGradient,
                 commonGradientRadius, commonColorTolerance, commonMinimumNeighbors,
                 commonMinimumMagnitude, commonMagnitudeRatio, commonMinimumAgreement / 100,
-                commonMinimumOpposition / 100);
+                commonMinimumOpposition / 100, useSecondarySparse, secondarySparseDark5,
+                secondarySparseComponent / 100, useSoftColorConsensus, softConsensus / 100,
+                softColorSpread, softMaxDarkNeighbors, softMaxDark5);
             string inputPath = Path.GetFullPath(input);
             string outputPath = Path.GetFullPath(target ?? Path.Combine(Path.GetDirectoryName(inputPath)!,
                 Path.GetFileNameWithoutExtension(inputPath) + "_dark_contours.png"));

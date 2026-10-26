@@ -60,6 +60,14 @@ param(
     [int]$SparsePatchMaxCardinal = 1,
     [int]$SparsePatchBright = 20,
     [double]$SparsePatchRatio = 5,
+    [switch]$NoSecondarySparse,
+    [int]$SecondarySparseDark5 = 8,
+    [double]$SecondarySparseComponent = 50,
+    [switch]$NoSoftColorConsensus,
+    [double]$SoftConsensus = 50,
+    [double]$SoftColorSpread = 40,
+    [int]$SoftMaxDarkNeighbors = 2,
+    [int]$SoftMaxDark5 = 6,
     [int]$ConflictRadius = 2,
     [switch]$RequireCommonGradient,
     [int]$CommonGradientRadius = 5,
@@ -84,6 +92,8 @@ $diagonalFlag = if ($NoDiagonalGradient) { @('--no-diagonal-gradient') } else { 
 $oppositionFlag = if ($NoDiagonalOpposition) { @('--no-diagonal-opposition') } else { @() }
 $taperedFlag = if ($NoTaperedRun) { @('--no-tapered-run') } else { @() }
 $sparseFlag = if ($NoSparsePatch) { @('--no-sparse-patch') } else { @() }
+$secondarySparseFlag = if ($NoSecondarySparse) { @('--no-secondary-sparse') } else { @() }
+$softColorFlag = if ($NoSoftColorConsensus) { @('--no-soft-color-consensus') } else { @() }
 $commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } else { @() }
 
 foreach ($kind in @('clean', 'noisy'))
@@ -130,12 +140,16 @@ foreach ($kind in @('clean', 'noisy'))
             --sparse-patch-max-dark5 $SparsePatchMaxDark5 `
             --sparse-patch-max-cardinal $SparsePatchMaxCardinal `
             --sparse-patch-bright $SparsePatchBright --sparse-patch-ratio $SparsePatchRatio `
+            --secondary-sparse-dark5 $SecondarySparseDark5 `
+            --secondary-sparse-component $SecondarySparseComponent `
+            --soft-consensus $SoftConsensus --soft-color-spread $SoftColorSpread `
+            --soft-max-dark-neighbors $SoftMaxDarkNeighbors --soft-max-dark5 $SoftMaxDark5 `
             --conflict-radius $ConflictRadius `
             --common-gradient-radius $CommonGradientRadius --common-color-tolerance $CommonColorTolerance `
             --common-min-neighbors $CommonMinimumNeighbors --common-min-magnitude $CommonMinimumMagnitude `
             --common-magnitude-ratio $CommonMagnitudeRatio --common-min-agreement $CommonMinimumAgreement `
             --common-min-opposition $CommonMinimumOpposition `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $commonFlag --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $commonFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"
