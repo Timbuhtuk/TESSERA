@@ -296,6 +296,10 @@ param(
     [double]$GroupedPaletteRatio = 1.5,
     [double]$GroupedPaletteHighRatio = 1,
     [double]$GroupedPaletteGain = 20,
+    [switch]$NoConfirmedGroupExemplar,
+    [int]$ConfirmedGroupPrior = 3,
+    [double]$ConfirmedGroupRatio = 0.1,
+    [double]$ConfirmedGroupGain = 20,
     [switch]$SparsePaletteConsensus = $true,
     [switch]$NoSparsePaletteConsensus,
     [double]$SparsePaletteConsensusTolerance = 0.5,
@@ -363,6 +367,7 @@ $sparsePaletteExclusiveFlag = if ($NoSparsePaletteExclusive -or !$SparsePaletteE
 $exemplarFlag = if ($NoExemplarRescue -or !$ExemplarRescue) { @('--no-exemplar-rescue') } else { @('--exemplar-rescue') }
 $exemplarMaterialFlag = if ($NoExemplarMaterialVeto) { @('--no-exemplar-material-veto') } else { @('--exemplar-material-veto') }
 $groupedPaletteFlag = if ($NoGroupedPaletteRescue -or !$GroupedPaletteRescue) { @('--no-grouped-palette-rescue') } else { @('--grouped-palette-rescue') }
+$confirmedGroupFlag = if ($NoConfirmedGroupExemplar) { @('--no-confirmed-group-exemplar') } else { @('--confirmed-group-exemplar') }
 $sparsePaletteConsensusFlag = if ($NoSparsePaletteConsensus -or !$SparsePaletteConsensus) { @('--no-sparse-palette-consensus') } else { @('--sparse-palette-consensus') }
 $sparsePaletteThreeFlag = if ($NoSparsePaletteThreeNeighbor -or !$SparsePaletteThreeNeighbor) { @('--no-sparse-palette-three-neighbor') } else { @('--sparse-palette-three-neighbor') }
 
@@ -542,11 +547,13 @@ foreach ($kind in @('clean', 'noisy'))
             --grouped-palette-average $GroupedPaletteAverage --grouped-palette-high-average $GroupedPaletteHighAverage `
             --grouped-palette-spacing $GroupedPaletteSpacing `
             --grouped-palette-ratio $GroupedPaletteRatio --grouped-palette-gain $GroupedPaletteGain `
+            --confirmed-group-prior $ConfirmedGroupPrior --confirmed-group-ratio $ConfirmedGroupRatio `
+            --confirmed-group-gain $ConfirmedGroupGain `
             --sparse-palette-consensus-tolerance $SparsePaletteConsensusTolerance --sparse-palette-consensus-max $SparsePaletteConsensusMax `
             --sparse-palette-consensus-gain $SparsePaletteConsensusGain --sparse-palette-consensus-energy $SparsePaletteConsensusEnergy `
             --sparse-palette-three-tolerance $SparsePaletteThreeTolerance --sparse-palette-three-max $SparsePaletteThreeMax `
             --sparse-palette-three-gain $SparsePaletteThreeGain --sparse-palette-three-energy $SparsePaletteThreeEnergy `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $sparseDarkPaletteExtendedFlag $sparsePaletteExclusiveFlag $exemplarFlag $exemplarMaterialFlag $groupedPaletteFlag $sparsePaletteConsensusFlag $sparsePaletteThreeFlag $auditArgs --passes $Passes
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag $threeNeighborEnergyRescueFlag $weightedRescueFlag $extendedWeightedFlag $symmetricPatchFlag $symmetricFirstPassFlag $texturedGradientRescueFlag $singleDiagonalFlag $threeGradientFlag $highContrastFlag $contrastConsensusFlag $repeatedDarkFlag $repeatedDarkPassFlag $repeatedBridgeFlag $sparseDarkPaletteFlag $sparseDarkPaletteExtendedFlag $sparsePaletteExclusiveFlag $exemplarFlag $exemplarMaterialFlag $groupedPaletteFlag $confirmedGroupFlag $sparsePaletteConsensusFlag $sparsePaletteThreeFlag $auditArgs --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

@@ -225,6 +225,10 @@ public static class DarkContourNoiseCleaner
         public double GroupedPaletteMaximumExemplarRatio { get; init; } = 1.5;
         public double GroupedPaletteHighNearMaximumExemplarRatio { get; init; } = 1;
         public double GroupedPaletteMinimumLightnessGain { get; init; } = 20;
+        public bool UseConfirmedGroupExemplarRescue { get; init; } = true;
+        public int ConfirmedGroupExemplarMinimumPriorChanges { get; init; } = 3;
+        public double ConfirmedGroupExemplarMaximumRatio { get; init; } = 0.1;
+        public double ConfirmedGroupExemplarMinimumLightnessGain { get; init; } = 20;
         public bool UseSparsePaletteConsensusRescue { get; init; } = true;
         public double SparsePaletteConsensusColorTolerance { get; init; } = 0.5;
         public int SparsePaletteConsensusMaximumSimilarPixels { get; init; }
@@ -472,6 +476,11 @@ public static class DarkContourNoiseCleaner
             options.GroupedPaletteHighNearMaximumExemplarRatio is < 0 or > 100 ||
             !double.IsFinite(options.GroupedPaletteMinimumLightnessGain) ||
             options.GroupedPaletteMinimumLightnessGain is < 0 or > 100 ||
+            options.ConfirmedGroupExemplarMinimumPriorChanges is < 1 or > 1000000 ||
+            !double.IsFinite(options.ConfirmedGroupExemplarMaximumRatio) ||
+            options.ConfirmedGroupExemplarMaximumRatio is < 0 or > 100 ||
+            !double.IsFinite(options.ConfirmedGroupExemplarMinimumLightnessGain) ||
+            options.ConfirmedGroupExemplarMinimumLightnessGain is < 0 or > 100 ||
             !double.IsFinite(options.SparsePaletteConsensusColorTolerance) ||
             options.SparsePaletteConsensusColorTolerance is < 0 or > 100 ||
             options.SparsePaletteConsensusMaximumSimilarPixels is < 0 or > 1000000 ||
@@ -1700,6 +1709,53 @@ public static class DarkContourNoiseCleaner
                     replacement.R, replacement.G, replacement.B);
                 changed++;
                 audit?.Invoke(x, y, "accepted-grouped-palette");
+            }
+        }
+        if (!options.UseConfirmedGroupExemplarRescue) return changed;
+
+        foreach (KeyValuePair<int, List<(int X, int Y)>> group in groups)
+        {
+            List<(int X, int Y)> points = group.Value;
+            if (points.Count < options.GroupedPaletteMinimumOccurrences ||
+                points.Count > options.GroupedPaletteMaximumOccurrences) continue;
+            Color sourceColor = Color.FromArgb(group.Key);
+            if (CountNearDarkPalette(sourceColor, darkColorOccurrences,
+                options.GroupedPaletteNearColorDistance) > options.GroupedPaletteMaximumNearPixels) continue;
+            int priorChanges = 0;
+            foreach ((int x, int y) in points)
+                if (output[y * width + x].ToArgb() != original[y * width + x].ToArgb())
+                    priorChanges++;
+            if (priorChanges < options.ConfirmedGroupExemplarMinimumPriorChanges) continue;
+
+            foreach ((int x, int y) in points)
+            {
+                int index = y * width + x;
+                if (output[index].ToArgb() != original[index].ToArgb() ||
+                    protectedPixels is not null && protectedPixels[index] ||
+                    !HasAlphaClearance(original, width, height, x, y, options.AlphaClearance) ||
+                    !HasBrightExemplar(original, width, height, x, y, options,
+                        options.ConfirmedGroupExemplarMaximumRatio)) continue;
+                var surrounding = new List<NeighborColor>(8);
+                for (int dy = -1; dy <= 1; dy++)
+                    for (int dx = -1; dx <= 1; dx++)
+                    {
+                        if (dx == 0 && dy == 0) continue;
+                        Color neighbor = original[(y + dy) * width + x + dx];
+                        if (Math.Max(neighbor.R, Math.Max(neighbor.G, neighbor.B)) <=
+                            options.ExemplarMinimumBrightChannel) continue;
+                        surrounding.Add(new NeighborColor(neighbor,
+                            dx == 0 || dy == 0 ? options.CardinalColorWeight : 1));
+                    }
+                if (surrounding.Count < 3) continue;
+                Color replacement = BrightRepresentative(surrounding, options.BrightColorTolerance);
+                if (Lab(replacement).L - Lab(original[index]).L <
+                    options.ConfirmedGroupExemplarMinimumLightnessGain ||
+                    options.UseExemplarMaterialVeto && HasOriginalMaterialExemplar(original,
+                        width, height, x, y, replacement, options)) continue;
+                output[index] = Color.FromArgb(original[index].A,
+                    replacement.R, replacement.G, replacement.B);
+                changed++;
+                audit?.Invoke(x, y, "accepted-confirmed-group-exemplar");
             }
         }
         return changed;
