@@ -136,6 +136,8 @@ param(
     [int]$ColorPatchMinimumBright = 1,
     [double]$ColorPatchRatio = 3,
     [int]$ColorPatchMaxDifferences = 0,
+    [switch]$ColorPatchEnergyRescue,
+    [double]$ColorPatchEnergyDrop = 80,
     [int]$Passes = 1
 )
 
@@ -162,6 +164,7 @@ $brightCornerFlag = if ($NoBrightCorner) { @('--no-bright-corner') } else { @() 
 $verticalShadeFlag = if ($NoVerticalShade) { @('--no-vertical-shade') } else { @() }
 $commonFlag = if ($RequireCommonGradient) { @('--require-common-gradient') } else { @() }
 $colorPatchFlag = if ($NoColorPatch) { @('--no-color-patch') } else { @('--require-color-patch') }
+$energyRescueFlag = if ($ColorPatchEnergyRescue) { @('--color-patch-energy-rescue') } else { @() }
 
 foreach ($kind in @('clean', 'noisy'))
 {
@@ -262,7 +265,8 @@ foreach ($kind in @('clean', 'noisy'))
             --common-min-opposition $CommonMinimumOpposition `
             --color-patch-tolerance $ColorPatchTolerance --color-patch-min-bright $ColorPatchMinimumBright `
             --color-patch-ratio $ColorPatchRatio --color-patch-max-differences $ColorPatchMaxDifferences `
-            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag --passes $Passes
+            --color-patch-energy-drop $ColorPatchEnergyDrop `
+            $bridgeFlag $straightFlag $mismatchFlag $diagonalFlag $oppositionFlag $taperedFlag $sparseFlag $secondarySparseFlag $softColorFlag $coherentFlag $divergentFlag $patchGradientFlag $mainSparseFlag $brightCornerFlag $verticalShadeFlag $commonFlag $colorPatchFlag $energyRescueFlag --passes $Passes
         if ($LASTEXITCODE -ne 0) { throw "Tessera failed on $($file.FullName): $line" }
         [System.IO.File]::AppendAllText($report, $line + [Environment]::NewLine)
         Write-Output "$kind $($file.Name)"

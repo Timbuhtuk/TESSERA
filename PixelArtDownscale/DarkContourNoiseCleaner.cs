@@ -86,6 +86,8 @@ public static class DarkContourNoiseCleaner
         public int ColorMatchedPatchMinimumBrightMatches { get; init; } = 1;
         public double ColorMatchedPatchBrightRatio { get; init; } = 3;
         public int ColorMatchedPatchMaximumPatternDifferences { get; init; }
+        public bool UseColorPatchEnergyRescue { get; init; }
+        public double ColorPatchEnergyRescueMinimumDrop { get; init; } = 0.8;
     }
 
     public sealed record Result(Bitmap Image, int ChangedPixels);
@@ -116,6 +118,8 @@ public static class DarkContourNoiseCleaner
             options.ColorMatchedPatchTolerance is < 0 or > 100 ||
             options.ColorMatchedPatchMinimumBrightMatches is < 0 or > 10000 ||
             options.ColorMatchedPatchMaximumPatternDifferences is < 0 or > 2 ||
+            !double.IsFinite(options.ColorPatchEnergyRescueMinimumDrop) ||
+            options.ColorPatchEnergyRescueMinimumDrop is < 0 or > 1 ||
             !double.IsFinite(options.ColorMatchedPatchBrightRatio) ||
             options.ColorMatchedPatchBrightRatio is < 0 or > 100 ||
             options.ThreeNeighborMinimumDark5 is < 0 or > 24 ||
@@ -349,11 +353,12 @@ public static class DarkContourNoiseCleaner
                     if (!diagonalPatchCounts.TryGetValue(pattern, out PatchCounts matches) ||
                         matches.Bright < options.TwoCardinalMinimumBrightPatternMatches) continue;
                 }
-                if (options.RequireColorMatchedPatch &&
-                    !HasColorMatchedPatch(original, dark, width, x, y, colorPatchIndex,
+                bool colorPatchMatch = !options.RequireColorMatchedPatch ||
+                    HasColorMatchedPatch(original, dark, width, x, y, colorPatchIndex,
                         options.ColorMatchedPatchTolerance,
                         options.ColorMatchedPatchMinimumBrightMatches,
-                        options.ColorMatchedPatchBrightRatio)) continue;
+                        options.ColorMatchedPatchBrightRatio);
+                if (!colorPatchMatch && !options.UseColorPatchEnergyRescue) continue;
                 int ringComponents = DarkRingComponents(dark, width, x, y);
                 bool diagonalBridge = options.AllowDiagonalBridge && ringComponents == 2 &&
                     darkNeighbors == 2 && cardinalDarkNeighbors == 0 && cardinalComponentSizes[index] == 1;
@@ -528,6 +533,8 @@ public static class DarkContourNoiseCleaner
                         options.VerticalShadeSearchRadius, options.VerticalShadeColorTolerance,
                         out Color verticalColor))
                     replacement = verticalColor;
+                if (!colorPatchMatch && !HasColorPatchEnergyRescue(original, width, x, y,
+                        replacement, options.ColorPatchEnergyRescueMinimumDrop)) continue;
                 if (options.RequireCommonGradient &&
                     !HasOpposedCommonGradient(original, width, height, x, y, options)) continue;
                 double lightnessGain = Lab(replacement).L - Lab(original[index]).L;
@@ -781,6 +788,25 @@ public static class DarkContourNoiseCleaner
             else bright++;
         }
         return bright >= minimumBright && bright > darkMatches * brightRatio;
+    }
+
+    private static bool HasColorPatchEnergyRescue(Color[] colors, int width, int x, int y,
+        Color replacement, double minimumDrop)
+    {
+        var before = Lab(colors[y * width + x]);
+        var after = Lab(replacement);
+        double originalEnergy = 0, replacementEnergy = 0;
+        for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                var neighbor = Lab(colors[(y + dy) * width + x + dx]);
+                double weight = 1.0 / (dx * dx + dy * dy);
+                originalEnergy += weight * DistanceSquared(before, neighbor);
+                replacementEnergy += weight * DistanceSquared(after, neighbor);
+            }
+        return originalEnergy > 1e-9 &&
+            (originalEnergy - replacementEnergy) / originalEnergy > minimumDrop;
     }
 
     private static (double L, double A, double B)[] ColorPatchRing(Color[] colors, int width, int x, int y)
