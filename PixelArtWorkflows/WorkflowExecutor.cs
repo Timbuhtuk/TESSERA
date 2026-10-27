@@ -167,6 +167,14 @@ public sealed class WorkflowExecutor
             }
             case ProcessingOperations.AdjustChannel:
                 return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken), previousAlignmentCell);
+            case ProcessingOperations.ContourHeatmap:
+                return (ContourNoiseCleaner.Analyze(current, step.Contours!).Heatmap, previousAlignmentCell);
+            case ProcessingOperations.CleanContours:
+            {
+                ContourCleanResult result = ContourNoiseCleaner.Process(current, step.Contours!);
+                result.CandidateMap.Dispose();
+                return (result.Image, previousAlignmentCell);
+            }
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -230,6 +238,12 @@ public sealed class WorkflowExecutor
                 if (step.Background.Tolerance is < 0 or > 100)
                     throw new InvalidDataException("Background tolerance must be 0..100.");
                 break;
+            case ProcessingOperations.ContourHeatmap:
+            case ProcessingOperations.CleanContours:
+                RequireOnly(step, contours: true);
+                if (step.Contours is null) throw new InvalidDataException("Contour parameters are required.");
+                ValidateContours(step.Contours);
+                break;
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -282,13 +296,27 @@ public sealed class WorkflowExecutor
         if (cellSize is < 2 or > 65535) throw new InvalidDataException("CellSize must be 2..65535.");
     }
 
+    private static void ValidateContours(ContourCleanOptions options)
+    {
+        if (options.WindowSize is < 3 or > 15 || options.WindowSize % 2 == 0 ||
+            !Enum.IsDefined(options.Strictness) ||
+            !double.IsFinite(options.SimilarColorDistance) || options.SimilarColorDistance is < 0 or > 100 ||
+            !double.IsFinite(options.MinimumPixelGradient) || options.MinimumPixelGradient is < 0 or > 20000 ||
+            !double.IsFinite(options.MinimumNeighborGradient) || options.MinimumNeighborGradient is < 0 or > 20000 ||
+            options.MinimumSimilarNeighbors is < 1 or > 224 ||
+            !double.IsFinite(options.MinimumAgreement) || options.MinimumAgreement is < 0 or > 1 ||
+            !double.IsFinite(options.MinimumOpposition) || options.MinimumOpposition is < 0 or > 1)
+            throw new InvalidDataException("Invalid contour parameters.");
+    }
+
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
-        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false, bool channelAdjustment = false)
+        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false,
+        bool channelAdjustment = false, bool contours = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
             !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
-            !channelAdjustment && step.ChannelAdjustment is not null)
+            !channelAdjustment && step.ChannelAdjustment is not null || !contours && step.Contours is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }

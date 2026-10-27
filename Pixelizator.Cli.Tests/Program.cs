@@ -607,6 +607,46 @@ try
         Require(File.ReadAllBytes(sourcePath).SequenceEqual(original), "Trim macro overwrote its source");
     });
 
+    Check("Contour cleanup and heatmap replay through saved macros", () =>
+    {
+        string sourcePath = Path.Combine(directory, "contour-macro-source.png");
+        using var source = new Bitmap(9, 9, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < source.Height; y++)
+            for (int x = 0; x < source.Width; x++)
+                source.SetPixel(x, y, Color.FromArgb(255, x < 4 ? 20 : 230, x < 4 ? 30 : 220, x < 4 ? 40 : 210));
+        source.SetPixel(3, 4, Color.Magenta);
+        source.Save(sourcePath, ImageFormat.Png);
+        byte[] original = File.ReadAllBytes(sourcePath);
+        var options = new ContourCleanOptions { WindowSize = 5, Strictness = ContourCleanStrictness.Strong,
+            SimilarColorDistance = 20, MinimumAgreement = 0.4, MinimumOpposition = 0.2 };
+        var store = new MacroStore(Path.Combine(directory, "contour-macro-library"));
+        var saved = store.Save(new MacroDefinition { Name = "Contour map after cleanup", Steps =
+        [
+            new ProcessingStep { OperationId = ProcessingOperations.CleanContours, Contours = options },
+            new ProcessingStep { OperationId = ProcessingOperations.ContourHeatmap, Contours = options }
+        ] });
+        string outputPath = Path.Combine(directory, "contour-macro-output.png");
+        var apply = Run(["macro", "apply", sourcePath, "--macro", store.PathFor(saved.Id), "-o", outputPath]);
+        Require(apply.Code == 0 && apply.Error.Length == 0, apply.Error);
+        var cleaned = ContourNoiseCleaner.Process(source, options);
+        using var cleanedImage = cleaned.Image;
+        using var candidates = cleaned.CandidateMap;
+        using var expected = ContourNoiseCleaner.Analyze(cleaned.Image, options).Heatmap;
+        using var actual = new Bitmap(outputPath);
+        EqualPixels(expected, actual);
+        Require(File.ReadAllBytes(sourcePath).SequenceEqual(original), "Contour macro modified its source");
+
+        RequireWorkflowStep(1, ProcessingOperations.ContourHeatmap, () => WorkflowExecutor.Validate(new ProcessingRecipe
+        {
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.ContourHeatmap }]
+        }));
+        RequireWorkflowStep(1, ProcessingOperations.CleanContours, () => WorkflowExecutor.Validate(new ProcessingRecipe
+        {
+            Steps = [new ProcessingStep { OperationId = ProcessingOperations.CleanContours,
+                Contours = new ContourCleanOptions { WindowSize = 4 } }]
+        }));
+    });
+
     Check("Color cleanup controls merge close shades and preserve pixels at zero strength", () =>
     {
         string sourcePath = Path.Combine(directory, "cleanup-controls.png");
