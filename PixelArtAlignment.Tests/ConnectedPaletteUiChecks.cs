@@ -6,6 +6,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DomainColorTest;
 using PixelArtDownscale;
+using PixelArtWorkflows;
 using Bitmap = System.Drawing.Bitmap;
 using Color = System.Drawing.Color;
 using Localization = DomainColorTest.Localization;
@@ -82,6 +83,14 @@ internal static class ConnectedPaletteUiChecks
             Until(() => document.Generations.Count == 1 && !Get<bool>("_processing"));
             Require(Same(expected, Get<Bitmap>("_downscaledResult")), "Saved result differs from preview");
             Require(document.SelectedGeneration!.ParentGenerationId is null, "First result has incorrect ancestry");
+            var recipe = document.SelectedGeneration.RecipeSnapshot;
+            Require(recipe is { Steps.Count: 1 } && recipe.Steps[0].OperationId == ProcessingOperations.ConnectedPalette,
+                "Connected palette result cannot create a macro");
+            var store = new MacroStore(library);
+            var macro = store.Save(new MacroDefinition { Name = "Palette replay", Steps = recipe!.Steps });
+            var restored = MacroStore.Read(store.PathFor(macro.Id));
+            using (var replay = new WorkflowExecutor().Execute(source, new ProcessingRecipe { Steps = restored.Steps }))
+                Require(Same(expected, replay), "Saved palette macro lost settings or RGBA pixels");
             string export = Path.Combine(folder, "result.png"); Invoke("SaveResult", export);
             using (var saved = new Bitmap(export)) Require(Same(expected, saved), "Export changed RGBA pixels");
             var parent = document.SelectedGeneration.Id;

@@ -6,6 +6,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DomainColorTest;
 using PixelArtDownscale;
+using PixelArtWorkflows;
 using Bitmap = System.Drawing.Bitmap;
 using Color = System.Drawing.Color;
 using Localization = DomainColorTest.Localization;
@@ -99,6 +100,14 @@ internal static class ContourUiChecks
             var first = document.SelectedGeneration!;
             using var expected = ContourNoiseCleaner.Analyze(source, new() { WindowSize = 3, ProtectDetails = false, MinimumAgreement = 0, MinimumOpposition = 0 }).Heatmap;
             Equal(expected, Get<Bitmap>("_downscaledResult"));
+            Require(first.RecipeSnapshot is { Steps.Count: 1 } &&
+                first.RecipeSnapshot.Steps[0].OperationId == ProcessingOperations.ContourHeatmap,
+                "Actual contour UI result cannot create a macro");
+            var store = new MacroStore(library);
+            var macro = store.Save(new MacroDefinition { Name = "Contour UI replay", Steps = first.RecipeSnapshot!.Steps });
+            var restored = MacroStore.Read(store.PathFor(macro.Id));
+            using (var replay = new WorkflowExecutor().Execute(source, new ProcessingRecipe { Steps = restored.Steps }))
+                Equal(expected, replay);
             Require(first.ParentGenerationId is null && window.ProcessingBasis == 1, "Contour result used an unselected input");
             Require(Get<ListBox>("sourceStrip").SelectedItem is null && ReferenceEquals(Get<ListBox>("generationStrip").SelectedItem, first), "Contour result is not the sole selected card");
             Require(!Visible() && Get<Border>("livePreviewFrame").Visibility == Visibility.Collapsed, "Applied result remains a temporary preview");

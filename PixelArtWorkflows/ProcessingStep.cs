@@ -21,6 +21,9 @@ public static class ProcessingOperations
     public const string ReplaceColor = "color.replace";
     public const string AdjustChannel = "color.channel.adjust";
     public const string RemoveBackground = "background.remove";
+    public const string ContourHeatmap = "contours.heatmap";
+    public const string CleanContours = "contours.clean";
+    public const string ConnectedPalette = "connected-palette";
     public const string Macro = "macro.apply";
 }
 
@@ -35,6 +38,8 @@ public sealed class ProcessingStep
     public ColorReplacementSettings? ColorReplacement { get; init; }
     public ChannelAdjustmentOptions? ChannelAdjustment { get; init; }
     public BackgroundSettings? Background { get; init; }
+    public ContourCleanOptions? Contours { get; init; }
+    public ConnectivityPaletteOptions? ConnectedPalette { get; init; }
 }
 
 public sealed class AsciiSettings

@@ -175,7 +175,12 @@ public partial class MainWindow
                     {
                         Settings = settings,
                         Operation = "Карта контуров",
-                        OperationId = "contours.heatmap",
+                        OperationId = ProcessingOperations.ContourHeatmap,
+                        AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
+                        {
+                            OperationId = ProcessingOperations.ContourHeatmap,
+                            Contours = options
+                        }),
                         ParentGenerationId = parentId,
                         PreservesTransparency = true,
                         Caption = $"КАРТА КОНТУРОВ · {analysis.Heatmap.Width} × {analysis.Heatmap.Height}",

@@ -119,6 +119,19 @@ internal static class HistoryMacroChecks
         record["Settings"]!["Downscale"]!.AsObject().Remove("TargetWidth"); File.WriteAllText(legacyPath, record.ToJsonString());
         var incompleteDimensions = library.Load().Single(s => s.Id == source.Id).Generations.Single(g => g.Id == legacy.Id);
         Require(!HistoryRecipes.TryBuild(source, incompleteDimensions, out _, out reason) && reason.Contains("TargetWidth"), "Missing legacy dimensions were replaced by defaults.");
+        var contours = new ContourCleanOptions { WindowSize = 5, MinimumAgreement = 0.45 };
+        var contourStep = new ProcessingStep { OperationId = ProcessingOperations.ContourHeatmap, Contours = contours };
+        using var contourMap = ContourNoiseCleaner.Analyze(fixture, contours).Heatmap;
+        var contourEntry = library.SaveGeneration(source, contourMap, null, new GenerationEntry
+        {
+            OperationId = contourStep.OperationId, AppliedRecipe = HistoryRecipes.Single(contourStep)
+        });
+        source.Generations.Add(contourEntry);
+        Require(HistoryRecipes.TryBuild(source, contourEntry, out var contourRecipe, out reason), reason);
+        using var contourReplay = new WorkflowExecutor().Execute(fixture, contourRecipe!);
+        Equal(contourMap, contourReplay);
+        Require(contourRecipe!.Steps[0].Contours?.MinimumAgreement == 0.45,
+            "Saved contour map lost its parameters.");
         Console.WriteLine("  Recipes: exact resize, alpha, ancestor deletion, independent source, macro rename/delete and legacy refusal passed.");
     }
 
