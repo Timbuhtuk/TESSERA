@@ -69,6 +69,7 @@ public partial class MainWindow
 
         var processingMenu = NavigationItem("processingMenu", "Обработка"); toolsMenu.Items.Add(processingMenu);
         profileMenuItem = AddTool(processingMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
+        AddTool(processingMenu, "finalistMenuItem", "TCR · уменьшение 8×…", "finalists", 420, _finalistGroup);
         AddTool(processingMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
 
         var sizeToolsMenu = NavigationItem("sizeToolsMenu", "Размер и сетка"); toolsMenu.Items.Add(sizeToolsMenu);

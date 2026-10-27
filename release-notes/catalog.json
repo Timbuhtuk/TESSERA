@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "TCR: уменьшение изображения в 8 раз",
+        "en": "TCR: reduce images by 8 times"
+      },
+      "notes": {
+        "ru": "- TCR · уменьшение 8×: новый инструмент в «Инструменты → Обработка» с режимами T3/p44, P5/OFF и их равной смесью. Для изображения любого размера результат имеет ширину и высоту, округлённые вверх после деления на 8.\n- T3/p44 сдвигает границы блоков на 4 пикселя; P5/OFF усредняет обычные блоки 8 × 8 без сегментации регионов. Смесь объединяет оба результата с учётом прозрачности.\n- История и макросы: выбранный режим сохраняется вместе с результатом и воспроизводится в редакторе и CLI. Методы усредняют цвет и альфу; тонкие детали могут измениться.",
+        "en": "- TCR · 8× reduction: a new tool under Tools → Processing with T3/p44, P5/OFF and their equal blend. For any image size, output width and height are rounded up after division by 8.\n- T3/p44 shifts block boundaries by 4 pixels; P5/OFF averages regular 8 × 8 blocks without region segmentation. The blend combines both outputs using transparency weights.\n- History and macros: the selected mode is saved with the result and replayed in the editor and CLI. These methods average color and alpha; fine details may change."
+      }
+    },
+    {
+      "version": "2.10.1",
+      "title": {
         "ru": "Макросы для карты контуров и связной палитры",
         "en": "Contour map and connected palette macros"
       },
