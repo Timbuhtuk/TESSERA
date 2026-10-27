@@ -80,6 +80,7 @@ public partial class MainWindow
         ProcessingOperations.ContourHeatmap => "Карта контуров",
         ProcessingOperations.CleanContours => "Очистка контуров",
         ProcessingOperations.ConnectedPalette => "Связная палитра",
+        ProcessingOperations.FinalistReduce => "TCR · уменьшение 8×",
         _ => operation
     });
 

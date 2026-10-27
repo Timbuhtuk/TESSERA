@@ -1246,5 +1246,17 @@
   "0: угол от 90°; 100: точно противоположные направления": "0: angle at least 90°; 100: exactly opposite directions.",
   "Пороги отбора": "Selection thresholds",
   "Красный — кандидат: сильный градиент направлен против общего градиента похожих соседей. Белый → светло-красный показывает силу цветового перепада.": "Red: candidate, with a strong gradient opposing similar neighbors. White to light red shows the strength of the color change.",
-  "Кандидатов: {0}. Окно {1} × {1}. Допуск цветов: {2}; градиенты пикселя/соседей: {3}/{4}; похожих соседей: {5}; согласие: {6}%; противоположность: {7}%; защита деталей: {8}.": "Candidates: {0}. Window {1} × {1}. Color tolerance: {2}; pixel/neighbor gradients: {3}/{4}; similar neighbors: {5}; agreement: {6}%; opposition: {7}%; detail protection: {8}."
+  "Кандидатов: {0}. Окно {1} × {1}. Допуск цветов: {2}; градиенты пикселя/соседей: {3}/{4}; похожих соседей: {5}; согласие: {6}%; противоположность: {7}%; защита деталей: {8}.": "Candidates: {0}. Window {1} × {1}. Color tolerance: {2}; pixel/neighbor gradients: {3}/{4}; similar neighbors: {5}; agreement: {6}%; opposition: {7}%; detail protection: {8}.",
+  "TCR · уменьшение 8×…": "TCR · 8× reduction…",
+  "TCR · уменьшение 8×": "TCR · 8× reduction",
+  "Результат: один пиксель на блок примерно 8 × 8 исходных пикселей. Цвет и прозрачность усредняются; тонкие детали могут измениться.": "Output: one pixel per approximately 8 × 8 source pixels. Color and alpha are averaged; fine details may change.",
+  "Границы ячеек сдвинуты на 4 пикселя; цвет усредняется с учётом прозрачности.": "Cell boundaries shift by 4 pixels; colors are averaged with alpha weighting.",
+  "Обычные блоки 8 × 8, метод R0/C0 без карты регионов.": "Regular 8 × 8 cells, R0/C0 without a region map.",
+  "Равная смесь T3/p44 и P5/OFF в sRGB с учётом прозрачности.": "Equal sRGB blend of T3/p44 and P5/OFF with alpha weighting.",
+  "Уменьшить изображение": "Reduce image",
+  "Применить уменьшение TCR 8×": "Apply TCR 8× reduction",
+  "Уменьшение TCR 8×…": "Reducing with TCR 8×…",
+  "TCR {0}: {1} × {2} → {3} × {4}; ячейка 8×, прозрачность 0–255.": "TCR {0}: {1} × {2} → {3} × {4}; 8× cells, alpha 0–255.",
+  "Готово · TCR {0}, {1} × {2}.": "Done · TCR {0}, {1} × {2}.",
+  "Не удалось уменьшить изображение: {0}": "Could not reduce the image: {0}"
 }

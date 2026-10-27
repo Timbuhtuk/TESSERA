@@ -16,6 +16,21 @@ if (args is ["--evaluate", var actualPath, var referencePath, "--cell-size", var
     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(quality, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     return quality.Score >= 90 ? 0 : 1;
 }
+if (args is ["--finalists", var labRoot])
+{
+    FinalistChecks.Run(labRoot);
+    return 0;
+}
+if (args is ["--finalists-ui"])
+{
+    FinalistUiChecks.Run();
+    return 0;
+}
+if (args is ["--finalists-ui", var uiLabRoot])
+{
+    FinalistUiChecks.Run(uiLabRoot);
+    return 0;
+}
 if (args.Any(a => a is not ("--connected-palette" or "--contours" or "--channels" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
@@ -81,6 +96,8 @@ Check("Local drift and unequal widths fail the 90 gate before repair", () =>
     }
 });
 if (args.Contains("--invariants")) Check("Canvas, source colors, alpha, idempotence, errors and detection", Invariants.Run);
+if (args.Contains("--invariants")) FinalistInvariantChecks.Run(Check);
+if (args.Contains("--ui")) Check("TCR modes, history, macro recipes and PNG in WPF", FinalistUiChecks.Run);
 if (args.Contains("--invariants")) IconExportChecks.Run(Check);
 if (args.Contains("--invariants")) IndependentImageProcessorChecks.Run(Check);
 if (args.Contains("--invariants")) ImageColorToolsChecks.Run(Check);

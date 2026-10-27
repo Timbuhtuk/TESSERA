@@ -177,6 +177,8 @@ public sealed class WorkflowExecutor
                 result.CandidateMap.Dispose();
                 return (result.Image, previousAlignmentCell);
             }
+            case ProcessingOperations.FinalistReduce:
+                return (FinalistReducer.Reduce(current, step.FinalistMode!.Value), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -257,6 +259,11 @@ public sealed class WorkflowExecutor
                     !double.IsFinite(palette.ContextWeight) || palette.ContextWeight is < 0 or > 1)
                     throw new InvalidDataException("Invalid connected palette parameters.");
                 break;
+            case ProcessingOperations.FinalistReduce:
+                RequireOnly(step, finalistMode: true);
+                if (step.FinalistMode is null || !Enum.IsDefined(step.FinalistMode.Value))
+                    throw new InvalidDataException("A finalist mode is required.");
+                break;
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -324,13 +331,13 @@ public sealed class WorkflowExecutor
 
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
         bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false,
-        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false)
+        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false, bool finalistMode = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
             !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
             !channelAdjustment && step.ChannelAdjustment is not null || !contours && step.Contours is not null ||
-            !connectedPalette && step.ConnectedPalette is not null)
+            !connectedPalette && step.ConnectedPalette is not null || !finalistMode && step.FinalistMode is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }

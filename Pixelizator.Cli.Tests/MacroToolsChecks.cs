@@ -7,6 +7,46 @@ internal static class MacroToolsChecks
 {
     public static void Run(string directory, Action<string, Action> check)
     {
+        check("TCR saved macros replay every mode, preserve the source and reject mixed payloads", () =>
+        {
+            string input = Path.Combine(directory, "tcr-macro-input.png");
+            using var source = new Bitmap(37, 29, PixelFormat.Format32bppArgb);
+            for (int y = 0; y < source.Height; y++) for (int x = 0; x < source.Width; x++)
+                source.SetPixel(x, y, Color.FromArgb((x * 19 + y * 37) % 256, x * 6, y * 8, 173));
+            source.Save(input, ImageFormat.Png);
+            byte[] original = File.ReadAllBytes(input);
+            var store = new MacroStore(Path.Combine(directory, "tcr-macro-library"));
+            foreach (FinalistMode mode in Enum.GetValues<FinalistMode>())
+            {
+                var macro = store.Save(new MacroDefinition { Name = mode.ToString(), Steps =
+                    [new ProcessingStep { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = mode }] });
+                string output = Path.Combine(directory, "tcr-" + mode + ".png");
+                var run = Invoke(["macro", "apply", input, "--macro", store.PathFor(macro.Id), "-o", output]);
+                Require(run.Code == 0, run.Error);
+                using var expected = FinalistReducer.Reduce(source, mode);
+                using var actual = new Bitmap(output);
+                Equal(expected, actual);
+            }
+            Require(File.ReadAllBytes(input).SequenceEqual(original), "TCR macro overwrote source");
+            ProcessingStep[] invalid =
+            [
+                new() { OperationId = ProcessingOperations.FinalistReduce },
+                new() { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = (FinalistMode)99 },
+                new() { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = FinalistMode.T3P44, Contours = new() },
+                new() { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = FinalistMode.P5Off, ConnectedPalette = new() },
+                new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new(), FinalistMode = FinalistMode.P5Off },
+                new() { OperationId = ProcessingOperations.ContourHeatmap, Contours = new(), FinalistMode = FinalistMode.HalfAndHalf }
+            ];
+            foreach (var step in invalid)
+            {
+                var macro = store.Save(new MacroDefinition { Name = "Invalid", Steps =
+                    [new ProcessingStep { OperationId = ProcessingOperations.Monochrome }, step] });
+                string output = Path.Combine(directory, "invalid-tcr-" + macro.Id + ".png");
+                var run = Invoke(["macro", "apply", input, "--macro", store.PathFor(macro.Id), "-o", output]);
+                Require(run.Code != 0 && !File.Exists(output) && run.Error.Contains("2"), "Invalid TCR macro ran");
+                store.Delete(macro.Id);
+            }
+        });
         check("Connected palette macros preserve every option, alpha and hidden RGB after JSON roundtrip", () =>
         {
             string input = Path.Combine(directory, "macro-palette-input.png");

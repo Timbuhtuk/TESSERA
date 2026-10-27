@@ -24,6 +24,7 @@ public static class ProcessingOperations
     public const string ContourHeatmap = "contours.heatmap";
     public const string CleanContours = "contours.clean";
     public const string ConnectedPalette = "connected-palette";
+    public const string FinalistReduce = "image.finalist.reduce";
     public const string Macro = "macro.apply";
 }
 
@@ -40,6 +41,7 @@ public sealed class ProcessingStep
     public BackgroundSettings? Background { get; init; }
     public ContourCleanOptions? Contours { get; init; }
     public ConnectivityPaletteOptions? ConnectedPalette { get; init; }
+    public FinalistMode? FinalistMode { get; init; }
 }
 
 public sealed class AsciiSettings
