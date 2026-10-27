@@ -14,10 +14,10 @@ NAMES = ["Assaultman", "Bowman", "Pistolman", "Rifleman", "StrongHand"]
 
 VARIANTS = [
     ("original", "Исходник", "Референс", "1254×1254 до обработки", "fimoz-user-samples/FIMOZ/{stem}.png"),
-    ("old", "Старый 2→4", "Контроль", "Предыдущий конвейер", "fimoz-user-samples/pipeline-smooth-2x4/{stem}-reduce4.png"),
-    ("baseline", "База 8 px", "Контроль", "finish-pixel-art, кандидат для сравнения", "shape-research/finish-cli/{stem}.png"),
-    ("gradient-default", "Градиент · обычный", "FAIL 1/5", "Осветляет нужные тёмные штрихи", "shape-gradient/{stem}-gradient-default.png"),
-    ("gradient-opposition", "Градиент · строгий", "PASS 5/5", "На 4/5 совпадает с базой", "shape-gradient/{stem}-gradient-opposition.png"),
+    ("old", "Старый 2→4", "Контроль", "Отдельный путь 1254→627→157; не вход градиента", "fimoz-user-samples/pipeline-smooth-2x4/{stem}-reduce4.png"),
+    ("baseline", "База 8 px", "Контроль", "1254→157: подготовка 3×3, сетка 8, LAB 128", "shape-research/finish-cli/{stem}.png"),
+    ("gradient-default", "Градиент · обычный", "FAIL 1/5", "Очиститель поверх базы 8 px: 3–16 изменённых клеток", "shape-gradient/{stem}-gradient-default.png"),
+    ("gradient-opposition", "Градиент · строгий", "PASS 5/5", "Очиститель поверх базы 8 px; на 4/5 совпадает с ней", "shape-gradient/{stem}-gradient-opposition.png"),
     ("regions", "Цветовые области", "FAIL 1/5", "Выступы альфы у 4/5", "shape-regions/{stem}-regions.png"),
     ("regions-protected", "Области · защита", "PASS 5/5", "Меняет две цветные клетки Bowman", "shape-regions/{stem}-regions-protected.png"),
     ("graph", "Граф областей", "FAIL 1/5", "Выступы альфы у 4/5", "shape-region-graph/{stem}-graph.png"),
@@ -130,7 +130,7 @@ button,select,input{font:inherit}button,select{color:var(--ink);background:var(-
 <div class="wrap">
   <header class="head"><div><div class="eyebrow">TESSERA / FIMOZ / 27.10.2026</div><h1>Атлас формы</h1><p>Пять исходников, базовый результат, четыре гипотезы и проверочные снимки. Выберите персонажа и листайте варианты. Нажмите на картинку для просмотра крупнее.</p></div><div class="note"><strong>Как читать PASS:</strong> вариант прошёл технический порог на этих пяти файлах. Это не подтверждение улучшения формы и не художественная приёмка.</div></header>
   <div class="bar"><div class="row" id="people"></div><div class="row tabs" id="tabs"></div></div>
-  <section id="compare" class="view active"><div class="toolbar"><label>Увеличение</label><input id="zoom" type="range" min="2" max="8" value="4"><span id="zoomText">4×</span><span class="spacer"></span><label>Фон</label><select id="background"><option value="checker">Шахматный</option><option value="white">Белый</option><option value="black">Чёрный</option></select></div><div class="compare" id="compareCards"></div><p style="margin-top:14px">Клавиши ← и → переключают персонажей. В выпадающих списках можно сопоставить любые два варианта.</p></section>
+  <section id="compare" class="view active"><div class="toolbar"><label>Увеличение</label><input id="zoom" type="range" min="2" max="8" value="4"><span id="zoomText">4×</span><span class="spacer"></span><label>Фон</label><select id="background"><option value="checker">Шахматный</option><option value="white">Белый</option><option value="black">Чёрный</option></select></div><p style="margin-bottom:14px;color:#c9ddca">Чтобы оценить вклад очистителя, сравнивайте «База 8 px» с «Градиент · обычный». «Старый 2→4» — отдельная предварительная цепочка; градиент к ней не применялся.</p><div class="compare" id="compareCards"></div><p style="margin-top:14px">Клавиши ← и → переключают персонажей. В выпадающих списках можно сопоставить любые два варианта.</p></section>
   <section id="matrix" class="view"><div class="sectionline"><div><h2>Все варианты одного исходника</h2><p>Исходник, старый контроль, базовый результат и все выходы экспериментальных веток.</p></div></div><div class="matrix" id="matrixCards"></div></section>
   <section id="sheets" class="view"><div class="sectionline"><div><h2>Обзорные листы</h2><p>Общие сравнения и листы для выбранного персонажа. Переключите персонажа выше, чтобы листать его материалы.</p></div></div><div class="sheetgrid" id="sheetCards"></div></section>
   <section id="details" class="view"><div class="sectionline"><div><h2>Проверочные снимки валидатора</h2><p>Увеличения, фоны и отмеченные дефекты. Здесь сохранены изображения из независимой проверки, а не только успешные варианты.</p></div></div><div class="toolbar"><label>Категория</label><select id="category"></select></div><div class="sheetgrid" id="detailCards"></div></section>
@@ -139,7 +139,7 @@ button,select,input{font:inherit}button,select{color:var(--ink);background:var(-
 <script type="application/json" id="manifest">__MANIFEST__</script>
 <script>
 const data=JSON.parse(document.getElementById('manifest').textContent);
-const state={person:data.names[0],tab:'compare',left:'baseline',right:'conservative',background:'checker',zoom:4,category:'Все'};
+const state={person:data.names[0],tab:'compare',left:'baseline',right:'gradient-default',background:'checker',zoom:4,category:'Все'};
 const $=id=>document.getElementById(id);
 const variant=id=>data.variants.find(x=>x.id===id);
 const badge=v=>{const kind=v.verdict.includes('FAIL')?'fail':v.verdict.includes('PASS')?'':'neutral';return `<span class="badge ${kind}">${v.verdict}</span>`};
@@ -172,6 +172,7 @@ def main() -> None:
     embedded = json.dumps(manifest, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
     (OUTPUT / "index.html").write_text(HTML.replace("__MANIFEST__", embedded), encoding="utf-8")
     (OUTPUT / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    shutil.copy2(HERE / "FIMOZ_GALLERY_METHODOLOGY.md", OUTPUT / "METHODOLOGY.md")
     count = sum(1 for _ in ASSETS.rglob("*.png"))
     print(f"Gallery: {OUTPUT / 'index.html'}")
     print(f"Images: {count}")
