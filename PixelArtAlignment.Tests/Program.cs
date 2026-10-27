@@ -2,7 +2,7 @@ using PixelArtAlignment.Tests;
 
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("PixelArtAlignment.Tests: --contours, --channels, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("PixelArtAlignment.Tests: --connected-palette, --contours, --channels, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;
@@ -16,7 +16,7 @@ if (args is ["--evaluate", var actualPath, var referencePath, "--cell-size", var
     Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(quality, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     return quality.Score >= 90 ? 0 : 1;
 }
-if (args.Any(a => a is not ("--contours" or "--channels" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--connected-palette" or "--contours" or "--channels" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -94,6 +94,7 @@ if (args.Contains("--history-macros")) HistoryMacroChecks.Run(Check);
 if (args.Contains("--navigation")) Check("Top navigation, menus, state and responsive layouts", NavigationChecks.Run);
 if (args.Contains("--workspace")) Check("Workspace catalog, projects, shared assets, copies and WPF", WorkspaceChecks.Run);
 if (args.Contains("--localization")) Check("English localization, SVG settings and language persistence", LocalizationChecks.Run);
+if (args.Contains("--connected-palette") || args.Contains("--ui")) Check("Connected palette preview, controls, history, PNG and restart", ConnectedPaletteUiChecks.Run);
 if (args.Contains("--contours") || args.Contains("--ui")) Check("Contour map preview, settings, history, export and tool isolation", ContourUiChecks.Run);
 if (args.Contains("--ui")) Check("Independent GUI alignment and downscale, normal and minimum layouts", UiChecks.Run);
 if (args.Contains("--ui") || args.Contains("--channels")) Check("RGBA channel editor, history, PNG, recipes and both hosts", ChannelAdjustmentUiChecks.Run);
