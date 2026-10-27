@@ -1,4 +1,5 @@
 {
+  "Очистка контуров": "Contour cleanup",
   "Учитывает концентрацию цвета в локальных областях заданного размера. Отключите для оценки по всему изображению.": "Uses color concentration in local regions of the selected size. Disable to evaluate the whole image.",
   "Связная палитра…": "Connected palette…",
   "Связная палитра": "Connected palette",

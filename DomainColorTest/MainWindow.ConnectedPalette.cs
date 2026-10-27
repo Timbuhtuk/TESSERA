@@ -154,7 +154,12 @@ public partial class MainWindow
                     {
                         Settings = settings,
                         Operation = "Связная палитра",
-                        OperationId = "connected-palette",
+                        OperationId = ProcessingOperations.ConnectedPalette,
+                        AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
+                        {
+                            OperationId = ProcessingOperations.ConnectedPalette,
+                            ConnectedPalette = options
+                        }),
                         ParentGenerationId = parentId,
                         PreservesTransparency = true,
                         Caption = $"СВЯЗНАЯ ПАЛИТРА · {basis.Width} × {basis.Height}",

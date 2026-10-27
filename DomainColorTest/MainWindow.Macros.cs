@@ -77,6 +77,9 @@ public partial class MainWindow
         ProcessingOperations.ReplaceColor => "Замена цвета",
         ProcessingOperations.AdjustChannel => "Каналы RGBA",
         ProcessingOperations.RemoveBackground => "Удаление фона",
+        ProcessingOperations.ContourHeatmap => "Карта контуров",
+        ProcessingOperations.CleanContours => "Очистка контуров",
+        ProcessingOperations.ConnectedPalette => "Связная палитра",
         _ => operation
     });
 

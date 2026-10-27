@@ -56,6 +56,11 @@ Use a fresh nonempty UUID when creating a separate macro, a nonblank name, and a
 | `color.channel.adjust` | `channelAdjustment`: `channel` (`R`, `G`, `B`, `A`), `mode` (`Value`, `Percent`), nonnegative finite `amount`, optional `subtract` (Tessera 2.6+) |
 | `color.replace` | `colorReplacement`: `fromArgb` and `toArgb` as signed 32-bit ARGB integers |
 | `background.remove` | `background`: `mode` (`GlobalColor` or `EdgeConnected`), `tolerance` (0–100), optional `colorArgb`; omit/null to estimate separately for each input |
+| `contours.heatmap` | `contours`: analysis settings captured by the desktop Contours map tool |
+| `contours.clean` | `contours`: settings for the image cleanup performed by `clean-contours` |
+| `connected-palette` | `connectedPalette`: `targetColors` (1–4096), `connectivityWeight`, `localWeight`, `detailWeight`, `contextWeight` (0–1), `tileSize` (0 or 4–256), `distanceSpace` (`Oklab` or `CieLab`) |
+
+For both contour operations, `contours` accepts `windowSize` (odd 3–15), `strictness` (`Cautious`, `Normal`, `Strong`), `protectDetails`, `similarColorDistance` (0–100), `minimumPixelGradient` and `minimumNeighborGradient` (0–20000), `minimumSimilarNeighbors` (1–224), `minimumAgreement` and `minimumOpposition` (0–1). The desktop saves its actual slider values in the map step. The cleanup step returns the cleaned image; its diagnostic candidate map is not a separate macro output.
 
 Payloads belonging to other operations are rejected, so do not copy a full step with unrelated fields. `downscale` uses the shared `DownscaleOptions` property names in camelCase, such as `targetWidth`, `targetHeight`, `palette`, and `localColorPasses`; these are JSON fields, not CLI flags. Use a saved recipe or current source contract for additional settings rather than guessing translations. Auto detection runs anew for each input. Previous-alignment reduction uses the most recent alignment in this execution, not state from another file or editor session.
 

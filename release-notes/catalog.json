@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Макросы для карты контуров и связной палитры",
+        "en": "Contour map and connected palette macros"
+      },
+      "notes": {
+        "ru": "- Макросы: исправлено создание макроса из новых результатов инструментов «Карта контуров» и «Связная палитра». Параметры выбранного инструмента сохраняются и воспроизводятся в редакторе и CLI.\n- Очистка контуров: сохранённые JSON-макросы поддерживают шаг contours.clean; его результат можно передать следующим шагам обработки.\n- Макросы: неподходящие, смешанные или неполные параметры отклоняются до начала обработки.",
+        "en": "- Macros: fixed macro creation from new Contour map and Connected palette results. The selected tool settings are saved and replayed in the editor and CLI.\n- Contour cleanup: saved JSON macros support the contours.clean step; its output can feed subsequent processing steps.\n- Macros: invalid, mixed or missing parameters are rejected before processing starts."
+      }
+    },
+    {
+      "version": "2.10.0",
+      "title": {
         "ru": "Связная палитра: новый экспериментальный режим",
         "en": "Connected palette: a new experimental mode"
       },
