@@ -77,6 +77,7 @@ public partial class MainWindow
         ProcessingOperations.ReplaceColor => "Замена цвета",
         ProcessingOperations.AdjustChannel => "Каналы RGBA",
         ProcessingOperations.RemoveBackground => "Удаление фона",
+        ProcessingOperations.FinalistReduce => "TCR · уменьшение 8×",
         _ => operation
     });
 

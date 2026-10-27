@@ -1,0 +1,117 @@
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using DomainColorTest;
+using PixelArtDownscale;
+using PixelArtWorkflows;
+using Bitmap = System.Drawing.Bitmap;
+
+namespace PixelArtAlignment.Tests;
+
+internal static class FinalistUiChecks
+{
+    public static void Run(string labRoot)
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try { Verify(Path.GetFullPath(labRoot)); }
+            catch (Exception ex) { failure = ex; }
+        }) { IsBackground = true };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        if (!thread.Join(TimeSpan.FromMinutes(2))) throw new Exception("Finalist WPF test timed out");
+        if (failure is not null) throw failure;
+    }
+
+    private static void Verify(string labRoot)
+    {
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+        string root = Path.GetFullPath(Path.Combine("artifacts", "finalists-ui-verification"));
+        string library = Path.Combine(root, "library"); Directory.CreateDirectory(library);
+        var window = new MainWindow(library) { Width = 1000, Height = 800, ShowActivated = false };
+        try
+        {
+            window.Show(); Pump();
+            string name = "T_Bowman_UNP.png";
+            string input = Path.Combine(labRoot, "data/originals", name);
+            Invoke(window, "LoadImage", input); Pump();
+            var menu = (MenuItem)window.FindName("finalistMenuItem");
+            Require(((MenuItem)window.FindName("processingMenu")).Items.Contains(menu), "Tool is absent from Tools/Processing");
+            NavigationTest.Click(window, "finalistMenuItem"); Pump();
+            var group = Get<GroupBox>(window, "_finalistGroup");
+            Require(group.IsVisible && Window.GetWindow(group) is { IsVisible: true }, "Finalist tool is not visible in WPF");
+            Capture(Window.GetWindow(group)!, Path.Combine(root, "finalist-tool.png"));
+            var apply = Get<Button>(window, "_finalistApply");
+            Require(apply.IsEnabled, "Finalist action is disabled for an image");
+
+            foreach (var (field, mode, reference) in new[]
+            {
+                ("_t3Mode", FinalistMode.T3P44, "reports/gallery/assets/candidates/T3/ce3b649abf52/p44/" + name),
+                ("_p5Mode", FinalistMode.P5Off, "reports/gallery/assets/candidates/P5/8151a7614f2a/OFF/" + name),
+                ("_mixedMode", FinalistMode.HalfAndHalf, "reports/gallery/previews/t3-p44_p5-off_50-50/" + name)
+            })
+            {
+                window.ProcessingBasis = 0;
+                Get<RadioButton>(window, field).IsChecked = true;
+                apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                Until(() => !Get<bool>(window, "_processing"));
+                var generation = Get<SourceEntry>(window, "_activeSource").SelectedGeneration!;
+                Require(generation.OperationId == ProcessingOperations.FinalistReduce &&
+                    generation.RecipeSnapshot?.Steps.Single().FinalistMode == mode, "Mode was not saved in the result recipe");
+                using var expected = new Bitmap(Path.Combine(labRoot, reference));
+                using var actual = (Bitmap)Get<Bitmap>(window, "_downscaledResult").Clone();
+                Equal(expected, actual);
+                using (var source = new Bitmap(input))
+                using (var replay = new WorkflowExecutor().Execute(source, generation.RecipeSnapshot!)) Equal(expected, replay);
+                string export = Path.Combine(root, "ui-" + mode + ".png");
+                Invoke(window, "SaveResult", export);
+                using var reopened = new Bitmap(export);
+                Equal(expected, reopened);
+                foreach (var (zoom, label) in new[] { (5, "1x"), (8, "8x") })
+                {
+                    window.PreviewZoom = zoom; Pump();
+                    Require(window.PreviewZoom == zoom, "Preview zoom did not change");
+                    Capture(window, Path.Combine(root, "ui-" + mode + "-" + label + ".png"));
+                }
+                Console.WriteLine("  WPF mode, history, PNG export/reopen, 1×/8× preview: " + mode);
+            }
+            Console.WriteLine("PASS finalists WPF: " + root);
+        }
+        finally { window.Close(); Pump(); }
+    }
+
+    private static T Get<T>(MainWindow window, string field)
+        => (T)typeof(MainWindow).GetField(field, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+    private static object? Invoke(MainWindow window, string method, params object[] arguments)
+        => typeof(MainWindow).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, arguments);
+    private static void Until(Func<bool> condition)
+    {
+        var until = DateTime.UtcNow.AddSeconds(15);
+        while (!condition() && DateTime.UtcNow < until) { Pump(); Thread.Sleep(10); }
+        Require(condition(), "WPF finalist action timed out"); Pump();
+    }
+    private static void Pump() => Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
+    private static void Capture(Window window, string path)
+    {
+        var visual = (FrameworkElement)window.Content;
+        var image = new RenderTargetBitmap((int)Math.Ceiling(visual.ActualWidth), (int)Math.Ceiling(visual.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+        image.Render(visual);
+        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(image));
+        using var stream = File.Create(path); encoder.Save(stream);
+    }
+    private static void Equal(Bitmap first, Bitmap second)
+    {
+        Require(first.Size == second.Size, "WPF image dimensions differ");
+        for (int y = 0; y < first.Height; y++)
+        for (int x = 0; x < first.Width; x++)
+            Require(first.GetPixel(x, y).ToArgb() == second.GetPixel(x, y).ToArgb(), $"WPF RGBA differs at {x},{y}");
+    }
+    private static void Require(bool condition, string reason)
+    {
+        if (!condition) throw new InvalidDataException(reason);
+    }
+}

@@ -44,6 +44,7 @@ public partial class MainWindow : Window
         InitializeChannelTool();
         InitializeHistoryTrays();
         InitializeMacros();
+        InitializeFinalistTool();
         InitializeNavigation();
         InitializePreviewMode();
         InitializeWindowFrame();
@@ -335,6 +336,7 @@ public partial class MainWindow : Window
         if (!processing) ScheduleLiveToolPreviews();
         if (_downscaledResult is null && ProcessingBasis == 1) ProcessingBasis = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
+        _finalistApply.IsEnabled = !processing && _sourceImage is not null;
         Cursor = processing ? Cursors.Wait : null;
         UpdateBusyIndicator();
         if (!processing) RefreshInfo();

@@ -21,6 +21,7 @@ public static class ProcessingOperations
     public const string ReplaceColor = "color.replace";
     public const string AdjustChannel = "color.channel.adjust";
     public const string RemoveBackground = "background.remove";
+    public const string FinalistReduce = "image.finalist.reduce";
     public const string Macro = "macro.apply";
 }
 
@@ -35,6 +36,7 @@ public sealed class ProcessingStep
     public ColorReplacementSettings? ColorReplacement { get; init; }
     public ChannelAdjustmentOptions? ChannelAdjustment { get; init; }
     public BackgroundSettings? Background { get; init; }
+    public FinalistMode? FinalistMode { get; init; }
 }
 
 public sealed class AsciiSettings

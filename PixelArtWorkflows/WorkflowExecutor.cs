@@ -167,6 +167,8 @@ public sealed class WorkflowExecutor
             }
             case ProcessingOperations.AdjustChannel:
                 return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken), previousAlignmentCell);
+            case ProcessingOperations.FinalistReduce:
+                return (FinalistReducer.Reduce(current, step.FinalistMode!.Value), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -230,6 +232,11 @@ public sealed class WorkflowExecutor
                 if (step.Background.Tolerance is < 0 or > 100)
                     throw new InvalidDataException("Background tolerance must be 0..100.");
                 break;
+            case ProcessingOperations.FinalistReduce:
+                RequireOnly(step, finalistMode: true);
+                if (step.FinalistMode is null || !Enum.IsDefined(step.FinalistMode.Value))
+                    throw new InvalidDataException("A finalist mode is required.");
+                break;
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -283,12 +290,12 @@ public sealed class WorkflowExecutor
     }
 
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
-        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false, bool channelAdjustment = false)
+        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false, bool channelAdjustment = false, bool finalistMode = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
             !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
-            !channelAdjustment && step.ChannelAdjustment is not null)
+            !channelAdjustment && step.ChannelAdjustment is not null || !finalistMode && step.FinalistMode is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }
