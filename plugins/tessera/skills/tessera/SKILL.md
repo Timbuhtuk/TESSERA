@@ -46,6 +46,7 @@ Read the installed command's help before choosing unfamiliar flags. The bundled 
 | Reduce a prefiltered palette using connected color areas | `connected-palette` |
 | Clean up nearby shades and protect details and edges | `smooth-colors` or `smooth` |
 | Probe small connected color areas and candidate replacements | `structure-probe` |
+| Build pixel art with color preparation, one aligned grid, and optional palette reduction | `finish-pixel-art` |
 | Convert visible pixels to grayscale | `monochrome` or `mono` |
 | Export ASCII text or a rendered ASCII image | `ascii` |
 | Count and list visible colors | `palette-info` |

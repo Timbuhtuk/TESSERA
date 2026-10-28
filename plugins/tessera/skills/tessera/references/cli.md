@@ -226,7 +226,8 @@ tessera colors input.png -o intermediate.png --color-mode quantization --quantiz
 tessera connected-palette intermediate.png -o palette128.png --colors 128 --connectivity 70 --tile-size 32 --local-weight 40 --detail-weight 50 --context-weight 30 --space oklab --json
 ```
 
-`--colors` accepts 1–4096 (default 128). `--connectivity`, `--local-weight`, `--detail-weight`, and `--context-weight` accept 0–100 percent (defaults 70, 40, 50, 30). `--tile-size` accepts 0 to disable local analysis, or 4–256 pixels (default 32). `--space` selects `oklab` (default) or `lab`. Each exact RGB color is analyzed in eight-connected components. The removal cost combines pixel count, component concentration, local tile concentration, and the distance to the nearest remaining color. Removed components can choose different retained colors according to their four-neighbor boundary. This is a test tool: a rare eye, speckle and highlight can remain ambiguous; inspect the result before grid compression. The desktop equivalent is **Tools → Color → Connected palette…**, with native preview and a saved result.
+`--colors` accepts 1–4096 (default 128). `--connectivity`, `--local-weight`, `--detail-weight`, and `--context-weight` accept 0–100 percent (defaults 70, 40, 50, 30). `--tile-size` accepts 0 to disable local analysis, or 4–256 pixels (default 32). `--space` selects `oklab` (default) or `lab`. Each exact RGB color is analyzed in eight-connected components. The removal cost combines pixel count, component concentration, local tile concentration, and the distance to the nearest remaining color. Removed components can choose different retained colors according to their four-neighbor boundary. This is a test tool: a rare eye, speckle and highlight can remain ambiguous; inspect the result before grid compression. In the desktop editor, connected selection is an option in **Tools → Color → Palette…**.
+
 ## Experimental structure probe
 
 `structure-probe` finds small connected areas of similar colors and tests whether one neighboring color dominates their boundary. It can save a proposed cleaned image, a red candidate map, or both. It keeps the source dimensions and every alpha value. This is an experiment for already reduced images; it does not reconstruct a pixel grid or guarantee that a marked detail is noise.
@@ -237,6 +238,16 @@ tessera structure-probe input.png -o candidates.png --map-only --max-component 1
 ```
 
 Eight-neighbor connectivity and LAB similarity form areas. Four-neighbor boundary votes select an existing replacement color. `--similar-color` (0–100, default 12) and `--max-component` (1–4096, default 8) control area formation. `--neighbor-agreement` (0–100%, default 70), `--max-replacement-distance` (1–150, default 60), and `--minimum-confidence` (0–100%, default 65) control replacement. `--detail-distance` (0–100, default 25) protects high-contrast areas of one or two pixels. Transparent boundaries and thin lines are protected by default; `--allow-alpha-edge` and `--allow-lines` disable those guards. Red on the map means a candidate, including candidates retained by the guards or confidence threshold. `--overwrite` is required for existing files; input and output paths must differ. The equivalent desktop tool is **Tools → Color → Structure probe…** and previews either the proposed image or candidate map.
+
+## Experimental pixel-art finish
+
+`finish-pixel-art` prepares nearby colors, aligns one grid, reduces each cell to one pixel, and optionally limits the palette. It saves a separate PNG and does not modify the source. The same experimental pipeline is available in **Tools → Size and grid → Build pixel art…**. Its output is a candidate for visual review; the branch review in `experiments/ContourCleanup/BRANCH_REVIEW.md` did not establish a general shape improvement.
+
+```powershell
+tessera finish-pixel-art input.png -o finished.png --cell-size 8 --smooth-passes 1 --colors 128 --json
+```
+
+`--cell-size` accepts 2–65535 and must fit the shorter image side. `--smooth-passes` accepts 0–100; `--colors` accepts 0–4096, with zero disabling palette reduction. `--rigid` disables adaptive grid alignment. Existing output requires `--overwrite`; input and output paths must differ.
 
 ## Dark contour and grid speckle cleanup (2.9+)
 

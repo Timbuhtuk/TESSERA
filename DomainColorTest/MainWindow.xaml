@@ -236,15 +236,15 @@
                             <Button x:Name="compactGridButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text1CE891F45A92}" IsEnabled="False" Margin="0,6,0,0" ToolTip="{local:Translate Text144EE6BDCC8B}" />
                         </StackPanel>
                     </GroupBox>
-                    <GroupBox x:Name="pixelArtFinishToolGroup" Header="Собрать пиксель-арт · эксперимент">
+                    <GroupBox x:Name="pixelArtFinishToolGroup" Header="{local:Translate Text0368EF9E0316}">
                         <StackPanel>
-                            <TextBlock Text="Подготовка цвета, единая сетка и сжатие до одного пикселя на ячейку." TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,8"/>
-                            <DockPanel Margin="0,3"><TextBlock Text="Ячейка, px" Width="132"/><local:IntegerInput x:Name="finishCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="Ячейка пиксель-арта"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Проходы 3×3" Width="132"/><local:IntegerInput x:Name="finishSmoothInput" Minimum="0" Maximum="100" Value="1" AutomationProperties.Name="Проходы подготовки"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Число цветов" Width="132"/><local:IntegerInput x:Name="finishColorsInput" Minimum="0" Maximum="4096" Value="128" AutomationProperties.Name="Число цветов"/></DockPanel>
-                            <TextBlock Text="0 оставляет цвета без ограничения." Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,5"/>
-                            <CheckBox x:Name="finishAdaptiveInput" Content="Подстраивать сетку" IsChecked="True"/>
-                            <Button x:Name="finishPixelArtButton" Style="{StaticResource PrimaryButton}" Content="Собрать пиксель-арт" IsEnabled="False" Margin="0,10,0,0"/>
+                            <TextBlock Text="{local:Translate Text56AFC07370F3}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,8"/>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text7F066E3E2030}" Width="132"/><local:IntegerInput x:Name="finishCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="{local:Translate Text3CC92774E208}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text4A02EA882194}" Width="132"/><local:IntegerInput x:Name="finishSmoothInput" Minimum="0" Maximum="100" Value="1" AutomationProperties.Name="{local:Translate TextC81140C3EBA1}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text89A26A950DB0}" Width="132"/><local:IntegerInput x:Name="finishColorsInput" Minimum="0" Maximum="4096" Value="128" AutomationProperties.Name="{local:Translate Text89A26A950DB0}"/></DockPanel>
+                            <TextBlock Text="{local:Translate TextFC314341B945}" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                            <CheckBox x:Name="finishAdaptiveInput" Content="{local:Translate Text5999BC8A94B8}" IsChecked="True" ToolTip="{local:Translate TextF9F28BD54C78}"/>
+                            <Button x:Name="finishPixelArtButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate TextE7216DB18A55}" IsEnabled="False" Margin="0,10,0,0"/>
                         </StackPanel>
                     </GroupBox>
                     <GroupBox x:Name="profileToolGroup" Header="{local:Translate Text35CA6037FF58}">
@@ -306,23 +306,23 @@
                             <CheckBox x:Name="smoothingLivePreviewInput" Content="Живой предпросмотр" ToolTip="Показывать результат настройки без сохранения в историю." Margin="0,10,0,5" />
                         </StackPanel>
                     </GroupBox>
-                    <GroupBox x:Name="structureProbeToolGroup" Header="Проба структуры · эксперимент">
+                    <GroupBox x:Name="structureProbeToolGroup" Header="{local:Translate Text39C4AA7E879A}">
                         <StackPanel>
-                            <TextBlock Text="Малые связные области похожих цветов и их окружение. Результат остаётся того же размера; красная карта показывает кандидатов."
+                            <TextBlock Text="{local:Translate Text16442E374D50}"
                                        TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,9"/>
-                            <DockPanel Margin="0,3"><TextBlock Text="Сходство LAB" Width="160"/><local:IntegerInput x:Name="structureSimilarityInput" Minimum="0" Maximum="100" Value="12" AutomationProperties.Name="Сходство цветов в LAB"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Размер области до" Width="160"/><local:IntegerInput x:Name="structureComponentInput" Minimum="1" Maximum="4096" Value="8" AutomationProperties.Name="Максимальный размер области"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Согласие окружения, %" Width="160"/><local:IntegerInput x:Name="structureAgreementInput" Minimum="0" Maximum="100" Value="70" AutomationProperties.Name="Согласие окружения"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Дистанция замены" Width="160"/><local:IntegerInput x:Name="structureDistanceInput" Minimum="1" Maximum="150" Value="60" AutomationProperties.Name="Максимальная дистанция замены"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Уверенность, %" Width="160"/><local:IntegerInput x:Name="structureConfidenceInput" Minimum="0" Maximum="100" Value="65" AutomationProperties.Name="Минимальная уверенность"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="Беречь детали от LAB" Width="160"/><local:IntegerInput x:Name="structureDetailDistanceInput" Minimum="0" Maximum="100" Value="25" AutomationProperties.Name="Контраст защищаемой детали"/></DockPanel>
-                            <CheckBox x:Name="structureProtectAlphaInput" Content="Беречь границу прозрачности" IsChecked="True" Margin="0,8,0,3"/>
-                            <CheckBox x:Name="structureProtectLinesInput" Content="Беречь тонкие линии" IsChecked="True"/>
-                            <CheckBox x:Name="structureMapPreviewInput" Content="Показывать карту кандидатов" Margin="0,10,0,0"/>
-                            <TextBlock x:Name="structurePreviewStatus" Text="Откройте изображение" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,9,0,0"/>
-                            <Button x:Name="structurePreviewButton" Content="Обновить предпросмотр" Margin="0,9,0,0"/>
-                            <Button x:Name="structureApplyButton" Style="{StaticResource PrimaryButton}" Content="Создать результат" IsEnabled="False" Margin="0,8,0,0"/>
-                            <Button x:Name="structureMapButton" Content="Создать результат-карту" IsEnabled="False" Margin="0,7,0,0"/>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text1E6FD286CF7D}" Width="160"/><local:IntegerInput x:Name="structureSimilarityInput" Minimum="0" Maximum="100" Value="12" AutomationProperties.Name="{local:Translate Text36EE325BDAD7}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextC114D2AA9724}" Width="160"/><local:IntegerInput x:Name="structureComponentInput" Minimum="1" Maximum="4096" Value="8" AutomationProperties.Name="{local:Translate TextD4CAB331E679}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text1C58CA608798}" Width="160"/><local:IntegerInput x:Name="structureAgreementInput" Minimum="0" Maximum="100" Value="70" AutomationProperties.Name="{local:Translate Text6DFA41A26DA9}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text8E965FF8574A}" Width="160"/><local:IntegerInput x:Name="structureDistanceInput" Minimum="1" Maximum="150" Value="60" AutomationProperties.Name="{local:Translate TextDC39D9D97FDD}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text5C4B70140957}" Width="160"/><local:IntegerInput x:Name="structureConfidenceInput" Minimum="0" Maximum="100" Value="65" AutomationProperties.Name="{local:Translate TextE559065A42C4}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextE5DC85FA4D98}" Width="160"/><local:IntegerInput x:Name="structureDetailDistanceInput" Minimum="0" Maximum="100" Value="25" AutomationProperties.Name="{local:Translate TextCEB7FA448D82}"/></DockPanel>
+                            <CheckBox x:Name="structureProtectAlphaInput" Content="{local:Translate Text501AE848969B}" IsChecked="True" Margin="0,8,0,3" ToolTip="{local:Translate Text356642240820}"/>
+                            <CheckBox x:Name="structureProtectLinesInput" Content="{local:Translate Text1270F95C2A3E}" IsChecked="True" ToolTip="{local:Translate Text8867CED22E5B}"/>
+                            <CheckBox x:Name="structureMapPreviewInput" Content="{local:Translate TextA8CE189B8841}" Margin="0,10,0,0" ToolTip="{local:Translate Text158FA348A801}"/>
+                            <TextBlock x:Name="structurePreviewStatus" Text="{local:Translate TextDEEA9C26AAEA}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,9,0,0"/>
+                            <Button x:Name="structurePreviewButton" Content="{local:Translate Text62B92AA4CE79}" Margin="0,9,0,0"/>
+                            <Button x:Name="structureApplyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text2E5D40A1FF51}" IsEnabled="False" Margin="0,8,0,0"/>
+                            <Button x:Name="structureMapButton" Content="{local:Translate Text7FE8FDE34E19}" IsEnabled="False" Margin="0,7,0,0"/>
                         </StackPanel>
                     </GroupBox>
                         <GroupBox x:Name="contourToolGroup" Header="{local:Translate Text0F29403ECDA2}">

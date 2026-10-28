@@ -145,6 +145,10 @@ Enable **Eraser on result**, choose its diameter in image pixels, and drag over 
 
 Open **Tools → Color → Structure probe…** to inspect small connected color areas. The right panel exposes LAB color similarity, maximum area size, agreement of the surrounding colors, replacement distance and confidence, plus separate guards for transparency edges, thin lines and high-contrast details. The left canvas previews the proposed replacement; **Show candidate map** switches it to a grayscale image with red candidate areas. **Create result** and **Create map result** add separate exportable history cards. Large images require **Refresh preview**. Source dimensions and alpha values are retained. This remains a trial cleanup for already reduced pixel art; inspect fine details before accepting its proposed colors. See [CLI.md](CLI.md) for the matching `structure-probe` command.
 
+## Experimental pixel-art finish
+
+Open **Tools → Size and grid → Build pixel art…** to prepare nearby colors, align a single grid, reduce each cell to one pixel, and optionally limit the palette. Choose the cell size, number of color preparation passes, palette size, and whether the grid can adapt to the image. Zero passes skip preparation; zero colors skip palette reduction. The result is saved as a new history card, leaving the source intact. Inspect silhouette, fine details, transparency, and colors before using it: the shape hypothesis review did not establish a general visual improvement. The matching CLI command is `finish-pixel-art`.
+
 ## Contours
 
 Open **View → Lenses → Contours…**. Choose an odd analysis window from **3×3 to 15×15** and adjust each threshold independently: LAB color tolerance, minimum pixel/neighbor gradients, minimum similar-neighbor count, agreement and opposition percentages. The old desktop strictness selector is replaced by these controls. Fine-detail protection remains separate.

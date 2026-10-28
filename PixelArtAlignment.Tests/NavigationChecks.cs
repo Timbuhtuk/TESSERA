@@ -60,8 +60,8 @@ internal static class NavigationChecks
                     "Tools categories are incomplete or out of order");
                 foreach (var (group, commands) in new[]
                 {
-                    ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem", "finalistMenuItem" }),
-                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "channelMenuItem", "infoMenuItem" }),
+                    ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem", "finalistMenuItem", "pixelArtFinishMenuItem" }),
+                    ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "structureProbeMenuItem", "channelMenuItem", "infoMenuItem" }),
                     ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
                     ("materialsToolsMenu", new[] { "materialMapsMenuItem", "inspectTilesMenuItem", "addToBoardMenuItem" })
                 })
@@ -75,7 +75,7 @@ internal static class NavigationChecks
                     window.FindName("replaceColorMenuItem") is null, "Removed tools remain in navigation");
                 Require(window.FindName("basisMenu") is null, "Processing source still has a second menu selection");
                 int historyCount = source.Generations.Count;
-                foreach (string command in new[] { "colorMenuItem", "smoothingMenuItem", "contoursMenuItem", "gridLensMenuItem", "channelMenuItem", "filtersMenuItem", "finalistMenuItem", "gridMenuItem", "infoMenuItem" })
+                foreach (string command in new[] { "colorMenuItem", "smoothingMenuItem", "structureProbeMenuItem", "contoursMenuItem", "gridLensMenuItem", "channelMenuItem", "filtersMenuItem", "finalistMenuItem", "pixelArtFinishMenuItem", "gridMenuItem", "infoMenuItem" })
                 {
                     NavigationTest.Click(window, command); Pump();
                     Require(Get<MenuItem>(command).IsChecked && Get<Bitmap>("_sourceImage") is not null,
@@ -83,7 +83,8 @@ internal static class NavigationChecks
                 }
                 var lens = Get<PixelPreview>("sourcePreview").GridLens;
                 Require(lens is { CellWidth: 16, CellHeight: 16, OffsetX: 0, OffsetY: 0 } &&
-                    Get<PixelPreview>("resultPreview").GridLens == lens, "Grid lens did not cover both previews");
+                    Get<PixelPreview>("resultPreview").GridLens == lens && !Get<MenuItem>("contoursMenuItem").IsChecked,
+                    "Grid lens did not replace contours on both previews");
                 Get<IntegerInput>("_gridLensWidth").Value = 12;
                 Get<IntegerInput>("_gridLensHeight").Value = 7;
                 Get<IntegerInput>("_gridLensOffsetX").Value = 3;
@@ -91,8 +92,10 @@ internal static class NavigationChecks
                 lens = Get<PixelPreview>("sourcePreview").GridLens;
                 Require(lens is { CellWidth: 12, CellHeight: 7, OffsetX: 3, OffsetY: 2 }, "Grid lens settings did not update");
                 window.AlternativePreview = true; Pump();
-                Require(Get<PixelPreview>("comparisonPreview").GridLens == lens, "Grid lens is absent in alternative preview");
+                Require(Get<PixelPreview>("comparisonPreview").GridLens is null && !Get<MenuItem>("gridLensMenuItem").IsChecked,
+                    "Alternative preview did not close the grid lens");
                 window.AlternativePreview = false;
+                NavigationTest.Click(window, "gridLensMenuItem"); Pump();
                 Get<CheckBox>("_gridLensVisible").IsChecked = false;
                 Require(Get<PixelPreview>("sourcePreview").GridLens is null, "Hidden grid lens still draws");
                 Get<CheckBox>("_gridLensVisible").IsChecked = true;
@@ -114,8 +117,9 @@ internal static class NavigationChecks
                 try { Get<Button>("_gridLensColorButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); }
                 finally { pickerTimer.Stop(); }
                 Require(pickerFailure is null && Get<PixelPreview>("sourcePreview").GridLens?.Color == System.Windows.Media.Color.FromArgb(190, 238, 51, 85) &&
-                    Get<PixelPreview>("resultPreview").GridLens == Get<PixelPreview>("comparisonPreview").GridLens,
-                    "Grid color picker did not update all preview hosts");
+                    Get<PixelPreview>("resultPreview").GridLens == Get<PixelPreview>("sourcePreview").GridLens &&
+                    Get<PixelPreview>("comparisonPreview").GridLens is null,
+                    "Grid color picker did not update ordinary preview hosts");
                 Require(library.Load().Single().Generations.Count == historyCount, "Choosing tools started processing");
                 var current = Get<SourceEntry>("_activeSource");
                 Get<ListBox>("generationStrip").SelectedItem = current.Generations.Last(); Pump();
