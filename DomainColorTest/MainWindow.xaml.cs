@@ -328,8 +328,10 @@ public partial class MainWindow : Window
         _processing = processing;
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
-        foreach (var tool in _dockedTools.Values) tool.Content.IsEnabled = !processing || _macroCancellation is not null;
-        foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
+        foreach (var (key, tool) in _dockedTools)
+            tool.Content.IsEnabled = !processing || key == "macros" && _macroCancellation is not null;
+        foreach (var (key, tool) in _toolWindows)
+            tool.ToolContent.IsEnabled = !processing || key == "macros" && _macroCancellation is not null;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
         homeContent.IsEnabled = !processing;
         processButton.IsEnabled = !processing && _sourceImage is not null;

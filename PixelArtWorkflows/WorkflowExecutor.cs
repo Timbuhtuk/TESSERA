@@ -4,7 +4,7 @@ using PixelArtDownscale;
 
 namespace PixelArtWorkflows;
 
-public sealed record WorkflowProgress(int Index, int Count, string OperationId);
+public sealed record WorkflowProgress(int Index, int Count, string OperationId, int? CellSize = null);
 
 public sealed class WorkflowStepException : Exception
 {
@@ -34,8 +34,9 @@ public sealed class WorkflowCanceledException : OperationCanceledException
 
 public sealed class WorkflowExecutor
 {
+    // The step callback runs synchronously while its bitmap is alive. Callers must copy or save it before returning.
     public Bitmap Execute(Bitmap input, ProcessingRecipe recipe, CancellationToken cancellationToken = default,
-        IProgress<WorkflowProgress>? progress = null)
+        IProgress<WorkflowProgress>? progress = null, Action<WorkflowProgress, Bitmap>? stepCompleted = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(recipe);
@@ -55,6 +56,13 @@ public sealed class WorkflowExecutor
                     cancellationToken.ThrowIfCancellationRequested();
                     (next, nextAlignmentCell) = ExecuteStep(current, step, previousAlignmentCell, cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
+                    int? cellSize = step.OperationId switch
+                    {
+                        ProcessingOperations.Align or ProcessingOperations.AlignLocal or ProcessingOperations.AlignLocalSnapped => nextAlignmentCell,
+                        ProcessingOperations.Reduce => step.UsePreviousAlignment ? previousAlignmentCell : step.CellSize,
+                        _ => null
+                    };
+                    stepCompleted?.Invoke(new WorkflowProgress(q + 1, recipe.Steps.Count, step.OperationId, cellSize), next);
                 }
                 catch (OperationCanceledException ex)
                 {
@@ -137,7 +145,7 @@ public sealed class WorkflowExecutor
                 var mode = step.OperationId == ProcessingOperations.Align ? GridAlignmentMode.Global : GridAlignmentMode.Local;
                 bool snap = step.OperationId == ProcessingOperations.AlignLocalSnapped;
                 var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap });
-                return (alignment.Aligned, mode == GridAlignmentMode.Global || snap ? alignment.CellSize : null);
+                return (alignment.Aligned, alignment.CellSize);
             }
             case ProcessingOperations.Reduce:
             {

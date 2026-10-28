@@ -91,7 +91,9 @@ dock button to return it. TCR offers reduction factors from 2 to 64.
 
 Right-click a result and choose Create macro to save its supported steps.
 Tools > Macros lists saved macros, shows their steps and applies them to
-the selected source or result, saving one final result. Right-click a macro
+the selected source or result. Every completed step becomes a separate history
+result linked to the previous step. Cancel or a processing error preserves the
+completed prefix; the current unfinished step is not saved. Right-click a macro
 to rename or delete it. Esc or Cancel stops a run without a partial result.
 Saved macros can also be listed and applied through the CLI and chat skill.
 

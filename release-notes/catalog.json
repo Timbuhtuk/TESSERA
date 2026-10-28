@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Макросы: история каждого шага",
+        "en": "Macros: history for every step"
+      },
+      "notes": {
+        "ru": "- Макросы: каждый успешно выполненный шаг появляется отдельным результатом в обозревателе. Карточки образуют последовательную цепочку от выбранного исходника или результата.\n- История: промежуточные результаты можно выбирать, экспортировать и использовать для продолжения обработки или создания нового макроса. Карточки сохраняют параметры операций и связи между шагами.\n- Отмена и ошибки: готовые шаги остаются в истории; сообщение показывает остановившийся шаг и число сохранённых результатов. Кнопка отмены доступна и в док-панели, и в отдельном окне.\n- Параметры шагов: сохраняются настройки связной палитры, резкости, TCR и сетки; последующие карточки сохраняют настройки предыдущих операций. Сообщения доступны на русском и английском.",
+        "en": "- Macros: every successfully completed step appears as a separate result in the browser. Cards form a sequential chain from the selected original image or saved result.\n- History: select, export and continue processing intermediate results, or use them to create another macro. Cards retain operation settings and links between steps.\n- Cancellation and errors: completed steps remain in history; the message identifies the stopped step and the number of saved results. Cancel works in both the dock and floating tool window.\n- Step settings: connected palette, Sharpen, TCR and grid settings are retained, and later cards keep the settings from preceding operations. Messages are available in Russian and English."
+      }
+    },
+    {
+      "version": "2.14.0",
+      "title": {
         "ru": "Линзы, выделение цвета и экспериментальные инструменты",
         "en": "Lenses, color outlines and experimental tools"
       },
