@@ -22,7 +22,7 @@ public partial class MainWindow
         _gridLensGroup.Header = Localization.Text("Линза · сетка");
         var content = new StackPanel();
         _gridLensVisible.Content = Localization.Text("Показывать сетку");
-        _gridLensVisible.ToolTip = Localization.Text("Показывать неразрушающую сетку на исходнике, результате и в альтернативном просмотре.");
+        _gridLensVisible.ToolTip = Localization.Text("Показывает линии только в обычном предпросмотре; результат и экспорт не меняются.");
         ToolTipService.SetShowOnDisabled(_gridLensVisible, true);
         _gridLensVisible.Margin = new Thickness(0, 0, 0, 8);
         content.Children.Add(_gridLensVisible);
@@ -102,11 +102,12 @@ public partial class MainWindow
     private void UpdateGridLens()
     {
         bool opened = _dockedTools.ContainsKey("gridLens") || _toolWindows.ContainsKey("gridLens");
-        PreviewGridLens? grid = opened && _gridLensVisible.IsChecked == true
+        PreviewGridLens? grid = opened && !AlternativePreview && _gridLensVisible.IsChecked == true
             ? new PreviewGridLens(_gridLensWidth.Value, _gridLensHeight.Value, _gridLensOffsetX.Value,
                 _gridLensOffsetY.Value, Color.FromArgb(190, _gridLensColor.R, _gridLensColor.G, _gridLensColor.B))
             : null;
-        foreach (var preview in new[] { sourcePreview, resultPreview, _comparisonPreview })
+        foreach (var preview in new[] { sourcePreview, resultPreview })
             if (preview.GridLens != grid) preview.GridLens = grid;
+        if (_comparisonPreview.GridLens is not null) _comparisonPreview.GridLens = null;
     }
 }

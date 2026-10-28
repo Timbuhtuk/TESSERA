@@ -1,5 +1,7 @@
 using System.Drawing.Imaging;
+using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -21,7 +23,7 @@ internal static class GridLensChecks
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
-        if (!thread.Join(TimeSpan.FromSeconds(30))) throw new Exception("Grid lens checks timed out");
+        if (!thread.Join(TimeSpan.FromSeconds(60))) throw new Exception("Grid lens checks timed out");
         if (failure is not null) throw failure;
     }
 
@@ -56,7 +58,73 @@ internal static class GridLensChecks
                 "Preview grid changed source pixels or exported image data");
         }
         finally { preview.Image = null; window.Close(); Pump(); }
+        VerifyEditorModes();
         Console.WriteLine("  Grid render, offsets, color, zoom and source PNG isolation passed");
+    }
+
+    private static void VerifyEditorModes()
+    {
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+        string folder = Path.GetFullPath(Path.Combine("artifacts", "grid-lens-modes", Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(folder);
+        string path = Path.Combine(folder, "source.png");
+        using (var image = new Bitmap(16, 16)) image.Save(path, ImageFormat.Png);
+        var editor = new MainWindow(Path.Combine(folder, "library"))
+            { Width = 1100, Height = 780, ShowActivated = false, ShowInTaskbar = false };
+        try
+        {
+            editor.EnableWorkspacePrototype(); editor.Show(); Pump();
+            Wait(editor.ImportWorkspaceFilesAsync([path]));
+            Wait(editor.OpenWorkspaceAssetAsync(editor.Workspace!.State.Assets.Single()));
+            var source = Get<PixelPreview>(editor, "sourcePreview");
+            var gridItem = Get<MenuItem>(editor, "gridLensMenuItem");
+            var contourItem = Get<MenuItem>(editor, "contoursMenuItem");
+            Require(Equals(Get<MenuItem>(editor, "infoMenuItem").Header, "Инфо…"),
+                "Russian information tool label still uses Latin letters");
+            NavigationTest.Click(editor, "gridLensMenuItem"); Pump();
+            Require(source.GridLens.HasValue && gridItem.IsChecked, "Preview grid did not become the active lens");
+            NavigationTest.Click(editor, "contoursMenuItem"); Pump();
+            Require(source.GridLens is null && !gridItem.IsChecked && contourItem.IsChecked,
+                "Opening contours did not turn off the preview grid lens");
+            editor.AlternativePreview = true; Pump();
+            Require(!contourItem.IsChecked && !gridItem.IsChecked && source.GridLens is null &&
+                Get<PixelPreview>(editor, "_comparisonPreview").GridLens is null,
+                "Alternative preview left a lens active");
+            bool warning = false;
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(10) };
+            timer.Tick += (_, _) =>
+            {
+                var dialog = editor.OwnedWindows.OfType<TesseraDialog>().FirstOrDefault();
+                if (dialog is null) return;
+                timer.Stop();
+                warning = ((TextBlock)dialog.FindName("dialogMessage")).Text.Contains("альтернативном просмотре");
+                ((StackPanel)dialog.FindName("dialogButtons")).Children.OfType<Button>()
+                    .Single(button => Equals(button.Tag, MessageBoxResult.OK))
+                    .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            };
+            timer.Start();
+            try { NavigationTest.Click(editor, "gridLensMenuItem"); }
+            finally { timer.Stop(); }
+            Require(warning && !gridItem.IsChecked && source.GridLens is null,
+                "Opening a lens in alternative preview did not explain the restriction");
+            editor.AlternativePreview = false;
+            NavigationTest.Click(editor, "gridLensMenuItem"); Pump();
+            Require(gridItem.IsChecked && source.GridLens.HasValue,
+                "Preview grid could not reopen after leaving alternative preview");
+        }
+        finally { editor.Close(); Pump(); }
+
+        static T Get<T>(MainWindow window, string name)
+            => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name,
+                BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
+    }
+
+    private static void Wait(Task task)
+    {
+        var until = DateTime.UtcNow.AddSeconds(15);
+        while (!task.IsCompleted && DateTime.UtcNow < until) { Pump(); Thread.Sleep(5); }
+        Require(task.IsCompleted, "Lens editor setup timed out");
+        task.GetAwaiter().GetResult(); Pump();
     }
 
     private static byte[] Capture(PixelPreview preview)

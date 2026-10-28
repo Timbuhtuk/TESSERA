@@ -32,7 +32,7 @@ public partial class MainWindow
 
     private void InitializeInfo()
     {
-        infoToolGroup.Header = "Info";
+        infoToolGroup.Header = Localization.Text("Инфо");
         infoPaletteList.ItemsSource = _infoPalette;
         infoManualReplaceButton.Click += (_, _) => OpenColorReplace(DrawingColor.Black, true);
         _infoEyedropperButton = new Button
@@ -231,7 +231,7 @@ public partial class MainWindow
     private void OpenColorReplace(DrawingColor oldColor, bool allowOldColorEdit)
     {
         if (_processing || _sourceImage is null) return;
-        if (!IsInfoToolOpen) OpenEditorTool("info", "Info", 760, infoToolGroup);
+        if (!IsInfoToolOpen) OpenEditorTool("info", Localization.Text("Инфо"), 760, infoToolGroup);
         RefreshInfo();
         if (_infoBasisShown is null || !IsInfoToolOpen) return;
         _replaceWindow?.Close();

@@ -208,6 +208,19 @@ internal static class HistoryMacroChecks
             window.Browser.Navigate("project", project.Id, nested.Id);
             Wait(window.OpenWorkspaceAssetAsync(actualCatalog.State.Assets.Single(a => a.Id == source.Id))); Pump();
             var preview = Get<Grid>(window, "previewPair"); Require(preview.ActualHeight >= 240, "Trays consumed preview minimum.");
+            strip.RestoreScroll(new Point(0, 0)); Pump();
+            strip.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120)
+                { RoutedEvent = UIElement.PreviewMouseWheelEvent }); Pump();
+            double firstRow = Math.Min(strip.CardBounds.Select(bounds => bounds.Top - strip.CardBounds.Min(card => card.Top))
+                .Where(offset => offset > .5).Min(), strip.Panel!.ExtentHeight - strip.Panel.ViewportHeight);
+            Require(Math.Abs(strip.ScrollPosition.Y - firstRow) < 1,
+                $"One wheel notch did not advance exactly one history card row: {strip.ScrollPosition.Y} vs {firstRow}, viewport={strip.Panel.ViewportHeight}, extent={strip.Panel.ExtentHeight}.");
+            strip.RestoreScroll(new Point(0, 0)); Pump();
+            strip.Panel.ScrollByCard(true, true); Pump();
+            double firstColumn = Math.Min(strip.CardBounds.Select(bounds => bounds.Left - strip.CardBounds.Min(card => card.Left))
+                .Where(offset => offset > .5).Min(), strip.Panel.ExtentWidth - strip.Panel.ViewportWidth);
+            Require(Math.Abs(strip.ScrollPosition.X - firstColumn) < 1,
+                "Horizontal history scroll did not advance one card column.");
             strip.RestoreScroll(new Point(500, 100)); Pump(); Require(strip.ScrollPosition.X > 0 && strip.ScrollPosition.Y > 0, "Both result scroll axes are not active.");
             int realized = Enumerable.Range(0, strip.Items.Count).Count(q => strip.ItemContainerGenerator.ContainerFromIndex(q) is not null);
             Require(realized < active.Generations.Count / 2, "History created containers for all cards.");

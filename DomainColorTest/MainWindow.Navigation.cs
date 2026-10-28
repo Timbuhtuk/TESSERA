@@ -83,7 +83,7 @@ public partial class MainWindow
         colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Палитра…", "color", 580, colorToolGroup);
         smoothingMenuItem = AddTool(colorToolsMenu, "smoothingMenuItem", "Сглаживание…", "smoothing", 470, smoothingToolGroup);
         AddTool(colorToolsMenu, "channelMenuItem", "Каналы RGBA…", "channel", 460, channelToolGroup);
-        infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Info…", "info", 760, infoToolGroup);
+        infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Инфо…", "info", 760, infoToolGroup);
 
         var filtersToolsMenu = NavigationItem("filtersToolsMenu", "Фильтры и фон"); toolsMenu.Items.Add(filtersToolsMenu);
         filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 570, filtersToolGroup);

@@ -21,6 +21,13 @@ public partial class MainWindow
         get => _alternativePreview;
         set
         {
+            if (value)
+            {
+                CloseDockedTool("contours");
+                CloseDockedTool("gridLens");
+                if (_toolWindows.TryGetValue("contours", out var contours)) contours.Close();
+                if (_toolWindows.TryGetValue("gridLens", out var grid)) grid.Close();
+            }
             _alternativePreview = value;
             ResetComparisonKey();
             UpdateComparisonPreview();

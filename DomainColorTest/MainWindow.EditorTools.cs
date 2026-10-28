@@ -22,6 +22,18 @@ public partial class MainWindow
     private void OpenEditorToolCore(string key, string title, double height, GroupBox[] groups,
         bool forceFloating = false, bool centerFloating = true)
     {
+        if (key is "contours" or "gridLens")
+        {
+            if (AlternativePreview)
+            {
+                TesseraDialog.Show(this, Localization.Text("Линзы не работают в альтернативном просмотре. Выключите его, чтобы открыть линзу."),
+                    Localization.Text("Линзы"), MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            string other = key == "contours" ? "gridLens" : "contours";
+            CloseDockedTool(other);
+            if (_toolWindows.TryGetValue(other, out var otherWindow)) otherWindow.Close();
+        }
         if (key == "contours") UpdateContourWindowLabel();
         if (_dockedTools.ContainsKey(key) && !forceFloating)
         {

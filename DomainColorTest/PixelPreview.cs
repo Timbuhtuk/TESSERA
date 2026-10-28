@@ -41,6 +41,8 @@ public sealed class PixelPreview : Grid
     private bool _applyingScroll;
     private int _scrollRevision;
     private bool _isColorPicking, _continuousFit;
+    private readonly DispatcherTimer _highlightTimer = new() { Interval = TimeSpan.FromMilliseconds(110) };
+    private int _highlightPhase;
     private bool _movingGrid;
     private Point _gridDragStart;
     private PreviewGridLens _gridDragOrigin;
@@ -67,7 +69,8 @@ public sealed class PixelPreview : Grid
         {
             _surface.Source = value is null ? null : ToBitmapSource(value);
             _surface.HighlightRgb = null;
-            _surface.HighlightMask = null;
+            _surface.HighlightOutline = null;
+            _highlightTimer.Stop();
             _image = value;
             _empty.Visibility = value is null ? Visibility.Visible : Visibility.Collapsed;
             UpdateScale();
@@ -103,13 +106,22 @@ public sealed class PixelPreview : Grid
             int? rgb = value.HasValue ? value.Value & 0xFFFFFF : null;
             if (_surface.HighlightRgb == rgb) return;
             _surface.HighlightRgb = rgb;
-            UpdateHighlightMask();
+            UpdateHighlightOutline();
+            UpdateHighlightAnimation();
         }
     }
 
     public PixelPreview()
     {
         ClipToBounds = true;
+        _highlightTimer.Tick += (_, _) =>
+        {
+            _highlightPhase = (_highlightPhase + 1) % 8;
+            _surface.HighlightPhase = _highlightPhase;
+            _surface.InvalidateVisual();
+        };
+        Loaded += (_, _) => UpdateHighlightAnimation();
+        Unloaded += (_, _) => _highlightTimer.Stop();
         _scroll = new ScrollViewer { Content = _surface, Background = Brushes.Transparent, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false };
         Children.Add(_scroll);
         _empty = new TextBlock { TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16), IsHitTestVisible = false };
@@ -202,25 +214,66 @@ public sealed class PixelPreview : Grid
             => double.IsFinite(point.X) && double.IsFinite(point.Y) && point.X >= 0 && point.Y >= 0 && point.X < width && point.Y < height;
     }
 
-    private void UpdateHighlightMask()
+    private void UpdateHighlightAnimation()
     {
-        _surface.HighlightMask = null;
+        if (IsLoaded && _surface.HighlightOutline is not null) _highlightTimer.Start();
+        else _highlightTimer.Stop();
+    }
+
+    private void UpdateHighlightOutline()
+    {
+        _surface.HighlightOutline = null;
         if (_surface.Source is { } source && _surface.HighlightRgb is int rgb)
         {
-            int stride = checked(source.PixelWidth * 4);
-            var pixels = new byte[checked(stride * source.PixelHeight)];
+            int width = source.PixelWidth, height = source.PixelHeight;
+            int stride = checked(width * 4);
+            var pixels = new byte[checked(stride * height)];
             source.CopyPixels(pixels, stride, 0);
-            Color accent = ThemeBrush("Ts.Accent").Color, canvas = ThemeBrush("Ts.Canvas").Color;
-            int Difference(Color color) => Math.Abs(color.R - (rgb >> 16 & 255)) + Math.Abs(color.G - (rgb >> 8 & 255)) + Math.Abs(color.B - (rgb & 255));
-            Color highlight = Difference(accent) >= Difference(canvas) ? accent : canvas;
-            for (int q = 0; q < pixels.Length; q += 4)
+            var selected = new bool[checked(width * height)];
+            for (int q = 0; q < selected.Length; q++)
             {
-                bool matches = pixels[q + 3] > 0 && (pixels[q + 2] << 16 | pixels[q + 1] << 8 | pixels[q]) == rgb;
-                pixels[q] = highlight.B; pixels[q + 1] = highlight.G; pixels[q + 2] = highlight.R;
-                pixels[q + 3] = matches ? (byte)180 : (byte)0;
+                int at = q * 4;
+                selected[q] = pixels[at + 3] > 0 &&
+                    (pixels[at + 2] << 16 | pixels[at + 1] << 8 | pixels[at]) == rgb;
             }
-            var mask = BitmapSource.Create(source.PixelWidth, source.PixelHeight, 96, 96, PixelFormats.Bgra32, null, pixels, stride);
-            mask.Freeze(); _surface.HighlightMask = mask;
+            var outline = new StreamGeometry();
+            using (var lines = outline.Open())
+            {
+                for (int y = 0; y <= height; y++)
+                {
+                    int start = -1;
+                    for (int x = 0; x <= width; x++)
+                    {
+                        bool boundary = x < width &&
+                            (y > 0 && selected[(y - 1) * width + x]) != (y < height && selected[y * width + x]);
+                        if (boundary && start < 0) start = x;
+                        if (!boundary && start >= 0)
+                        {
+                            lines.BeginFigure(new Point(start, y), false, false);
+                            lines.LineTo(new Point(x, y), true, false);
+                            start = -1;
+                        }
+                    }
+                }
+                for (int x = 0; x <= width; x++)
+                {
+                    int start = -1;
+                    for (int y = 0; y <= height; y++)
+                    {
+                        bool boundary = y < height &&
+                            (x > 0 && selected[y * width + x - 1]) != (x < width && selected[y * width + x]);
+                        if (boundary && start < 0) start = y;
+                        if (!boundary && start >= 0)
+                        {
+                            lines.BeginFigure(new Point(x, start), false, false);
+                            lines.LineTo(new Point(x, y), true, false);
+                            start = -1;
+                        }
+                    }
+                }
+            }
+            outline.Freeze();
+            _surface.HighlightOutline = outline.IsEmpty() ? null : outline;
         }
         _surface.InvalidateVisual();
     }
@@ -308,7 +361,7 @@ public sealed class PixelPreview : Grid
     private void RefreshTheme()
     {
         UpdateBackground();
-        if (_surface.HighlightRgb.HasValue) UpdateHighlightMask();
+        if (_surface.HighlightRgb.HasValue) UpdateHighlightOutline();
     }
 
     public static BitmapSource ToBitmapSource(Bitmap bitmap)
@@ -337,7 +390,8 @@ public sealed class PixelPreview : Grid
         public PreviewGridLens? GridLens { get; set; }
         public Rect VisibleBounds { get; set; }
         public int? HighlightRgb { get; set; }
-        public BitmapSource? HighlightMask { get; set; }
+        public Geometry? HighlightOutline { get; set; }
+        public int HighlightPhase { get; set; }
         public Pen? RegionPen { get; set; }
         public Pen? RegionContrastPen { get; set; }
         public Rect ImageBounds
@@ -356,8 +410,8 @@ public sealed class PixelPreview : Grid
             if (Source is null) return;
             Rect image = ImageBounds;
             drawingContext.DrawImage(Source, image);
-            if (HighlightMask is not null) drawingContext.DrawImage(HighlightMask, image);
             if (GridLens is { } grid) DrawGrid(drawingContext, image, Source, grid);
+            if (HighlightOutline is { } outline) DrawHighlightOutline(drawingContext, image, Source, outline);
             if (SelectedRegion is { } region)
             {
                 Rect bounds = new(image.X + region.X * image.Width / Source.PixelWidth,
@@ -371,6 +425,22 @@ public sealed class PixelPreview : Grid
                     drawingContext.DrawRectangle(null, RegionPen, bounds);
                 }
             }
+        }
+
+        private void DrawHighlightOutline(DrawingContext context, Rect image, BitmapSource source, Geometry outline)
+        {
+            double scaleX = image.Width / source.PixelWidth, scaleY = image.Height / source.PixelHeight;
+            if (scaleX <= 0 || scaleY <= 0) return;
+            var dpi = VisualTreeHelper.GetDpi(this);
+            double thickness = 1.5 / Math.Max(scaleX * dpi.DpiScaleX, scaleY * dpi.DpiScaleY);
+            var black = new Pen(Brushes.Black, thickness) { DashStyle = new DashStyle([4, 4], HighlightPhase) };
+            var white = new Pen(Brushes.White, thickness) { DashStyle = new DashStyle([4, 4], HighlightPhase + 4) };
+            context.PushClip(new RectangleGeometry(image));
+            context.PushTransform(new MatrixTransform(scaleX, 0, 0, scaleY, image.X, image.Y));
+            context.DrawGeometry(null, black, outline);
+            context.DrawGeometry(null, white, outline);
+            context.Pop();
+            context.Pop();
         }
 
         private void DrawGrid(DrawingContext context, Rect image, BitmapSource source, PreviewGridLens grid)

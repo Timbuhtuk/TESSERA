@@ -33,9 +33,9 @@ internal static class ToolImprovementsChecks
             try
             {
                 SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
-                check("Theme backgrounds, crop region, comparison fit and highlight pixel mask", VerifyEditor);
+                check("Theme backgrounds, crop region, comparison fit and color outline", VerifyEditor);
                 check("Real palette and quantizer diagonal samples match processing", PaletteComparisonChecks.Run);
-                check("Exact RGB highlight, scrolled viewport clipping and same visual fit", () => VerifyPreviewSelection(ArtifactRoot));
+                check("Exact RGB marching outline, scrolled viewport clipping and same visual fit", () => VerifyPreviewSelection(ArtifactRoot));
                 check("Docked and floating info picker updates dialog, basis highlight and lifetime", InfoPickerChecks.Run);
                 check("Background custom color and eraser export/undo/reprocessing", BackgroundEditingChecks.Run);
                 check("Background history keeps loaded source/result parent, pixels and settings", BackgroundHistoryChecks.Run);
@@ -308,9 +308,20 @@ internal static class ToolImprovementsChecks
         {
             host.Show(); Pump();
             object surface = typeof(PixelPreview).GetField("_surface", Private)!.GetValue(preview)!;
-            var mask = (BitmapSource)surface.GetType().GetProperty("HighlightMask")!.GetValue(surface)!;
-            byte[] pixels = new byte[4 * 2 * 4]; mask.CopyPixels(pixels, 16, 0);
-            for (int q = 0; q < 8; q++) Require((pixels[q * 4 + 3] > 0) == (q is 0 or 1), "Highlight is not the exact visible replacement pixel set");
+            var outline = (Geometry)surface.GetType().GetProperty("HighlightOutline")!.GetValue(surface)!;
+            Require(outline.Bounds == new Rect(0, 0, 2, 1),
+                $"Replacement outline is not the boundary of the exact visible color set: {outline.Bounds}");
+            byte[] selectedPixels = RenderPreview();
+            preview.HighlightRgb = null; Pump();
+            Require(!selectedPixels.SequenceEqual(RenderPreview()), "Replacement outline was not rendered");
+            preview.HighlightRgb = selected.ToArgb(); Pump();
+            int firstPhase = (int)surface.GetType().GetProperty("HighlightPhase")!.GetValue(surface)!;
+            var deadline = DateTime.UtcNow.AddSeconds(1);
+            while ((int)surface.GetType().GetProperty("HighlightPhase")!.GetValue(surface)! == firstPhase &&
+                   DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(10); }
+            Require((int)surface.GetType().GetProperty("HighlightPhase")!.GetValue(surface)! != firstPhase,
+                "Replacement outline did not animate");
+            Capture(host, Path.Combine(directory, "exact-color-outline.png"));
             Rect bounds = (Rect)surface.GetType().GetProperty("ImageBounds")!.GetValue(surface)!;
             var element = (FrameworkElement)surface;
             Point location = element.TranslatePoint(new Point(bounds.X + bounds.Width * .875, bounds.Y + bounds.Height * .25), preview);
@@ -331,6 +342,15 @@ internal static class ToolImprovementsChecks
             Require(Math.Abs(firstWidth - secondWidth) < .01, "Comparison fit depends on source pixel dimensions");
         }
         finally { host.Close(); }
+
+        byte[] RenderPreview()
+        {
+            var frame = new RenderTargetBitmap((int)preview.ActualWidth, (int)preview.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            frame.Render(preview);
+            byte[] pixels = new byte[(int)preview.ActualWidth * (int)preview.ActualHeight * 4];
+            frame.CopyPixels(pixels, (int)preview.ActualWidth * 4, 0);
+            return pixels;
+        }
     }
 
     internal static string FindRepository()

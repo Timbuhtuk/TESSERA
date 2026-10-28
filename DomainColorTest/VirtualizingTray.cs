@@ -67,6 +67,15 @@ public sealed class VirtualizingTray : ListBox
         Panel?.SetHorizontalOffset(point.X); Panel?.SetVerticalOffset(point.Y);
     }
 
+    protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
+    {
+        if (Panel is null) { base.OnPreviewMouseWheel(e); return; }
+        bool horizontal = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || Panel.ExtentHeight <= Panel.ViewportHeight + 1;
+        int steps = (int)Math.Max(1, Math.Abs((long)e.Delta) / 120);
+        for (int q = 0; q < steps; q++) Panel.ScrollByCard(e.Delta < 0, horizontal);
+        e.Handled = true;
+    }
+
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down or Key.Home or Key.End)
@@ -235,16 +244,29 @@ public sealed class TrayPanel : VirtualizingPanel, IScrollInfo
         if (_offset == offset) return;
         _offset = offset; InvalidateMeasure(); ScrollOwner?.InvalidateScrollInfo(); Owner?.OnScrollChanged();
     }
-    public void LineLeft() => SetHorizontalOffset(HorizontalOffset - 48);
-    public void LineRight() => SetHorizontalOffset(HorizontalOffset + 48);
-    public void LineUp() => SetVerticalOffset(VerticalOffset - 39);
-    public void LineDown() => SetVerticalOffset(VerticalOffset + 39);
+    internal void ScrollByCard(bool forward, bool horizontal)
+    {
+        if (Owner is not { } owner || owner.CardBounds.Length == 0) return;
+        double maximum = Math.Max(0, horizontal ? ExtentWidth - ViewportWidth : ExtentHeight - ViewportHeight);
+        if (maximum < 1) return;
+        double current = horizontal ? HorizontalOffset : VerticalOffset;
+        double origin = owner.CardBounds.Min(bounds => horizontal ? bounds.Left : bounds.Top);
+        var anchors = owner.CardBounds.Select(bounds => Math.Clamp((horizontal ? bounds.Left : bounds.Top) - origin, 0, maximum))
+            .Append(0).Append(maximum).Distinct().Order().ToArray();
+        double target = forward ? anchors.FirstOrDefault(value => value > current + .5, maximum)
+            : anchors.LastOrDefault(value => value < current - .5, 0);
+        if (horizontal) SetHorizontalOffset(target); else SetVerticalOffset(target);
+    }
+    public void LineLeft() => ScrollByCard(false, true);
+    public void LineRight() => ScrollByCard(true, true);
+    public void LineUp() => ScrollByCard(false, false);
+    public void LineDown() => ScrollByCard(true, false);
     public void PageLeft() => SetHorizontalOffset(HorizontalOffset - ViewportWidth);
     public void PageRight() => SetHorizontalOffset(HorizontalOffset + ViewportWidth);
     public void PageUp() => SetVerticalOffset(VerticalOffset - ViewportHeight);
     public void PageDown() => SetVerticalOffset(VerticalOffset + ViewportHeight);
     public void MouseWheelLeft() => LineLeft();
     public void MouseWheelRight() => LineRight();
-    public void MouseWheelUp() { if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) LineLeft(); else SetVerticalOffset(VerticalOffset - 78); }
-    public void MouseWheelDown() { if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) LineRight(); else SetVerticalOffset(VerticalOffset + 78); }
+    public void MouseWheelUp() => ScrollByCard(false, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || ExtentHeight <= ViewportHeight + 1);
+    public void MouseWheelDown() => ScrollByCard(true, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) || ExtentHeight <= ViewportHeight + 1);
 }
