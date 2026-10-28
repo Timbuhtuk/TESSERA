@@ -83,6 +83,7 @@ public partial class MainWindow : Window
         colorOnlyButton.Click += ApplyColorsOnly;
         neighborColorsButton.Click += ApplyNeighborColorsOnly;
         alignButton.Click += AlignImage;
+        finishPixelArtButton.Click += FinishPixelArt;
         Closing += (_, e) => { if (_workspaceImporting || _processing || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy) { e.Cancel = true; statusLabel.Text = Localization.Text("Дождитесь завершения обработки."); } else if (!moodboardWorkspace.CanLeave()) e.Cancel = true; };
         Closed += (_, _) =>
         {
@@ -342,6 +343,7 @@ public partial class MainWindow : Window
         if (!processing) ScheduleLiveToolPreviews();
         if (_downscaledResult is null && ProcessingBasis == 1) ProcessingBasis = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;
+        finishPixelArtButton.IsEnabled = !processing && _sourceImage is not null;
         _finalistApply.IsEnabled = !processing && _sourceImage is not null;
         Cursor = processing ? Cursors.Wait : null;
         UpdateBusyIndicator();

@@ -30,6 +30,7 @@ internal static class EditorRegressionChecks
         Check("tool-state", VerifyTools);
         Check("aspect-lock", VerifyAspectLock);
         Check("grid-basis", VerifyGridBasis);
+        Check("pixel-art-finish", VerifyFinish);
         Check("export-protection", VerifyExportProtection);
         Require(failures.Count == 0, string.Join(Environment.NewLine, failures));
 
@@ -160,6 +161,30 @@ internal static class EditorRegressionChecks
             using (var expected = new PixelGridAligner().Align(source, new GridAlignmentOptions()))
                 EqualPixels(expected.Aligned, Get<Bitmap>("_downscaledResult"), "Automatic alignment of source");
             Require(document.SelectedGeneration!.ParentGenerationId is null, "Source alignment retained an unrelated parent");
+        }
+
+        void VerifyFinish()
+        {
+            var document = Get<SourceEntry>("_activeSource");
+            var parent = document.SelectedGeneration!;
+            using var basis = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
+            Get<IntegerInput>("finishCellInput").Value = 2;
+            Get<IntegerInput>("finishSmoothInput").Value = 0;
+            Get<IntegerInput>("finishColorsInput").Value = 0;
+            Get<CheckBox>("finishAdaptiveInput").IsChecked = false;
+            using var expected = PixelArtFinisher.Process(basis, new PixelArtFinishOptions
+            {
+                CellSize = 2, SmoothPasses = 0, ColorCount = 0, AdaptiveGrid = false
+            });
+            Click("finishPixelArtButton"); Wait();
+            EqualPixels(expected, Get<Bitmap>("_downscaledResult"), "Pixel-art finish of selected result");
+            Require(document.SelectedGeneration!.ParentGenerationId == parent.Id, "Pixel-art finish lost its parent");
+            EqualPixels(source, Get<Bitmap>("_sourceImage"), "Pixel-art finish changed the source");
+            string export = Path.Combine(folder, "pixel-art-finish.png");
+            Invoke("SaveResult", export);
+            using var saved = new Bitmap(export);
+            EqualPixels(expected, saved, "Pixel-art finish PNG export");
         }
 
         void VerifyExportProtection()

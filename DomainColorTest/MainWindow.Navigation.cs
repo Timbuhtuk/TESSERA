@@ -78,6 +78,7 @@ public partial class MainWindow
         sizeMenuItem = AddTool(sizeToolsMenu, "sizeMenuItem", "Размер и кадр…", "size", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
         gridMenuItem = AddTool(sizeToolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
         AddTool(sizeToolsMenu, "finalistMenuItem", "TCR · уменьшение изображения…", "finalists", 460, _finalistGroup);
+        AddTool(sizeToolsMenu, "pixelArtFinishMenuItem", "Собрать пиксель-арт…", "pixel-art-finish", 390, pixelArtFinishToolGroup);
 
         var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
         colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Палитра…", "color", 580, colorToolGroup);

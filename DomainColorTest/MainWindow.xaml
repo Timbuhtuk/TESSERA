@@ -236,6 +236,17 @@
                             <Button x:Name="compactGridButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text1CE891F45A92}" IsEnabled="False" Margin="0,6,0,0" ToolTip="{local:Translate Text144EE6BDCC8B}" />
                         </StackPanel>
                     </GroupBox>
+                    <GroupBox x:Name="pixelArtFinishToolGroup" Header="Собрать пиксель-арт · эксперимент">
+                        <StackPanel>
+                            <TextBlock Text="Подготовка цвета, единая сетка и сжатие до одного пикселя на ячейку." TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,8"/>
+                            <DockPanel Margin="0,3"><TextBlock Text="Ячейка, px" Width="132"/><local:IntegerInput x:Name="finishCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="Ячейка пиксель-арта"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="Проходы 3×3" Width="132"/><local:IntegerInput x:Name="finishSmoothInput" Minimum="0" Maximum="100" Value="1" AutomationProperties.Name="Проходы подготовки"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="Число цветов" Width="132"/><local:IntegerInput x:Name="finishColorsInput" Minimum="0" Maximum="4096" Value="128" AutomationProperties.Name="Число цветов"/></DockPanel>
+                            <TextBlock Text="0 оставляет цвета без ограничения." Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,5"/>
+                            <CheckBox x:Name="finishAdaptiveInput" Content="Подстраивать сетку" IsChecked="True"/>
+                            <Button x:Name="finishPixelArtButton" Style="{StaticResource PrimaryButton}" Content="Собрать пиксель-арт" IsEnabled="False" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </GroupBox>
                     <GroupBox x:Name="profileToolGroup" Header="{local:Translate Text35CA6037FF58}">
                         <StackPanel>
                             <UniformGrid Columns="3">

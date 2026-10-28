@@ -35,6 +35,7 @@ internal static class CliApplication
         Создание многоразмерной иконки Windows: tessera ico --help.
         Удаление однотонного фона: tessera remove-background --help.
         Очистка тёмных контуров и одиночных точек сетки: tessera clean-dark-contours --help.
+        Экспериментальная сборка пиксель-арта: tessera finish-pixel-art --help.
         Отдельные размер и цвета: tessera resize --help; tessera colors --help.
         Сглаживание, монохром и ASCII: tessera smooth-colors --help;
         tessera monochrome --help; tessera ascii --help.
@@ -104,6 +105,8 @@ internal static class CliApplication
             return ConnectivityPaletteCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "structure-probe")
             return StructureProbeCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "finish-pixel-art")
+            return FinishPixelArtCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "clean-dark-contours")
             return CleanDarkContoursCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "align")
