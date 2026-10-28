@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Панель инструментов, единая палитра и кратность TCR",
+        "en": "Tool dock, combined palette and TCR factors"
+      },
+      "notes": {
+        "ru": "- Панель инструментов: открывайте несколько вкладок справа, выносите инструмент в отдельное окно и возвращайте его в панель. Меню показывает открытые инструменты; повторный выбор открывает инструмент в центре экрана.\n- Палитра: выбор готовой палитры или числа цветов объединён с дополнительным связным отбором. Настройки сохраняются в истории и макросах; для изображений с более чем 4096 цветами доступно предварительное квантование. Размер и прозрачность сохраняются.\n- TCR: кратность уменьшения выбирается от 2 до 64 для T3/p44, P5/OFF и смеси 50/50. Прежние макросы продолжают уменьшать в 8 раз. Цвет и прозрачность усредняются; тонкие детали могут измениться.\n- Инструменты: TCR и «Контуры» находятся в «Размер и сетка», «Макросы» открываются прямо из меню. «Очистить цвета» переименован в «Сглаживание», «Цвета и сведения» — в Info. Пункты «Готовые сценарии» и отдельная «Замена цвета» убраны из меню.\n- История и ассеты: исходное изображение закреплено неудаляемым корнем дерева результатов. Библиотека ассетов размещена под предпросмотром и по умолчанию свёрнута.",
+        "en": "- Tool dock: open several tabs on the right, float a tool into its own window and dock it again. The menu marks open tools; selecting one again places it at the center of the screen.\n- Palette: choosing a preset palette or color count now includes optional connected selection. Settings are saved in history and macros; images with more than 4096 colors receive preliminary quantization. Dimensions and alpha are preserved.\n- TCR: choose reduction factors from 2 to 64 for T3/p44, P5/OFF and the 50/50 blend. Existing macros retain 8× reduction. Color and alpha are averaged; fine details may change.\n- Tools: TCR and Contours are under Size and grid; Macros opens directly from Tools. Clean colors is renamed Smoothing, and Colors and information is renamed Info. Ready-made scenarios and the separate Replace color entry are removed from the menu.\n- History and assets: the original image is the protected root of the result tree. The asset library is below the preview and collapsed by default."
+      }
+    },
+    {
+      "version": "2.11.0",
+      "title": {
         "ru": "TCR: уменьшение изображения в 8 раз",
         "en": "TCR: reduce images by 8 times"
       },

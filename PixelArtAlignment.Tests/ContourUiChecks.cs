@@ -68,7 +68,7 @@ internal static class ContourUiChecks
             NavigationTest.Click(window, "contoursMenuItem");
             Until(() => Visible());
             Require(document.Generations.Count == 0, "Preview created a history card");
-            Require(Get<MenuItem>("colorToolsMenu").Items.Contains(Get<MenuItem>("contoursMenuItem")), "Contours is outside Tools/Color");
+            Require(Get<MenuItem>("sizeToolsMenu").Items.Contains(Get<MenuItem>("contoursMenuItem")), "Contours is outside Tools/Size and grid");
             Require(Get<MenuItem>("contoursMenuItem").Header.ToString() == (language == "en" ? "Contours…" : "Контуры…"), "Contour menu is not localized");
             Require(Get<Button>("contourApplyButton").Content.ToString() == (language == "en" ? "Create map result" : "Создать результат-карту"), "Contour action is not localized");
             var controls = Get<Slider>("contourWindowInput");

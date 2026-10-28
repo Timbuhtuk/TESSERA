@@ -42,6 +42,7 @@ public sealed class ProcessingStep
     public ContourCleanOptions? Contours { get; init; }
     public ConnectivityPaletteOptions? ConnectedPalette { get; init; }
     public FinalistMode? FinalistMode { get; init; }
+    public int? FinalistFactor { get; init; }
 }
 
 public sealed class AsciiSettings

@@ -16,7 +16,6 @@ public partial class MainWindow
     private WorkspaceBrowser? _workspaceBrowser;
     private WorkspaceAsset? _workspaceActive;
     private Border? _workspaceDock;
-    private StackPanel? _workspaceToolContent;
     private readonly List<GroupBox> _workspaceGroups = [];
     private readonly HashSet<Guid> _observedSources = [];
     private readonly ObservableCollection<SourceEntry> _workspaceSources = [];
@@ -67,8 +66,9 @@ public partial class MainWindow
         _workspaceDock.SetResourceReference(Border.BackgroundProperty, "Ts.Raised");
         _workspaceDock.SetResourceReference(Border.BorderBrushProperty, "Ts.Border");
         Grid.SetColumn(_workspaceDock, 1); Grid.SetRow(_workspaceDock, 1); workspaceGrid.Children.Add(_workspaceDock);
-        colorToolGroup.Header = Localization.Text("Число цветов");
-        colorOnlyButton.Content = Localization.Text("Уменьшить число цветов");
+        InitializeToolDock();
+        colorToolGroup.Header = Localization.Text("Палитра");
+        colorOnlyButton.Content = Localization.Text("Создать результат");
         resultPreview.EmptyText = Localization.Text("Выберите действие справа.\nНовый вариант появится здесь и сохранится в истории.");
         updateButton.Content = enableUpdates ? UpdateButtonText() : Localization.Text("Экспериментальная версия");
         updateButton.IsEnabled = checkUpdatesMenuItem.IsEnabled = enableUpdates;
@@ -171,7 +171,7 @@ public partial class MainWindow
                 ProcessingBasis = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
                 PreviewZoom = Math.Clamp(asset.Zoom, 0, ZoomFactors.Length - 1);
                 PreviewBackground = Math.Clamp(asset.Background, 0, 3);
-                OpenDockedWorkspaceTool(Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
+                OpenDockedWorkspaceTool("size", Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
             }
             else if (asset.Kind == WorkspaceAssetKind.Animation)
             {
@@ -452,41 +452,13 @@ public partial class MainWindow
         ProcessingBasis = asset.Basis == 1 && _downscaledResult is not null ? 1 : 0;
         PreviewZoom = Math.Clamp(asset.Zoom, 0, ZoomFactors.Length - 1);
         PreviewBackground = Math.Clamp(asset.Background, 0, 3);
-        if (_workspaceDock?.Visibility != Visibility.Visible) OpenDockedWorkspaceTool(Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
+        if (_workspaceDock?.Visibility != Visibility.Visible) OpenDockedWorkspaceTool("size", Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
     }
 
-    private void OpenDockedWorkspaceTool(string title, params GroupBox[] groups)
-    {
-        if (_workspaceDock is null) return;
-        CloseDockedWorkspaceTool();
-        var content = new StackPanel { Margin = new Thickness(14), IsEnabled = !_processing };
-        content.Children.Add(new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 14) });
-        for (int q = 0; q < groups.Length; q++)
-        {
-            var group = groups[q]; if (!group.Resources.MergedDictionaries.Contains(Resources)) group.Resources.MergedDictionaries.Add(Resources);
-            if (group.Parent is Panel parent) parent.Children.Remove(group); _workspaceGroups.Add(group);
-            if (q == 0) content.Children.Add(group);
-            else content.Children.Add(new Expander { Header = group.Header, Content = group, IsExpanded = false, Margin = new Thickness(0, 8, 0, 0), Style = (Style)FindResource("ToolExpander") });
-        }
-        _workspaceToolContent = content;
-        _workspaceDock.Child = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
-        _workspaceDock.Visibility = Visibility.Visible; UpdateWorkspaceDockLayout();
-        _cropToolActive = groups.Contains(frameToolGroup);
-        UpdateCropPreview();
-    }
+    private void OpenDockedWorkspaceTool(string key, string title, params GroupBox[] groups) => DockTool(key, title, groups);
     private void CloseDockedWorkspaceTool()
     {
-        _cropToolActive = false;
-        UpdateCropPreview();
-        SetActiveLivePreviewTool(null);
-        if (_workspaceGroups.Contains(infoToolGroup)) ResetInfoSnapshot();
-        foreach (var group in _workspaceGroups)
-        {
-            if (group.Parent is Panel panel) panel.Children.Remove(group); else if (group.Parent is Expander expander) expander.Content = null;
-            settingsPanel.Children.Add(group);
-        }
-        _workspaceGroups.Clear();
-        if (_workspaceDock is not null) { _workspaceDock.Child = null; _workspaceDock.Visibility = Visibility.Collapsed; }
+        foreach (string key in _dockedTools.Keys.ToArray()) CloseDockedTool(key);
     }
     private void UpdateWorkspaceDockLayout()
     {
@@ -494,7 +466,7 @@ public partial class MainWindow
         bool compact = ActualWidth < 1000;
         _workspaceDock.Width = compact ? double.NaN : 320; _workspaceDock.MaxHeight = compact ? 260 : double.PositiveInfinity;
         Grid.SetColumn(_workspaceDock, compact ? 0 : 1); Grid.SetRow(_workspaceDock, compact ? 0 : 1);
-        workspaceGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 320);
+        workspaceGrid.ColumnDefinitions[1].Width = new GridLength(compact || _workspaceDock.Visibility != Visibility.Visible ? 0 : 320);
     }
 }
 

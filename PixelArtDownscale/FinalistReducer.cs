@@ -7,25 +7,28 @@ public enum FinalistMode { T3P44, P5Off, HalfAndHalf }
 /// <summary>The two owner-selected TCR-Lab reducers and their equal sRGB/alpha blend.</summary>
 public static class FinalistReducer
 {
-    private const int CellSize = 8;
+    public const int DefaultFactor = 8;
+    public const int MinFactor = 2;
+    public const int MaxFactor = 64;
 
-    public static Bitmap Reduce(Bitmap source, FinalistMode mode)
+    public static Bitmap Reduce(Bitmap source, FinalistMode mode, int factor = DefaultFactor)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+        if (factor is < MinFactor or > MaxFactor) throw new ArgumentOutOfRangeException(nameof(factor));
         if (source.Width < 1 || source.Height < 1) throw new ArgumentException("Image dimensions must be positive.", nameof(source));
 
         using var input = source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);
         using var pixels = BitmapBuffer.FromBitmap(input);
-        int width = (source.Width + CellSize - 1) / CellSize;
-        int height = (source.Height + CellSize - 1) / CellSize;
+        int width = 1 + (source.Width - 1) / factor;
+        int height = 1 + (source.Height - 1) / factor;
         var result = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (var output = BitmapBuffer.FromWritableBitmap(result))
         {
-            int[] regularX = Boundaries(source.Width, width, 0);
-            int[] regularY = Boundaries(source.Height, height, 0);
-            int[] shiftedX = Boundaries(source.Width, width, 4);
-            int[] shiftedY = Boundaries(source.Height, height, 4);
+            int[] regularX = Boundaries(source.Width, width, factor, 0);
+            int[] regularY = Boundaries(source.Height, height, factor, 0);
+            int[] shiftedX = Boundaries(source.Width, width, factor, factor / 2);
+            int[] shiftedY = Boundaries(source.Height, height, factor, factor / 2);
             for (int y = 0; y < height; y++)
             for (int x = 0; x < width; x++)
             {
@@ -44,13 +47,13 @@ public static class FinalistReducer
         return result;
     }
 
-    private static int[] Boundaries(int size, int count, int phase)
+    private static int[] Boundaries(int size, int count, int factor, int phase)
     {
         var boundaries = new int[count + 1];
         for (int q = 1; q < count; q++)
         {
-            // Laboratory p44 uses 8*q+4. For a shorter final cell, keep each cell nonempty.
-            boundaries[q] = Math.Min(CellSize * q + phase, size - (count - q));
+            // At 8× this is the laboratory p44 boundary. Keep a short final cell nonempty.
+            boundaries[q] = Math.Min(factor * q + phase, size - (count - q));
         }
         boundaries[count] = size;
         return boundaries;

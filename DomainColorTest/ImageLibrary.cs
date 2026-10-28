@@ -14,10 +14,11 @@ namespace DomainColorTest;
 
 public sealed class EditorSettings
 {
-    public ConnectivityPaletteOptions ConnectedPalette { get; set; } = new();
     public int ConnectedPaletteTileSize { get; set; } = 32;
     public int Mode { get; set; } = 1;
     public DownscaleOptions Downscale { get; set; } = new();
+    public ConnectivityPaletteOptions? ConnectedPalette { get; set; }
+    public bool? ConnectedPaletteEnabled { get; set; }
     public ChannelAdjustmentOptions ChannelAdjustment { get; set; } = new();
     public int CellSize { get; set; } = 8;
     public bool DetectGrid { get; set; }

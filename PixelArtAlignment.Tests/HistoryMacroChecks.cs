@@ -169,19 +169,34 @@ internal static class HistoryMacroChecks
             Wait(window.OpenWorkspaceAssetAsync(actualCatalog.State.Assets.Single(a => a.Id == source.Id))); Pump();
             var strip = Get<VirtualizingTray>(window, "generationStrip"); var sources = Get<VirtualizingTray>(window, "sourceStrip");
             Require(sources.Items.OfType<SourceEntry>().Count() == 1 && Get<Guid?>(window, "_sourceTrayFolder") == nested.Id, "Opening source did not resolve its active project folder.");
+            Require(Get<Border>(window, "sourceTray").Visibility == Visibility.Collapsed && Get<RowDefinition>(window, "sourceLibraryHeight").ActualHeight == 0,
+                "Source library did not start collapsed below the preview.");
+            Require(strip.Items[0] is HistorySourceRoot root && root.Source.Id == source.Id && strip.SelectedItem == root,
+                "The active source is missing as the history root.");
+            Capture(window, "editor-source-root.png");
             var active = Get<SourceEntry>(window, "_activeSource");
             var selected = active.Generations[4]; Invoke(window, "PromoteHistoryBranch", selected, (int?)null); Pump();
-            Require(strip.CardBounds[4].X == strip.CardBounds[0].X && selected.ParentGenerationId is not null, "Editor promotion lost real parent.");
+            Require(strip.CardBounds[5].X == strip.CardBounds[1].X && selected.ParentGenerationId is not null, "Editor promotion lost real parent.");
+            Require(strip.CardBounds[0].X < strip.CardBounds[1].X && strip.Connections.Count > active.Generations.Count - 1,
+                "Source root is not connected to the result branches.");
             var row = Get<RowDefinition>(window, "trayHeight"); row.Height = new GridLength(300); Invoke(window, "CommitTrayHeight"); Pump();
             var splitter = Get<GridSplitter>(window, "trayHeightSplitter"); double beforeDrag = row.ActualHeight;
             Require(splitter.ActualWidth >= Get<Grid>(window, "historyRow").ActualWidth - 2,
-                "Shared height divider inherited a narrow hit area instead of spanning both trays.");
+                "History height divider does not span the tree.");
             splitter.RaiseEvent(new DragStartedEventArgs(0, 0) { RoutedEvent = Thumb.DragStartedEvent });
             splitter.RaiseEvent(new DragDeltaEventArgs(0, 30) { RoutedEvent = Thumb.DragDeltaEvent });
             splitter.RaiseEvent(new DragCompletedEventArgs(0, 30, false) { RoutedEvent = Thumb.DragCompletedEvent }); Pump();
             Require(row.ActualHeight > beforeDrag + 20, "Shared splitter did not resize the tray row.");
+            Get<Button>(window, "sourceLibraryToggle").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            Require(Get<Border>(window, "sourceTray").Visibility == Visibility.Visible && Get<RowDefinition>(window, "sourceLibraryHeight").ActualHeight > 0,
+                "Source library did not expand below the preview.");
             Require(sources.Items.OfType<TrayFolderHeader>().Any(h => h.IsEmpty), "Expanded source tray hid empty folders.");
             Require(sources.Items.OfType<TrayFolderHeader>().Any(h => h.Label.Contains("Вложенная")), "Nested folder header missing.");
+            sources.SelectedItem = sources.Items.OfType<SourceEntry>().Single(s => s.Id == rootSource.Id); Pump();
+            Require(Get<SourceEntry>(window, "_activeSource").Id == rootSource.Id && strip.Items[0] is HistorySourceRoot otherRoot && otherRoot.Source.Id == rootSource.Id,
+                "Choosing another asset in the lower library did not replace the history root.");
+            sources.SelectedItem = sources.Items.OfType<SourceEntry>().Single(s => s.Id == source.Id); Pump();
+            Require(Get<SourceEntry>(window, "_activeSource").Id == source.Id, "Lower library could not switch back to the original asset.");
             Invoke(window, "NavigateSourceFolder", folder.Id, false); Pump();
             Require(Get<SourceEntry>(window, "_activeSource").Id == source.Id, "Folder navigation switched preview.");
             Invoke(window, "NavigateSourceFolder", folder.Id, true); Pump();
@@ -212,6 +227,10 @@ internal static class HistoryMacroChecks
             Require(active.Generations.Count == before + 1 && active.Generations[^1].RecipeSnapshot?.Steps.Count == 2 && active.Generations[^1].ParentGenerationId is null, "Macro published intermediates or wrong parent.");
             Require(active.Generations[^1].Width == 17 && active.Generations[^1].Height == 11, "Macro did not repeat literal dimensions.");
             Require(strip.CardBounds[^1].IntersectsWith(new Rect(strip.ScrollPosition, new System.Windows.Size(strip.Panel!.ViewportWidth, strip.Panel.ViewportHeight))), "New result did not become visible.");
+            strip.SelectedItem = strip.Items[0]; Pump();
+            Require(window.ProcessingBasis == 0 && strip.SelectedItem is HistorySourceRoot,
+                "Selecting the history root did not restore the original as processing input.");
+            strip.SelectedItem = active.Generations[^1]; Pump();
             window.ProcessingBasis = 1;
             Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!); Pump();
             Require(active.Generations[^1].ParentGenerationId == active.Generations[^2].Id && active.Generations[^1].RecipeSnapshot?.Steps.Count == 4, "Macro-on-result lost expanded recipe or parent.");

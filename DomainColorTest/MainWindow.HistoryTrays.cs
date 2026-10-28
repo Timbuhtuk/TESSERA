@@ -16,7 +16,6 @@ public sealed class HistoryTrayState
     public int Version { get; set; } = 1;
     public double Height { get; set; } = 120;
     public double ExpandedHeight { get; set; } = 290;
-    public double WidthRatio { get; set; } = .5;
     public Dictionary<Guid, BranchPresentation> Branches { get; set; } = [];
     public Dictionary<string, Point> Scroll { get; set; } = [];
     public Dictionary<Guid, Guid?> CurrentFolders { get; set; } = [];
@@ -27,10 +26,12 @@ public partial class MainWindow
 {
     private HistoryTrayState _trayState = new();
     private readonly ObservableCollection<object> _traySources = [];
+    private readonly ObservableCollection<object> _historyItems = [];
     private HistoryBranchLayout? _branchLayout;
     private SourceEntry? _trayHistorySource;
+    private HistorySourceRoot? _historySourceRoot;
     private readonly DispatcherTimer _traySaveTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
-    private bool _traysReady, _refreshingTrays, _traysExpanded;
+    private bool _traysReady, _refreshingTrays, _traysExpanded, _sourceLibraryExpanded;
     private Guid? _sourceTrayFolder;
     private string _sourceScrollKey = "";
     private readonly Dictionary<VirtualizingTray, int> _pendingTrayRestores = [];
@@ -49,21 +50,13 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         { statusLabel.Text = Localization.Text("Не удалось восстановить расположение лент: ") + ex.Message; }
-        double ratio = double.IsFinite(_trayState.WidthRatio) ? Math.Clamp(_trayState.WidthRatio, .15, .85) : .5;
-        historyRow.ColumnDefinitions[0].Width = new GridLength(ratio, GridUnitType.Star);
-        historyRow.ColumnDefinitions[2].Width = new GridLength(1 - ratio, GridUnitType.Star);
         _trayState.Height = double.IsFinite(_trayState.Height) ? Math.Max(120, _trayState.Height) : 120;
         _trayState.ExpandedHeight = double.IsFinite(_trayState.ExpandedHeight) ? Math.Max(160, _trayState.ExpandedHeight) : 290;
         trayHeight.Height = new GridLength(_trayState.Height);
         _traysExpanded = _trayState.Height > 150;
         _traySaveTimer.Tick += (_, _) => { _traySaveTimer.Stop(); SaveTrayState(); };
         trayHeightSplitter.DragCompleted += (_, _) => CommitTrayHeight();
-        trayWidthSplitter.DragCompleted += (_, _) =>
-        {
-            double width = historyRow.ColumnDefinitions[0].ActualWidth + historyRow.ColumnDefinitions[2].ActualWidth;
-            if (width > 0) _trayState.WidthRatio = historyRow.ColumnDefinitions[0].ActualWidth / width;
-            ScheduleTraySave();
-        };
+        UpdateSourceLibrary();
         trayHeightSplitter.PreviewMouseDoubleClick += (_, e) =>
         {
             double target = _traysExpanded ? 120 : _trayState.ExpandedHeight;
@@ -106,6 +99,20 @@ public partial class MainWindow
     }
 
     private double MaximumTrayHeight() => Math.Max(120, previewArea.ActualHeight - 246);
+    private void ToggleSourceLibrary(object sender, RoutedEventArgs e)
+    {
+        _sourceLibraryExpanded = !_sourceLibraryExpanded;
+        UpdateSourceLibrary();
+        RefreshSourceTray();
+        if (_sourceLibraryExpanded) RestoreTrayScroll();
+    }
+
+    private void UpdateSourceLibrary()
+    {
+        sourceLibraryHeight.Height = new GridLength(_sourceLibraryExpanded ? 180 : 0);
+        sourceTray.Visibility = _sourceLibraryExpanded ? Visibility.Visible : Visibility.Collapsed;
+        sourceLibraryToggle.Content = Localization.Text(_sourceLibraryExpanded ? "▾ Библиотека ассетов" : "▸ Библиотека ассетов");
+    }
     private void CommitTrayHeight()
     {
         RememberTrayScroll();
@@ -132,6 +139,8 @@ public partial class MainWindow
         RememberTrayScroll();
         if (_trayHistorySource is not null) _trayHistorySource.Generations.CollectionChanged -= HistoryChanged;
         _trayHistorySource = source;
+        _historySourceRoot = new HistorySourceRoot(source);
+        generationStrip.ItemsSource = _historyItems;
         source.Generations.CollectionChanged += HistoryChanged;
         RefreshHistoryLayout();
         ChooseSourceFolder(source);
@@ -147,16 +156,36 @@ public partial class MainWindow
 
     private void RefreshHistoryLayout()
     {
-        if (_trayHistorySource is null) { generationStrip.SetLayout([]); return; }
-        _branchLayout = HistoryBranchLayout.Build(_trayHistorySource.Generations.ToArray(), CurrentBranchPresentation());
-        var bounds = _trayHistorySource.Generations.Select(g => _branchLayout.Bounds[g.Id]).ToArray();
-        var lines = _branchLayout.Connections.Select(link =>
+        bool restoring = _restoringHistory; _restoringHistory = true;
+        try
         {
-            var parent = _branchLayout.Bounds[link.Parent]; var child = _branchLayout.Bounds[link.Child];
-            return (new Point(parent.Right, parent.Y + parent.Height / 2), new Point(child.Left, child.Y + child.Height / 2));
-        }).ToArray();
-        generationStrip.SetLayout(bounds, lines);
+            if (_trayHistorySource is null)
+            {
+                _historyItems.Clear(); generationStrip.SetLayout([]); return;
+            }
+            _branchLayout = HistoryBranchLayout.Build(_trayHistorySource.Generations.ToArray(), CurrentBranchPresentation());
+            var bounds = new List<Rect> { new(4, 4, 124, 68) };
+            bounds.AddRange(_trayHistorySource.Generations.Select(g => OffsetHistoryBounds(_branchLayout.Bounds[g.Id])));
+            var lines = _branchLayout.Connections.Select(link =>
+            {
+                var parent = OffsetHistoryBounds(_branchLayout.Bounds[link.Parent]); var child = OffsetHistoryBounds(_branchLayout.Bounds[link.Child]);
+                return (new Point(parent.Right, parent.Y + parent.Height / 2), new Point(child.Left, child.Y + child.Height / 2));
+            }).ToList();
+            foreach (var root in _branchLayout.Roots)
+            {
+                var child = OffsetHistoryBounds(_branchLayout.Bounds[root]);
+                lines.Add((new Point(128, 38), new Point(child.Left, child.Y + child.Height / 2)));
+            }
+            _historyItems.Clear();
+            _historyItems.Add(_historySourceRoot!);
+            foreach (var generation in _trayHistorySource.Generations) _historyItems.Add(generation);
+            generationStrip.SetLayout(bounds, lines);
+            generationStrip.SelectedItem = ProcessingBasis == 0 ? _historySourceRoot : _trayHistorySource.SelectedGeneration;
+        }
+        finally { _restoringHistory = restoring; }
     }
+
+    private static Rect OffsetHistoryBounds(Rect bounds) => new(bounds.X + 142, bounds.Y, bounds.Width, bounds.Height);
 
     private void PromoteHistoryBranch(GenerationEntry entry, int? insertion = null)
     {
@@ -284,7 +313,7 @@ public partial class MainWindow
             {
                 if (_sourceTrayFolder is { } current && !state!.Folders.Any(f => f.Id == current && f.ProjectId == project.Id)) _sourceTrayFolder = null;
                 BuildSourceBreadcrumb(project);
-                if (!_traysExpanded) AddImages(InFolder(_sourceTrayFolder), 4, 0);
+                if (!_sourceLibraryExpanded) AddImages(InFolder(_sourceTrayFolder), 4, 0);
                 else
                 {
                     double y = 0;
@@ -318,7 +347,7 @@ public partial class MainWindow
                 positions.Add(new Rect(4, 4, 220, 28));
             }
             string scope = _workspaceSourceProject?.ToString() ?? (_workspaceSourcesUnassigned ? "unassigned" : "all");
-            string location = _traysExpanded ? "tree" : _sourceTrayFolder?.ToString() ?? "root";
+            string location = _sourceLibraryExpanded ? "tree" : _sourceTrayFolder?.ToString() ?? "root";
             _sourceScrollKey = $"sources:{scope}:{location}";
             _traySources.Clear(); foreach (var item in items) _traySources.Add(item);
             sourceStrip.SetLayout(positions);

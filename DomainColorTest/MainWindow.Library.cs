@@ -30,12 +30,16 @@ public partial class MainWindow
         };
         generationStrip.SelectionChanged += (_, _) =>
         {
-            if (_restoringHistory || _processing || generationStrip.SelectedItem is not GenerationEntry generation) return;
-            try { SelectGeneration(generation); }
+            if (_restoringHistory || _processing) return;
+            try
+            {
+                if (generationStrip.SelectedItem is HistorySourceRoot root) SelectSource(root.Source);
+                else if (generationStrip.SelectedItem is GenerationEntry generation) SelectGeneration(generation);
+            }
             catch (Exception ex)
             {
                 statusLabel.Text = Localization.Format("Не удалось открыть результат: {0}", ex.Message);
-                _restoringHistory = true; generationStrip.SelectedItem = _activeSource?.SelectedGeneration; _restoringHistory = false;
+                _restoringHistory = true; generationStrip.SelectedItem = ProcessingBasis == 0 ? _historySourceRoot : _activeSource?.SelectedGeneration; _restoringHistory = false;
             }
         };
         foreach (var preview in new[] { sourcePreview, resultPreview })
@@ -180,7 +184,6 @@ public partial class MainWindow
             ClearDisplayedResult();
             sourceStrip.SelectedItem = source;
             sourceStrip.ScrollIntoView(source);
-            generationStrip.ItemsSource = source.Generations;
             ConfigureHistorySource(source);
             fileLabel.Text = source.Label;
             fileLabel.ToolTip = source.OriginalPath;
@@ -218,7 +221,12 @@ public partial class MainWindow
         if (_activeSource is null || !_activeSource.Generations.Contains(generation)) return;
         ClearDisplayedLivePreview();
         var output = ImageLibrary.ReadBitmap(_library.ResultPath(_activeSource, generation));
-        if (generation.OperationId != ProcessingOperations.Macro) RestoreSettings(generation.Settings);
+        if (generation.OperationId != ProcessingOperations.Macro) RestoreGenerationSettings(generation.Settings, generation.OperationId);
+        if (generation.OperationId == ProcessingOperations.FinalistReduce && generation.RecipeSnapshot?.Steps.LastOrDefault() is { } finalist)
+        {
+            _finalistFactor.SelectedItem = finalist.FinalistFactor ?? FinalistReducer.DefaultFactor;
+            (finalist.FinalistMode == FinalistMode.P5Off ? _p5Mode : finalist.FinalistMode == FinalistMode.HalfAndHalf ? _mixedMode : _t3Mode).IsChecked = true;
+        }
         _restoringHistory = true;
         try
         {
@@ -251,7 +259,7 @@ public partial class MainWindow
         try
         {
             sourceStrip.SelectedItem = ProcessingBasis == 0 ? _activeSource : null;
-            generationStrip.SelectedItem = ProcessingBasis == 1 ? _activeSource?.SelectedGeneration : null;
+            generationStrip.SelectedItem = ProcessingBasis == 1 ? _activeSource?.SelectedGeneration : _historySourceRoot;
         }
         finally { _restoringHistory = false; }
     }
@@ -360,9 +368,9 @@ public partial class MainWindow
     private EditorSettings CaptureSettings() => new()
     {
         Mode = detailsMode.IsChecked == true ? 2 : backgroundMode.IsChecked == true ? 0 : 1,
-        Downscale = BuildOptionsFromUi(), CellSize = gridCellInput.Value,
+        Downscale = BuildOptionsFromUi(), ConnectedPalette = BuildConnectedPaletteOptions(), CellSize = gridCellInput.Value,
         ChannelAdjustment = _channelAdjustment,
-        ConnectedPalette = BuildConnectedOptions(),
+        ConnectedPaletteEnabled = connectedPaletteInput.IsChecked == true,
         ConnectedPaletteTileSize = connectedTileSizeInput.Value,
         ContourWindowSize = ContourWindowSize,
         ContourStrictness = ContourCleanStrictness.Strong,
@@ -378,7 +386,9 @@ public partial class MainWindow
         AspectLock = aspectLock.IsChecked == true
     };
 
-    private void RestoreSettings(EditorSettings settings)
+    private void RestoreSettings(EditorSettings settings) => RestoreGenerationSettings(settings, null);
+
+    private void RestoreGenerationSettings(EditorSettings settings, string? operationId)
     {
         _restoringHistory = true;
         try
@@ -394,9 +404,24 @@ public partial class MainWindow
             paletteStepInput.Value = options.PaletteStep;
             quantizationInput.SelectedIndex = Math.Clamp((int)options.Quantization, 0, 2);
             quantizationColorsInput.Value = options.QuantizationColors;
+            var connected = settings.ConnectedPalette;
+            connectedPaletteInput.IsChecked = settings.ConnectedPaletteEnabled == true ||
+                settings.ConnectedPaletteEnabled is null && operationId == ProcessingOperations.ConnectedPalette;
+            connectedConnectivityInput.Value = (int)Math.Round((connected?.ConnectivityWeight ?? .75) * 100);
+            connectedTilesInput.IsChecked = (connected?.TileSize ?? 16) != 0;
+            connectedTileSizeInput.Value = connected?.TileSize is > 0 ? connected.TileSize : Math.Clamp(settings.ConnectedPaletteTileSize, 4, 256);
+            connectedLocalInput.Value = (int)Math.Round((connected?.LocalWeight ?? .55) * 100);
+            connectedDetailInput.Value = (int)Math.Round((connected?.DetailWeight ?? .66) * 100);
+            connectedContextInput.Value = (int)Math.Round((connected?.ContextWeight ?? .3) * 100);
+            connectedSpaceInput.SelectedIndex = connected?.DistanceSpace == PaletteDistanceSpace.CieLab ? 1 : 0;
             paletteColorModeInput.IsChecked = options.IndependentColorMode == IndependentColorMode.Palette ||
                 options.IndependentColorMode == IndependentColorMode.Combined && options.Palette != PaletteKind.None;
             quantizationColorModeInput.IsChecked = paletteColorModeInput.IsChecked != true;
+            if (settings.ConnectedPaletteEnabled is null && operationId == ProcessingOperations.ConnectedPalette && connected is not null)
+            {
+                quantizationColorModeInput.IsChecked = true;
+                quantizationColorsInput.Value = Math.Clamp(connected.TargetColors, 1, 4096);
+            }
             localColorPassesInput.Value = options.LocalColorPasses;
             // Older histories store target brightness/contrast rather than cleanup parameters.
             // They open with safe cleanup defaults; their old values are never reinterpreted as tolerances.
@@ -415,15 +440,6 @@ public partial class MainWindow
             edgeInput.Value = (options.ManualCriteria?.TargetEdge ?? .5) * 100;
             aspectLock.IsChecked = settings.AspectLock;
             RestoreChannelAdjustment(settings.ChannelAdjustment);
-            var connected = settings.ConnectedPalette ?? new ConnectivityPaletteOptions();
-            connectedColorsInput.Value = Math.Clamp(connected.TargetColors, 1, 4096);
-            connectedConnectivityInput.Value = Math.Clamp((int)Math.Round(connected.ConnectivityWeight * 100), 0, 100);
-            connectedTileSizeInput.Value = Math.Clamp(settings.ConnectedPaletteTileSize, 4, 256);
-            connectedTilesInput.IsChecked = connected.TileSize != 0;
-            connectedLocalInput.Value = Math.Clamp((int)Math.Round(connected.LocalWeight * 100), 0, 100);
-            connectedDetailInput.Value = Math.Clamp((int)Math.Round(connected.DetailWeight * 100), 0, 100);
-            connectedContextInput.Value = Math.Clamp((int)Math.Round(connected.ContextWeight * 100), 0, 100);
-            connectedSpaceInput.SelectedIndex = connected.DistanceSpace == PaletteDistanceSpace.CieLab ? 1 : 0;
             contourWindowInput.Value = settings.ContourWindowSize is >= 3 and <= 15 && settings.ContourWindowSize % 2 == 1 ? settings.ContourWindowSize : 15;
             contourDetailGuardInput.IsChecked = settings.ContourProtectDetails;
             contourSimilarityInput.Value = settings.ContourSimilarColorDistance;
@@ -437,6 +453,7 @@ public partial class MainWindow
             UpdateGridAlignmentMode();
             gridCellInput.Value = settings.CellSize; detectGridInput.IsChecked = settings.DetectGrid;
             UpdateDependentControls();
+            UpdateConnectedControls();
             ditheringInput.IsChecked = options.Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && options.EnableDithering;
             profileState.Text = Localization.Text("Параметры выбранного результата");
         }

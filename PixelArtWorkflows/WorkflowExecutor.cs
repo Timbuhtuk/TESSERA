@@ -127,7 +127,7 @@ public sealed class WorkflowExecutor
             case ProcessingOperations.Trim:
                 return (BitmapFactory.CropTransparentEdges(current), previousAlignmentCell);
             case ProcessingOperations.Colors:
-                return (IndependentImageProcessor.ApplyColors(current, LocalOptions(step.Downscale!)), previousAlignmentCell);
+                return (PaletteProcessor.Apply(current, LocalOptions(step.Downscale!), step.ConnectedPalette), previousAlignmentCell);
             case ProcessingOperations.Cleanup:
                 return (IndependentImageProcessor.ApplyNeighborColors(current, LocalOptions(step.Downscale!)), previousAlignmentCell);
             case ProcessingOperations.Align:
@@ -178,7 +178,8 @@ public sealed class WorkflowExecutor
                 return (result.Image, previousAlignmentCell);
             }
             case ProcessingOperations.FinalistReduce:
-                return (FinalistReducer.Reduce(current, step.FinalistMode!.Value), previousAlignmentCell);
+                return (FinalistReducer.Reduce(current, step.FinalistMode!.Value,
+                    step.FinalistFactor ?? FinalistReducer.DefaultFactor), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -193,11 +194,22 @@ public sealed class WorkflowExecutor
         {
             case ProcessingOperations.Profile:
             case ProcessingOperations.Resize:
-            case ProcessingOperations.Colors:
             case ProcessingOperations.Cleanup:
                 RequireOnly(step, downscale: true);
                 if (step.Downscale is null) throw new InvalidDataException("Downscale parameters are required.");
                 ValidateOptions(step.Downscale);
+                break;
+            case ProcessingOperations.Colors:
+                RequireOnly(step, downscale: true, connectedPalette: true);
+                if (step.Downscale is null) throw new InvalidDataException("Downscale parameters are required.");
+                ValidateOptions(step.Downscale);
+                if (step.ConnectedPalette is { } connected)
+                {
+                    if (connected.TargetColors is < 1 or > 4096 || connected.TileSize != 0 && connected.TileSize is < 4 or > 256 ||
+                        !Enum.IsDefined(connected.DistanceSpace) || new[] { connected.ConnectivityWeight, connected.LocalWeight,
+                            connected.DetailWeight, connected.ContextWeight }.Any(value => !double.IsFinite(value) || value is < 0 or > 1))
+                        throw new InvalidDataException("Connected palette parameters are invalid.");
+                }
                 break;
             case ProcessingOperations.Align:
             case ProcessingOperations.AlignLocal:
@@ -260,9 +272,11 @@ public sealed class WorkflowExecutor
                     throw new InvalidDataException("Invalid connected palette parameters.");
                 break;
             case ProcessingOperations.FinalistReduce:
-                RequireOnly(step, finalistMode: true);
+                RequireOnly(step, finalistMode: true, finalistFactor: true);
                 if (step.FinalistMode is null || !Enum.IsDefined(step.FinalistMode.Value))
                     throw new InvalidDataException("A finalist mode is required.");
+                if (step.FinalistFactor is < FinalistReducer.MinFactor or > FinalistReducer.MaxFactor)
+                    throw new InvalidDataException("Finalist factor must be 2..64.");
                 break;
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
@@ -331,13 +345,13 @@ public sealed class WorkflowExecutor
 
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
         bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false,
-        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false, bool finalistMode = false)
+        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false, bool finalistMode = false, bool finalistFactor = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
             !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
             !channelAdjustment && step.ChannelAdjustment is not null || !contours && step.Contours is not null ||
-            !connectedPalette && step.ConnectedPalette is not null || !finalistMode && step.FinalistMode is not null)
+            !connectedPalette && step.ConnectedPalette is not null || !finalistMode && step.FinalistMode is not null || !finalistFactor && step.FinalistFactor is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }

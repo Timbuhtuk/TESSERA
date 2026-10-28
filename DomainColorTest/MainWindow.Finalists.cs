@@ -10,27 +10,35 @@ public partial class MainWindow
 {
     private readonly GroupBox _finalistGroup = new();
     private readonly RadioButton _t3Mode = new(), _p5Mode = new(), _mixedMode = new();
+    private readonly ComboBox _finalistFactor = new();
     private readonly Button _finalistApply = new();
 
     private void InitializeFinalistTool()
     {
-        _finalistGroup.Header = Localization.Text("TCR · уменьшение 8×");
+        _finalistGroup.Header = Localization.Text("TCR · уменьшение изображения");
         var content = new StackPanel();
         content.Children.Add(new TextBlock
         {
-            Text = Localization.Text("Результат: один пиксель на блок примерно 8 × 8 исходных пикселей. Цвет и прозрачность усредняются; тонкие детали могут измениться."),
+            Text = Localization.Text("Один пиксель результата на выбранный блок исходных пикселей. Цвет и прозрачность усредняются; тонкие детали могут измениться."),
             TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 12)
         });
-        AddMode(_t3Mode, "T3 / p44", "Границы ячеек сдвинуты на 4 пикселя; цвет усредняется с учётом прозрачности.");
-        AddMode(_p5Mode, "P5 / OFF", "Обычные блоки 8 × 8, метод R0/C0 без карты регионов.");
+        AddMode(_t3Mode, "T3 / p44", "Границы ячеек сдвинуты на половину кратности; цвет усредняется с учётом прозрачности.");
+        AddMode(_p5Mode, "P5 / OFF", "Обычные блоки выбранного размера, метод R0/C0 без карты регионов.");
         AddMode(_mixedMode, "50 / 50", "Равная смесь T3/p44 и P5/OFF в sRGB с учётом прозрачности.");
         _t3Mode.IsChecked = true;
+        content.Children.Add(new TextBlock { Text = Localization.Text("Кратность сжатия (2–64)"), Margin = new Thickness(0, 2, 0, 4) });
+        _finalistFactor.MaxDropDownHeight = 240;
+        _finalistFactor.ItemsSource = Enumerable.Range(FinalistReducer.MinFactor,
+            FinalistReducer.MaxFactor - FinalistReducer.MinFactor + 1);
+        _finalistFactor.SelectedItem = FinalistReducer.DefaultFactor;
+        AutomationProperties.SetName(_finalistFactor, Localization.Text("Кратность сжатия (2–64)"));
+        content.Children.Add(_finalistFactor);
         _finalistApply.Content = Localization.Text("Уменьшить изображение");
         _finalistApply.Style = (Style)FindResource("PrimaryButton");
         _finalistApply.Margin = new Thickness(0, 14, 0, 0);
         _finalistApply.IsEnabled = false;
-        AutomationProperties.SetName(_finalistApply, Localization.Text("Применить уменьшение TCR 8×"));
+        AutomationProperties.SetName(_finalistApply, Localization.Text("Применить уменьшение TCR"));
         _finalistApply.Click += (_, _) => ApplyFinalistReduction();
         content.Children.Add(_finalistApply);
         _finalistGroup.Content = content;
@@ -58,6 +66,11 @@ public partial class MainWindow
     {
         Bitmap? basis = GetFilterBasis();
         if (_processing || basis is null || _activeSource is null) return;
+        if (_finalistFactor.SelectedItem is not int factor || factor is < FinalistReducer.MinFactor or > FinalistReducer.MaxFactor)
+        {
+            statusLabel.Text = Localization.Text("Укажите целую кратность сжатия от 2 до 64.");
+            return;
+        }
         var document = _activeSource;
         Guid? parentId = ReferenceEquals(basis, _downscaledResult) ? document.SelectedGeneration?.Id : null;
         FinalistMode mode = _p5Mode.IsChecked == true ? FinalistMode.P5Off :
@@ -71,28 +84,29 @@ public partial class MainWindow
         var settings = CaptureSettings();
         using var input = (Bitmap)basis.Clone();
         SetProcessingState(true);
-        statusLabel.Text = Localization.Text("Уменьшение TCR 8×…");
+        statusLabel.Text = Localization.Format("Уменьшение TCR {0}×…", factor);
         try
         {
             var generation = await Task.Run(() =>
             {
-                using var output = FinalistReducer.Reduce(input, mode);
+                using var output = FinalistReducer.Reduce(input, mode, factor);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
-                    Operation = "TCR " + modeName,
+                    Operation = $"TCR {modeName} {factor}×",
                     OperationId = ProcessingOperations.FinalistReduce,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = mode }),
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.FinalistReduce,
+                        FinalistMode = mode, FinalistFactor = factor }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
-                    Caption = $"TCR {modeName} · {output.Width} × {output.Height}",
-                    Log = Localization.Format("TCR {0}: {1} × {2} → {3} × {4}; ячейка 8×, прозрачность 0–255.",
-                        modeName, input.Width, input.Height, output.Width, output.Height)
+                    Caption = $"TCR {modeName} {factor}× · {output.Width} × {output.Height}",
+                    Log = Localization.Format("TCR {0}: {1} × {2} → {3} × {4}; ячейка {5}×, прозрачность 0–255.",
+                        modeName, input.Width, input.Height, output.Width, output.Height, factor)
                 });
             });
             document.Generations.Add(generation);
             SelectGeneration(generation);
-            statusLabel.Text = Localization.Format("Готово · TCR {0}, {1} × {2}.", modeName, generation.Width, generation.Height);
+            statusLabel.Text = Localization.Format("Готово · TCR {0} {1}×, {2} × {3}.", modeName, factor, generation.Width, generation.Height);
         }
         catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось уменьшить изображение: {0}", ex.Message); }
         finally { SetProcessingState(false); }

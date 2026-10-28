@@ -24,6 +24,7 @@ public partial class MainWindow
     private int? _highlightInfoColor;
 
     private bool _infoSnapshotReady;
+    private string? _infoLanguageShown;
 
     private bool IsInfoToolOpen => _toolWindows.ContainsKey("info") ||
         _workspaceDock?.Visibility == Visibility.Visible && _workspaceGroups.Contains(infoToolGroup);
@@ -31,6 +32,7 @@ public partial class MainWindow
 
     private void InitializeInfo()
     {
+        infoToolGroup.Header = "Info";
         infoPaletteList.ItemsSource = _infoPalette;
         infoManualReplaceButton.Click += (_, _) => OpenColorReplace(DrawingColor.Black, true);
         _infoEyedropperButton = new Button
@@ -74,6 +76,7 @@ public partial class MainWindow
     {
         _infoRefreshVersion++;
         _infoSnapshotReady = false;
+        _infoLanguageShown = null;
         _replaceWindow?.Close();
         ClearInfoColorSelection();
         _infoSourceShown = _infoResultShown = _infoBasisShown = null;
@@ -89,11 +92,12 @@ public partial class MainWindow
         Bitmap? basis = ProcessingBasis == 1 && result is not null ? result : source;
         if (_infoSnapshotReady && ReferenceEquals(source, _infoSourceShown) &&
             ReferenceEquals(result, _infoResultShown) &&
-            ReferenceEquals(basis, _infoBasisShown)) return;
+            ReferenceEquals(basis, _infoBasisShown) && _infoLanguageShown == Localization.Language) return;
 
         _replaceWindow?.Close();
         ClearInfoColorSelection();
         _infoSnapshotReady = true;
+        _infoLanguageShown = Localization.Language;
         _infoSourceShown = source;
         _infoResultShown = result;
         _infoBasisShown = basis;
@@ -227,7 +231,7 @@ public partial class MainWindow
     private void OpenColorReplace(DrawingColor oldColor, bool allowOldColorEdit)
     {
         if (_processing || _sourceImage is null) return;
-        if (!IsInfoToolOpen) OpenEditorTool("info", Localization.Text("Цвета и сведения"), 760, infoToolGroup);
+        if (!IsInfoToolOpen) OpenEditorTool("info", "Info", 760, infoToolGroup);
         RefreshInfo();
         if (_infoBasisShown is null || !IsInfoToolOpen) return;
         _replaceWindow?.Close();

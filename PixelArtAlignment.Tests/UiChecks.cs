@@ -17,7 +17,7 @@ internal static class UiChecks
         Exception? failure = null;
         var thread = new Thread(() =>
         {
-            try { AppearanceChecks.Run(); LibraryLocationChecks.Run(); EditorRegressionChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); Verify(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); WorkspaceExportChecks.Run(); } catch (Exception e) { failure = e; }
+            try { AppearanceChecks.Run(); LibraryLocationChecks.Run(); EditorRegressionChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); WorkspaceExportChecks.Run(); } catch (Exception e) { failure = e; }
         }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();

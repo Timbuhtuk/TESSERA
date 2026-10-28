@@ -66,8 +66,8 @@ public partial class MainWindow
         ProcessingOperations.Profile => "Профильная обработка",
         ProcessingOperations.Resize => "Размер и кадр",
         ProcessingOperations.Trim => "Обрезка прозрачных краёв",
-        ProcessingOperations.Colors => "Число цветов",
-        ProcessingOperations.Cleanup => "Очистка цветов",
+        ProcessingOperations.Colors => "Палитра",
+        ProcessingOperations.Cleanup => "Сглаживание",
         ProcessingOperations.Align => "Выравнивание сетки",
         ProcessingOperations.AlignLocal => "Локальное выравнивание сетки",
         ProcessingOperations.AlignLocalSnapped => "Локальная сетка с привязкой",
@@ -80,7 +80,7 @@ public partial class MainWindow
         ProcessingOperations.ContourHeatmap => "Карта контуров",
         ProcessingOperations.CleanContours => "Очистка контуров",
         ProcessingOperations.ConnectedPalette => "Связная палитра",
-        ProcessingOperations.FinalistReduce => "TCR · уменьшение 8×",
+        ProcessingOperations.FinalistReduce => "TCR · уменьшение изображения",
         _ => operation
     });
 

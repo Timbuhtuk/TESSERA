@@ -13,8 +13,12 @@ public partial class MainWindow
     private MenuItem fileMenu = null!, toolsMenu = null!, viewMenu = null!, moreMenu = null!;
     private MenuItem openMenuItem = null!, saveMenuItem = null!, saveAllMenuItem = null!, saveDocumentMenuItem = null!, exportMenu = null!;
     private MenuItem createMenu = null!, returnMenuItem = null!;
-    private MenuItem profileMenuItem = null!, sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, filtersMenuItem = null!, infoMenuItem = null!;
+    private MenuItem sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, filtersMenuItem = null!, infoMenuItem = null!;
     private MenuItem checkUpdatesMenuItem = null!, zoomMenu = null!, backgroundMenu = null!;
+    private MenuItem openToolsMenu = null!;
+    private sealed record ToolDefinition(string Title, double Height, GroupBox[] Groups);
+    private readonly Dictionary<string, ToolDefinition> _toolDefinitions = [];
+    private readonly Dictionary<string, MenuItem> _toolMenuItems = [];
     private readonly List<MenuItem> _imageCommands = [];
     private readonly List<MenuItem> _zoomChoices = [], _backgroundChoices = [];
     private bool _navigationReady, _navigationCompact;
@@ -67,23 +71,20 @@ public partial class MainWindow
         returnMenuItem = AddNavigation(fileMenu, "returnMenuItem", "Вернуться в библиотеку", () => { GoToLibrary(this, new()); return Task.CompletedTask; });
         checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", "Проверить обновления");
 
-        var processingMenu = NavigationItem("processingMenu", "Обработка"); toolsMenu.Items.Add(processingMenu);
-        profileMenuItem = AddTool(processingMenu, "profileMenuItem", "Готовые сценарии…", "profile", 320, profileToolGroup, executionToolGroup);
-        AddTool(processingMenu, "finalistMenuItem", "TCR · уменьшение 8×…", "finalists", 420, _finalistGroup);
-        AddTool(processingMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
-
+        openToolsMenu = NavigationItem("openToolsMenu", "Открытые инструменты");
+        toolsMenu.Items.Add(openToolsMenu);
+        toolsMenu.Items.Add(new Separator());
         var sizeToolsMenu = NavigationItem("sizeToolsMenu", "Размер и сетка"); toolsMenu.Items.Add(sizeToolsMenu);
         sizeMenuItem = AddTool(sizeToolsMenu, "sizeMenuItem", "Размер и кадр…", "size", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
         gridMenuItem = AddTool(sizeToolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
+        AddTool(sizeToolsMenu, "finalistMenuItem", "TCR · уменьшение изображения…", "finalists", 460, _finalistGroup);
+        AddTool(sizeToolsMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
 
         var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
-        colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Число цветов…", "color", 440, colorToolGroup);
-        AddTool(colorToolsMenu, "connectedPaletteMenuItem", "Связная палитра…", "connected-palette", 590, connectedPaletteToolGroup);
-        smoothingMenuItem = AddTool(colorToolsMenu, "smoothingMenuItem", "Очистить цвета…", "smoothing", 470, smoothingToolGroup);
-        AddTool(colorToolsMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
+        colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Палитра…", "color", 580, colorToolGroup);
+        smoothingMenuItem = AddTool(colorToolsMenu, "smoothingMenuItem", "Сглаживание…", "smoothing", 470, smoothingToolGroup);
         AddTool(colorToolsMenu, "channelMenuItem", "Каналы RGBA…", "channel", 460, channelToolGroup);
-        AddNavigation(colorToolsMenu, "replaceColorMenuItem", "Заменить цвет…", () => NavigationImageActionAsync("replace"));
-        infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Цвета и сведения…", "info", 760, infoToolGroup);
+        infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Info…", "info", 760, infoToolGroup);
 
         var filtersToolsMenu = NavigationItem("filtersToolsMenu", "Фильтры и фон"); toolsMenu.Items.Add(filtersToolsMenu);
         filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
@@ -93,6 +94,7 @@ public partial class MainWindow
         AddNavigation(materialsToolsMenu, "materialMapsMenuItem", "Карты Height / Normal / AO…", OpenMaterialMapsAsync);
         AddNavigation(materialsToolsMenu, "inspectTilesMenuItem", "Проверить тайлы…", () => NavigationImageActionAsync("tiles"));
         AddNavigation(materialsToolsMenu, "addToBoardMenuItem", "Добавить на доску…", () => NavigationImageActionAsync("board"));
+        AddTool(toolsMenu, "macrosMenuItem", "Макросы…", "macros", 460, _macrosGroup);
 
         _imageCommands.AddRange(NavigationDescendants(toolsMenu));
         _imageCommands.Add((MenuItem)FindName("exportIcoMenuItem"));
@@ -154,7 +156,39 @@ public partial class MainWindow
         }
     }
     private MenuItem AddTool(MenuItem parent, string name, string text, string key, double height, params GroupBox[] groups)
-        => AddNavigation(parent, name, text, () => { OpenEditorTool(key, Localization.Text(text).TrimEnd('…'), height, groups); if (key == "info") RefreshInfo(); return Task.CompletedTask; });
+    {
+        string title = Localization.Text(text).TrimEnd('…');
+        _toolDefinitions[key] = new ToolDefinition(title, height, groups);
+        var item = AddNavigation(parent, name, text, () => { OpenEditorTool(key, title, height, groups); return Task.CompletedTask; });
+        item.IsCheckable = true;
+        _toolMenuItems[key] = item;
+        return item;
+    }
+
+    private void UpdateToolOpenState()
+    {
+        if (openToolsMenu is null) return;
+        openToolsMenu.Items.Clear();
+        foreach (var (key, item) in _toolMenuItems)
+        {
+            bool opened = _dockedTools.ContainsKey(key) || _toolWindows.ContainsKey(key);
+            item.IsChecked = opened;
+            if (!opened) continue;
+            var definition = _toolDefinitions[key];
+            var shortcut = new MenuItem { Header = definition.Title, IsCheckable = true, IsChecked = true };
+            shortcut.Click += (_, e) =>
+            {
+                if (!ReferenceEquals(e.OriginalSource, shortcut)) return;
+                e.Handled = true;
+                CloseNavigationMenus();
+                OpenEditorTool(key, definition.Title, definition.Height, definition.Groups);
+                UpdateToolOpenState();
+            };
+            openToolsMenu.Items.Add(shortcut);
+        }
+        if (openToolsMenu.Items.Count == 0)
+            openToolsMenu.Items.Add(new MenuItem { Header = Localization.Text("Нет открытых инструментов"), IsEnabled = false });
+    }
 
     private bool ImageEditorVisible => workspaceHost.Visibility == Visibility.Visible && _sourceImage is not null && _activeSource is not null && (!_workspaceReady || _workspaceActive?.Kind == WorkspaceAssetKind.Image);
     private void UpdateNavigationState()
@@ -167,7 +201,7 @@ public partial class MainWindow
         bool background = backgroundWorkspace.Visibility == Visibility.Visible;
         bool ico = iconWorkspace.Visibility == Visibility.Visible;
         bool tiles = _workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null;
-        bool canExport = image && !ContourPreviewVisible && !ConnectedPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
+        bool canExport = image && !ContourPreviewVisible && !PalettePreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
         toolsMenu.IsEnabled = image && !busy;
@@ -177,7 +211,7 @@ public partial class MainWindow
         saveDocumentMenuItem.Header = Localization.Text(_workspaceReady ? "Сохранить проект" : "Сохранить документ");
         exportMenu.IsEnabled = !busy && canExport;
         saveMenuItem.Header = animation ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
-        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !ConnectedPreviewVisible);
+        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !PalettePreviewVisible);
         saveMenuItem.InputGestureText = image && !_workspaceReady ? "Ctrl+S" : "";
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;
         saveAllMenuItem.Visibility = image ? Visibility.Visible : Visibility.Collapsed;
@@ -194,6 +228,7 @@ public partial class MainWindow
         for (int q = 0; q < _zoomChoices.Count; q++) _zoomChoices[q].IsChecked = PreviewZoom == q;
         for (int q = 0; q < _backgroundChoices.Count; q++) _backgroundChoices[q].IsChecked = PreviewBackground == q;
         _alternativePreviewItem.IsChecked = AlternativePreview;
+        UpdateToolOpenState();
         zoomMenu.IsEnabled = true;
     }
     private void UpdateNavigationLayout()

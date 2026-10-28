@@ -109,15 +109,17 @@ public partial class MainWindow
         ScheduleLiveToolPreviews();
     }
 
+    private bool PalettePreviewVisible => _activeLivePreviewTool == "color" && _livePreviewBitmap is not null && ReferenceEquals(resultPreview.Image, _livePreviewBitmap);
+
     private void ClearDisplayedLivePreview()
     {
         ClearContourPreview();
-        ClearConnectedPreview();
         if (ReferenceEquals(resultPreview.Image, _livePreviewBitmap) && _livePreviewBitmap is not null)
             resultPreview.Image = _downscaledResult;
         livePreviewFrame.Visibility = livePreviewBadge.Visibility = Visibility.Collapsed;
         _livePreviewBitmap?.Dispose();
         _livePreviewBitmap = null;
+        UpdateNavigationState();
     }
 
     private void ScheduleLiveToolPreviews()
@@ -125,7 +127,6 @@ public partial class MainWindow
         _livePreviewRevision++;
         _livePreviewTimer.Stop();
         if (_activeLivePreviewTool == "contours") { ScheduleContourPreview(); return; }
-        if (_activeLivePreviewTool == "connected-palette") { ScheduleConnectedPreview(); return; }
         if (_largePreviewDecisionPending) { ClearDisplayedLivePreview(); return; }
         var basis = LivePreviewBasis;
         if (basis is not null && (long)basis.Width * basis.Height > LivePreviewPixelLimit)
@@ -158,13 +159,14 @@ public partial class MainWindow
 
         int revision = _livePreviewRevision;
         var options = BuildOptionsFromUi();
+        var connected = color ? BuildConnectedPaletteOptions() : null;
         using var source = (Bitmap)basis.Clone();
         _livePreviewBusy = true;
         Bitmap? result = null;
         try
         {
             result = await Task.Run(() => color
-                ? IndependentImageProcessor.ApplyColors(source, options)
+                ? PaletteProcessor.Apply(source, options, connected)
                 : IndependentImageProcessor.ApplyNeighborColors(source, options));
             if (revision != _livePreviewRevision || _processing) return;
             ClearDisplayedLivePreview();
@@ -172,6 +174,7 @@ public partial class MainWindow
             resultPreview.Image = result;
             livePreviewFrame.Visibility = livePreviewBadge.Visibility = Visibility.Visible;
             result = null;
+            UpdateNavigationState();
         }
         catch (Exception ex)
         {
