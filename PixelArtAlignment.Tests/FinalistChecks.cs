@@ -2,6 +2,7 @@ using System.Drawing.Imaging;
 using System.Security.Cryptography;
 using System.Text.Json;
 using PixelArtDownscale;
+using PixelArtWorkflows;
 
 namespace PixelArtAlignment.Tests;
 
@@ -54,7 +55,35 @@ internal static class FinalistChecks
             {
                 using var actual = FinalistReducer.Reduce(sample, mode);
                 Require(actual.Size == new Size((size.Width + 7) / 8, (size.Height + 7) / 8), "Wrong general image size");
+                foreach (int factor in new[] { 2, 3, 4, 13, 64 })
+                {
+                    using var scaled = FinalistReducer.Reduce(sample, mode, factor);
+                    Require(scaled.Size == new Size(1 + (size.Width - 1) / factor, 1 + (size.Height - 1) / factor),
+                        $"Wrong {factor}× size for {mode}");
+                }
             }
+        }
+        using (var sample = new Bitmap(16, 1, PixelFormat.Format32bppArgb))
+        {
+            for (int x = 0; x < 16; x++) sample.SetPixel(x, 0, x < 8 ? Color.Black : Color.White);
+            using var regular = FinalistReducer.Reduce(sample, FinalistMode.P5Off, 4);
+            using var shifted = FinalistReducer.Reduce(sample, FinalistMode.T3P44, 4);
+            Require(regular.GetPixel(1, 0).ToArgb() == Color.Black.ToArgb(), "Regular 4× cell is wrong");
+            Require(shifted.GetPixel(1, 0).R == 128, "Shifted 4× cell did not cross the color boundary");
+        }
+        foreach (int factor in new[] { 1, 65 })
+        {
+            using var sample = new Bitmap(1, 1);
+            try { using var invalid = FinalistReducer.Reduce(sample, FinalistMode.P5Off, factor); throw new InvalidDataException("Invalid factor accepted"); }
+            catch (ArgumentOutOfRangeException) { }
+        }
+        using (var sample = new Bitmap(9, 9))
+        {
+            var oldRecipe = new ProcessingRecipe { Steps = [new ProcessingStep
+                { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = FinalistMode.P5Off }] };
+            using var legacy = new WorkflowExecutor().Execute(sample, oldRecipe);
+            using var defaultResult = FinalistReducer.Reduce(sample, FinalistMode.P5Off);
+            Equal(defaultResult, legacy, "Old recipe defaults to 8×");
         }
         Require(FinalistReducer.Blend((100, 50, 25, 0), (10, 20, 30, 255)) == (10, 20, 30, 128), "Transparent input contaminated mixture");
         Require(FinalistReducer.Blend((100, 50, 25, 0), (10, 20, 30, 0)) == (0, 0, 0, 0), "Zero alpha retained RGB");

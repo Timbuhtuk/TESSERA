@@ -83,7 +83,7 @@ internal static class EditorRegressionChecks
             var changes = new List<string>();
             Get<Slider>("brightnessInput").ValueChanged += (_, e) => changes.Add($"brightness {e.OldValue} -> {e.NewValue}");
             foreach (var pair in new[] { ("sizeMenuItem", "widthInput"), ("smoothingMenuItem", "localBrightnessInput"),
-                ("colorMenuItem", "paletteInput"), ("gridMenuItem", "gridCellInput"), ("profileMenuItem", "sceneMode") })
+                ("colorMenuItem", "paletteInput"), ("gridMenuItem", "gridCellInput") })
                 for (int q = 0; q < 2; q++)
                 {
                     Click(pair.Item1); Pump();

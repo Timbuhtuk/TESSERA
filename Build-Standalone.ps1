@@ -61,7 +61,7 @@ the main result pane with a contrasting PREVIEW frame; run the tool to
 save a history result.
 Tools > Color > RGBA channels adjusts one channel by value or percentage,
 including fractional amounts and transparency, with history and macros.
-Tools > Color > Contours previews candidate errors and gradients as a white-to-red
+Tools > Size and grid > Contours previews candidate errors and gradients as a white-to-red
 map. Create map result adds an exportable PNG result; the 3x3-15x15 window and
 individual similarity, gradient, neighbor and direction thresholds are saved with it. The CLI clean-contours command instead
 performs an experimental cleanup pass with an optional candidate mask.
@@ -75,10 +75,13 @@ File > Save exports one result; Save all results exports the current history.
 Result history now shows branches. Drag a branch to rearrange it without
 changing its processing origin. Resize the trays with their shared lower
 divider, or double-click it to switch between compact and expanded views.
-The source tray follows the current project's folders.
+The source image is the protected root of the result tree. The asset library
+below the preview is collapsed by default and follows the current project's folders.
+Tools opens multiple docked tabs; drag a tab out to float it and use its
+dock button to return it. TCR offers reduction factors from 2 to 64.
 
 Right-click a result and choose Create macro to save its supported steps.
-Tools > Processing > Macros lists saved macros, shows their steps and applies them to
+Tools > Macros lists saved macros, shows their steps and applies them to
 the selected source or result, saving one final result. Right-click a macro
 to rename or delete it. Esc or Cancel stops a run without a partial result.
 Saved macros can also be listed and applied through the CLI and chat skill.

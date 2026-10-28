@@ -49,13 +49,15 @@ internal static class FinalistUiChecks
             }
             Invoke(window, "LoadImage", input); Pump();
             var menu = (MenuItem)window.FindName("finalistMenuItem");
-            Require(((MenuItem)window.FindName("processingMenu")).Items.Contains(menu), "Tool is absent from Tools/Processing");
+            Require(((MenuItem)window.FindName("sizeToolsMenu")).Items.Contains(menu), "Tool is absent from Tools/Size and grid");
             NavigationTest.Click(window, "finalistMenuItem"); Pump();
             var group = Get<GroupBox>(window, "_finalistGroup");
             Require(group.IsVisible && Window.GetWindow(group) is { IsVisible: true }, "Finalist tool is not visible in WPF");
             Capture(Window.GetWindow(group)!, Path.Combine(root, "finalist-tool.png"));
             var apply = Get<Button>(window, "_finalistApply");
+            var factorInput = Get<ComboBox>(window, "_finalistFactor");
             Require(apply.IsEnabled, "Finalist action is disabled for an image");
+            Require(factorInput.SelectedItem is 8, "Default reduction factor is not 8×");
 
             foreach (var (field, mode, reference) in new[]
             {
@@ -70,7 +72,8 @@ internal static class FinalistUiChecks
                 Until(() => !Get<bool>(window, "_processing"));
                 var generation = Get<SourceEntry>(window, "_activeSource").SelectedGeneration!;
                 Require(generation.OperationId == ProcessingOperations.FinalistReduce &&
-                    generation.RecipeSnapshot?.Steps.Single().FinalistMode == mode, "Mode was not saved in the result recipe");
+                    generation.RecipeSnapshot?.Steps.Single().FinalistMode == mode &&
+                    generation.RecipeSnapshot?.Steps.Single().FinalistFactor == 8, "Mode or factor was not saved in the result recipe");
                 using var original = new Bitmap(input);
                 using var expected = labRoot is null ? FinalistReducer.Reduce(original, mode) : new Bitmap(Path.Combine(labRoot, reference));
                 using var actual = (Bitmap)Get<Bitmap>(window, "_downscaledResult").Clone();
@@ -91,6 +94,35 @@ internal static class FinalistUiChecks
                 }
                 Console.WriteLine("  WPF mode, history, PNG export/reopen, 1×/8× preview: " + mode);
             }
+            window.ProcessingBasis = 0;
+            factorInput.SelectedItem = 4;
+            apply.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Until(() => !Get<bool>(window, "_processing"));
+            var custom = Get<SourceEntry>(window, "_activeSource").SelectedGeneration!;
+            Require(custom.RecipeSnapshot?.Steps.Single().FinalistFactor == 4, "Custom factor was not saved in history");
+            var customStore = new MacroStore(Path.Combine(root, "macros-custom"));
+            customStore.Save(new MacroDefinition { Name = "TCR 4x", Steps = custom.RecipeSnapshot!.Steps });
+            using (var source = new Bitmap(input))
+            using (var expected = FinalistReducer.Reduce(source, FinalistMode.HalfAndHalf, 4))
+            using (var actual = (Bitmap)Get<Bitmap>(window, "_downscaledResult").Clone())
+            using (var replay = new WorkflowExecutor().Execute(source, custom.RecipeSnapshot!))
+            {
+                Equal(expected, actual);
+                Equal(expected, replay);
+                string export = Path.Combine(root, "ui-4x.png");
+                Invoke(window, "SaveResult", export);
+                using var reopened = new Bitmap(export);
+                Equal(expected, reopened);
+            }
+            Require(!factorInput.Items.Contains(1) && !factorInput.Items.Contains(65),
+                "Factor selector contains an out-of-range value");
+            var history = Get<SourceEntry>(window, "_activeSource").Generations;
+            Invoke(window, "SelectGeneration", history.First());
+            Require(factorInput.SelectedItem is 8 && Get<RadioButton>(window, "_t3Mode").IsChecked == true,
+                "Selecting an older result did not restore its TCR mode/factor");
+            Invoke(window, "SelectGeneration", custom);
+            Require(factorInput.SelectedItem is 4 && Get<RadioButton>(window, "_mixedMode").IsChecked == true,
+                "Selecting a custom result did not restore its TCR mode/factor");
             Console.WriteLine("PASS finalists WPF: " + root);
         }
         finally { window.Close(); Pump(); }

@@ -45,6 +45,7 @@ public partial class MainWindow : Window
         InitializeHistoryTrays();
         InitializeMacros();
         InitializeFinalistTool();
+        InitializeConnectedPalette();
         InitializeNavigation();
         InitializePreviewMode();
         InitializeWindowFrame();
@@ -96,7 +97,6 @@ public partial class MainWindow : Window
         InitializeImageActions();
         InitializeLiveToolPreviews();
         InitializeContourPreview();
-        InitializeConnectedPalette();
         InitializeHome();
         InitializeIcons();
         InitializeAseprite();
@@ -167,6 +167,7 @@ public partial class MainWindow : Window
         paletteColorControls.IsEnabled = paletteSelected;
         quantizationColorControls.Opacity = quantizationSelected ? 1 : .55;
         paletteColorControls.Opacity = paletteSelected ? 1 : .55;
+        UpdateConnectedControls();
         SetVisible(stepControls, paletteInput.SelectedIndex == 4);
         SetVisible(cropControls, spriteInput.IsChecked != true);
         SetVisible(alphaControls, spriteInput.IsChecked == true);
@@ -324,7 +325,7 @@ public partial class MainWindow : Window
         _processing = processing;
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
-        if (_workspaceToolContent is not null) _workspaceToolContent.IsEnabled = !processing || _macroCancellation is not null;
+        foreach (var tool in _dockedTools.Values) tool.Content.IsEnabled = !processing || _macroCancellation is not null;
         foreach (var tool in _toolWindows.Values) tool.ToolContent.IsEnabled = !processing;
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
         homeContent.IsEnabled = !processing;
@@ -333,9 +334,7 @@ public partial class MainWindow : Window
             !processing && _sourceImage is not null;
         trimTransparentButton.IsEnabled = !processing && _sourceImage is not null;
         contourApplyButton.IsEnabled = contourPreviewButton.IsEnabled = !processing && LivePreviewBasis is not null;
-        connectedApplyButton.IsEnabled = connectedPreviewButton.IsEnabled = !processing && LivePreviewBasis is not null;
         if (processing) ClearContourPreview();
-        if (processing) ClearConnectedPreview();
         if (!processing) ScheduleLiveToolPreviews();
         if (_downscaledResult is null && ProcessingBasis == 1) ProcessingBasis = 0;
         alignButton.IsEnabled = !processing && _sourceImage is not null;

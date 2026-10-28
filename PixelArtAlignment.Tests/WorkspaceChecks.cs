@@ -180,7 +180,7 @@ internal static class WorkspaceChecks
             Require(images.Load().Single(s => s.Id == asset.Id).Generations.Count == 5, "Tile corrections return to original image history");
             inspector.DiscardAndClose(); Pump();
 
-            Get<ListBox>(window, "generationStrip").SelectedIndex = 0; Pump();
+            Get<ListBox>(window, "generationStrip").SelectedItem = Get<ListBox>(window, "generationStrip").Items.OfType<GenerationEntry>().First(); Pump();
             var beforeCopy = window.Workspace.State.Assets.Select(a => a.Id).ToHashSet();
             Wait(Action("copy", window.Workspace.State.Assets.Single(a => a.Id == asset.Id)));
             var stateCopy = window.Workspace.State.Assets.Single(a => !beforeCopy.Contains(a.Id));

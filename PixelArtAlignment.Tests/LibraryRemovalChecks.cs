@@ -34,6 +34,7 @@ internal static class LibraryRemovalChecks
         var window = Create();
         try
         {
+            NavigationTest.Click(window, "sourceLibraryToggle"); Pump();
             var sources = Get<ListBox>("sourceStrip");
             var generations = Get<ListBox>("generationStrip");
             var original = sources.Items.Cast<SourceEntry>().Single(s => s.Id == seeded[0].Id);
@@ -47,26 +48,19 @@ internal static class LibraryRemovalChecks
             VerifyScroll(Descendants<ScrollViewer>(sources).First(), Orientation.Horizontal);
             VerifyScroll(Descendants<ScrollViewer>(generations).First(), Orientation.Vertical);
 
-            NavigationTest.Click(window, "profileMenuItem"); Pump();
-            var log = Get<TextBox>("processingLog");
-            Descendants<Expander>(Window.GetWindow(log)!).First().IsExpanded = true; Pump();
-            log.Text = string.Join(Environment.NewLine, Enumerable.Range(1, 40).Select(i => $"Строка журнала {i}"));
-            Pump(); log.BringIntoView(); Pump();
-            foreach (var bar in Descendants<ScrollBar>(log)) VerifyStyle(bar);
-            VerifyScroll(Descendants<ScrollViewer>(log).First(), Orientation.Vertical);
-            Capture("scrollbars-log.png");
             NavigationTest.Click(window, "viewMenu"); Pump();
             var zoom = Get<MenuItem>("zoomMenu"); zoom.IsSubmenuOpen = true; Pump();
             var popup = (Popup)zoom.Template.FindName("PART_Popup", zoom);
             ((FrameworkElement)popup.Child).MaxHeight = 80; Pump();
             foreach (var bar in Descendants<ScrollBar>(popup.Child)) VerifyStyle(bar);
             zoom.IsSubmenuOpen = false; Get<MenuItem>("viewMenu").IsSubmenuOpen = false;
-            Window.GetWindow(log)!.Close();
 
             var selected = original.SelectedGeneration;
             var unselected = original.Generations[0];
             Remove(generations, unselected);
-            Require(ReferenceEquals(selected, original.SelectedGeneration) && ReferenceEquals(original, sources.SelectedItem) && generations.SelectedItem is null, "Removing another result changed source selection");
+            Require(ReferenceEquals(selected, original.SelectedGeneration) && ReferenceEquals(original, sources.SelectedItem) &&
+                generations.SelectedItem is HistorySourceRoot historyRoot && historyRoot.Source == original,
+                "Removing another result changed source selection");
             Require(!File.Exists(library.ResultPath(original, unselected)), "Deleted result remains on disk");
             generations.SelectedItem = selected; Pump();
             Require(sources.SelectedItem is null && ReferenceEquals(selected, generations.SelectedItem), "Selecting a result left the source selected");
@@ -86,7 +80,7 @@ internal static class LibraryRemovalChecks
                 Remove(generations, original.SelectedGeneration ?? original.Generations[0]);
                 Require(original.Generations.Count < before, "Result deletion stopped: " + Get<TextBlock>("statusLabel").Text);
             }
-            Require(generations.Visibility == Visibility.Collapsed && Get<PixelPreview>("resultPreview").Image is null &&
+            Require(generations.Items.Count == 1 && generations.SelectedItem is HistorySourceRoot && Get<PixelPreview>("resultPreview").Image is null &&
                 !Get<MenuItem>("saveMenuItem").IsEnabled && Get<PixelPreview>("sourcePreview").Image is not null, "Deleting last result left stale UI");
 
             // Keep a generation on a different source to check cascading deletion of its history.
@@ -107,6 +101,7 @@ internal static class LibraryRemovalChecks
             sources.SelectedItem = independent; Pump();
             Require(Get<PixelPreview>("sourcePreview").Image!.Size == bitmap.Size && File.Exists(library.SourcePath(independent)), "Deleting parent broke a promoted source");
             window.Close(); window = Create();
+            NavigationTest.Click(window, "sourceLibraryToggle"); Pump();
             sources = Get<ListBox>("sourceStrip"); generations = Get<ListBox>("generationStrip");
             Require(sources.Items.Count == 9 && sources.Items.Cast<SourceEntry>().All(s => s.Id != original.Id && s.Id != other.Id), "Deleted entries returned after restart");
             while (sources.Items.Count > 0)

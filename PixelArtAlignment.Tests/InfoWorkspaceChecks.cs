@@ -80,11 +80,16 @@ internal static class InfoWorkspaceChecks
             dialog = window.OwnedWindows.OfType<ColorReplaceWindow>().Single();
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0; Pump();
             Require(!dialog.IsVisible, "Changing the processing basis left a stale replacement dialog open");
-            NavigationTest.Click(window, "sizeMenuItem"); Pump();
-            NavigationTest.Click(window, "replaceColorMenuItem"); Pump();
-            dialog = window.OwnedWindows.OfType<ColorReplaceWindow>().Single();
-            Require(dialog.Owner == window && dialog.IsVisible, "Direct replacement menu does not open the information tool and dialog");
-            NavigationTest.Click(window, "sizeMenuItem"); Pump();
+            NavigationTest.Click(window, "smoothingMenuItem"); Pump();
+            Require(Get<MenuItem>(window, "infoMenuItem").IsChecked && Field<Bitmap?>(window, "_infoBasisShown") is not null,
+                "Switching dock tabs closed information");
+            NavigationTest.Click(window, "infoMenuItem"); Pump();
+            var infoWindow = Window.GetWindow(Get<GroupBox>(window, "infoToolGroup"))!;
+            Require(infoWindow != window, "Second information command did not float the widget");
+            Get<Button>(window, "infoManualReplaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            dialog = infoWindow.OwnedWindows.OfType<ColorReplaceWindow>().Single();
+            Require(dialog.Owner == infoWindow && dialog.IsVisible, "Replacement dialog lost its floating owner");
+            infoWindow.Close(); Pump();
             Require(!dialog.IsVisible && Field<Bitmap?>(window, "_infoBasisShown") is null, "Closing information retained its dialog or snapshot");
 
             string gray = Path.Combine(folder, "gray.png");
@@ -105,13 +110,14 @@ internal static class InfoWorkspaceChecks
         try
         {
             floating.Show(); Invoke(floating, "LoadImage", path); Pump();
-            NavigationTest.Click(floating, "replaceColorMenuItem"); Pump();
+            NavigationTest.Click(floating, "infoMenuItem"); Pump();
+            Get<Button>(floating, "infoManualReplaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             var dialog = floating.OwnedWindows.Cast<Window>().SelectMany(w => w.OwnedWindows.OfType<ColorReplaceWindow>()).Single();
             Require(dialog.IsVisible && dialog.Owner != floating, "Floating information/replacement compatibility is broken");
             dialog.Close();
         }
         finally { floating.Close(); Pump(); }
-        Console.WriteLine("  Image information: docked source/result, palette replacement/history/alpha, direct menu, basis/image changes, panel closure, details, narrow layout, EN and floating compatibility passed.");
+        Console.WriteLine("  Image information: docked source/result, replacement from Info, history/alpha, basis/image changes, panel closure, details, narrow layout, EN and floating compatibility passed.");
     }
 
     private static Button PaletteButton(MainWindow window, Color color)

@@ -13,6 +13,14 @@
                     <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
                 </Grid>
             </DataTemplate>
+        <DataTemplate x:Key="HistorySourceTemplate">
+            <Grid Width="112" ToolTip="{Binding Description}">
+                <StackPanel>
+                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
+                    <TextBlock Text="{Binding Label}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
         <DataTemplate x:Key="TrayFolderTemplate"><Button Content="{Binding Label}" Tag="{Binding}" Click="TrayFolderClicked" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Padding="4,2" FontSize="12" /></DataTemplate>
         <Style x:Key="FilmstripItem" TargetType="ListBoxItem">
             <Setter Property="Margin" Value="0" /><Setter Property="Padding" Value="5" />
@@ -48,6 +56,31 @@
             <Setter Property="ItemContainerStyle" Value="{StaticResource FilmstripItem}" />
             <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><local:TrayPanel /></ItemsPanelTemplate></Setter.Value></Setter>
             <Setter Property="ItemTemplateSelector"><Setter.Value><local:TrayTemplateSelector /></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="ToolDockTab" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}" />
+            <Setter Property="Padding" Value="7,6" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
+                <Border x:Name="Frame" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,1" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter ContentSource="Header" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource Ts.Text}" /><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Panel}" /><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}" /></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Hover}" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="ToolDockTabs" TargetType="TabControl">
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ToolDockTab}" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabControl">
+                <Grid KeyboardNavigation.TabNavigation="Local">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" CanContentScroll="False">
+                        <TabPanel IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                    </ScrollViewer>
+                    <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" ContentSource="SelectedContent" />
+                </Grid>
+            </ControlTemplate></Setter.Value></Setter>
         </Style>
     </ResourceDictionary></Window.Resources>
     <Grid x:Name="rootLayout" Background="{DynamicResource Ts.Canvas}">
@@ -87,9 +120,8 @@
         <ScrollViewer x:Name="workspaceHost" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <Grid x:Name="workspaceGrid">
             <Grid x:Name="previewArea" Margin="18,0,18,12">
-                <Grid.RowDefinitions><RowDefinition x:Name="trayHeight" Height="120" MinHeight="120" /><RowDefinition Height="6" /><RowDefinition Height="*" MinHeight="240" /></Grid.RowDefinitions>
+                <Grid.RowDefinitions><RowDefinition x:Name="trayHeight" Height="120" MinHeight="120" /><RowDefinition Height="6" /><RowDefinition Height="*" MinHeight="240" /><RowDefinition Height="Auto" /><RowDefinition x:Name="sourceLibraryHeight" Height="0" /></Grid.RowDefinitions>
                 <Grid x:Name="historyRow" Grid.Row="0">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" MinWidth="140" /><ColumnDefinition Width="6" /><ColumnDefinition Width="*" MinWidth="140" /></Grid.ColumnDefinitions>
                     <DockPanel x:Name="resultTray">
                         <TextBlock x:Name="resultCaption" DockPanel.Dock="Top" Text="{local:Translate Text5839549C1984}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
                         <local:VirtualizingTray x:Name="generationStrip" AutomationProperties.Name="{local:Translate Text0ABF4F397ACF}">
@@ -98,13 +130,6 @@
                             </Style></local:VirtualizingTray.Style>
                         </local:VirtualizingTray>
                     </DockPanel>
-                    <GridSplitter x:Name="trayWidthSplitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" />
-                    <Border x:Name="sourceTray" Grid.Column="2" Background="Transparent">
-                        <DockPanel>
-                            <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="{local:Translate TextE44D7C43D79A}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
-                            <local:VirtualizingTray x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="{local:Translate Text174D6695EF84}" />
-                        </DockPanel>
-                    </Border>
                 </Grid>
                 <GridSplitter x:Name="trayHeightSplitter" Grid.Row="1" Height="6" Width="Auto" ResizeDirection="Rows" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" />
                 <Grid x:Name="previewPair" Grid.Row="2">
@@ -122,7 +147,13 @@
                         <local:PixelPreview x:Name="sourcePreview" EmptyText="{local:Translate TextFB3F56EF34F4}" />
                     </DockPanel>
                 </Grid>
-
+                <Button x:Name="sourceLibraryToggle" Grid.Row="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="0,8,0,0" Padding="8,5" Click="ToggleSourceLibrary" AutomationProperties.Name="{local:Translate Text174D6695EF84}" />
+                <Border x:Name="sourceTray" Grid.Row="4" Background="Transparent" Visibility="Collapsed">
+                    <DockPanel>
+                        <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="{local:Translate TextE44D7C43D79A}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                        <local:VirtualizingTray x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="{local:Translate Text174D6695EF84}" />
+                    </DockPanel>
+                </Border>
             </Grid>
         </Grid>
         </ScrollViewer>
@@ -226,9 +257,9 @@
                                 <RadioButton x:Name="quantizationColorModeInput" GroupName="IndependentColorMode" Content="{local:Translate TextFCC22DC80172}" Margin="0,0,18,0" IsChecked="True" ToolTip="{local:Translate Text41732EF1FC73}" />
                                 <RadioButton x:Name="paletteColorModeInput" GroupName="IndependentColorMode" Content="{local:Translate Text4C98A2ABA326}" ToolTip="{local:Translate TextFCDE614649BD}" />
                             </WrapPanel>
+                            <DockPanel x:Name="paletteCountRow" Margin="0,3"><TextBlock Text="{local:Translate Text89A26A950DB0}" Width="132" /><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="{local:Translate Text89A26A950DB0}" /></DockPanel>
                             <StackPanel x:Name="quantizationColorControls">
                             <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text5FCCA1576AB8}" Width="132" /><ComboBox x:Name="quantizationInput" SelectedIndex="1"><ComboBoxItem Content="Median Cut" /><ComboBoxItem Content="K-Means LAB" /><ComboBoxItem Content="K-Means Linear" /></ComboBox></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text89A26A950DB0}" Width="132" /><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="{local:Translate Text89A26A950DB0}" /></DockPanel>
                             <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="colorWeightsInput" Content="{local:Translate Text8DB358014F1C}" ToolTip="{local:Translate TextA44ED03E8314}" />
 
                             </StackPanel>
@@ -241,22 +272,6 @@
                             <Button x:Name="colorOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text1D197AED7DF5}" IsEnabled="False" Margin="0,7,0,0" />
                             <CheckBox x:Name="colorLivePreviewInput" Content="Живой предпросмотр" ToolTip="Показывать результат настройки без сохранения в историю." Margin="0,10,0,5" />
 
-                        </StackPanel>
-                    </GroupBox>
-                    <GroupBox x:Name="connectedPaletteToolGroup" Header="{local:Translate Text35A8C3A4B388}">
-                        <StackPanel>
-                            <TextBlock Text="{local:Translate TextFAAA51D6F0FB}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,10"/>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextD1A78C0E6549}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedColorsInput" Minimum="1" Maximum="4096" Value="128" AutomationProperties.Name="{local:Translate TextA9BB573279A7}"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextCEE7678C601D}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedConnectivityInput" Minimum="0" Maximum="100" Value="70" AutomationProperties.Name="{local:Translate TextEA6371F1BF27}"/></DockPanel>
-                            <CheckBox x:Name="connectedTilesInput" Content="{local:Translate TextFCE991770BDE}" IsChecked="True" Margin="0,7,0,3"/>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextDE6AB5D79B0B}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedTileSizeInput" Minimum="4" Maximum="256" Value="32" AutomationProperties.Name="{local:Translate Text0B096F1F2507}"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextEFCE107AB8DE}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedLocalInput" Minimum="0" Maximum="100" Value="40" AutomationProperties.Name="{local:Translate Text46ECED7F4D80}"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate TextDFB36177C222}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedDetailInput" Minimum="0" Maximum="100" Value="50" AutomationProperties.Name="{local:Translate Text19C19B692B08}"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text72B537176AD9}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="connectedContextInput" Minimum="0" Maximum="100" Value="30" AutomationProperties.Name="{local:Translate Text17112A7034FD}"/></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text0ADE853F6269}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><ComboBox x:Name="connectedSpaceInput" SelectedIndex="0" AutomationProperties.Name="{local:Translate Text0ADE853F6269}"><ComboBoxItem Content="Oklab"/><ComboBoxItem Content="CIE Lab"/></ComboBox></DockPanel>
-                            <TextBlock x:Name="connectedPreviewStatus" Text="{local:Translate Text633AD966C74E}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,10,0,0"/>
-                            <Button x:Name="connectedPreviewButton" Content="{local:Translate Text62B92AA4CE79}" Margin="0,10,0,0"/>
-                            <Button x:Name="connectedApplyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text2E5D40A1FF51}" IsEnabled="False" Margin="0,8,0,0"/>
                         </StackPanel>
                     </GroupBox>
                     <GroupBox x:Name="channelToolGroup" />

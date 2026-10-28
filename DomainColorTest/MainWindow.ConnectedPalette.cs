@@ -1,186 +1,99 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
-using System.Windows.Threading;
 using PixelArtDownscale;
-using Bitmap = System.Drawing.Bitmap;
 
 namespace DomainColorTest;
 
 public partial class MainWindow
 {
-    private readonly DispatcherTimer _connectedPreviewTimer = new() { Interval = TimeSpan.FromMilliseconds(350) };
-    private int _connectedPreviewRevision;
-    private bool _connectedPreviewBusy;
-    private Bitmap? _connectedPreviewBitmap, _connectedPreviewBasis;
-    private bool ConnectedPaletteOpen => ActiveLivePreviewTool == "connected-palette";
-    private bool ConnectedPreviewVisible => _connectedPreviewBitmap is not null &&
-        ReferenceEquals(resultPreview.Image, _connectedPreviewBitmap);
+    private readonly CheckBox connectedPaletteInput = new();
+    private readonly CheckBox connectedTilesInput = new();
+    private readonly IntegerInput connectedConnectivityInput = new() { Minimum = 0, Maximum = 100, Value = 75 };
+    private readonly IntegerInput connectedTileSizeInput = new() { Minimum = 4, Maximum = 256, Value = 16 };
+    private readonly IntegerInput connectedLocalInput = new() { Minimum = 0, Maximum = 100, Value = 55 };
+    private readonly IntegerInput connectedDetailInput = new() { Minimum = 0, Maximum = 100, Value = 66 };
+    private readonly IntegerInput connectedContextInput = new() { Minimum = 0, Maximum = 100, Value = 30 };
+    private readonly ComboBox connectedSpaceInput = new();
 
     private void InitializeConnectedPalette()
     {
-        connectedTilesInput.ToolTip = Localization.Text("Учитывает концентрацию цвета в локальных областях заданного размера. Отключите для оценки по всему изображению.");
-        _connectedPreviewTimer.Tick += async (_, _) =>
-        {
-            _connectedPreviewTimer.Stop();
-            await RenderConnectedPreview(false);
-        };
-        foreach (var input in new[] { connectedColorsInput, connectedConnectivityInput, connectedTileSizeInput,
-            connectedLocalInput, connectedDetailInput, connectedContextInput })
-            input.ValueChanged += (_, _) => ScheduleConnectedPreview();
-        connectedSpaceInput.SelectionChanged += (_, _) => ScheduleConnectedPreview();
-        connectedTilesInput.Checked += (_, _) => ChangeTiles();
-        connectedTilesInput.Unchecked += (_, _) => ChangeTiles();
-        connectedPreviewButton.Click += async (_, _) => await RenderConnectedPreview(true);
-        connectedApplyButton.Click += async (_, _) => await ApplyConnectedPalette();
-        Closed += (_, _) => ClearConnectedPreview();
+        colorToolGroup.Header = Localization.Text("Палитра");
+        colorOnlyButton.Content = Localization.Text("Создать результат");
+        var content = (StackPanel)colorToolGroup.Content;
+        int position = content.Children.IndexOf(colorOnlyButton);
+        connectedPaletteInput.Content = Localization.Text("Учитывать связность цветов");
+        connectedPaletteInput.ToolTip = Localization.Text("При отборе итоговых цветов учитывать цельные пятна и соседей пикселя.");
+        connectedPaletteInput.Margin = new Thickness(0, 12, 0, 5);
+        AutomationProperties.SetName(connectedPaletteInput, Localization.Text("Учитывать связность цветов"));
+        content.Children.Insert(position++, connectedPaletteInput);
 
-        void ChangeTiles()
+        var panel = new StackPanel();
+        panel.Children.Add(Row("Связность, %", connectedConnectivityInput));
+        connectedTilesInput.Content = new TextBlock { Text = Localization.Text("Учитывать локальные области"),
+            TextWrapping = TextWrapping.Wrap, MaxWidth = 180 };
+        connectedTilesInput.IsChecked = true;
+        panel.Children.Add(connectedTilesInput);
+        panel.Children.Add(Row("Размер области, px", connectedTileSizeInput));
+        panel.Children.Add(Row("Локальный вес, %", connectedLocalInput));
+        panel.Children.Add(Row("Различие цветов, %", connectedDetailInput));
+        panel.Children.Add(Row("Соседи при замене, %", connectedContextInput));
+        connectedSpaceInput.Items.Add("Oklab"); connectedSpaceInput.Items.Add("CIE Lab");
+        connectedSpaceInput.SelectedIndex = 0;
+        panel.Children.Add(Row("Пространство цвета", connectedSpaceInput));
+        panel.Children.Add(new TextBlock
         {
-            connectedTileSizeInput.IsEnabled = connectedLocalInput.IsEnabled = connectedTilesInput.IsChecked == true;
-            ScheduleConnectedPreview();
+            Text = Localization.Text("Если связный отбор получает более 4096 цветов, сначала выполняется квантование."),
+            TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 4)
+        });
+        var details = new Expander
+        {
+            Header = Localization.Text("Настройки связности"), Content = panel,
+            Style = (Style)FindResource("ToolExpander"), Margin = new Thickness(0, 0, 0, 8), IsEnabled = false
+        };
+        content.Children.Insert(position, details);
+
+        connectedPaletteInput.Checked += (_, _) => { details.IsEnabled = details.IsExpanded = true; Changed(); };
+        connectedPaletteInput.Unchecked += (_, _) => { details.IsExpanded = details.IsEnabled = false; Changed(); };
+        connectedTilesInput.Checked += (_, _) => Changed();
+        connectedTilesInput.Unchecked += (_, _) => Changed();
+        foreach (var input in new[] { connectedConnectivityInput, connectedTileSizeInput, connectedLocalInput,
+            connectedDetailInput, connectedContextInput })
+            input.ValueChanged += (_, _) => Changed();
+        connectedSpaceInput.SelectionChanged += (_, _) => Changed();
+        UpdateConnectedControls();
+
+        void Changed()
+        {
+            UpdateConnectedControls();
+            SettingsChanged(null, EventArgs.Empty);
+            ScheduleLiveToolPreviews();
+        }
+        DockPanel Row(string label, FrameworkElement control)
+        {
+            var row = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+            row.Children.Add(new TextBlock { Text = Localization.Text(label), Width = 150,
+                VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap });
+            AutomationProperties.SetName(control, Localization.Text(label));
+            row.Children.Add(control);
+            return row;
         }
     }
 
-    private ConnectivityPaletteOptions BuildConnectedOptions() => new()
+    private void UpdateConnectedControls()
     {
-        TargetColors = connectedColorsInput.Value,
+        connectedTileSizeInput.IsEnabled = connectedLocalInput.IsEnabled = connectedTilesInput.IsChecked == true;
+        paletteCountRow.IsEnabled = quantizationColorModeInput.IsChecked == true || connectedPaletteInput.IsChecked == true;
+    }
+
+    private ConnectivityPaletteOptions? BuildConnectedPaletteOptions() => connectedPaletteInput.IsChecked == true ? new()
+    {
+        TargetColors = quantizationColorsInput.Value,
         ConnectivityWeight = connectedConnectivityInput.Value / 100.0,
         TileSize = connectedTilesInput.IsChecked == true ? connectedTileSizeInput.Value : 0,
         LocalWeight = connectedLocalInput.Value / 100.0,
         DetailWeight = connectedDetailInput.Value / 100.0,
         ContextWeight = connectedContextInput.Value / 100.0,
         DistanceSpace = connectedSpaceInput.SelectedIndex == 1 ? PaletteDistanceSpace.CieLab : PaletteDistanceSpace.Oklab
-    };
-
-    private void ScheduleConnectedPreview()
-    {
-        _connectedPreviewRevision++;
-        _connectedPreviewTimer.Stop();
-        if (!ConnectedPaletteOpen || _processing || _restoringHistory) { ClearConnectedPreview(); return; }
-        if (!IsLoaded || LivePreviewBasis is not { } basis) return;
-        if (!ReferenceEquals(basis, _connectedPreviewBasis))
-        {
-            ClearConnectedPreview();
-            _connectedPreviewBasis = basis;
-        }
-        connectedApplyButton.IsEnabled = connectedPreviewButton.IsEnabled = true;
-        if ((long)basis.Width * basis.Height > LivePreviewPixelLimit)
-        {
-            if (ConnectedPreviewVisible) ClearConnectedPreview();
-            connectedPreviewStatus.Text = Localization.Text("Большое изображение: нажмите «Обновить предпросмотр».");
-            return;
-        }
-        connectedPreviewStatus.Text = Localization.Text("Расчёт палитры…");
-        _connectedPreviewTimer.Start();
-    }
-
-    private void ClearConnectedPreview()
-    {
-        _connectedPreviewRevision++;
-        _connectedPreviewTimer.Stop();
-        if (ConnectedPreviewVisible)
-        {
-            resultPreview.Image = _downscaledResult;
-            resultCaption.Text = Localization.StoredText(_activeSource?.SelectedGeneration?.Caption ?? "РЕЗУЛЬТАТ");
-            resultPreview.ToolTip = Localization.Text("Ctrl + колёсико — масштаб. Перетащите результат в исходники, чтобы обработать его дальше.");
-        }
-        _connectedPreviewBitmap?.Dispose();
-        _connectedPreviewBitmap = null;
-        _connectedPreviewBasis = null;
-        livePreviewFrame.Visibility = livePreviewBadge.Visibility = Visibility.Collapsed;
-        UpdateNavigationState();
-    }
-
-    private async Task RenderConnectedPreview(bool manual)
-    {
-        if (_connectedPreviewBusy || _processing || !ConnectedPaletteOpen || LivePreviewBasis is not { } basis) return;
-        if (!manual && (long)basis.Width * basis.Height > LivePreviewPixelLimit) return;
-        int revision = _connectedPreviewRevision;
-        var options = BuildConnectedOptions();
-        using var source = (Bitmap)basis.Clone();
-        _connectedPreviewBusy = true;
-        ConnectivityPaletteResult? report = null;
-        try
-        {
-            connectedPreviewStatus.Text = Localization.Text("Расчёт палитры…");
-            report = await Task.Run(() => ConnectivityPaletteReducer.Process(source, options));
-            if (revision != _connectedPreviewRevision || _processing || !ConnectedPaletteOpen || !IsLoaded) return;
-            resultPreview.Image = null;
-            _connectedPreviewBitmap?.Dispose();
-            _connectedPreviewBitmap = report.Image;
-            resultPreview.Image = _connectedPreviewBitmap;
-            livePreviewFrame.Visibility = livePreviewBadge.Visibility = Visibility.Visible;
-            resultCaption.Text = Localization.Format("ПРЕДПРОСМОТР ПАЛИТРЫ · {0} × {1}", basis.Width, basis.Height);
-            resultPreview.ToolTip = Localization.Text("Предпросмотр. Создайте результат, чтобы сохранить изображение в истории.");
-            connectedPreviewStatus.Text = Localization.Format("Цветов: {0} → {1}; изменено {2} пикселей.",
-                report.ColorsBefore, report.ColorsAfter, report.ChangedPixels);
-            UpdateNavigationState();
-            report = null;
-        }
-        catch (Exception ex)
-        {
-            if (revision == _connectedPreviewRevision)
-                connectedPreviewStatus.Text = Localization.Format("Предпросмотр недоступен: {0}", ex.Message);
-        }
-        finally
-        {
-            report?.Image.Dispose();
-            _connectedPreviewBusy = false;
-            if (revision != _connectedPreviewRevision) ScheduleConnectedPreview();
-        }
-    }
-
-    private async Task ApplyConnectedPalette()
-    {
-        if (!ConnectedPaletteOpen || _sourceImage is null || _activeSource is null || _processing ||
-            LivePreviewBasis is not { } basis) return;
-        var options = BuildConnectedOptions();
-        var settings = CaptureSettings();
-        var document = _activeSource;
-        bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
-        Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
-        using var source = (Bitmap)basis.Clone();
-        _connectedPreviewRevision++;
-        _connectedPreviewTimer.Stop();
-        SetProcessingState(true);
-        statusLabel.Text = Localization.Text("Сокращение связной палитры…");
-        try
-        {
-            var generation = await Task.Run(() =>
-            {
-                var report = ConnectivityPaletteReducer.Process(source, options);
-                using (report.Image)
-                    return _library.SaveGeneration(document, report.Image, null, new GenerationEntry
-                    {
-                        Settings = settings,
-                        Operation = "Связная палитра",
-                        OperationId = ProcessingOperations.ConnectedPalette,
-                        AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
-                        {
-                            OperationId = ProcessingOperations.ConnectedPalette,
-                            ConnectedPalette = options
-                        }),
-                        ParentGenerationId = parentId,
-                        PreservesTransparency = true,
-                        Caption = $"СВЯЗНАЯ ПАЛИТРА · {basis.Width} × {basis.Height}",
-                        Log = Localization.Format("Цветов: {0} → {1}; компонент: {2}; изменено пикселей: {3}. Цель: {4}; связность: {5}%; локальная область: {6}; локальный вес: {7}%; различие: {8}%; контекст: {9}%; пространство: {10}.",
-                            report.ColorsBefore, report.ColorsAfter, report.ComponentsBefore, report.ChangedPixels,
-                            options.TargetColors, options.ConnectivityWeight * 100, options.TileSize,
-                            options.LocalWeight * 100, options.DetailWeight * 100, options.ContextWeight * 100,
-                            options.DistanceSpace)
-                    });
-            });
-            document.Generations.Add(generation);
-            if (_workspaceReady) CloseDockedWorkspaceTool();
-            else if (_toolWindows.TryGetValue("connected-palette", out var tool)) tool.Close();
-            SelectGeneration(generation);
-            statusLabel.Text = Localization.Text("Связная палитра сохранена как результат.");
-        }
-        catch (Exception ex)
-        {
-            statusLabel.Text = Localization.Text("Не удалось сократить палитру.");
-            TesseraDialog.Show(this, ex.Message, Localization.Text("Связная палитра"), MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-        finally { SetProcessingState(false); }
-    }
+    } : null;
 }

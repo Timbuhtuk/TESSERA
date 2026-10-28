@@ -10,7 +10,21 @@ namespace DomainColorTest;
 public sealed class TrayTemplateSelector : DataTemplateSelector
 {
     public override DataTemplate SelectTemplate(object item, DependencyObject container)
-        => (DataTemplate)((FrameworkElement)container).FindResource(item is TrayFolderHeader ? "TrayFolderTemplate" : "TrayCardTemplate");
+        => (DataTemplate)((FrameworkElement)container).FindResource(item switch
+        {
+            TrayFolderHeader => "TrayFolderTemplate",
+            HistorySourceRoot => "HistorySourceTemplate",
+            _ => "TrayCardTemplate"
+        });
+}
+
+public sealed class HistorySourceRoot
+{
+    public HistorySourceRoot(SourceEntry source) => Source = source;
+    public SourceEntry Source { get; }
+    public string Label => Source.Label;
+    public string Description => Source.Description;
+    public object? Thumbnail => Source.Thumbnail;
 }
 
 /// <summary>Pixel-scrolled, two-dimensional filmstrip. Only intersecting cards get containers.</summary>

@@ -14,13 +14,14 @@ public partial class MainWindow
 
     private void InitializeCleanupControls()
     {
+        smoothingToolGroup.Header = Localization.Text("Сглаживание");
         var defaults = new ColorCleanupOptions();
         localBrightnessInput.Value = defaults.ColorTolerance / .4;
         localContrastInput.Value = defaults.Strength * 100;
         localDetailGuardInput.IsChecked = defaults.DetailProtection > 0;
         localEdgeInput.Value = defaults.EdgeProtection * 100;
         cleanupDescription.Text = Localization.Text("Объединяет близкие оттенки по соседним пикселям, сохраняя линии, границы и прозрачность. Новые цвета не создаются.");
-        neighborColorsButton.Content = Localization.Text("Очистить цвета");
+        neighborColorsButton.Content = Localization.Text("Применить сглаживание");
         neighborColorsButton.ToolTip = Localization.Text("Убирает цветовой шум и объединяет близкие оттенки без изменения размера и прозрачности.");
         localColorPassesInput.ToolTip = Localization.Text("Повторяет очистку до указанного числа проходов. Обработка останавливается раньше, если цвета перестали меняться.");
         localBrightnessInput.ToolTip = Localization.Text("Максимальная разница близких оттенков. Больше значение — больше цветов объединяется; 0 сохраняет исходник.");
@@ -53,7 +54,7 @@ public partial class MainWindow
         statusLabel.Text = operation switch
         {
             IndependentOperation.Size => enlarged ? Localization.Text("Увеличение изображения…") : Localization.Text("Изменение размера…"),
-            IndependentOperation.NeighborColors => Localization.Text("Очистка близких оттенков с защитой деталей…"),
+            IndependentOperation.NeighborColors => Localization.Text("Сглаживание близких оттенков…"),
             _ => Localization.Text("Обработка цветов…")
         };
         try
@@ -64,7 +65,7 @@ public partial class MainWindow
                 {
                     IndependentOperation.Size => IndependentImageProcessor.Scale(source, options),
                     IndependentOperation.NeighborColors => IndependentImageProcessor.ApplyNeighborColors(source, options),
-                    _ => IndependentImageProcessor.ApplyColors(source, options)
+                    _ => PaletteProcessor.Apply(source, options, settings.ConnectedPalette)
                 };
                 string colorOperation = options.IndependentColorMode switch
                 {
@@ -72,15 +73,18 @@ public partial class MainWindow
                     IndependentColorMode.Palette => Localization.Text("Палитра"),
                     _ => Localization.Text("Цвет")
                 };
+                if (settings.ConnectedPalette is not null && !changeSize && !neighborColors)
+                    colorOperation = Localization.Text("Палитра · связный отбор");
                 string label = changeSize ? enlarged ? Localization.Text("УВЕЛИЧЕНИЕ") : Localization.Text("РАЗМЕР") :
-                    neighborColors ? Localization.Text("ОЧИСТКА ЦВЕТОВ") : colorOperation.ToUpperInvariant();
+                    neighborColors ? Localization.Text("СГЛАЖИВАНИЕ") : colorOperation.ToUpperInvariant();
                 return _library.SaveGeneration(document, result, null, new GenerationEntry
                 {
                     Settings = settings,
                     OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors, Downscale = options }),
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
+                        Downscale = options, ConnectedPalette = !changeSize && !neighborColors ? settings.ConnectedPalette : null }),
                     Operation = changeSize ? enlarged ? Localization.Text("Увеличение") : Localization.Text("Размер") :
-                        neighborColors ? Localization.Text("Очистка цветов") : colorOperation,
+                        neighborColors ? Localization.Text("Сглаживание") : colorOperation,
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = $"{label} · {result.Width} × {result.Height}",

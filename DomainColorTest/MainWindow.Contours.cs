@@ -60,7 +60,7 @@ public partial class MainWindow
 
     private void CloseContourTool()
     {
-        if (_workspaceReady) CloseDockedWorkspaceTool();
+        if (_workspaceReady) CloseDockedTool("contours");
         else if (_toolWindows.TryGetValue("contours", out var tool)) tool.Close();
     }
 

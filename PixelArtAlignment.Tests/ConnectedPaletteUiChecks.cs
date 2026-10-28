@@ -50,7 +50,7 @@ internal static class ConnectedPaletteUiChecks
         var window = Open();
         try
         {
-            Require(!Get<Button>("connectedApplyButton").IsEnabled, "Empty editor permits palette processing");
+            Require(!Get<Button>("colorOnlyButton").IsEnabled, "Empty editor permits palette processing");
             if (docked)
             {
                 window.EnableWorkspacePrototype();
@@ -59,10 +59,13 @@ internal static class ConnectedPaletteUiChecks
             }
             else Invoke("LoadImage", path);
             var document = Get<SourceEntry>("_activeSource");
-            NavigationTest.Click(window, "connectedPaletteMenuItem");
-            Require(Get<MenuItem>("connectedPaletteMenuItem").Header.ToString() ==
-                (language == "en" ? "Connected palette…" : "Связная палитра…"), "Menu translation missing");
-            Get<IntegerInput>("connectedColorsInput").Value = 8;
+            NavigationTest.Click(window, "colorMenuItem");
+            Require(Get<MenuItem>("colorMenuItem").Header.ToString() ==
+                (language == "en" ? "Palette…" : "Палитра…"), "Menu translation missing");
+            Get<RadioButton>("quantizationColorModeInput").IsChecked = true;
+            Get<CheckBox>("connectedPaletteInput").IsChecked = true;
+            Get<CheckBox>("colorLivePreviewInput").IsChecked = true;
+            Get<IntegerInput>("quantizationColorsInput").Value = 8;
             Until(() => Visible() && Get<PixelPreview>("resultPreview").Image is { } image && Colors(image) == 8);
             Require(document.Generations.Count == 0 && !Get<MenuItem>("saveMenuItem").IsEnabled, "Preview entered history/export");
             Get<IntegerInput>("connectedConnectivityInput").Value = 25;
@@ -72,19 +75,19 @@ internal static class ConnectedPaletteUiChecks
             Get<IntegerInput>("connectedDetailInput").Value = 80;
             Get<IntegerInput>("connectedContextInput").Value = 15;
             Get<ComboBox>("connectedSpaceInput").SelectedIndex = 1;
-            Get<IntegerInput>("connectedColorsInput").Value = 3;
+            Get<IntegerInput>("quantizationColorsInput").Value = 3;
             var options = new ConnectivityPaletteOptions { TargetColors = 3, ConnectivityWeight = .25,
                 TileSize = 0, LocalWeight = .65, DetailWeight = .8, ContextWeight = .15,
                 DistanceSpace = PaletteDistanceSpace.CieLab };
-            using var expected = ConnectivityPaletteReducer.Process(source, options).Image;
+            using var expected = PaletteProcessor.Apply(source, (DownscaleOptions)typeof(MainWindow).GetMethod("BuildOptionsFromUi", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null)!, options);
             Until(() => Visible() && Get<PixelPreview>("resultPreview").Image is { } image && Same(expected, image));
             Capture(window, Path.Combine(folder, "preview-" + language + ".png"));
-            NavigationTest.Click(window, "connectedApplyButton");
+            NavigationTest.Click(window, "colorOnlyButton");
             Until(() => document.Generations.Count == 1 && !Get<bool>("_processing"));
             Require(Same(expected, Get<Bitmap>("_downscaledResult")), "Saved result differs from preview");
             Require(document.SelectedGeneration!.ParentGenerationId is null, "First result has incorrect ancestry");
             var recipe = document.SelectedGeneration.RecipeSnapshot;
-            Require(recipe is { Steps.Count: 1 } && recipe.Steps[0].OperationId == ProcessingOperations.ConnectedPalette,
+            Require(recipe is { Steps.Count: 1 } && recipe.Steps[0].OperationId == ProcessingOperations.Colors,
                 "Connected palette result cannot create a macro");
             var store = new MacroStore(library);
             var macro = store.Save(new MacroDefinition { Name = "Palette replay", Steps = recipe!.Steps });
@@ -94,23 +97,24 @@ internal static class ConnectedPaletteUiChecks
             string export = Path.Combine(folder, "result.png"); Invoke("SaveResult", export);
             using (var saved = new Bitmap(export)) Require(Same(expected, saved), "Export changed RGBA pixels");
             var parent = document.SelectedGeneration.Id;
-            NavigationTest.Click(window, "connectedPaletteMenuItem");
-            Get<IntegerInput>("connectedColorsInput").Value = 2;
+            NavigationTest.Click(window, "colorMenuItem");
+            Get<IntegerInput>("quantizationColorsInput").Value = 2;
             Until(() => Visible() && Get<PixelPreview>("resultPreview").Image is { } image && Colors(image) == 2);
-            NavigationTest.Click(window, "connectedApplyButton");
+            NavigationTest.Click(window, "colorOnlyButton");
             Until(() => document.Generations.Count == 2 && !Get<bool>("_processing"));
             Require(document.SelectedGeneration!.ParentGenerationId == parent, "Result processing lost selected ancestry");
             using var final = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
-            NavigationTest.Click(window, "connectedPaletteMenuItem");
-            Get<IntegerInput>("connectedColorsInput").Value = 1;
+            NavigationTest.Click(window, "colorMenuItem");
+            Get<IntegerInput>("quantizationColorsInput").Value = 1;
             NavigationTest.Click(window, "contoursMenuItem");
-            Until(() => !(bool)typeof(MainWindow).GetProperty("ConnectedPreviewVisible", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!);
+            Until(() => !(bool)typeof(MainWindow).GetProperty("PalettePreviewVisible", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!);
             var end = DateTime.UtcNow.AddMilliseconds(700);
             while (DateTime.UtcNow < end) { Pump(); Thread.Sleep(5); }
             Require(document.Generations.Count == 2, "Tool switch created history");
             window.Close(); window = Open();
             Require(Same(final, Get<Bitmap>("_downscaledResult")), "Restart lost saved result");
-            Require(Get<IntegerInput>("connectedColorsInput").Value == 2 &&
+            Require(Get<CheckBox>("connectedPaletteInput").IsChecked == true &&
+                Get<IntegerInput>("quantizationColorsInput").Value == 2 &&
                 Get<IntegerInput>("connectedConnectivityInput").Value == 25 &&
                 Get<IntegerInput>("connectedTileSizeInput").Value == 16 &&
                 Get<CheckBox>("connectedTilesInput").IsChecked == false &&
@@ -126,7 +130,7 @@ internal static class ConnectedPaletteUiChecks
         MainWindow Open() { var result = new MainWindow(library) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false }; result.Show(); Pump(); return result; }
         T Get<T>(string name) => (T)(window.FindName(name) ?? typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window))!;
         object? Invoke(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, args);
-        bool Visible() => (bool)typeof(MainWindow).GetProperty("ConnectedPreviewVisible", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+        bool Visible() => (bool)typeof(MainWindow).GetProperty("PalettePreviewVisible", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
     }
 
     private static int Colors(Bitmap image)
