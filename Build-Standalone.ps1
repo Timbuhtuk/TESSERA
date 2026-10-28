@@ -65,13 +65,19 @@ View > Lenses > Contours previews candidate errors and gradients as a white-to-r
 map. Create map result adds an exportable PNG result; the 3x3-15x15 window and
 individual similarity, gradient, neighbor and direction thresholds are saved with it. The CLI clean-contours command instead
 performs an experimental cleanup pass with an optional candidate mask.
-View > Lenses > Preview grid overlays a movable grid on the original, result
-and alternative preview. Spacing, offsets, color and visibility are adjustable;
-the grid never changes saved image pixels.
+View > Lenses > Preview grid overlays a movable grid on the original and result.
+Only one lens can be open. Alternative Alt preview turns lenses off; opening a
+lens there shows an explanation. Spacing, offsets, color and visibility are
+adjustable; the grid never changes saved image pixels.
 Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
 Choose any new color with the hue strip and color field, an image swatch,
-or HEX. The original stays intact.
+or HEX. Animated black-and-white outlines mark replaceable regions; the original stays intact.
+Tools > Color > Structure probe previews experimental small-region replacements
+or a candidate map, preserving dimensions and alpha. Review the output visually.
+Tools > Size and grid > Build pixel art combines color preparation, alignment and
+cell reduction with optional palette limits. It is experimental; color, alpha
+and fine details can change, and improved shapes are not guaranteed.
 Zoom and preview background affect viewing only.
 File > Save exports one result; Save all results exports the current history.
 

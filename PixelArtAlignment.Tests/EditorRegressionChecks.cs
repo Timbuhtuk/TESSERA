@@ -12,6 +12,20 @@ namespace PixelArtAlignment.Tests;
 
 internal static class EditorRegressionChecks
 {
+    public static void RunStandalone()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try { Run(); }
+            catch (Exception ex) { failure = ex; }
+        }) { IsBackground = true };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        if (!thread.Join(TimeSpan.FromSeconds(60))) throw new Exception("Editor regression checks timed out");
+        if (failure is not null) throw failure;
+    }
+
     public static void Run()
     {
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
@@ -31,6 +45,7 @@ internal static class EditorRegressionChecks
         Check("aspect-lock", VerifyAspectLock);
         Check("grid-basis", VerifyGridBasis);
         Check("pixel-art-finish", VerifyFinish);
+        Check("structure-probe", VerifyStructure);
         Check("export-protection", VerifyExportProtection);
         Require(failures.Count == 0, string.Join(Environment.NewLine, failures));
 
@@ -185,6 +200,45 @@ internal static class EditorRegressionChecks
             Invoke("SaveResult", export);
             using var saved = new Bitmap(export);
             EqualPixels(expected, saved, "Pixel-art finish PNG export");
+        }
+
+        void VerifyStructure()
+        {
+            var document = Get<SourceEntry>("_activeSource");
+            var parent = document.SelectedGeneration!;
+            using var basis = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
+            Click("structureProbeMenuItem"); Pump();
+            Get<IntegerInput>("structureSimilarityInput").Value = 0;
+            Get<IntegerInput>("structureDistanceInput").Value = 100;
+            Get<IntegerInput>("structureConfidenceInput").Value = 50;
+            var options = (PixelArtDownscale.StructureProbeOptions)Invoke("BuildStructureOptions")!;
+            var expected = PixelArtDownscale.StructureProbe.Process(basis, options);
+            using (expected.Image)
+            using (expected.Heatmap)
+            {
+                WaitTask((Task)Invoke("RenderStructurePreview", true)!);
+                EqualPixels(expected.Image, Get<PixelPreview>("resultPreview").Image!, "Structure preview of selected result");
+                Require(!Get<MenuItem>("saveMenuItem").IsEnabled, "Unsaved structure preview can be exported");
+                WaitTask((Task)Invoke("ApplyStructureProbe", false)!);
+                EqualPixels(expected.Image, Get<Bitmap>("_downscaledResult"), "Saved structure result");
+                Require(document.SelectedGeneration!.ParentGenerationId == parent.Id, "Structure result lost its selected parent");
+                string export = Path.Combine(folder, "structure-probe.png");
+                Invoke("SaveResult", export);
+                using var saved = new Bitmap(export);
+                EqualPixels(expected.Image, saved, "Structure PNG export");
+            }
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
+            Click("structureProbeMenuItem"); Pump();
+            var map = PixelArtDownscale.StructureProbe.Process(source, options);
+            using (map.Image)
+            using (map.Heatmap)
+            {
+                WaitTask((Task)Invoke("ApplyStructureProbe", true)!);
+                EqualPixels(map.Heatmap, Get<Bitmap>("_downscaledResult"), "Structure map from original");
+                Require(document.SelectedGeneration!.ParentGenerationId is null, "Source map retained a result parent");
+            }
+            EqualPixels(source, Get<Bitmap>("_sourceImage"), "Structure probe modified the source");
         }
 
         void VerifyExportProtection()

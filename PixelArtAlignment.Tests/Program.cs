@@ -3,6 +3,7 @@ using PixelArtAlignment.Tests;
 if (args is ["--help"] or ["-h"])
 {
     Console.WriteLine("PixelArtAlignment.Tests: --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("Programmatic editor regression checks without native input: --editor-regressions");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;
@@ -31,7 +32,7 @@ if (args is ["--finalists-ui", var uiLabRoot])
     FinalistUiChecks.Run(uiLabRoot);
     return 0;
 }
-if (args.Any(a => a is not ("--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--editor-regressions" or "--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -42,6 +43,7 @@ if (args.Length == 0) args = ["--invariants", "--benchmark"];
 // Written before the alignment implementation. Scores are 0..100, with a fixed 90 gate.
 // Color recall is macro-averaged: large backgrounds cannot hide missing small colors.
 int failed = 0;
+if (args.Contains("--editor-regressions")) Check("Selected-history editor tools and export protection", EditorRegressionChecks.RunStandalone);
 if (args.Contains("--project-notes") || args.Contains("--ui")) Check("Project notes: live previews, modal decisions, comparison wheel and aspect ratios", ProjectNotesChecks.Run);
 if (args.Contains("--detail-protection") || args.Contains("--ui")) DetailProtectionChecks.Run(Check);
 if (args.Contains("--local-grid") || args.Contains("--ui")) LocalGridModeChecks.Run(Check);
