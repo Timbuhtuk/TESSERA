@@ -91,11 +91,25 @@ internal static class ProjectNotesChecks
                 "Preview/modal changed history or minimized the owner");
 
             // Drive the same wheel controller as the routed event without physical input.
-            using var comparisonImage = new Bitmap(320, 240);
+            using var comparisonImage = new Bitmap(129, 128);
             using (var graphics = System.Drawing.Graphics.FromImage(comparisonImage)) graphics.Clear(Color.Teal);
             typeof(MainWindow).GetField("_downscaledResult", Private)!.SetValue(window, comparisonImage);
             window.AlternativePreview = true; window.PreviewZoom = 8; Pump();
             var comparison = Get<PixelPreview>("comparisonPreview");
+            var originalFlag = typeof(MainWindow).GetField("_comparisonOriginal", Private)!;
+            var originalImage = Get<Bitmap>("_sourceImage");
+            foreach (int step in new[] { 0, 8 })
+            {
+                window.PreviewZoom = step; Pump();
+                double resultWidth = comparison.EffectiveZoom * comparisonImage.Width;
+                double resultHeight = comparison.EffectiveZoom * comparisonImage.Height;
+                originalFlag.SetValue(window, true); Invoke("UpdateComparisonPreview"); Pump();
+                Require(ReferenceEquals(comparison.Image, originalImage) &&
+                    Math.Abs(comparison.EffectiveZoom * originalImage.Width - resultWidth) < 2 &&
+                    Math.Abs(comparison.EffectiveZoom * originalImage.Height - resultHeight) < 2,
+                    "Alternative preview changed the displayed size between original and result");
+                originalFlag.SetValue(window, false); Invoke("UpdateComparisonPreview"); Pump();
+            }
             var scroll = (ScrollViewer)comparison.Children[0];
             Require(scroll.ScrollableHeight > 0 && scroll.ScrollableWidth > 0, "Comparison did not expose both scrollbars");
             double before = scroll.VerticalOffset;

@@ -78,7 +78,6 @@ public partial class MainWindow
         sizeMenuItem = AddTool(sizeToolsMenu, "sizeMenuItem", "Размер и кадр…", "size", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
         gridMenuItem = AddTool(sizeToolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
         AddTool(sizeToolsMenu, "finalistMenuItem", "TCR · уменьшение изображения…", "finalists", 460, _finalistGroup);
-        AddTool(sizeToolsMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
 
         var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
         colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Палитра…", "color", 580, colorToolGroup);
@@ -87,7 +86,7 @@ public partial class MainWindow
         infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Info…", "info", 760, infoToolGroup);
 
         var filtersToolsMenu = NavigationItem("filtersToolsMenu", "Фильтры и фон"); toolsMenu.Items.Add(filtersToolsMenu);
-        filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
+        filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 570, filtersToolGroup);
         AddNavigation(filtersToolsMenu, "removeBackgroundMenuItem", "Удалить фон…", () => NavigationImageActionAsync("background"));
 
         var materialsToolsMenu = NavigationItem("materialsToolsMenu", "Материалы и тайлы"); toolsMenu.Items.Add(materialsToolsMenu);
@@ -119,6 +118,10 @@ public partial class MainWindow
         _alternativePreviewItem.IsCheckable = true;
         _alternativePreviewItem.ToolTip = Localization.Text("Показывает выбранный результат во всей области предпросмотра. Удерживайте Alt для просмотра исходника. Если выключить, исходник и результат отображаются в отдельных областях.");
         ToolTipService.SetShowOnDisabled(_alternativePreviewItem, true);
+        var lensesMenu = NavigationItem("lensesMenu", "Линзы"); viewMenu.Items.Add(lensesMenu);
+        AddTool(lensesMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
+        AddTool(lensesMenu, "gridLensMenuItem", "Сетка предпросмотра…", "gridLens", 370, _gridLensGroup);
+        _imageCommands.AddRange(NavigationDescendants(lensesMenu));
         SizeChanged += (_, _) => UpdateNavigationLayout();
         Loaded += (_, _) => { UpdateNavigationLayout(); UpdateNavigationState(); };
         _navigationReady = true;
@@ -188,6 +191,7 @@ public partial class MainWindow
         }
         if (openToolsMenu.Items.Count == 0)
             openToolsMenu.Items.Add(new MenuItem { Header = Localization.Text("Нет открытых инструментов"), IsEnabled = false });
+        UpdateGridLens();
     }
 
     private bool ImageEditorVisible => workspaceHost.Visibility == Visibility.Visible && _sourceImage is not null && _activeSource is not null && (!_workspaceReady || _workspaceActive?.Kind == WorkspaceAssetKind.Image);
@@ -201,7 +205,7 @@ public partial class MainWindow
         bool background = backgroundWorkspace.Visibility == Visibility.Visible;
         bool ico = iconWorkspace.Visibility == Visibility.Visible;
         bool tiles = _workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null;
-        bool canExport = image && !ContourPreviewVisible && !PalettePreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
+        bool canExport = image && !ContourPreviewVisible && !LiveToolPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
         toolsMenu.IsEnabled = image && !busy;
@@ -211,7 +215,7 @@ public partial class MainWindow
         saveDocumentMenuItem.Header = Localization.Text(_workspaceReady ? "Сохранить проект" : "Сохранить документ");
         exportMenu.IsEnabled = !busy && canExport;
         saveMenuItem.Header = animation ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
-        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !PalettePreviewVisible);
+        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !LiveToolPreviewVisible);
         saveMenuItem.InputGestureText = image && !_workspaceReady ? "Ctrl+S" : "";
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;
         saveAllMenuItem.Visibility = image ? Visibility.Visible : Visibility.Collapsed;

@@ -161,6 +161,17 @@ internal static class ToolDockPaletteChecks
             Invoke(window, "CloseDockedTool", "color", false); Pump();
             Require(!Get<MenuItem>(window, "colorMenuItem").IsChecked && Get<IDictionary>(window, "_dockedTools").Count == 2,
                 "Closed palette remains marked open");
+            NavigationTest.Click(window, "finalistMenuItem"); Pump();
+            var tabs = Get<TabControl>(window, "_workspaceTabs");
+            var tcrTab = tabs.Items.OfType<TabItem>().Single(tab => Equals(tab.Tag, "finalists"));
+            Require(Descendants(tcrTab.Header as DependencyObject ?? tcrTab).OfType<TextBlock>().Any(text => text.Text == "TCR"),
+                "Docked TCR tab lost its compact title");
+            var factor = Get<ComboBox>(window, "_finalistFactor");
+            var row = factor.Parent as DockPanel;
+            Require(row is not null && row.Children.OfType<TextBlock>().Single().ActualWidth == 132 &&
+                factor.ActualWidth > 0 && factor.ActualWidth < row.ActualWidth,
+                "TCR factor is not aligned beside its label in the narrow dock");
+            Capture(window, Path.Combine(folder, "tcr-docked.png"));
             Console.WriteLine("  Palette/dock WPF: connected DB16, alpha, recipe replay, tabs, float, redock, menu tracking. " + folder);
         }
         finally { window.Close(); Pump(); }

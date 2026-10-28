@@ -73,6 +73,7 @@ public partial class MainWindow
         ProcessingOperations.AlignLocalSnapped => "Локальная сетка с привязкой",
         ProcessingOperations.Reduce => "Сжатие сетки",
         ProcessingOperations.Monochrome => "Монохром",
+        ProcessingOperations.Sharpen => "Резкость",
         ProcessingOperations.Ascii => "ASCII-изображение",
         ProcessingOperations.ReplaceColor => "Замена цвета",
         ProcessingOperations.AdjustChannel => "Каналы RGBA",

@@ -61,10 +61,13 @@ the main result pane with a contrasting PREVIEW frame; run the tool to
 save a history result.
 Tools > Color > RGBA channels adjusts one channel by value or percentage,
 including fractional amounts and transparency, with history and macros.
-Tools > Size and grid > Contours previews candidate errors and gradients as a white-to-red
+View > Lenses > Contours previews candidate errors and gradients as a white-to-red
 map. Create map result adds an exportable PNG result; the 3x3-15x15 window and
 individual similarity, gradient, neighbor and direction thresholds are saved with it. The CLI clean-contours command instead
 performs an experimental cleanup pass with an optional candidate mask.
+View > Lenses > Preview grid overlays a movable grid on the original, result
+and alternative preview. Spacing, offsets, color and visibility are adjustable;
+the grid never changes saved image pixels.
 Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
 Choose any new color with the hue strip and color field, an image swatch,
@@ -86,7 +89,9 @@ the selected source or result, saving one final result. Right-click a macro
 to rename or delete it. Esc or Cancel stops a run without a partial result.
 Saved macros can also be listed and applied through the CLI and chat skill.
 
-Filters offers monochrome conversion and ASCII art. Save ASCII as UTF-8 TXT
+Filters offers monochrome conversion, Sharpen and ASCII art. Sharpen uses strength
+0-200% and threshold 0-64, with live preview, saved history and macro replay.
+ Save ASCII as UTF-8 TXT
 or render an opaque black-and-white image into the history. Choose a preset
 character set or enter your own. Keep the input size or use one character
 per pixel for a larger image. Input and render inversion are independent.

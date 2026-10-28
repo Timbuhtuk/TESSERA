@@ -52,6 +52,7 @@ Use a fresh nonempty UUID when creating a separate macro, a nonblank name, and a
 | `grid.align.local.snapped` | Optional `cellSize` (2–64); restore local grids, then move figures onto the shared canvas-origin grid |
 | `grid.reduce` | Literal `cellSize`, or `usePreviousAlignment: true` following `grid.align` or `grid.align.local.snapped` in this recipe |
 | `filter.monochrome` | No additional payload |
+| `filter.sharpen` | `sharpen`: integer `strength` (0–200, default 100) and `threshold` (0–64, default 4); preserves dimensions and alpha (Tessera 2.13+) |
 | `filter.ascii` | `ascii`: `characters`, `keepSourceSize`, `invertSource`, `invertColors`; produces an image |
 | `color.channel.adjust` | `channelAdjustment`: `channel` (`R`, `G`, `B`, `A`), `mode` (`Value`, `Percent`), nonnegative finite `amount`, optional `subtract` (Tessera 2.6+) |
 | `color.replace` | `colorReplacement`: `fromArgb` and `toArgb` as signed 32-bit ARGB integers |

@@ -227,6 +227,11 @@ public partial class MainWindow
             _finalistFactor.SelectedItem = finalist.FinalistFactor ?? FinalistReducer.DefaultFactor;
             (finalist.FinalistMode == FinalistMode.P5Off ? _p5Mode : finalist.FinalistMode == FinalistMode.HalfAndHalf ? _mixedMode : _t3Mode).IsChecked = true;
         }
+        if (generation.OperationId == ProcessingOperations.Sharpen && generation.RecipeSnapshot?.Steps.LastOrDefault()?.Sharpen is { } sharpen)
+        {
+            sharpenStrengthInput.Value = sharpen.Strength;
+            sharpenThresholdInput.Value = sharpen.Threshold;
+        }
         _restoringHistory = true;
         try
         {

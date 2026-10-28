@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Резкость, линзы предпросмотра и док-панель",
+        "en": "Sharpen, preview lenses and tool dock"
+      },
+      "notes": {
+        "ru": "- Резкость: новый фильтр в «Инструменты → Фильтры» с силой 0–200% и порогом 0–64. Усиливает локальные перепады цвета после уменьшения, сохраняя размер и прозрачность; потерянные детали не восстанавливает. Доступны живой предпросмотр, история и воспроизведение макросом в редакторе и CLI.\n- Вид → Линзы: «Контуры» перенесены в отдельное меню просмотра; добавлена «Сетка предпросмотра». Сетка накладывается на исходник, результат и альтернативный просмотр, не изменяя изображение и экспорт.\n- Сетка предпросмотра: настраиваются шаг и смещение по X/Y, цвет и видимость; сетку можно передвигать мышью прямо на изображении.\n- Док-панель: вкладки выровнены в одну строку, названия «Размер» и TCR стали компактнее; восстановлен возврат плавающего инструмента перетаскиванием и щелчком по кнопке закрепления.\n- TCR: поле кратности выровнено с другими настройками, описания режимов помещаются в узкой панели.\n- Альтернативный просмотр: отображаемые размеры исходника и результата согласованы при переключении, в том числе в режиме «Вписать»; пропорции сохраняются.",
+        "en": "- Sharpen: a new filter under Tools → Filters with strength 0–200% and threshold 0–64. It increases local color contrast after downscaling while retaining dimensions and alpha; lost detail is not reconstructed. Includes live preview, history and macro replay in the editor and CLI.\n- View → Lenses: Contours moves into a dedicated viewing menu, alongside the new Preview grid. The grid covers the original, result and alternative preview without changing image pixels or exports.\n- Preview grid: adjust horizontal/vertical spacing and offsets, color and visibility, or drag the grid directly on the image.\n- Tool dock: tabs align in one row with compact Size and TCR titles. Floating tools can again be returned by dragging or clicking the dock button.\n- TCR: the reduction factor aligns with other settings, and mode descriptions fit the narrow dock.\n- Alternative preview: original/result switching keeps displayed sizes aligned, including Fit, while preserving image proportions."
+      }
+    },
+    {
+      "version": "2.12.0",
+      "title": {
         "ru": "Панель инструментов, единая палитра и кратность TCR",
         "en": "Tool dock, combined palette and TCR factors"
       },

@@ -46,6 +46,7 @@ public partial class MainWindow : Window
         InitializeMacros();
         InitializeFinalistTool();
         InitializeConnectedPalette();
+        InitializeGridLens();
         InitializeNavigation();
         InitializePreviewMode();
         InitializeWindowFrame();

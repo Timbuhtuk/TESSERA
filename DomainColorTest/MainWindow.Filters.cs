@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Automation;
 using Microsoft.Win32;
 using PixelArtDownscale;
 using Bitmap = System.Drawing.Bitmap;
@@ -14,6 +15,17 @@ public partial class MainWindow
     private void InitializeFilters()
     {
         monochromeButton.Click += (_, _) => ApplyMonochrome();
+        sharpenButton.Click += (_, _) => ApplySharpen();
+        sharpenTitle.Text = Localization.Text("Резкость");
+        sharpenDescription.Text = Localization.Text("Усиливает границы после уменьшения без изменения размера и прозрачности. Потерянные детали не восстанавливаются.");
+        sharpenStrengthLabel.Text = Localization.Text("Сила, %");
+        sharpenThresholdLabel.Text = Localization.Text("Порог, 0–64");
+        sharpenButton.Content = Localization.Text("Повысить резкость");
+        sharpenThresholdInput.ToolTip = Localization.Text("Слабые перепады цвета ниже порога не усиливаются.");
+        AutomationProperties.SetName(sharpenStrengthInput, sharpenStrengthLabel.Text);
+        AutomationProperties.SetName(sharpenThresholdInput, sharpenThresholdLabel.Text);
+        sharpenStrengthInput.ValueChanged += (_, _) => { RefreshFilterState(); ScheduleLiveToolPreviews(); };
+        sharpenThresholdInput.ValueChanged += (_, _) => ScheduleLiveToolPreviews();
         asciiSaveTextButton.Click += (_, _) => SaveAsciiText();
         asciiRenderButton.Click += (_, _) => RenderAsciiImage();
         asciiRampPresetInput.SelectionChanged += (_, _) => ApplyAsciiRampPreset();
@@ -51,6 +63,7 @@ public partial class MainWindow
         Bitmap? basis = GetFilterBasis();
         bool enabled = !_processing && basis is not null;
         monochromeButton.IsEnabled = enabled;
+        sharpenButton.IsEnabled = enabled && sharpenStrengthInput.Value > 0;
         asciiSaveTextButton.IsEnabled = enabled;
         asciiRenderButton.IsEnabled = enabled;
         RefreshChannelAdjustmentState();
@@ -91,6 +104,48 @@ public partial class MainWindow
         catch (Exception ex)
         {
             statusLabel.Text = Localization.Format("Не удалось применить монохром: {0}", ex.Message);
+        }
+        finally { SetProcessingState(false); }
+    }
+
+    private async void ApplySharpen()
+    {
+        Bitmap? basis = GetFilterBasis();
+        if (_processing || basis is null || _activeSource is null || sharpenStrengthInput.Value == 0) return;
+        int strength = sharpenStrengthInput.Value, threshold = sharpenThresholdInput.Value;
+        bool useResult = ReferenceEquals(basis, _downscaledResult);
+        var document = _activeSource;
+        Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
+        var settings = CaptureSettings();
+        using var input = (Bitmap)basis.Clone();
+        sharpenLivePreviewInput.IsChecked = false;
+        SetProcessingState(true);
+        statusLabel.Text = Localization.Text("Повышение резкости…");
+        try
+        {
+            var generation = await Task.Run(() =>
+            {
+                using var output = ImageFilters.Sharpen(input, strength, threshold);
+                return _library.SaveGeneration(document, output, null, new GenerationEntry
+                {
+                    Settings = settings,
+                    Operation = Localization.Text("Резкость"),
+                    OperationId = ProcessingOperations.Sharpen,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Sharpen,
+                        Sharpen = new SharpenSettings { Strength = strength, Threshold = threshold } }),
+                    ParentGenerationId = parentId,
+                    PreservesTransparency = true,
+                    Caption = Localization.Format("РЕЗКОСТЬ · {0}% · {1} × {2}", strength, output.Width, output.Height),
+                    Log = Localization.Format("Локальная резкость {0}%, порог {1}. Размер и прозрачность сохранены.", strength, threshold)
+                });
+            });
+            document.Generations.Add(generation);
+            SelectGeneration(generation);
+            statusLabel.Text = Localization.Text("Резкость сохранена в истории.");
+        }
+        catch (Exception ex)
+        {
+            statusLabel.Text = Localization.Format("Не удалось повысить резкость: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
     }
