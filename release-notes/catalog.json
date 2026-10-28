@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Линзы, выделение цвета и экспериментальные инструменты",
+        "en": "Lenses, color outlines and experimental tools"
+      },
+      "notes": {
+        "ru": "- Линзы: одновременно включена только одна линза. Переход в альтернативный просмотр с Alt выключает линзу; при попытке открыть её в этом режиме появляется пояснение.\n- Инфо и замена цвета: русское название «Инфо»; заменяемые области выделены движущейся чёрно-белой окантовкой, без перекрашивания предпросмотра.\n- Ассеты и история: колёсико прокручивает верхние карточки по одному виджету; Shift переключает горизонтальную прокрутку.\n- Проба структуры: экспериментальный поиск небольших цветовых областей, предпросмотр предложенных замен и карта кандидатов. Размер и прозрачность сохраняются; защиту границ, линий и контрастных деталей можно настроить. Результат требует визуальной проверки.\n- Собрать пиксель-арт: экспериментальная подготовка цветов, выравнивание сетки и уменьшение ячеек с необязательным ограничением палитры. Доступны размер ячейки, число проходов и цветов, подстройка сетки. Цвет, прозрачность и тонкие детали могут измениться; общее улучшение формы не подтверждено.",
+        "en": "- Lenses: only one lens can be active. Entering the alternative Alt preview turns the lens off; attempting to open one there shows an explanation.\n- Info and color replacement: the Russian Info label is localized. Replaceable regions have an animated black-and-white outline without recoloring the preview.\n- Assets and history: the wheel scrolls upper cards one widget at a time; Shift selects horizontal scrolling.\n- Structure probe: an experimental tool for small color regions, proposed replacements and a candidate map. Dimensions and alpha are retained; boundary, line and contrasting-detail protection are adjustable. Review the result visually.\n- Build pixel art: experimental color preparation, grid alignment and cell reduction with optional palette limits. Adjust cell size, preparation passes, colors and adaptive alignment. Color, alpha and fine details may change; a general shape improvement has not been established."
+      }
+    },
+    {
+      "version": "2.13.0",
+      "title": {
         "ru": "Резкость, линзы предпросмотра и док-панель",
         "en": "Sharpen, preview lenses and tool dock"
       },
