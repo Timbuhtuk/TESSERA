@@ -3,6 +3,7 @@
 **/__pycache__/
 .vs/
 artifacts/
+/algorithm-atlas/
 *.csproj.user
 *.pubxml.user
 .idea/
