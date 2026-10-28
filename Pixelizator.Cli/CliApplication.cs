@@ -22,6 +22,7 @@ internal static class CliApplication
                        tessera connected-palette <изображение> -o <результат.png>
                        tessera smooth-colors <изображение> -o <результат.png>
                        tessera clean-contours <изображение> -o <результат.png>
+                       tessera structure-probe <изображение> -o <результат.png>
                        tessera monochrome <изображение> -o <результат.png>
                        tessera ascii <изображение> -o <результат.txt>
                        tessera palette-info <изображение> --json
@@ -40,6 +41,7 @@ internal static class CliApplication
         Палитра и замена цвета: tessera palette-info --help; tessera replace-color --help.
         Связная палитра: tessera connected-palette --help.
         Очистка контуров: tessera clean-contours --help.
+        Экспериментальная проба структуры: tessera structure-probe --help.
         Многошаговые макросы: tessera macro --help.
         Пакетный Aseprite → PNG + JSON: tessera aseprite --help.
 
@@ -100,6 +102,8 @@ internal static class CliApplication
     {
         if (args.Length > 0 && args[0] == "connected-palette")
             return ConnectivityPaletteCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "structure-probe")
+            return StructureProbeCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "clean-dark-contours")
             return CleanDarkContoursCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "align")

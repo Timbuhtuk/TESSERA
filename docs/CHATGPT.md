@@ -37,7 +37,7 @@ Ask ChatGPT normally, for example:
 - “Сделай ICO с размерами 16, 32, 48 и 256 без сглаживания.”
 - “Экспортируй эти Aseprite-файлы в PNG и JSON, раскладка grid, четыре столбца.”
 
-The skill supports the combined downscaler, `align`, `reduce-grid` / `compact-grid`, `resize`, `colors`, `connected-palette`, `smooth-colors` / `smooth`, `monochrome` / `mono`, `ascii`, `palette-info`, `replace-color`, `remove-background` / `remove-bg`, `ico` / `icon`, `aseprite`, and saved macros through `macro list` and `macro apply`. Its launcher forwards all arguments, so additional CLI options do not require an adapter update. Read [CLI.md](CLI.md) or the installed command's `--help` for the complete option set.
+The skill supports the combined downscaler, `align`, `reduce-grid` / `compact-grid`, `resize`, `colors`, `connected-palette`, `smooth-colors` / `smooth`, `structure-probe`, `monochrome` / `mono`, `ascii`, `palette-info`, `replace-color`, `remove-background` / `remove-bg`, `ico` / `icon`, `aseprite`, and saved macros through `macro list` and `macro apply`. Its launcher forwards all arguments, so additional CLI options do not require an adapter update. Read [CLI.md](CLI.md) or the installed command's `--help` for the complete option set.
 
 Manual launcher calls put its own options before `--` and every Tessera argument after it:
 
