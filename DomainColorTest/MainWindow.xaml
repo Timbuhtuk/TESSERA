@@ -76,7 +76,7 @@
                 <Grid KeyboardNavigation.TabNavigation="Local">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" CanContentScroll="False">
-                        <TabPanel IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                        <StackPanel Orientation="Horizontal" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
                     </ScrollViewer>
                     <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" ContentSource="SelectedContent" />
                 </Grid>

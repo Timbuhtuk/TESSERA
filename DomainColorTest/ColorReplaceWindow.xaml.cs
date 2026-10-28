@@ -56,6 +56,12 @@ public partial class ColorReplaceWindow : Window
         UpdateColorState(true);
     }
 
+    public ColorReplaceWindow(DrawingColor initialColor, string title) : this(initialColor)
+    {
+        Title = Localization.Text(title) + " · TESSERA";
+        dialogTitle.Text = Localization.Text(title);
+    }
+
     public ColorReplaceWindow(DrawingColor oldColor, IReadOnlyList<PaletteColorEntry> colors, bool allowOldColorEdit)
     {
         InitializeComponent();

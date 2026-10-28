@@ -85,7 +85,9 @@ public partial class MainWindow
         var grip = new TextBlock { Text = "⋮⋮", Padding = new Thickness(3, 0, 4, 0), Cursor = Cursors.SizeAll,
             ToolTip = Localization.Text("Перетащите инструмент из панели") };
         DockPanel.SetDock(grip, Dock.Left); header.Children.Add(grip);
-        header.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center,
+        string tabTitle = key switch { "size" => Localization.Text("Размер"), "finalists" => "TCR", _ => title };
+        header.ToolTip = title;
+        header.Children.Add(new TextBlock { Text = tabTitle, VerticalAlignment = VerticalAlignment.Center,
             TextTrimming = TextTrimming.CharacterEllipsis });
         Point dragStart = default;
         grip.PreviewMouseLeftButtonDown += (_, e) =>

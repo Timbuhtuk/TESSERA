@@ -3,12 +3,18 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Input;
 using System.Windows.Shell;
+using System.Runtime.InteropServices;
 
 namespace DomainColorTest;
 
 public partial class MainWindow
 {
     private readonly Dictionary<string, EditorToolWindow> _toolWindows = [];
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CursorPoint { public int X; public int Y; }
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out CursorPoint point);
+    private static Point ScreenCursor() => GetCursorPos(out var point) ? new Point(point.X, point.Y) : new Point(double.NaN, double.NaN);
 
     private void OpenEditorTool(string key, string title, double height, params GroupBox[] groups)
         => OpenEditorToolCore(key, title, height, groups);
@@ -82,10 +88,16 @@ public partial class MainWindow
             if (centerFloating) CenterFloatingWindow(tool);
             else
             {
-                var point = Mouse.GetPosition(this);
-                var area = SystemParameters.WorkArea;
-                tool.Left = Math.Clamp(Left + point.X - 80, area.Left, Math.Max(area.Left, area.Right - tool.Width));
-                tool.Top = Math.Clamp(Top + point.Y - 20, area.Top, Math.Max(area.Top, area.Bottom - tool.Height));
+                var point = ScreenCursor();
+                if (double.IsFinite(point.X) && double.IsFinite(point.Y))
+                {
+                    var local = PointFromScreen(point);
+                    point = new Point(Left + local.X, Top + local.Y);
+                    var area = SystemParameters.WorkArea;
+                    tool.Left = Math.Clamp(point.X - 80, area.Left, Math.Max(area.Left, area.Right - tool.Width));
+                    tool.Top = Math.Clamp(point.Y - 20, area.Top, Math.Max(area.Top, area.Bottom - tool.Height));
+                }
+                else CenterFloatingWindow(tool);
                 tool.Activate();
             }
         }
@@ -195,16 +207,32 @@ public partial class MainWindow
                 ToolTip = Localization.Text("Перетащите в правую панель или нажмите для закрепления"),
                 Style = (Style)FindResource("CaptionButton")
             };
-            Point dragStart = default;
-            dock.PreviewMouseLeftButtonDown += (_, e) => dragStart = e.GetPosition(dock);
-            dock.PreviewMouseMove += (_, e) =>
+            dock.PreviewMouseLeftButtonDown += (_, e) =>
             {
-                if (e.LeftButton != MouseButtonState.Pressed) return;
-                Point current = e.GetPosition(dock);
-                if (Math.Abs(current.X - dragStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
-                    Math.Abs(current.Y - dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
-                DragDrop.DoDragDrop(dock, new DataObject(ToolDragFormat, key), DragDropEffects.Move);
+                if (e.ChangedButton != MouseButton.Left) return;
                 e.Handled = true;
+                Point start = ScreenCursor();
+                bool cancelled = false;
+                QueryContinueDragEventHandler onContinue = (_, args) => cancelled |= args.EscapePressed;
+                DragDropEffects result;
+                dock.QueryContinueDrag += onContinue;
+                try { result = DragDrop.DoDragDrop(dock, new DataObject(ToolDragFormat, key), DragDropEffects.Move); }
+                finally { dock.QueryContinueDrag -= onContinue; }
+                if (cancelled || result != DragDropEffects.None || !owner._toolWindows.ContainsKey(key)) return;
+                Point end = ScreenCursor();
+                if (double.IsFinite(end.X) && double.IsFinite(end.Y) && owner._workspaceDock is { IsVisible: true } host)
+                {
+                    Point drop = host.PointFromScreen(end);
+                    if (drop.X >= 0 && drop.Y >= 0 && drop.X < host.ActualWidth && drop.Y < host.ActualHeight)
+                    {
+                        owner.DockFloatingTool(key);
+                        return;
+                    }
+                }
+                if (!double.IsFinite(start.X) || !double.IsFinite(end.X) ||
+                    Math.Abs(end.X - start.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                    Math.Abs(end.Y - start.Y) < SystemParameters.MinimumVerticalDragDistance)
+                    owner.DockFloatingTool(key);
             };
             dock.Click += (_, _) => owner.DockFloatingTool(key);
             WindowChrome.SetIsHitTestVisibleInChrome(dock, true);

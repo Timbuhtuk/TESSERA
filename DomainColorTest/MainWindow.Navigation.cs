@@ -78,7 +78,6 @@ public partial class MainWindow
         sizeMenuItem = AddTool(sizeToolsMenu, "sizeMenuItem", "Размер и кадр…", "size", 370, sizeToolGroup, frameToolGroup, pixelToolGroup);
         gridMenuItem = AddTool(sizeToolsMenu, "gridMenuItem", "Сетка…", "grid", 400, gridToolGroup);
         AddTool(sizeToolsMenu, "finalistMenuItem", "TCR · уменьшение изображения…", "finalists", 460, _finalistGroup);
-        AddTool(sizeToolsMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
 
         var colorToolsMenu = NavigationItem("colorToolsMenu", "Цвет"); toolsMenu.Items.Add(colorToolsMenu);
         colorMenuItem = AddTool(colorToolsMenu, "colorMenuItem", "Палитра…", "color", 580, colorToolGroup);
@@ -119,6 +118,10 @@ public partial class MainWindow
         _alternativePreviewItem.IsCheckable = true;
         _alternativePreviewItem.ToolTip = Localization.Text("Показывает выбранный результат во всей области предпросмотра. Удерживайте Alt для просмотра исходника. Если выключить, исходник и результат отображаются в отдельных областях.");
         ToolTipService.SetShowOnDisabled(_alternativePreviewItem, true);
+        var lensesMenu = NavigationItem("lensesMenu", "Линзы"); viewMenu.Items.Add(lensesMenu);
+        AddTool(lensesMenu, "contoursMenuItem", "Контуры…", "contours", 580, contourToolGroup);
+        AddTool(lensesMenu, "gridLensMenuItem", "Сетка предпросмотра…", "gridLens", 370, _gridLensGroup);
+        _imageCommands.AddRange(NavigationDescendants(lensesMenu));
         SizeChanged += (_, _) => UpdateNavigationLayout();
         Loaded += (_, _) => { UpdateNavigationLayout(); UpdateNavigationState(); };
         _navigationReady = true;
@@ -188,6 +191,7 @@ public partial class MainWindow
         }
         if (openToolsMenu.Items.Count == 0)
             openToolsMenu.Items.Add(new MenuItem { Header = Localization.Text("Нет открытых инструментов"), IsEnabled = false });
+        UpdateGridLens();
     }
 
     private bool ImageEditorVisible => workspaceHost.Visibility == Visibility.Visible && _sourceImage is not null && _activeSource is not null && (!_workspaceReady || _workspaceActive?.Kind == WorkspaceAssetKind.Image);

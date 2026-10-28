@@ -27,13 +27,16 @@ public partial class MainWindow
         AddMode(_p5Mode, "P5 / OFF", "Обычные блоки выбранного размера, метод R0/C0 без карты регионов.");
         AddMode(_mixedMode, "50 / 50", "Равная смесь T3/p44 и P5/OFF в sRGB с учётом прозрачности.");
         _t3Mode.IsChecked = true;
-        content.Children.Add(new TextBlock { Text = Localization.Text("Кратность сжатия (2–64)"), Margin = new Thickness(0, 2, 0, 4) });
+        var factorRow = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
+        factorRow.Children.Add(new TextBlock { Text = Localization.Text("Кратность сжатия (2–64)"),
+            Width = 132, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
         _finalistFactor.MaxDropDownHeight = 240;
         _finalistFactor.ItemsSource = Enumerable.Range(FinalistReducer.MinFactor,
             FinalistReducer.MaxFactor - FinalistReducer.MinFactor + 1);
         _finalistFactor.SelectedItem = FinalistReducer.DefaultFactor;
         AutomationProperties.SetName(_finalistFactor, Localization.Text("Кратность сжатия (2–64)"));
-        content.Children.Add(_finalistFactor);
+        factorRow.Children.Add(_finalistFactor);
+        content.Children.Add(factorRow);
         _finalistApply.Content = Localization.Text("Уменьшить изображение");
         _finalistApply.Style = (Style)FindResource("PrimaryButton");
         _finalistApply.Margin = new Thickness(0, 14, 0, 0);
@@ -52,7 +55,7 @@ public partial class MainWindow
                 Children =
                 {
                     new TextBlock { Text = title, FontWeight = FontWeights.SemiBold },
-                    new TextBlock { Text = Localization.Text(explanation), TextWrapping = TextWrapping.Wrap, MaxWidth = 300,
+                    new TextBlock { Text = Localization.Text(explanation), TextWrapping = TextWrapping.Wrap, MaxWidth = 210,
                         Foreground = (System.Windows.Media.Brush)FindResource("Ts.TextSecondary") }
                 }
             };

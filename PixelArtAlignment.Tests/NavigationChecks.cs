@@ -60,23 +60,62 @@ internal static class NavigationChecks
                     "Tools categories are incomplete or out of order");
                 foreach (var (group, commands) in new[]
                 {
-                    ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem", "finalistMenuItem", "contoursMenuItem" }),
+                    ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem", "finalistMenuItem" }),
                     ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "channelMenuItem", "infoMenuItem" }),
                     ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
                     ("materialsToolsMenu", new[] { "materialMapsMenuItem", "inspectTilesMenuItem", "addToBoardMenuItem" })
                 })
                     Require(Get<MenuItem>(group).Items.Count == commands.Length &&
                         commands.All(name => Get<MenuItem>(group).Items.Contains(Get<MenuItem>(name))), "Tools category lost a command: " + group);
+                Require(Get<MenuItem>("viewMenu").Items.Contains(Get<MenuItem>("lensesMenu")) &&
+                    Get<MenuItem>("lensesMenu").Items.OfType<MenuItem>()
+                        .SequenceEqual(new[] { Get<MenuItem>("contoursMenuItem"), Get<MenuItem>("gridLensMenuItem") }),
+                    "View lenses are incomplete or out of order");
                 Require(window.FindName("processingMenu") is null && window.FindName("profileMenuItem") is null &&
                     window.FindName("replaceColorMenuItem") is null, "Removed tools remain in navigation");
                 Require(window.FindName("basisMenu") is null, "Processing source still has a second menu selection");
                 int historyCount = source.Generations.Count;
-                foreach (string command in new[] { "colorMenuItem", "smoothingMenuItem", "contoursMenuItem", "channelMenuItem", "filtersMenuItem", "finalistMenuItem", "gridMenuItem", "infoMenuItem" })
+                foreach (string command in new[] { "colorMenuItem", "smoothingMenuItem", "contoursMenuItem", "gridLensMenuItem", "channelMenuItem", "filtersMenuItem", "finalistMenuItem", "gridMenuItem", "infoMenuItem" })
                 {
                     NavigationTest.Click(window, command); Pump();
                     Require(Get<MenuItem>(command).IsChecked && Get<Bitmap>("_sourceImage") is not null,
                         "Tool did not remain open");
                 }
+                var lens = Get<PixelPreview>("sourcePreview").GridLens;
+                Require(lens is { CellWidth: 16, CellHeight: 16, OffsetX: 0, OffsetY: 0 } &&
+                    Get<PixelPreview>("resultPreview").GridLens == lens, "Grid lens did not cover both previews");
+                Get<IntegerInput>("_gridLensWidth").Value = 12;
+                Get<IntegerInput>("_gridLensHeight").Value = 7;
+                Get<IntegerInput>("_gridLensOffsetX").Value = 3;
+                Get<IntegerInput>("_gridLensOffsetY").Value = 2;
+                lens = Get<PixelPreview>("sourcePreview").GridLens;
+                Require(lens is { CellWidth: 12, CellHeight: 7, OffsetX: 3, OffsetY: 2 }, "Grid lens settings did not update");
+                window.AlternativePreview = true; Pump();
+                Require(Get<PixelPreview>("comparisonPreview").GridLens == lens, "Grid lens is absent in alternative preview");
+                window.AlternativePreview = false;
+                Get<CheckBox>("_gridLensVisible").IsChecked = false;
+                Require(Get<PixelPreview>("sourcePreview").GridLens is null, "Hidden grid lens still draws");
+                Get<CheckBox>("_gridLensVisible").IsChecked = true;
+                Exception? pickerFailure = null;
+                var pickerTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
+                pickerTimer.Tick += (_, _) =>
+                {
+                    var picker = window.OwnedWindows.OfType<ColorReplaceWindow>().FirstOrDefault();
+                    if (picker is null) return;
+                    pickerTimer.Stop();
+                    try
+                    {
+                        ((TextBox)picker.FindName("newHexInput")).Text = "#EE3355";
+                        ((Button)picker.FindName("replaceButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    }
+                    catch (Exception ex) { pickerFailure = ex; picker.Close(); }
+                };
+                pickerTimer.Start();
+                try { Get<Button>("_gridLensColorButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); }
+                finally { pickerTimer.Stop(); }
+                Require(pickerFailure is null && Get<PixelPreview>("sourcePreview").GridLens?.Color == System.Windows.Media.Color.FromArgb(190, 238, 51, 85) &&
+                    Get<PixelPreview>("resultPreview").GridLens == Get<PixelPreview>("comparisonPreview").GridLens,
+                    "Grid color picker did not update all preview hosts");
                 Require(library.Load().Single().Generations.Count == historyCount, "Choosing tools started processing");
                 var current = Get<SourceEntry>("_activeSource");
                 Get<ListBox>("generationStrip").SelectedItem = current.Generations.Last(); Pump();
@@ -130,7 +169,9 @@ internal static class NavigationChecks
                     Get<ListBox>("sourceStrip").SelectedItem == current && Get<ListBox>("generationStrip").SelectedItem is HistorySourceRoot &&
                     Get<ListBox>("sourceStrip").Items.Count == 1, "Navigation lost image settings or project source scope");
                 typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [true]);
-                Require(!Get<MenuItem>("toolsMenu").IsEnabled && !Get<MenuItem>("materialMapsMenuItem").IsEnabled && !Get<MenuItem>("smoothingMenuItem").IsEnabled && !Get<MenuItem>("openMenuItem").IsEnabled && Get<MenuItem>("viewMenu").IsEnabled, "Busy navigation guard is wrong");
+                Require(!Get<MenuItem>("toolsMenu").IsEnabled && !Get<MenuItem>("materialMapsMenuItem").IsEnabled &&
+                    !Get<MenuItem>("smoothingMenuItem").IsEnabled && !Get<MenuItem>("gridLensMenuItem").IsEnabled &&
+                    !Get<MenuItem>("openMenuItem").IsEnabled && Get<MenuItem>("viewMenu").IsEnabled, "Busy navigation guard is wrong");
                 typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [false]);
             }
             finally { window.Close(); Pump(); }

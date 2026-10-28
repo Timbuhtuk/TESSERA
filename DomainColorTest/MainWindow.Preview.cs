@@ -104,6 +104,9 @@ public partial class MainWindow
         _comparisonPreview.Visibility = enabled ? Visibility.Visible : Visibility.Collapsed;
         _comparisonPreview.PreviewBackground = PreviewBackground;
         _comparisonPreview.Zoom = ZoomFactors[Math.Clamp(PreviewZoom, 0, ZoomFactors.Length - 1)];
+        _comparisonPreview.ReferenceImageSize = _sourceImage is { } source && _downscaledResult is { } result
+            ? new System.Drawing.Size(Math.Max(source.Width, result.Width), Math.Max(source.Height, result.Height))
+            : null;
         var image = enabled ? _comparisonOriginal ? _sourceImage : _downscaledResult : null;
         if (!ReferenceEquals(_comparisonPreview.Image, image)) _comparisonPreview.Image = image;
         UpdateCropPreview();
