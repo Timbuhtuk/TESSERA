@@ -217,6 +217,16 @@ For downscaling, the report includes absolute paths, source/crop/result dimensio
 tessera clean-contours input.png -o result.png --window-size 3 --similar-color-distance 24 --min-pixel-gradient 120 --min-neighbor-gradient 80 --min-similar-neighbors 2 --min-agreement 35 --min-opposition 10 --candidates-output candidates.png --json
 ```
 
+## Sharpen through a macro
+
+Tessera 2.13+ replays the editor's Sharpen filter through `macro apply`. Save a Sharpen result as a macro in the editor, then run:
+
+```powershell
+tessera macro apply input.png --macro sharpen.json -o sharpened.png
+```
+
+The step is `{"operationId":"filter.sharpen","sharpen":{"strength":100,"threshold":4}}`. Strength accepts 0–200 percent and threshold 0–64. Dimensions, every alpha value and fully transparent RGB remain unchanged. It increases local color contrast; it does not reconstruct lost detail.
+
 ## Experimental connected palette
 
 `connected-palette` reduces the visible RGB palette before grid downscaling, using connected color areas, spatial concentration and color difference to estimate the cost of removing a color. The result uses only colors from its input palette. It keeps width, height, pixel positions and every alpha value, and does not add dithering. A preliminary Median Cut or K-means pass is recommended for rich source images; this first implementation accepts up to 4096 visible RGB colors.

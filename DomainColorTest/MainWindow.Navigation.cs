@@ -86,7 +86,7 @@ public partial class MainWindow
         infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Info…", "info", 760, infoToolGroup);
 
         var filtersToolsMenu = NavigationItem("filtersToolsMenu", "Фильтры и фон"); toolsMenu.Items.Add(filtersToolsMenu);
-        filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 410, filtersToolGroup);
+        filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 570, filtersToolGroup);
         AddNavigation(filtersToolsMenu, "removeBackgroundMenuItem", "Удалить фон…", () => NavigationImageActionAsync("background"));
 
         var materialsToolsMenu = NavigationItem("materialsToolsMenu", "Материалы и тайлы"); toolsMenu.Items.Add(materialsToolsMenu);
@@ -205,7 +205,7 @@ public partial class MainWindow
         bool background = backgroundWorkspace.Visibility == Visibility.Visible;
         bool ico = iconWorkspace.Visibility == Visibility.Visible;
         bool tiles = _workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null;
-        bool canExport = image && !ContourPreviewVisible && !PalettePreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
+        bool canExport = image && !ContourPreviewVisible && !LiveToolPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
         toolsMenu.IsEnabled = image && !busy;
@@ -215,7 +215,7 @@ public partial class MainWindow
         saveDocumentMenuItem.Header = Localization.Text(_workspaceReady ? "Сохранить проект" : "Сохранить документ");
         exportMenu.IsEnabled = !busy && canExport;
         saveMenuItem.Header = animation ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
-        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !PalettePreviewVisible);
+        saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !LiveToolPreviewVisible);
         saveMenuItem.InputGestureText = image && !_workspaceReady ? "Ctrl+S" : "";
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;
         saveAllMenuItem.Visibility = image ? Visibility.Visible : Visibility.Collapsed;

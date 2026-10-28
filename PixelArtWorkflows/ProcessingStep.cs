@@ -17,6 +17,7 @@ public static class ProcessingOperations
     public const string AlignLocalSnapped = "grid.align.local.snapped";
     public const string Reduce = "grid.reduce";
     public const string Monochrome = "filter.monochrome";
+    public const string Sharpen = "filter.sharpen";
     public const string Ascii = "filter.ascii";
     public const string ReplaceColor = "color.replace";
     public const string AdjustChannel = "color.channel.adjust";
@@ -36,6 +37,7 @@ public sealed class ProcessingStep
     public int? CellSize { get; init; }
     public bool UsePreviousAlignment { get; init; }
     public AsciiSettings? Ascii { get; init; }
+    public SharpenSettings? Sharpen { get; init; }
     public ColorReplacementSettings? ColorReplacement { get; init; }
     public ChannelAdjustmentOptions? ChannelAdjustment { get; init; }
     public BackgroundSettings? Background { get; init; }
@@ -51,6 +53,12 @@ public sealed class AsciiSettings
     public bool KeepSourceSize { get; init; } = true;
     public bool InvertSource { get; init; }
     public bool InvertColors { get; init; }
+}
+
+public sealed class SharpenSettings
+{
+    public int Strength { get; init; } = 100;
+    public int Threshold { get; init; } = 4;
 }
 
 public sealed class ColorReplacementSettings

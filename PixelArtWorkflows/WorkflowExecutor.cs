@@ -146,6 +146,8 @@ public sealed class WorkflowExecutor
             }
             case ProcessingOperations.Monochrome:
                 return (ImageFilters.Monochrome(current), previousAlignmentCell);
+            case ProcessingOperations.Sharpen:
+                return (ImageFilters.Sharpen(current, step.Sharpen!.Strength, step.Sharpen.Threshold, cancellationToken), previousAlignmentCell);
             case ProcessingOperations.Ascii:
             {
                 AsciiSettings settings = step.Ascii!;
@@ -230,6 +232,11 @@ public sealed class WorkflowExecutor
             case ProcessingOperations.Trim:
             case ProcessingOperations.Monochrome:
                 RequireOnly(step);
+                break;
+            case ProcessingOperations.Sharpen:
+                RequireOnly(step, sharpen: true);
+                if (step.Sharpen is null || step.Sharpen.Strength is < 0 or > 200 || step.Sharpen.Threshold is < 0 or > 64)
+                    throw new InvalidDataException("Sharpen strength must be 0..200 and threshold 0..64.");
                 break;
             case ProcessingOperations.Ascii:
                 RequireOnly(step, ascii: true);
@@ -345,13 +352,13 @@ public sealed class WorkflowExecutor
 
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
         bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false,
-        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false, bool finalistMode = false, bool finalistFactor = false)
+        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false, bool finalistMode = false, bool finalistFactor = false, bool sharpen = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
             !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
             !channelAdjustment && step.ChannelAdjustment is not null || !contours && step.Contours is not null ||
-            !connectedPalette && step.ConnectedPalette is not null || !finalistMode && step.FinalistMode is not null || !finalistFactor && step.FinalistFactor is not null)
+            !connectedPalette && step.ConnectedPalette is not null || !finalistMode && step.FinalistMode is not null || !finalistFactor && step.FinalistFactor is not null || !sharpen && step.Sharpen is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }

@@ -89,7 +89,9 @@ the selected source or result, saving one final result. Right-click a macro
 to rename or delete it. Esc or Cancel stops a run without a partial result.
 Saved macros can also be listed and applied through the CLI and chat skill.
 
-Filters offers monochrome conversion and ASCII art. Save ASCII as UTF-8 TXT
+Filters offers monochrome conversion, Sharpen and ASCII art. Sharpen uses strength
+0-200% and threshold 0-64, with live preview, saved history and macro replay.
+ Save ASCII as UTF-8 TXT
 or render an opaque black-and-white image into the history. Choose a preset
 character set or enter your own. Keep the input size or use one character
 per pixel for a larger image. Input and render inversion are independent.

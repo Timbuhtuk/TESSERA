@@ -34,6 +34,58 @@ public static class ImageFilters
         return WriteArgb(pixels, source.Width, source.Height);
     }
 
+    /// <summary>Alpha-aware 3×3 unsharp mask, constrained to local channel extrema to avoid overshoot halos.</summary>
+    public static Bitmap Sharpen(Bitmap source, int strength = 100, int threshold = 4, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (strength is < 0 or > 200) throw new ArgumentOutOfRangeException(nameof(strength));
+        if (threshold is < 0 or > 64) throw new ArgumentOutOfRangeException(nameof(threshold));
+        cancellationToken.ThrowIfCancellationRequested();
+        int width = source.Width, height = source.Height;
+        int[] pixels = ReadArgb(source);
+        if (strength == 0) return WriteArgb(pixels, width, height);
+        int[] result = new int[pixels.Length];
+        int[] kernel = [1, 2, 1, 2, 4, 2, 1, 2, 1];
+        double amount = strength / 100.0;
+        for (int y = 0; y < height; y++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            for (int x = 0; x < width; x++)
+            {
+                int index = y * width + x, center = pixels[index];
+                int alpha = (int)((uint)center >> 24);
+                if (alpha == 0) { result[index] = center; continue; }
+                long sumR = 0, sumG = 0, sumB = 0;
+                int weightSum = 0, minR = 255, minG = 255, minB = 255, maxR = 0, maxG = 0, maxB = 0;
+                for (int e = -1; e <= 1; e++)
+                for (int f = -1; f <= 1; f++)
+                {
+                    int px = pixels[Math.Clamp(y + e, 0, height - 1) * width + Math.Clamp(x + f, 0, width - 1)];
+                    int neighborAlpha = (int)((uint)px >> 24);
+                    if (neighborAlpha == 0) continue;
+                    int weight = kernel[(e + 1) * 3 + f + 1] * neighborAlpha;
+                    int r = px >> 16 & 255, g = px >> 8 & 255, b = px & 255;
+                    sumR += (long)r * weight; sumG += (long)g * weight; sumB += (long)b * weight;
+                    weightSum += weight;
+                    minR = Math.Min(minR, r); minG = Math.Min(minG, g); minB = Math.Min(minB, b);
+                    maxR = Math.Max(maxR, r); maxG = Math.Max(maxG, g); maxB = Math.Max(maxB, b);
+                }
+                double blurR = sumR / (double)weightSum, blurG = sumG / (double)weightSum, blurB = sumB / (double)weightSum;
+                int oldR = center >> 16 & 255, oldG = center >> 8 & 255, oldB = center & 255;
+                if (Math.Max(Math.Abs(oldR - blurR), Math.Max(Math.Abs(oldG - blurG), Math.Abs(oldB - blurB))) <= threshold)
+                { result[index] = center; continue; }
+                int red = SharpenChannel(oldR, blurR, minR, maxR, amount);
+                int green = SharpenChannel(oldG, blurG, minG, maxG, amount);
+                int blue = SharpenChannel(oldB, blurB, minB, maxB, amount);
+                result[index] = alpha << 24 | red << 16 | green << 8 | blue;
+            }
+        }
+        return WriteArgb(result, width, height);
+
+        static int SharpenChannel(int value, double blur, int minimum, int maximum, double amount)
+            => Math.Clamp((int)Math.Round(value + (value - blur) * amount), minimum, maximum);
+    }
+
     public static string ToAscii(Bitmap source, int columns, string characters = DefaultAsciiRamp, bool invertSource = false)
     {
         ArgumentNullException.ThrowIfNull(source);

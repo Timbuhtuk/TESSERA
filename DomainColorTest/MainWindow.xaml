@@ -165,6 +165,14 @@
                             <Button x:Name="monochromeButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text0F9E6B21E377}" IsEnabled="False" />
 
                             <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,14,0,12" />
+                            <TextBlock x:Name="sharpenTitle" FontWeight="SemiBold" />
+                            <TextBlock x:Name="sharpenDescription" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,4,0,7" />
+                            <DockPanel Margin="0,5,0,3"><TextBlock x:Name="sharpenStrengthLabel" Width="150" VerticalAlignment="Center" /><local:IntegerInput x:Name="sharpenStrengthInput" Minimum="0" Maximum="200" Value="100" /></DockPanel>
+                            <DockPanel Margin="0,3,0,5"><TextBlock x:Name="sharpenThresholdLabel" Width="150" VerticalAlignment="Center" /><local:IntegerInput x:Name="sharpenThresholdInput" Minimum="0" Maximum="64" Value="4" /></DockPanel>
+                            <CheckBox x:Name="sharpenLivePreviewInput" ToolTip="Показывать результат настройки без сохранения в историю." />
+                            <Button x:Name="sharpenButton" Style="{StaticResource PrimaryButton}" IsEnabled="False" Margin="0,7,0,0" />
+
+                            <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,14,0,12" />
                             <TextBlock Text="{local:Translate Text219DD8B02710}" FontWeight="SemiBold" />
                             <TextBlock x:Name="asciiDescription" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,4,0,7" />
                             <DockPanel Margin="0,7,0,3"><TextBlock Text="{local:Translate Text3B94BE00A0E8}" Width="150" /><ComboBox x:Name="asciiRampPresetInput" SelectedIndex="0" AutomationProperties.Name="{local:Translate Text3FEBE7C4A2CD}"><ComboBoxItem Content="Standard" /><ComboBoxItem Content="Detailed" /><ComboBoxItem Content="Minimal" /><ComboBoxItem Content="Blocks" /><ComboBoxItem Content="{local:Translate TextF23CE7058E1A}" /></ComboBox></DockPanel>

@@ -14,7 +14,7 @@ public partial class MainWindow
     private int _livePreviewRevision;
     private bool _livePreviewBusy;
     private Bitmap? _livePreviewBitmap;
-    private Bitmap? _approvedLargeColorBasis, _approvedLargeSmoothingBasis;
+    private Bitmap? _approvedLargeColorBasis, _approvedLargeSmoothingBasis, _approvedLargeSharpenBasis;
     private bool _largePreviewDecisionPending;
     private string? _activeLivePreviewTool;
     private string? ActiveLivePreviewTool => _activeLivePreviewTool;
@@ -24,7 +24,7 @@ public partial class MainWindow
         trimTransparentButton.Content = Localization.Text("Обрезать прозрачные края");
         trimTransparentButton.ToolTip = Localization.Text("Обрезать изображение по крайним пикселям с альфой больше нуля.");
         livePreviewBadgeText.Text = Localization.Text("ПРЕДПРОСМОТР");
-        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput })
+        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput, sharpenLivePreviewInput })
         {
             check.Content = Localization.Text("Живой предпросмотр");
             check.ToolTip = Localization.Text("Показывать результат настройки без сохранения в историю.");
@@ -34,7 +34,7 @@ public partial class MainWindow
             _livePreviewTimer.Stop();
             await RenderLiveToolPreviews();
         };
-        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput })
+        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput, sharpenLivePreviewInput })
         {
             check.Checked += (_, _) => ChangeLivePreview(check);
             check.Unchecked += (_, _) => ChangeLivePreview(check);
@@ -65,7 +65,7 @@ public partial class MainWindow
 
     private void SetActiveLivePreviewTool(string? key)
     {
-        string? next = key is "color" or "smoothing" or "contours" or "connected-palette" ? key : null;
+        string? next = key is "color" or "smoothing" or "filters" or "contours" ? key : null;
         if (_activeLivePreviewTool == next) { ScheduleLiveToolPreviews(); return; }
         _activeLivePreviewTool = next;
         ClearDisplayedLivePreview();
@@ -98,18 +98,23 @@ public partial class MainWindow
             finally { _largePreviewDecisionPending = false; }
             if (answer != MessageBoxResult.Yes) { check.IsChecked = false; return; }
             if (ReferenceEquals(check, colorLivePreviewInput)) _approvedLargeColorBasis = basis;
-            else _approvedLargeSmoothingBasis = basis;
+            else if (ReferenceEquals(check, smoothingLivePreviewInput)) _approvedLargeSmoothingBasis = basis;
+            else _approvedLargeSharpenBasis = basis;
         }
         if (check.IsChecked != true)
         {
             if (ReferenceEquals(check, colorLivePreviewInput)) _approvedLargeColorBasis = null;
-            else _approvedLargeSmoothingBasis = null;
-            if (_activeLivePreviewTool == (ReferenceEquals(check, colorLivePreviewInput) ? "color" : "smoothing")) ClearDisplayedLivePreview();
+            else if (ReferenceEquals(check, smoothingLivePreviewInput)) _approvedLargeSmoothingBasis = null;
+            else _approvedLargeSharpenBasis = null;
+            string key = ReferenceEquals(check, colorLivePreviewInput) ? "color" :
+                ReferenceEquals(check, smoothingLivePreviewInput) ? "smoothing" : "filters";
+            if (_activeLivePreviewTool == key) ClearDisplayedLivePreview();
         }
         ScheduleLiveToolPreviews();
     }
 
-    private bool PalettePreviewVisible => _activeLivePreviewTool == "color" && _livePreviewBitmap is not null && ReferenceEquals(resultPreview.Image, _livePreviewBitmap);
+    private bool LiveToolPreviewVisible => _livePreviewBitmap is not null && ReferenceEquals(resultPreview.Image, _livePreviewBitmap);
+    private bool PalettePreviewVisible => _activeLivePreviewTool == "color" && LiveToolPreviewVisible;
 
     private void ClearDisplayedLivePreview()
     {
@@ -135,11 +140,14 @@ public partial class MainWindow
                 colorLivePreviewInput.IsChecked = false;
             if (smoothingLivePreviewInput.IsChecked == true && !ReferenceEquals(basis, _approvedLargeSmoothingBasis))
                 smoothingLivePreviewInput.IsChecked = false;
+            if (sharpenLivePreviewInput.IsChecked == true && !ReferenceEquals(basis, _approvedLargeSharpenBasis))
+                sharpenLivePreviewInput.IsChecked = false;
         }
         bool enabled = _activeLivePreviewTool switch
         {
             "color" => colorLivePreviewInput.IsChecked == true,
             "smoothing" => smoothingLivePreviewInput.IsChecked == true,
+            "filters" => sharpenLivePreviewInput.IsChecked == true,
             _ => false
         };
         if (!IsLoaded || _processing || basis is null || !enabled)
@@ -155,19 +163,21 @@ public partial class MainWindow
         if (_livePreviewBusy || _processing || LivePreviewBasis is not { } basis) return;
         bool color = _activeLivePreviewTool == "color" && colorLivePreviewInput.IsChecked == true && colorToolGroup.IsVisible;
         bool smooth = _activeLivePreviewTool == "smoothing" && smoothingLivePreviewInput.IsChecked == true && smoothingToolGroup.IsVisible;
-        if (!color && !smooth) { ClearDisplayedLivePreview(); return; }
+        bool sharpen = _activeLivePreviewTool == "filters" && sharpenLivePreviewInput.IsChecked == true && filtersToolGroup.IsVisible;
+        if (!color && !smooth && !sharpen) { ClearDisplayedLivePreview(); return; }
 
         int revision = _livePreviewRevision;
-        var options = BuildOptionsFromUi();
+        var options = color || smooth ? BuildOptionsFromUi() : null;
         var connected = color ? BuildConnectedPaletteOptions() : null;
+        int strength = sharpenStrengthInput.Value, threshold = sharpenThresholdInput.Value;
         using var source = (Bitmap)basis.Clone();
         _livePreviewBusy = true;
         Bitmap? result = null;
         try
         {
-            result = await Task.Run(() => color
-                ? PaletteProcessor.Apply(source, options, connected)
-                : IndependentImageProcessor.ApplyNeighborColors(source, options));
+            result = await Task.Run(() => sharpen ? ImageFilters.Sharpen(source, strength, threshold) : color
+                ? PaletteProcessor.Apply(source, options!, connected)
+                : IndependentImageProcessor.ApplyNeighborColors(source, options!));
             if (revision != _livePreviewRevision || _processing) return;
             ClearDisplayedLivePreview();
             _livePreviewBitmap = result;

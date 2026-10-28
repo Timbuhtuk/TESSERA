@@ -1289,10 +1289,22 @@
   "Сетка предпросмотра…": "Preview grid…",
   "Линза · сетка": "Lens · grid",
   "Показывать сетку": "Show grid",
+  "Показывать неразрушающую сетку на исходнике, результате и в альтернативном просмотре.": "Show a non-destructive grid on the original, result and alternative preview.",
   "Шаг по X, px": "Horizontal spacing, px",
   "Шаг по Y, px": "Vertical spacing, px",
   "Сдвиг по X, px": "Horizontal offset, px",
   "Сдвиг по Y, px": "Vertical offset, px",
   "Цвет сетки": "Grid color",
-  "Перетащите сетку мышью прямо на изображении. Она не попадёт в результат и экспорт.": "Drag the grid directly on the image. It will not appear in results or exports."
+  "Перетащите сетку мышью прямо на изображении. Она не попадёт в результат и экспорт.": "Drag the grid directly on the image. It will not appear in results or exports.",
+  "Резкость": "Sharpen",
+  "Усиливает границы после уменьшения без изменения размера и прозрачности. Потерянные детали не восстанавливаются.": "Strengthens edges after downscaling without changing dimensions or transparency. Lost details cannot be recovered.",
+  "Сила, %": "Strength, %",
+  "Порог, 0–64": "Threshold, 0–64",
+  "Повысить резкость": "Sharpen image",
+  "Слабые перепады цвета ниже порога не усиливаются.": "Color changes below the threshold are left unchanged.",
+  "Повышение резкости…": "Sharpening…",
+  "РЕЗКОСТЬ · {0}% · {1} × {2}": "SHARPEN · {0}% · {1} × {2}",
+  "Локальная резкость {0}%, порог {1}. Размер и прозрачность сохранены.": "Local sharpening {0}%, threshold {1}. Dimensions and transparency preserved.",
+  "Резкость сохранена в истории.": "Sharpened result saved to history.",
+  "Не удалось повысить резкость: {0}": "Could not sharpen the image: {0}"
 }

@@ -22,6 +22,8 @@ public partial class MainWindow
         _gridLensGroup.Header = Localization.Text("Линза · сетка");
         var content = new StackPanel();
         _gridLensVisible.Content = Localization.Text("Показывать сетку");
+        _gridLensVisible.ToolTip = Localization.Text("Показывать неразрушающую сетку на исходнике, результате и в альтернативном просмотре.");
+        ToolTipService.SetShowOnDisabled(_gridLensVisible, true);
         _gridLensVisible.Margin = new Thickness(0, 0, 0, 8);
         content.Children.Add(_gridLensVisible);
         content.Children.Add(GridLensRow("Шаг по X, px", _gridLensWidth));
