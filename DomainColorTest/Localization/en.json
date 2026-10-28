@@ -1354,5 +1354,9 @@
   "Локально подстраивает сетку перед сжатием. Проверьте итоговый силуэт.": "Adjusts the grid locally before reduction. Review the final silhouette.",
   "Не заменять пиксели у границы прозрачности.": "Do not replace pixels next to transparency boundaries.",
   "Не заменять пиксели тонких линий.": "Do not replace pixels in thin lines.",
-  "Показывать красным кандидаты вместо предлагаемого результата.": "Show candidates in red instead of the proposed result."
+  "Показывать красным кандидаты вместо предлагаемого результата.": "Show candidates in red instead of the proposed result.",
+  "Макрос применён: {0}. Сохранено шагов: {1}.": "Macro applied: {0}. Saved steps: {1}.",
+  "Макрос отменён на шаге {0}: {1}. Сохранено шагов: {2}.": "Macro canceled at step {0}: {1}. Saved steps: {2}.",
+  "Макрос отменён. Сохранено шагов: {0}.": "Macro canceled. Saved steps: {0}.",
+  "Шаг {0}: {1}. {2} Сохранено шагов: {3}.": "Step {0}: {1}. {2} Saved steps: {3}."
 }

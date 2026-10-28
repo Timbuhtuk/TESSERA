@@ -385,10 +385,19 @@ try
                 new ProcessingStep { OperationId = ProcessingOperations.Reduce, UsePreviousAlignment = true }
             ]
         };
-        using var actual = new WorkflowExecutor().Execute(source, recipe);
+        var completed = new List<WorkflowProgress>();
+        using var actual = new WorkflowExecutor().Execute(source, recipe,
+            stepCompleted: (update, image) =>
+            {
+                Require(image.Width > 0 && image.Height > 0, "Step callback received an invalid bitmap");
+                completed.Add(update);
+            });
         using var aligned = new PixelGridAligner().Align(source, new GridAlignmentOptions());
         using var expected = PixelGridReducer.Reduce(aligned.Aligned, aligned.CellSize);
         EqualPixels(expected, actual);
+        Require(completed.Select(item => item.Index).SequenceEqual(new[] { 1, 2 }) &&
+            completed.All(item => item.CellSize == aligned.CellSize),
+            "Step callback lost order or resolved alignment cell size");
 
         var invalid = new ProcessingRecipe
         {

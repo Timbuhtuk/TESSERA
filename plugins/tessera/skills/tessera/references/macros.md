@@ -66,3 +66,8 @@ For both contour operations, `contours` accepts `windowSize` (odd 3–15), `stri
 Payloads belonging to other operations are rejected, so do not copy a full step with unrelated fields. `downscale` uses the shared `DownscaleOptions` property names in camelCase, such as `targetWidth`, `targetHeight`, `palette`, and `localColorPasses`; these are JSON fields, not CLI flags. Use a saved recipe or current source contract for additional settings rather than guessing translations. Auto detection runs anew for each input. Previous-alignment reduction uses the most recent alignment in this execution, not state from another file or editor session.
 
 Nested `macro.apply` steps are unsupported by this contract. Saved editor macros contain flattened operations. ICO export, Aseprite export, palette inspection, and ASCII text export are ordinary CLI operations, not steps in this image recipe.
+
+
+## Desktop step history (2.15+)
+
+The editor saves one history result for each completed macro step, linked from the selected source or result. Each card retains its operation and parameters. Completed cards remain available after cancellation or a processing error and after reopening the editor. Intermediate results can be exported, processed further or used to create a macro. This desktop history behavior does not change the CLI final-file contract above.

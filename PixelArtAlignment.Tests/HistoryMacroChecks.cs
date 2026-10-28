@@ -35,6 +35,7 @@ internal static class HistoryMacroChecks
                 Directory.CreateDirectory(Root);
                 VerifyRecipes();
                 VerifyEditor();
+                check("Macro step history: completed prefixes, cancellation, errors, settings and restart", MacroStepHistoryChecks.Run);
             }
             catch (Exception ex) { Console.WriteLine(ex); failure = ex; }
         }) { IsBackground = true };
@@ -160,7 +161,12 @@ internal static class HistoryMacroChecks
         catalog.Link(rootSource.Id, project.Id, null);
         catalog.State.View = "project"; catalog.State.ProjectId = project.Id; catalog.State.FolderId = nested.Id; catalog.Save();
         var store = new MacroStore(libraryPath);
-        var macro = store.Save(new MacroDefinition { Name = "Один итог", Steps = [new ProcessingStep { OperationId = ProcessingOperations.Resize, Downscale = new DownscaleOptions { TargetWidth = 17, TargetHeight = 11, SpriteMode = true } }, mono] });
+        var macro = store.Save(new MacroDefinition { Name = "Два шага", Steps = [new ProcessingStep { OperationId = ProcessingOperations.Resize, Downscale = new DownscaleOptions { TargetWidth = 17, TargetHeight = 11, SpriteMode = true } }, mono] });
+        var gridMacro = store.Save(new MacroDefinition { Name = "Сетка и сжатие", Steps =
+        [
+            new ProcessingStep { OperationId = ProcessingOperations.Align, CellSize = 2 },
+            new ProcessingStep { OperationId = ProcessingOperations.Reduce, UsePreviousAlignment = true }
+        ] });
         var window = new MainWindow(libraryPath) { Width = 1280, Height = 850, ShowActivated = false, ShowInTaskbar = false, Left = -8000, Top = -8000 };
         try
         {
@@ -237,8 +243,22 @@ internal static class HistoryMacroChecks
                 "Macro step list must support real scrolling and keyboard inspection.");
             int before = active.Generations.Count;
             Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!); Pump();
-            Require(active.Generations.Count == before + 1 && active.Generations[^1].RecipeSnapshot?.Steps.Count == 2 && active.Generations[^1].ParentGenerationId is null, "Macro published intermediates or wrong parent.");
-            Require(active.Generations[^1].Width == 17 && active.Generations[^1].Height == 11, "Macro did not repeat literal dimensions.");
+            Require(active.Generations.Count == before + 2, "Macro did not publish one result for each step.");
+            var firstStep = active.Generations[^2]; var secondStep = active.Generations[^1];
+            Require(firstStep.OperationId == ProcessingOperations.Resize && secondStep.OperationId == ProcessingOperations.Monochrome,
+                "Macro history lost the actual operation IDs.");
+            Require(firstStep.ParentGenerationId is null && secondStep.ParentGenerationId == firstStep.Id,
+                "Macro steps did not form a parent-child chain from the source.");
+            Require(firstStep.AppliedRecipe?.Steps.Count == 1 && firstStep.RecipeSnapshot?.Steps.Count == 1 &&
+                secondStep.AppliedRecipe?.Steps.Count == 1 && secondStep.RecipeSnapshot?.Steps.Count == 2,
+                "Intermediate results did not retain individual and cumulative recipes.");
+            Require(firstStep.Width == 17 && firstStep.Height == 11 && secondStep.Width == 17 && secondStep.Height == 11,
+                "Macro did not repeat literal dimensions.");
+            using (var expectedFirst = IndependentImageProcessor.Scale(fixture, macro.Steps[0].Downscale!))
+            using (var actualFirst = ImageLibrary.ReadBitmap(library.ResultPath(active, firstStep)))
+            using (var expectedSecond = ImageFilters.Monochrome(expectedFirst))
+            using (var actualSecond = ImageLibrary.ReadBitmap(library.ResultPath(active, secondStep)))
+            { Equal(expectedFirst, actualFirst); Equal(expectedSecond, actualSecond); }
             Require(strip.CardBounds[^1].IntersectsWith(new Rect(strip.ScrollPosition, new System.Windows.Size(strip.Panel!.ViewportWidth, strip.Panel.ViewportHeight))), "New result did not become visible.");
             strip.SelectedItem = strip.Items[0]; Pump();
             Require(window.ProcessingBasis == 0 && strip.SelectedItem is HistorySourceRoot,
@@ -246,7 +266,18 @@ internal static class HistoryMacroChecks
             strip.SelectedItem = active.Generations[^1]; Pump();
             window.ProcessingBasis = 1;
             Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!); Pump();
-            Require(active.Generations[^1].ParentGenerationId == active.Generations[^2].Id && active.Generations[^1].RecipeSnapshot?.Steps.Count == 4, "Macro-on-result lost expanded recipe or parent.");
+            Require(active.Generations.Count == before + 4 && active.Generations[^2].ParentGenerationId == secondStep.Id &&
+                active.Generations[^1].ParentGenerationId == active.Generations[^2].Id &&
+                active.Generations[^2].RecipeSnapshot?.Steps.Count == 3 && active.Generations[^1].RecipeSnapshot?.Steps.Count == 4,
+                "Macro-on-result lost the intermediate branch or cumulative recipe.");
+            window.ProcessingBasis = 0;
+            Get<ListBox>(window, "_macroList").SelectedItem = Get<ObservableCollection<MacroDefinition>>(window, "_macros").Single(m => m.Id == gridMacro.Id);
+            Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!); Pump();
+            var alignedStep = active.Generations[^2]; var reducedStep = active.Generations[^1];
+            Require(active.Generations.Count == before + 6 && alignedStep.IsAlignment && alignedStep.CellSize == 2 &&
+                reducedStep.IsGridReduction && reducedStep.CellSize == 2 && reducedStep.ParentGenerationId == alignedStep.Id &&
+                alignedStep.RecipeSnapshot?.Steps.Count == 1 && reducedStep.RecipeSnapshot?.Steps.Count == 2,
+                "Grid macro steps lost their cell size, result type or parent relationship.");
             foreach (var theme in new[] { TesseraTheme.Dark, TesseraTheme.Light })
             {
                 AppearanceResources.Apply(theme); Pump(); Capture(window, theme == TesseraTheme.Dark ? "editor-dark.png" : "editor-light.png");
@@ -277,7 +308,7 @@ internal static class HistoryMacroChecks
             Require(!nameDialog.Confirm.IsEnabled, "Blank macro name accepted.");
             nameDialog.NameInput.Text = "Занято"; Require(!nameDialog.Confirm.IsEnabled, "Duplicate name accepted.");
             nameDialog.NameInput.Text = "Новый"; Require(nameDialog.Confirm.IsEnabled, "Unique name rejected.");
-            Console.WriteLine($"  Editor: {before} cards, {realized} realized; 20,000 sources, {visibleSources} realized; two axes, nested/empty/collapsed/project folders, one final result and both themes passed.");
+            Console.WriteLine($"  Editor: {before} cards, {realized} realized; 20,000 sources, {visibleSources} realized; two axes, nested/empty/collapsed/project folders, every macro step and both themes passed.");
             File.WriteAllText(Path.Combine(Root, "native-library.txt"), libraryPath);
         }
         finally { if (window.IsVisible) window.Close(); Pump(); AppearanceResources.Apply(TesseraTheme.Dark); }

@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using PixelArtAlignment;
 using Bitmap = System.Drawing.Bitmap;
 
 namespace DomainColorTest;
@@ -146,25 +147,49 @@ public partial class MainWindow
         using var cancellation = new CancellationTokenSource(); _macroCancellation = cancellation;
         SetProcessingState(true);
         _macroList.IsEnabled = _macroApply.IsEnabled = false; _macroCancel.Visibility = Visibility.Visible;
-        var progress = new Progress<WorkflowProgress>(p => statusLabel.Text = Localization.Format("Шаг {0}/{1}: {2}", p.Index, p.Count, StepName(p.OperationId)));
+        int savedSteps = 0;
         try
         {
-            using var output = await Task.Run(() => new WorkflowExecutor().Execute(input, applied, cancellation.Token, progress));
-            if (cancellation.IsCancellationRequested)
-                throw new WorkflowCanceledException(applied.Steps.Count, applied.Steps[^1].OperationId, new OperationCanceledException(cancellation.Token));
-            // Publish only after every step has completed. No partial history exists on cancellation.
-            var generation = _library.SaveGeneration(document, output, null, new GenerationEntry
-            {
-                Operation = macro.Name, OperationId = ProcessingOperations.Macro, AppliedRecipe = applied,
-                ParentGenerationId = parentId, Settings = settings, PreservesTransparency = true,
-                Caption = macro.Name, Log = string.Join(Environment.NewLine, macro.Steps.Select((step, q) => $"{q + 1}. {StepName(step.OperationId)}"))
-            });
-            document.Generations.Add(generation); SelectGeneration(generation);
-            statusLabel.Text = Localization.Text("Макрос применён: ") + macro.Name;
+            using var output = await Task.Run(() => new WorkflowExecutor().Execute(input, applied, cancellation.Token,
+                stepCompleted: (stepProgress, image) => Dispatcher.Invoke(() =>
+                {
+                    ProcessingStep step = macro.Steps[stepProgress.Index - 1];
+                    string name = StepName(step.OperationId);
+                    EditorSettings stepSettings = MacroStepSettings(settings, step, stepProgress.CellSize);
+                    var generation = _library.SaveGeneration(document, image, null, new GenerationEntry
+                    {
+                        Operation = name, OperationId = step.OperationId,
+                        AppliedRecipe = HistoryRecipes.Single(step), ParentGenerationId = parentId,
+                        Settings = stepSettings, PreservesTransparency = true,
+                        IsAlignment = step.OperationId is ProcessingOperations.Align or ProcessingOperations.AlignLocal or ProcessingOperations.AlignLocalSnapped,
+                        IsGridReduction = step.OperationId == ProcessingOperations.Reduce,
+                        CellSize = stepProgress.CellSize ?? 0,
+                        Caption = $"{macro.Name} · {name} · {image.Width} × {image.Height}",
+                        Log = $"{macro.Name} · " + Localization.Format("Шаг {0}/{1}: {2}", stepProgress.Index, stepProgress.Count, name)
+                    });
+                    settings = stepSettings;
+                    document.Generations.Add(generation);
+                    parentId = generation.Id;
+                    savedSteps++;
+                    SelectGeneration(generation);
+                    statusLabel.Text = Localization.Format("Шаг {0}/{1}: {2}", stepProgress.Index, stepProgress.Count, name);
+                })));
+            statusLabel.Text = Localization.Format("Макрос применён: {0}. Сохранено шагов: {1}.", macro.Name, savedSteps);
         }
-        catch (WorkflowCanceledException ex) { statusLabel.Text = Localization.Format("Макрос отменён на шаге {0}: {1}.", ex.StepIndex, StepName(ex.OperationId)); }
-        catch (OperationCanceledException) { statusLabel.Text = Localization.Text("Макрос отменён. Итоговый результат не сохранён."); }
-        catch (WorkflowStepException ex) { ShowMacroError(Localization.Format("Шаг {0}: {1}. {2}", ex.StepIndex, StepName(ex.OperationId), ex.InnerException?.Message ?? ex.Message)); }
+        catch (WorkflowCanceledException ex)
+        {
+            statusLabel.Text = Localization.Format("Макрос отменён на шаге {0}: {1}. Сохранено шагов: {2}.",
+                ex.StepIndex, StepName(ex.OperationId), savedSteps);
+        }
+        catch (OperationCanceledException)
+        {
+            statusLabel.Text = Localization.Format("Макрос отменён. Сохранено шагов: {0}.", savedSteps);
+        }
+        catch (WorkflowStepException ex)
+        {
+            ShowMacroError(Localization.Format("Шаг {0}: {1}. {2} Сохранено шагов: {3}.",
+                ex.StepIndex, StepName(ex.OperationId), ex.InnerException?.Message ?? ex.Message, savedSteps));
+        }
         catch (Exception ex) { ShowMacroError(ex.Message); }
         finally
         {
@@ -172,5 +197,38 @@ public partial class MainWindow
             _macroList.IsEnabled = true; _macroApply.IsEnabled = _macroList.SelectedItem is MacroDefinition;
             _macroCancel.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private static EditorSettings MacroStepSettings(EditorSettings settings, ProcessingStep step, int? cellSize)
+    {
+        var result = WorkflowJson.Snapshot(settings);
+        if (step.Downscale is not null) result.Downscale = WorkflowJson.Snapshot(step.Downscale);
+        if (step.OperationId is ProcessingOperations.Colors or ProcessingOperations.ConnectedPalette)
+        {
+            result.ConnectedPalette = step.ConnectedPalette is null ? null : WorkflowJson.Snapshot(step.ConnectedPalette);
+            result.ConnectedPaletteEnabled = step.OperationId == ProcessingOperations.ConnectedPalette ? null : step.ConnectedPalette is not null;
+            if (step.ConnectedPalette?.TileSize is > 0) result.ConnectedPaletteTileSize = step.ConnectedPalette.TileSize;
+        }
+        if (step.ChannelAdjustment is not null) result.ChannelAdjustment = WorkflowJson.Snapshot(step.ChannelAdjustment);
+        if (step.Contours is { } contours)
+        {
+            result.ContourWindowSize = contours.WindowSize;
+            result.ContourStrictness = contours.Strictness;
+            result.ContourProtectDetails = contours.ProtectDetails;
+            result.ContourSimilarColorDistance = (int)Math.Round(contours.SimilarColorDistance);
+            result.ContourMinimumPixelGradient = (int)Math.Round(contours.MinimumPixelGradient);
+            result.ContourMinimumNeighborGradient = (int)Math.Round(contours.MinimumNeighborGradient);
+            result.ContourMinimumSimilarNeighbors = contours.MinimumSimilarNeighbors;
+            result.ContourMinimumAgreement = (int)Math.Round(contours.MinimumAgreement * 100);
+            result.ContourMinimumOpposition = (int)Math.Round(contours.MinimumOpposition * 100);
+        }
+        if (step.OperationId is ProcessingOperations.Align or ProcessingOperations.AlignLocal or ProcessingOperations.AlignLocalSnapped)
+        {
+            result.AlignmentMode = step.OperationId == ProcessingOperations.Align ? GridAlignmentMode.Global : GridAlignmentMode.Local;
+            result.SnapToGlobalGrid = step.OperationId == ProcessingOperations.AlignLocalSnapped;
+            result.DetectGrid = step.CellSize is null;
+        }
+        if (cellSize is { } resolved) result.CellSize = resolved;
+        return result;
     }
 }
