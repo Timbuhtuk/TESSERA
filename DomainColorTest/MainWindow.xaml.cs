@@ -41,6 +41,7 @@ public partial class MainWindow : Window
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
         InitializeComponent();
+        InitializeSizeFactor();
         InitializeChannelTool();
         InitializeHistoryTrays();
         InitializeMacros();
@@ -212,6 +213,15 @@ public partial class MainWindow : Window
     {
         UpdateCropPreview();
         var sizeSource = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
+        bool validTarget = TryGetTargetSize(out int width, out int height);
+        scaleOnlyButton.IsEnabled = !_processing && _sourceImage is not null && validTarget;
+        if (!validTarget && scaleFactorModeInput.IsChecked == true && sizeSource is not null)
+        {
+            sizeHint.Text = Localization.Text("Укажите положительный коэффициент; итоговый размер должен помещаться в допустимый диапазон.");
+            sizeToolGroup.ToolTip = sizeHint.Text;
+            frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = false;
+            return;
+        }
         if (sizeSource is null)
         {
             sizeHint.Text = Localization.Text("Укажите ширину и высоту результата.");
@@ -219,7 +229,14 @@ public partial class MainWindow : Window
             frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = true;
             return;
         }
-        int width = (int)widthInput.Value, height = (int)heightInput.Value;
+        if (scaleFactorModeInput.IsChecked == true)
+        {
+            sizeHint.Text = Localization.Format("Основа {0} × {1} → результат {2} × {3} px.", sizeSource.Width, sizeSource.Height, width, height);
+            sizeToolGroup.ToolTip = sizeHint.Text;
+            bool factorReducing = width <= sizeSource.Width && height <= sizeSource.Height;
+            frameToolGroup.IsEnabled = pixelToolGroup.IsEnabled = factorReducing;
+            return;
+        }
         if (width > sizeSource.Width || height > sizeSource.Height)
             sizeHint.Text = Localization.Format("Основа {0} × {1}. Увеличение через «Изменить размер» сохраняет цвета и прозрачность без сглаживания. «Обработать» не увеличивает исходник.", sizeSource.Width, sizeSource.Height);
         else if (spriteInput.IsChecked == true && Math.Abs((double)width / height / ((double)sizeSource.Width / sizeSource.Height) - 1) > .02)
@@ -274,6 +291,7 @@ public partial class MainWindow : Window
     private async void ProcessImage(object? sender, EventArgs e)
     {
         if (_sourceImage is null || _activeSource is null || _processing) return;
+        if (!TryGetTargetSize(out _, out _)) { UpdateSizeHint(); return; }
         ApplyProfile();
         CommitInputs();
         var settings = CaptureReadyModeSettings();
@@ -335,8 +353,8 @@ public partial class MainWindow : Window
         sourceStrip.IsEnabled = generationStrip.IsEnabled = !processing;
         homeContent.IsEnabled = !processing;
         processButton.IsEnabled = !processing && _sourceImage is not null;
-        scaleOnlyButton.IsEnabled = colorOnlyButton.IsEnabled = neighborColorsButton.IsEnabled =
-            !processing && _sourceImage is not null;
+        colorOnlyButton.IsEnabled = neighborColorsButton.IsEnabled = !processing && _sourceImage is not null;
+        scaleOnlyButton.IsEnabled = !processing && _sourceImage is not null && TryGetTargetSize(out _, out _);
         trimTransparentButton.IsEnabled = !processing && _sourceImage is not null;
         contourApplyButton.IsEnabled = contourPreviewButton.IsEnabled = !processing && LivePreviewBasis is not null;
         structureApplyButton.IsEnabled = structureMapButton.IsEnabled = structurePreviewButton.IsEnabled = !processing && LivePreviewBasis is not null;
@@ -363,8 +381,8 @@ public partial class MainWindow : Window
 
     private DownscaleOptions BuildOptionsFromUi() => new()
     {
-        TargetWidth = (int)widthInput.Value,
-        TargetHeight = (int)heightInput.Value,
+        TargetWidth = TryGetTargetSize(out int width, out _) ? width : (int)widthInput.Value,
+        TargetHeight = TryGetTargetSize(out _, out int height) ? height : (int)heightInput.Value,
         SpriteMode = spriteInput.IsChecked == true,
         AlphaThreshold = (int)alphaInput.Value,
         CropHorizontal = (CropHorizontalAlignment)cropHorizontalInput.SelectedIndex,

@@ -1358,5 +1358,12 @@
   "Макрос применён: {0}. Сохранено шагов: {1}.": "Macro applied: {0}. Saved steps: {1}.",
   "Макрос отменён на шаге {0}: {1}. Сохранено шагов: {2}.": "Macro canceled at step {0}: {1}. Saved steps: {2}.",
   "Макрос отменён. Сохранено шагов: {0}.": "Macro canceled. Saved steps: {0}.",
-  "Шаг {0}: {1}. {2} Сохранено шагов: {3}.": "Step {0}: {1}. {2} Saved steps: {3}."
+  "Шаг {0}: {1}. {2} Сохранено шагов: {3}.": "Step {0}: {1}. {2} Saved steps: {3}.",
+  "Размер, px": "Size, px",
+  "Масштаб размера": "Scale",
+  "Коэффициент": "Factor",
+  "Коэффициент масштаба": "Scale factor",
+  "Например, 0.5 уменьшит обе стороны вдвое, а 1.5 увеличит в полтора раза.": "For example, 0.5 halves both dimensions and 1.5 increases them by half.",
+  "Укажите положительный коэффициент; итоговый размер должен помещаться в допустимый диапазон.": "Enter a positive factor; the resulting dimensions must be within the supported range.",
+  "Основа {0} × {1} → результат {2} × {3} px.": "Input {0} × {1} → result {2} × {3} px."
 }

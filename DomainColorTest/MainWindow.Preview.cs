@@ -135,7 +135,7 @@ public partial class MainWindow
         if (!_cropToolActive) return;
         var basis = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
         if (basis is null || spriteInput.IsChecked == true) return;
-        int width = (int)widthInput.Value, height = (int)heightInput.Value;
+        if (!TryGetTargetSize(out int width, out int height)) return;
         if (width < 1 || height < 1 || width > basis.Width || height > basis.Height) return;
         int cropWidth = basis.Width / width * width;
         int cropHeight = basis.Height / height * height;

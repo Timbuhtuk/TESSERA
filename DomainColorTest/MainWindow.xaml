@@ -262,10 +262,20 @@
 
                     <GroupBox x:Name="sizeToolGroup" Header="{local:Translate Text1DFCC8257970}">
                         <StackPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text45B5E94DDEA8}" Width="132" /><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate Text44191BDBA86A}" /></DockPanel>
-                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text47DCC74F054D}" Width="132" /><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate Text4F1F111D65A8}" /></DockPanel>
-                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="aspectLock" Content="{local:Translate Text650D2C0CB70B}" ToolTip="{local:Translate TextA67C95BAA6B1}" />
-                            <TextBlock x:Name="sizeHint" Visibility="Collapsed" />
+                            <WrapPanel Margin="0,0,0,5">
+                                <RadioButton x:Name="pixelSizeModeInput" GroupName="SizeInputMode" IsChecked="True" Margin="0,0,16,0" />
+                                <RadioButton x:Name="scaleFactorModeInput" GroupName="SizeInputMode" />
+                            </WrapPanel>
+                            <StackPanel x:Name="pixelSizeControls">
+                                <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text45B5E94DDEA8}" Width="132" /><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate Text44191BDBA86A}" /></DockPanel>
+                                <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Text47DCC74F054D}" Width="132" /><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate Text4F1F111D65A8}" /></DockPanel>
+                                <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="aspectLock" Content="{local:Translate Text650D2C0CB70B}" ToolTip="{local:Translate TextA67C95BAA6B1}" />
+                            </StackPanel>
+                            <DockPanel x:Name="scaleFactorControls" Margin="0,3" Visibility="Collapsed">
+                                <TextBlock x:Name="scaleFactorLabel" Width="132" VerticalAlignment="Center" />
+                                <TextBox x:Name="scaleFactorInput" Text="1" MinHeight="30" VerticalContentAlignment="Center" TextAlignment="Right" AutomationProperties.Name="Коэффициент масштаба" />
+                            </DockPanel>
+                            <TextBlock x:Name="sizeHint" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource Ts.TextSecondary}" />
                             <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Text3837BA14575C}" IsEnabled="False" Margin="0,7,0,0" ToolTip="{local:Translate Text7FAF700157C0}" />
                             <Button x:Name="trimTransparentButton" Content="Обрезать прозрачные края" IsEnabled="False" Margin="0,7,0,0" />
                         </StackPanel>

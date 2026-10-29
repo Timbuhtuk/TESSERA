@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Размер и кадр: масштаб по коэффициенту",
+        "en": "Size and frame: scale by a factor"
+      },
+      "notes": {
+        "ru": "- Размер и кадр: добавлен режим «Масштаб размера». Укажите коэффициент, например 0.5 для уменьшения вдвое или 1.5 для увеличения в полтора раза. Ввод ширины и высоты в пикселях остаётся доступен.\n- Размер и кадр: коэффициент применяется к обеим сторонам выбранного исходника или результата. До обработки показан итоговый размер; дробные размеры округляются до ближайшего пикселя, минимум — один пиксель.\n- История и макросы: результаты сохраняют рассчитанные размеры и связь с предыдущим шагом. Их можно повторять, экспортировать и продолжать обрабатывать.\n- Размер и кадр: недопустимый коэффициент блокирует изменение размера и сопровождается подсказкой. Подписи и подсказки доступны на русском и английском.",
+        "en": "- Size and frame: choose Scale to enter a factor, such as 0.5 to halve the image or 1.5 to enlarge it by half. Pixel width and height entry remains available.\n- Size and frame: the factor applies to both dimensions of the selected original or saved result. The resulting size is shown before processing; fractional dimensions round to the nearest pixel, with a minimum of one pixel.\n- History and macros: results retain their resolved dimensions and links to preceding steps. Replay, export and continue processing them.\n- Size and frame: an invalid factor disables resizing and displays a helpful message. Labels and hints are available in Russian and English."
+      }
+    },
+    {
+      "version": "2.15.0",
+      "title": {
         "ru": "Макросы: история каждого шага",
         "en": "Macros: history for every step"
       },
