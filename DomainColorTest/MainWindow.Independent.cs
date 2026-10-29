@@ -38,6 +38,7 @@ public partial class MainWindow
     private async void RunIndependentOperation(IndependentOperation operation)
     {
         if (_sourceImage is null || _activeSource is null || _processing) return;
+        if (operation == IndependentOperation.Size && !TryGetTargetSize(out _, out _)) { UpdateSizeHint(); return; }
         CommitInputs();
         var settings = CaptureSettings();
         DownscaleOptions options = settings.Downscale;
