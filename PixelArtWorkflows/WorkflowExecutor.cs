@@ -160,7 +160,8 @@ public sealed class WorkflowExecutor
             {
                 AsciiSettings settings = step.Ascii!;
                 return (ImageFilters.RenderAscii(current, settings.KeepSourceSize, settings.Characters,
-                    settings.InvertSource, settings.InvertColors), previousAlignmentCell);
+                    settings.InvertSource, settings.InvertColors, settings.ColorMode,
+                    settings.ForegroundArgb, settings.BackgroundArgb, settings.Columns, settings.Dither), previousAlignmentCell);
             }
             case ProcessingOperations.ReplaceColor:
             {
@@ -252,6 +253,8 @@ public sealed class WorkflowExecutor
                 if (string.IsNullOrEmpty(step.Ascii.Characters) || step.Ascii.Characters.Contains('\r') ||
                     step.Ascii.Characters.Contains('\n'))
                     throw new InvalidDataException("ASCII characters must be a non-empty single line.");
+                if (!Enum.IsDefined(step.Ascii.ColorMode) || step.Ascii.Columns is < 0 or > 512)
+                    throw new InvalidDataException("ASCII color mode or column count is invalid.");
                 break;
             case ProcessingOperations.ReplaceColor:
                 RequireOnly(step, replacement: true);

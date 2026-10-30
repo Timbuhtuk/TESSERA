@@ -38,7 +38,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         InitializeComponent();
         foreach (int size in new[] { 16, 24, 32, 48, 64, 96, 128, 256 })
         {
-            var check = new CheckBox { Content = $"{size} × {size}", Tag = size, IsChecked = size != 96, Margin = new Thickness(0, 0, 22, 16),
+            var check = new CheckBox { Style = (Style)FindResource("Ts.SwitchBox"), Content = $"{size} × {size}", Tag = size, IsChecked = size != 96, Margin = new Thickness(0, 0, 22, 16),
                 ToolTip = Localization.Format("Включить кадр {0} × {0} пикселей в ICO. Выключите, чтобы исключить этот размер из файла.", size) };
             ToolTipService.SetShowOnDisabled(check, true);
             check.Checked += (_, _) => SchedulePreview();

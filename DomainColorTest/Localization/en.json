@@ -1386,5 +1386,22 @@
   "После ручной вставки полный рецепт этой цепочки недоступен.": "The full recipe of this chain is unavailable after a manual insertion.",
   "Полный рецепт цепочки недоступен.": "The full recipe of this chain is unavailable.",
   "Снимок истории повреждён. Текущие результаты сохранены.": "The history snapshot is damaged. Current results have been preserved.",
-  "Не удалось сохранить шаг в истории.": "Could not save the step in history."
+  "Не удалось сохранить шаг в истории.": "Could not save the step in history.",
+  "Сохраняет размер исходника. При выключении строит изображение в размере символьной сетки с учётом прямоугольной формы символов.": "Preserves source image dimensions. When disabled, renders at the character-grid size while accounting for rectangular glyph cells.",
+  "Упорядоченный дизеринг": "Ordered dithering",
+  "Смешивает соседние символы разной плотности, чтобы плавнее передать полутона. Для TXT и PNG.": "Mixes neighboring glyph densities for smoother midtones. Applies to TXT and PNG.",
+  "Сохраняет размер исходника. При ширине 0 сетка подбирается автоматически; если выключить сохранение размера, изображение увеличится до размера выбранной сетки символов.": "Keeps the source image size. Width 0 chooses the character grid automatically; turning this off expands the image to the selected character grid.",
+  "Меняет местами цвет символов и фона в PNG. Для TXT не применяется.": "Swaps character and background colors in PNG. Does not apply to TXT.",
+  "Монохром…": "Monochrome…",
+  "Резкость…": "Sharpen…",
+  "ASCII…": "ASCII…",
+  "Плотность и форма участков подбирают символы. PNG может использовать цвета исходника или выбранные цвета; TXT сохраняет только символы.": "Cell density and shape select characters. PNG can use source or custom colors; TXT stores characters only.",
+  "Ширина, 0 — авто": "Width, 0 = auto",
+  "Количество символов в строке. 0 подбирает ширину автоматически; высота следует пропорциям исходника и символа.": "Characters per line. 0 chooses the width automatically; height follows the source and character proportions.",
+  "Цвет символов": "Character color",
+  "Из исходника": "From source",
+  "Цвет символов: ": "Character color: ",
+  "Цвет фона: ": "Background color: ",
+  "ASCII: {0} × {1} px; цвет: {2}; ширина: {3}; инверсия исходника: {4}; инверсия рендера: {5}.": "ASCII: {0} × {1} px; color: {2}; width: {3}; invert source: {4}; invert render: {5}.",
+  "авто": "auto"
 }

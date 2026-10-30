@@ -95,8 +95,8 @@
                         <TextBlock x:Name="pairLabel" Text="{local:Translate Text70033FB0F84C}" Style="{StaticResource Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,14"/>
                         <TextBlock Text="{local:Translate Text3472342D6716}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="repeatXInput" Content="{local:Translate Text933FF8867862}" IsChecked="True" Click="OptionsChanged" ToolTip="{local:Translate TextB1778617E43F}" />
-                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="repeatYInput" Content="{local:Translate Text245019C819B6}" IsChecked="True" Click="OptionsChanged" ToolTip="{local:Translate Text08F3552DFCBC}" />
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="repeatXInput" Content="{local:Translate Text933FF8867862}" IsChecked="True" Click="OptionsChanged" ToolTip="{local:Translate TextB1778617E43F}" />
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="repeatYInput" Content="{local:Translate Text245019C819B6}" IsChecked="True" Click="OptionsChanged" ToolTip="{local:Translate Text08F3552DFCBC}" />
                         <TextBlock Text="{local:Translate TextFBDC92AE6CF8}" Margin="0,12,0,5"/>
                         <ComboBox x:Name="copiesInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate Text4FEA157588CE}">
                             <ComboBoxItem Content="3"/><ComboBoxItem Content="5"/><ComboBoxItem Content="7"/>
@@ -112,9 +112,9 @@
                         <ComboBox x:Name="backgroundInput" SelectedIndex="0" SelectionChanged="SelectionChanged" AutomationProperties.Name="{local:Translate Text9D6D5197FC22}">
                             <ComboBoxItem Content="{local:Translate Text5E7EC04C97C5}"/><ComboBoxItem Content="{local:Translate TextA024A93D4E0C}"/><ComboBoxItem Content="{local:Translate Text21943A44634E}"/>
                         </ComboBox>
-                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="guidesInput" Content="{local:Translate Text059662D5BABD}" Click="OptionsChanged" Margin="0,12,0,0" ToolTip="{local:Translate TextA1B9DDBCD48C}" />
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="guidesInput" Content="{local:Translate Text059662D5BABD}" Click="OptionsChanged" Margin="0,12,0,0" ToolTip="{local:Translate TextA1B9DDBCD48C}" />
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,16,0,14"/>
-                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="heatInput" Content="{local:Translate TextFE52793B403A}" IsChecked="True" Click="OptionsChanged"
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="heatInput" Content="{local:Translate TextFE52793B403A}" IsChecked="True" Click="OptionsChanged"
                                   ToolTip="{local:Translate Text0CBFBFFA4686}"/>
                         <TextBlock Text="{local:Translate TextD8E51B7BDD60}" Style="{StaticResource Hint}"/>
                         <TextBlock x:Name="thresholdLabel" Text="{local:Translate TextDC31C6BFE35D}" Margin="0,12,0,0"/>
@@ -126,7 +126,7 @@
                         <Border Height="8" Margin="0,4,0,6"><Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,0"><GradientStop Color="#30D250" Offset="0"/><GradientStop Color="#FFD750" Offset="0.5"/><GradientStop Color="#FF3232" Offset="1"/></LinearGradientBrush></Border.Background></Border>
                         <TextBlock Text="{local:Translate TextC60F395A1648}" Style="{StaticResource Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,14"/>
-                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="watchInput" Content="{local:Translate Text9E95D6C39340}" IsChecked="True" Click="WatchChanged" ToolTip="{local:Translate TextA4E257CF4A0A}"/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="watchInput" Content="{local:Translate Text9E95D6C39340}" IsChecked="True" Click="WatchChanged" ToolTip="{local:Translate TextA4E257CF4A0A}"/>
                         <Button x:Name="reloadButton" Content="{local:Translate Text3B479F67775A}" Click="ReloadClicked" IsEnabled="False" Margin="0,8,0,0"/>
                         <TextBlock Text="{local:Translate Text19D51F0CAA2E}" Style="{StaticResource Hint}" Margin="0,14,0,0"/>
                         <TextBlock Text="{local:Translate TextBB15EEE4CBC7}" Style="{StaticResource Hint}"/>
@@ -165,7 +165,7 @@
                         <WrapPanel>
                             <TextBlock Text="{local:Translate Text32E3B1F59D75}" VerticalAlignment="Center" Margin="0,0,8,4"/>
                             <TextBox x:Name="smoothPassesInput" Text="1" Width="60" Padding="6,4" Margin="0,0,8,4" AutomationProperties.Name="{local:Translate Text4B7147AD8DFE}"/>
-                            <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="smoothEdgesInput" Content="{local:Translate TextC3D3E9C503B9}" Click="OptionsChanged" VerticalAlignment="Center" Margin="0,0,8,4" ToolTip="{local:Translate Text8213C3BAC982}"/>
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="smoothEdgesInput" Content="{local:Translate TextC3D3E9C503B9}" Click="OptionsChanged" VerticalAlignment="Center" Margin="0,0,8,4" ToolTip="{local:Translate Text8213C3BAC982}"/>
                             <Button x:Name="smoothButton" Content="{local:Translate TextC75D41147BEF}" Click="SmoothClicked" IsEnabled="False" Margin="0,0,0,4"/>
                         </WrapPanel>
                         <TextBlock x:Name="editHint" Text="{local:Translate Text27DD5D2DFFB2}" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" FontSize="11"/>

@@ -83,7 +83,7 @@
                     <ComboBox x:Name="zoomInput" Width="100" SelectedIndex="0" SelectionChanged="ViewChanged" AutomationProperties.Name="Масштаб карт">
                         <ComboBoxItem Content="Вписать"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/>
                     </ComboBox>
-                    <CheckBox x:Name="gridInput" Content="Сетка" IsChecked="True" Checked="ViewChanged" Unchecked="ViewChanged" Margin="12,0" VerticalAlignment="Center" ToolTip="Показывать пиксельную сетку при увеличении от 600%. Экспорт не меняется."/>
+                    <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="gridInput" Content="Сетка" IsChecked="True" Checked="ViewChanged" Unchecked="ViewChanged" Margin="12,0" VerticalAlignment="Center" ToolTip="Показывать пиксельную сетку при увеличении от 600%. Экспорт не меняется."/>
                     <TextBlock Text="Подложка" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <Slider x:Name="overlayInput" Width="110" Minimum="0" Maximum="0.8" Value="0" ValueChanged="ViewChanged" AutomationProperties.Name="Прозрачность подложки исходника"/>
                 </WrapPanel>
@@ -115,9 +115,9 @@
                     <Grid.RowDefinitions><RowDefinition Height="Auto" SharedSizeGroup="MapHeader"/><RowDefinition/></Grid.RowDefinitions>
                     <WrapPanel Margin="10,6">
                         <TextBlock Text="ПРЕДПРОСМОТР" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <CheckBox x:Name="useNormalInput" Content="Normal" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="Учитывать нормали при освещении предпросмотра. Данные карты не меняются."/>
-                        <CheckBox x:Name="useAoInput" Content="AO" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="Учитывать AO в рассеянном освещении предпросмотра. Данные карты не меняются."/>
-                        <CheckBox x:Name="compareInput" Content="Исходник" Checked="LightingChanged" Unchecked="LightingChanged" ToolTip="Показать исходное изображение без освещения для сравнения. Экспорт карт не меняется."/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="useNormalInput" Content="Normal" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="Учитывать нормали при освещении предпросмотра. Данные карты не меняются."/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="useAoInput" Content="AO" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="Учитывать AO в рассеянном освещении предпросмотра. Данные карты не меняются."/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="compareInput" Content="Исходник" Checked="LightingChanged" Unchecked="LightingChanged" ToolTip="Показать исходное изображение без освещения для сравнения. Экспорт карт не меняется."/>
                     </WrapPanel>
                     <local:MaterialMapView x:Name="litView" Grid.Row="1" DrawingEnabled="False" AutomationProperties.Name="Предпросмотр освещения" ToolTip="Двигайте мышь над изображением — перемещайте свет"/>
                 </Grid></Border>

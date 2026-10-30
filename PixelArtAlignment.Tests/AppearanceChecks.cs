@@ -65,7 +65,7 @@ internal static class AppearanceChecks
             }
             bitmap.Save(input);
             Invoke(window, "LoadImage", input);
-            foreach (string name in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "gridMenuItem", "infoMenuItem", "filtersMenuItem" })
+            foreach (string name in new[] { "sizeMenuItem", "colorMenuItem", "smoothingMenuItem", "gridMenuItem", "infoMenuItem", "monochromeMenuItem", "sharpenMenuItem", "asciiMenuItem" })
                 Click(window, name);
             Pump();
             var tools = window.OwnedWindows.Cast<Window>().Where(w => w is not AppearanceWindow).ToArray();

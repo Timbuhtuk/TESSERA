@@ -127,8 +127,8 @@ internal static class SharpenChecks
             Get<ListBox>("generationStrip").SelectedItem = Get<SourceEntry>("_activeSource").Generations.Single(g => g.Id == parent.Id);
             Pump();
             Require(window.ProcessingBasis == 1, "Saved result was not selected as the sharpening input");
-            NavigationTest.Click(window, "filtersMenuItem"); Pump();
-            var group = Get<GroupBox>("filtersToolGroup");
+            NavigationTest.Click(window, "sharpenMenuItem"); Pump();
+            var group = Get<GroupBox>("sharpenToolGroup");
             Require(ReferenceEquals(Window.GetWindow(group), window), "Sharpen filter did not dock in the editor");
             Get<IntegerInput>("sharpenStrengthInput").Value = 150;
             Get<IntegerInput>("sharpenThresholdInput").Value = 0;

@@ -137,19 +137,23 @@ internal static class UiChecks
                 smoothingTool.Title.StartsWith("Очистить цвета") &&
                 ReferenceEquals(Window.GetWindow(Get<Button>("neighborColorsButton")), smoothingTool),
                 "Smoothing did not open as an independent action");
-            Click("filtersMenuItem"); Pump();
-            var filtersTool = Window.GetWindow(Get<TextBox>("asciiCharactersInput"));
-            Require(filtersTool is not null && filtersTool != smoothingTool &&
-                filtersTool.Title.StartsWith("Фильтры") &&
-                ReferenceEquals(Window.GetWindow(Get<Button>("monochromeButton")), filtersTool) &&
-                ReferenceEquals(Window.GetWindow(Get<Button>("asciiSaveTextButton")), filtersTool) &&
-                ReferenceEquals(Window.GetWindow(Get<Button>("asciiRenderButton")), filtersTool) &&
+            Click("monochromeMenuItem"); Pump();
+            var monochromeTool = Window.GetWindow(Get<Button>("monochromeButton"));
+            Click("sharpenMenuItem"); Pump();
+            var sharpenTool = Window.GetWindow(Get<Button>("sharpenButton"));
+            Click("asciiMenuItem"); Pump();
+            var asciiTool = Window.GetWindow(Get<TextBox>("asciiCharactersInput"));
+            Require(asciiTool is not null && asciiTool != smoothingTool &&
+                monochromeTool is not null && sharpenTool is not null &&
+                !ReferenceEquals(asciiTool, monochromeTool) && !ReferenceEquals(asciiTool, sharpenTool) &&
+                ReferenceEquals(Window.GetWindow(Get<Button>("asciiSaveTextButton")), asciiTool) &&
+                ReferenceEquals(Window.GetWindow(Get<Button>("asciiRenderButton")), asciiTool) &&
                 Get<CheckBox>("asciiKeepSourceSizeInput").IsChecked == true &&
                 Get<CheckBox>("asciiInvertSourceInput").IsChecked == false &&
                 Get<CheckBox>("asciiInvertRenderInput").IsChecked == false &&
                 Get<ComboBox>("asciiRampPresetInput").Items.Count == 5 &&
                 Get<TextBox>("asciiCharactersInput").Text == ImageFilters.AsciiRampPresets[0].Characters,
-                "Filters did not open with monochrome and ASCII actions");
+                "Filters did not open as separate tools");
             Get<ComboBox>("asciiRampPresetInput").SelectedIndex = 3; Pump();
             Require(Get<TextBox>("asciiCharactersInput").Text == ImageFilters.AsciiRampPresets[3].Characters,
                 "ASCII ramp preset did not update its character list");
@@ -164,9 +168,9 @@ internal static class UiChecks
             CaptureTool(sizeTool!, "size-tool.png");
             CaptureTool(colorTool!, "color-tool.png");
             CaptureTool(smoothingTool!, "smoothing-tool.png");
-            CaptureTool(filtersTool!, "filters-tool.png");
+            CaptureTool(asciiTool!, "ascii-tool.png");
             CaptureTool(profileTool!, "mode-tool.png");
-            foreach (var tool in new[] { gridTool, sizeTool, colorTool, smoothingTool, filtersTool, profileTool }) tool!.Close();
+            foreach (var tool in new[] { gridTool, sizeTool, colorTool, smoothingTool, monochromeTool, sharpenTool, asciiTool, profileTool }) tool!.Close();
             Require(ReferenceEquals(Window.GetWindow(Get<IntegerInput>("widthInput")), window), "Tool settings were lost after closing their window");
             Get<IntegerInput>("widthInput").Value = 13;
             Get<IntegerInput>("heightInput").Value = 7;

@@ -6,11 +6,12 @@ using System.Text;
 namespace PixelArtDownscale;
 
 public sealed record AsciiRampPreset(string Name, string Characters);
+public enum AsciiColorMode { Monochrome, Source, Custom }
 
 public static class ImageFilters
 {
     public const string DefaultAsciiRamp = "@#S08Xx+=-;:, .";
-    public const int DefaultAsciiFontSize = 14;
+    public const int DefaultAsciiFontSize = 10;
     public static IReadOnlyList<AsciiRampPreset> AsciiRampPresets { get; } =
     [
         new("Standard", DefaultAsciiRamp),
@@ -86,43 +87,67 @@ public static class ImageFilters
             => Math.Clamp((int)Math.Round(value + (value - blur) * amount), minimum, maximum);
     }
 
-    public static string ToAscii(Bitmap source, int columns, string characters = DefaultAsciiRamp, bool invertSource = false)
+    public static string ToAscii(Bitmap source, int columns, string characters = DefaultAsciiRamp,
+        bool invertSource = false, bool dither = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (columns < 1)
             throw new ArgumentOutOfRangeException(nameof(columns), "Ширина ASCII должна быть положительной.");
-        double calculatedRows = source.Height / (double)source.Width * columns * 0.5;
-        if (calculatedRows > int.MaxValue)
-            throw new InvalidOperationException("ASCII-текст не помещается в доступный размер строки.");
-        int rows = Math.Max(1, (int)Math.Round(calculatedRows));
-        return ToAscii(source, columns, rows, characters, invertSource);
+        var cell = MeasureAsciiCell(DefaultAsciiFontSize);
+        int rows = CalculateAsciiRows(source.Width, source.Height, columns, cell.Width, cell.Height);
+        return ToAscii(source, columns, rows, characters, invertSource, dither);
     }
 
-    public static string ToAscii(Bitmap source, string characters = DefaultAsciiRamp, bool invertSource = false)
+    public static string ToAscii(Bitmap source, string characters = DefaultAsciiRamp,
+        bool invertSource = false, bool dither = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         var cell = MeasureAsciiCell(DefaultAsciiFontSize);
-        int columns = Math.Max(1, source.Width / cell.Width);
-        int rows = Math.Max(1, source.Height / cell.Height);
-        return ToAscii(source, columns, rows, characters, invertSource);
+        int columns = Math.Max(1, (int)Math.Round(source.Width / (double)cell.Width));
+        int rows = CalculateAsciiRows(source.Width, source.Height, columns, cell.Width, cell.Height);
+        return ToAscii(source, columns, rows, characters, invertSource, dither);
     }
 
-    public static string ToAsciiPerPixel(Bitmap source, string characters = DefaultAsciiRamp, bool invertSource = false)
+    public static string ToAsciiPerPixel(Bitmap source, string characters = DefaultAsciiRamp,
+        bool invertSource = false, bool dither = false)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return ToAscii(source, source.Width, source.Height, characters, invertSource);
+        return ToAscii(source, source.Width, source.Height, characters, invertSource, dither);
+    }
+
+    public static string ToAsciiAtColumns(Bitmap source, int columns, string characters = DefaultAsciiRamp,
+        bool invertSource = false, bool dither = false)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (columns is < 1 or > 512) throw new ArgumentOutOfRangeException(nameof(columns));
+        var cell = MeasureAsciiCell(DefaultAsciiFontSize);
+        int rows = CalculateAsciiRows(source.Width, source.Height, columns, cell.Width, cell.Height);
+        return ToAscii(source, columns, rows, characters, invertSource, dither);
+    }
+
+    internal static int CalculateAsciiRows(int width, int height, int columns, int cellWidth, int cellHeight)
+    {
+        double value = height / (double)width * columns * cellWidth / cellHeight;
+        if (value > int.MaxValue)
+            throw new InvalidOperationException("ASCII-текст не помещается в доступный размер строки.");
+        return Math.Max(1, (int)Math.Round(value));
     }
 
     public static Bitmap RenderAscii(Bitmap source, bool keepSourceSize = true, string characters = DefaultAsciiRamp,
-        bool invertSource = false, bool invertColors = false)
+        bool invertSource = false, bool invertColors = false, AsciiColorMode colorMode = AsciiColorMode.Monochrome,
+        int foregroundArgb = -1, int backgroundArgb = unchecked((int)0xFF000000), int columns = 0,
+        bool dither = false)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (string.IsNullOrEmpty(characters) || characters.Contains('\r') || characters.Contains('\n'))
             throw new ArgumentException("Набор ASCII должен содержать символы яркости в одной строке.", nameof(characters));
-        return AsciiRenderer.Render(source, ReadArgb(source), keepSourceSize, characters, invertSource, invertColors);
+        if (!Enum.IsDefined(colorMode)) throw new ArgumentOutOfRangeException(nameof(colorMode));
+        if (columns is < 0 or > 512) throw new ArgumentOutOfRangeException(nameof(columns));
+        return AsciiRenderer.Render(source, ReadArgb(source), keepSourceSize, characters, invertSource,
+            invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither);
     }
 
-    public static Bitmap RenderAscii(string text, int fontSize = 14, bool invertColors = false)
+    public static Bitmap RenderAscii(string text, int fontSize = DefaultAsciiFontSize, bool invertColors = false)
     {
         ArgumentNullException.ThrowIfNull(text);
         if (fontSize < 1)
@@ -180,7 +205,7 @@ public static class ImageFilters
         return RenderAscii(text, width, height, DefaultAsciiFontSize, invertColors);
     }
 
-    private static string ToAscii(Bitmap source, int columns, int rows, string characters, bool invertSource)
+    private static string ToAscii(Bitmap source, int columns, int rows, string characters, bool invertSource, bool dither)
     {
         if (string.IsNullOrEmpty(characters) || characters.Contains('\r') || characters.Contains('\n'))
             throw new ArgumentException("Набор ASCII должен содержать символы яркости в одной строке.", nameof(characters));
@@ -215,7 +240,9 @@ public static class ImageFilters
                     text.Append(GetMinimumFiller(characters));
                     continue;
                 }
-                int index = (int)Math.Round(brightness / coverage * (characters.Length - 1));
+                double tone = brightness / coverage;
+                if (dither) tone = AsciiDither.Adjust(tone, x, y, 1.0 / Math.Max(1, characters.Length - 1));
+                int index = (int)Math.Round(tone * (characters.Length - 1));
                 text.Append(characters[Math.Clamp(index, 0, characters.Length - 1)]);
             }
             if (y + 1 < rows) text.AppendLine();
@@ -252,13 +279,15 @@ public static class ImageFilters
         }
     }
 
-    private static (int Width, int Height) MeasureAsciiCell(int fontSize)
+    internal static (int Width, int Height) MeasureAsciiCell(int fontSize)
     {
         using var font = new Font(FontFamily.GenericMonospace, fontSize, FontStyle.Regular, GraphicsUnit.Pixel);
+        using var format = (StringFormat)StringFormat.GenericTypographic.Clone();
+        format.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
         using var measure = new Bitmap(1, 1);
         using var graphics = Graphics.FromImage(measure);
         graphics.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
-        var size = graphics.MeasureString("@", font, PointF.Empty, StringFormat.GenericTypographic);
+        var size = graphics.MeasureString("@", font, PointF.Empty, format);
         return (Math.Max(1, (int)Math.Ceiling(size.Width)), Math.Max(1, (int)Math.Ceiling(font.GetHeight(graphics))));
     }
 

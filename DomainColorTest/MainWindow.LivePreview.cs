@@ -65,7 +65,7 @@ public partial class MainWindow
 
     private void SetActiveLivePreviewTool(string? key)
     {
-        string? next = key is "color" or "smoothing" or "filters" or "contours" or "structure-probe" ? key : null;
+        string? next = key is "color" or "smoothing" or "sharpen" or "contours" or "structure-probe" ? key : null;
         if (_activeLivePreviewTool == next) { ScheduleLiveToolPreviews(); return; }
         _activeLivePreviewTool = next;
         ClearDisplayedLivePreview();
@@ -107,7 +107,7 @@ public partial class MainWindow
             else if (ReferenceEquals(check, smoothingLivePreviewInput)) _approvedLargeSmoothingBasis = null;
             else _approvedLargeSharpenBasis = null;
             string key = ReferenceEquals(check, colorLivePreviewInput) ? "color" :
-                ReferenceEquals(check, smoothingLivePreviewInput) ? "smoothing" : "filters";
+                ReferenceEquals(check, smoothingLivePreviewInput) ? "smoothing" : "sharpen";
             if (_activeLivePreviewTool == key) ClearDisplayedLivePreview();
         }
         ScheduleLiveToolPreviews();
@@ -149,7 +149,7 @@ public partial class MainWindow
         {
             "color" => colorLivePreviewInput.IsChecked == true,
             "smoothing" => smoothingLivePreviewInput.IsChecked == true,
-            "filters" => sharpenLivePreviewInput.IsChecked == true,
+            "sharpen" => sharpenLivePreviewInput.IsChecked == true,
             _ => false
         };
         if (!IsLoaded || _processing || basis is null || !enabled)
@@ -165,7 +165,7 @@ public partial class MainWindow
         if (_livePreviewBusy || _processing || LivePreviewBasis is not { } basis) return;
         bool color = _activeLivePreviewTool == "color" && colorLivePreviewInput.IsChecked == true && colorToolGroup.IsVisible;
         bool smooth = _activeLivePreviewTool == "smoothing" && smoothingLivePreviewInput.IsChecked == true && smoothingToolGroup.IsVisible;
-        bool sharpen = _activeLivePreviewTool == "filters" && sharpenLivePreviewInput.IsChecked == true && filtersToolGroup.IsVisible;
+        bool sharpen = _activeLivePreviewTool == "sharpen" && sharpenLivePreviewInput.IsChecked == true && sharpenToolGroup.IsVisible;
         if (!color && !smooth && !sharpen) { ClearDisplayedLivePreview(); return; }
 
         int revision = _livePreviewRevision;

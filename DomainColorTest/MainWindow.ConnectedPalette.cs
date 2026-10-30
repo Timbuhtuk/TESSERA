@@ -23,6 +23,8 @@ public partial class MainWindow
         var content = (StackPanel)colorToolGroup.Content;
         int position = content.Children.IndexOf(colorOnlyButton);
         connectedPaletteInput.Content = Localization.Text("Учитывать связность цветов");
+        connectedPaletteInput.Style = (Style)FindResource("Ts.SwitchBox");
+        connectedTilesInput.Style = (Style)FindResource("Ts.SwitchBox");
         connectedPaletteInput.ToolTip = Localization.Text("При отборе итоговых цветов учитывать цельные пятна и соседей пикселя.");
         connectedPaletteInput.Margin = new Thickness(0, 12, 0, 5);
         AutomationProperties.SetName(connectedPaletteInput, Localization.Text("Учитывать связность цветов"));

@@ -2,7 +2,7 @@ using PixelArtAlignment.Tests;
 
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("PixelArtAlignment.Tests: --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("PixelArtAlignment.Tests: --ascii, --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Programmatic editor regression checks without native input: --editor-regressions");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
@@ -32,7 +32,7 @@ if (args is ["--finalists-ui", var uiLabRoot])
     FinalistUiChecks.Run(uiLabRoot);
     return 0;
 }
-if (args.Any(a => a is not ("--editor-regressions" or "--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--size-factor" or "--history-edits" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--ascii" or "--editor-regressions" or "--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--size-factor" or "--history-edits" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -111,6 +111,7 @@ if (args.Contains("--release-notes")) Check("Bundled patch notes, first launch a
 if (args.Contains("--tool-improvements")) ToolImprovementsChecks.Run(Check);
 if (args.Contains("--history-macros")) HistoryMacroChecks.Run(Check);
 if (args.Contains("--history-edits") || args.Contains("--ui")) Check("History insert, merge, subtree deletion and persistent undo", HistoryEditChecks.Run);
+if (args.Contains("--ascii") || args.Contains("--ui")) Check("ASCII workspace colors, text, history, undo and macro replay", AsciiWorkspaceChecks.Run);
 if (args.Contains("--size-factor") || args.Contains("--ui")) Check("Size and frame fractional scale factor", SizeFactorUiChecks.Run);
 if (args.Contains("--navigation")) Check("Top navigation, menus, state and responsive layouts", NavigationChecks.Run);
 if (args.Contains("--sharpen") || args.Contains("--ui")) SharpenChecks.Run(Check);

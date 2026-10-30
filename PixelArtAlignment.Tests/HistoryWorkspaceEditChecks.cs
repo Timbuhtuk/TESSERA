@@ -61,7 +61,7 @@ internal static class HistoryWorkspaceEditChecks
             ApplyMacro();
             var original = Active().Generations.ToArray();
             Invoke("SelectGeneration", original[0]);
-            NavigationTest.Click(window, "filtersMenuItem"); Pump();
+            NavigationTest.Click(window, "monochromeMenuItem"); Pump();
             if (!docked) { Invoke("FloatDockedTool", "filters", false); Pump(); }
             Get<CheckBox>("insertHistoryInput").IsChecked = true;
             NavigationTest.Click(window, "monochromeButton"); WaitProcessing();

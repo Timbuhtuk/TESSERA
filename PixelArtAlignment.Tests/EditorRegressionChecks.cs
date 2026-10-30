@@ -112,7 +112,7 @@ internal static class EditorRegressionChecks
             Get<IntegerInput>("widthInput").Value++;
             Require(Get<bool>("_resultStale"), "A real size edit did not mark the result stale");
 
-            foreach (var pair in new[] { ("sizeMenuItem", "scaleOnlyButton"), ("gridMenuItem", "alignButton"), ("filtersMenuItem", "monochromeButton") })
+            foreach (var pair in new[] { ("sizeMenuItem", "scaleOnlyButton"), ("gridMenuItem", "alignButton"), ("monochromeMenuItem", "monochromeButton") })
                 for (int q = 0; q < 2; q++)
                 {
                     Click(pair.Item1); Pump();
