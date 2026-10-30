@@ -53,6 +53,11 @@ public sealed class AsciiSettings
     public bool KeepSourceSize { get; init; } = true;
     public bool InvertSource { get; init; }
     public bool InvertColors { get; init; }
+    public AsciiColorMode ColorMode { get; init; }
+    public int ForegroundArgb { get; init; } = -1;
+    public int BackgroundArgb { get; init; } = unchecked((int)0xFF000000);
+    public int Columns { get; init; }
+    public bool Dither { get; init; }
 }
 
 public sealed class SharpenSettings

@@ -42,7 +42,7 @@
                                 <TextBlock Text="{local:Translate TextC01BFAA0AB93}" Margin="0,8,0,0"/><TextBox x:Name="spacingYInput" Text="0" TextChanged="GridTextChanged" Padding="7,5" AutomationProperties.Name="{local:Translate TextCCCFFC7C6281}"/>
                             </StackPanel>
                         </Expander>
-                        <CheckBox ToolTipService.ShowOnDisabled="True" x:Name="skipEmptyInput" Margin="0,14,0,0" ToolTip="{local:Translate TextE8610A242F26}"><TextBlock Text="{local:Translate TextBBA9027BE377}" TextWrapping="Wrap"/></CheckBox>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="skipEmptyInput" Margin="0,14,0,0" ToolTip="{local:Translate TextE8610A242F26}"><TextBlock Text="{local:Translate TextBBA9027BE377}" TextWrapping="Wrap"/></CheckBox>
                         <TextBlock Text="{local:Translate TextBF438935BEF2}" Style="{StaticResource Hint}"/>
                     </StackPanel>
                 </ScrollViewer>

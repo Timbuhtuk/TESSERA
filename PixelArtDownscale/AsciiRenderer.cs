@@ -7,37 +7,35 @@ namespace PixelArtDownscale;
 
 internal static class AsciiRenderer
 {
-    private const int SampleSide = 4;
+    private const int SampleSide = 8;
 
     private sealed class Glyph : IDisposable
     {
         public Bitmap Image { get; }
         public double Density { get; set; }
         public double[] Shape { get; } = new double[SampleSide * SampleSide];
+        public double[] Ink { get; } = new double[SampleSide * SampleSide];
 
         public Glyph(Bitmap image) => Image = image;
         public void Dispose() => Image.Dispose();
     }
 
     public static Bitmap Render(Bitmap source, int[] pixels, bool keepSourceSize, string characters,
-        bool invertSource, bool invertColors)
+        bool invertSource, bool invertColors, AsciiColorMode colorMode, int foregroundArgb,
+        int backgroundArgb, int requestedColumns, bool dither)
     {
         using var font = new Font(FontFamily.GenericMonospace, ImageFilters.DefaultAsciiFontSize,
             FontStyle.Regular, GraphicsUnit.Pixel);
         using var format = (StringFormat)StringFormat.GenericTypographic.Clone();
         format.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
-        int cellWidth;
-        int cellHeight;
-        using (var measure = new Bitmap(1, 1))
-        using (var graphics = Graphics.FromImage(measure))
-        {
-            graphics.TextRenderingHint = TextRenderingHint.SingleBitPerPixelGridFit;
-            cellWidth = Math.Max(1, (int)Math.Ceiling(graphics.MeasureString("@", font, PointF.Empty, format).Width));
-            cellHeight = Math.Max(1, (int)Math.Ceiling(font.GetHeight(graphics)));
-        }
+        var cell = ImageFilters.MeasureAsciiCell(ImageFilters.DefaultAsciiFontSize);
+        int cellWidth = cell.Width, cellHeight = cell.Height;
 
-        int columns = keepSourceSize ? Math.Max(1, (int)Math.Round(source.Width / (double)cellWidth)) : source.Width;
-        int rows = keepSourceSize ? Math.Max(1, (int)Math.Round(source.Height / (double)cellHeight)) : source.Height;
+        int columns = requestedColumns > 0 ? requestedColumns : keepSourceSize
+            ? Math.Max(1, (int)Math.Round(source.Width / (double)cellWidth)) : source.Width;
+        if (keepSourceSize) columns = Math.Min(columns, source.Width);
+        int rows = ImageFilters.CalculateAsciiRows(source.Width, source.Height, columns, cellWidth, cellHeight);
+        if (keepSourceSize) rows = Math.Min(rows, source.Height);
         long width = keepSourceSize ? source.Width : (long)columns * cellWidth;
         long height = keepSourceSize ? source.Height : (long)rows * cellHeight;
         if (width > int.MaxValue || height > int.MaxValue)
@@ -59,10 +57,15 @@ internal static class AsciiRenderer
                 for (int q = 0; q < glyph.Shape.Length; q++)
                     glyph.Shape[q] = (glyph.Shape[q] - mean) / maximumDensity;
             }
+            double[] densities = glyphs.Select(glyph => glyph.Density).Distinct().Order().ToArray();
+            double ditherStep = 0;
+            for (int q = 1; q < densities.Length; q++)
+                ditherStep = Math.Max(ditherStep, densities[q] - densities[q - 1]);
 
             result = new Bitmap((int)width, (int)height, PixelFormat.Format24bppRgb);
             using var output = Graphics.FromImage(result);
-            output.Clear(invertColors ? Color.White : Color.Black);
+            output.Clear(colorMode == AsciiColorMode.Monochrome
+                ? (invertColors ? Color.White : Color.Black) : Color.FromArgb(backgroundArgb));
             output.CompositingMode = CompositingMode.SourceCopy;
             output.InterpolationMode = InterpolationMode.NearestNeighbor;
             output.PixelOffsetMode = PixelOffsetMode.Half;
@@ -79,16 +82,24 @@ internal static class AsciiRenderer
                     int right = (int)((long)(x + 1) * width / columns);
                     double mean = SampleCell(pixels, source.Width, source.Height, x, y, columns, rows,
                         invertSource, target, coverage);
+                    double tone = dither ? AsciiDither.Adjust(mean, x, y, ditherStep) : mean;
                     Glyph glyph;
                     if (mean < 0) glyph = blank;
-                    else if (!keepSourceSize)
+                    else if (columns == source.Width && rows == source.Height)
                     {
-                        int tone = Math.Clamp((int)Math.Round(mean * (flatGlyphs.Length - 1)), 0, flatGlyphs.Length - 1);
-                        glyph = flatGlyphs[tone] ??= FindGlyph(glyphs, mean, target, coverage);
+                        int toneIndex = Math.Clamp((int)Math.Round(tone * (flatGlyphs.Length - 1)), 0, flatGlyphs.Length - 1);
+                        glyph = flatGlyphs[toneIndex] ??= FindGlyph(glyphs, mean, tone, target, coverage, maximumDensity);
                     }
-                    else glyph = FindGlyph(glyphs, mean, target, coverage);
-                    output.DrawImage(glyph.Image, new Rectangle(left, top, right - left, bottom - top),
-                        0, 0, cellWidth, cellHeight, GraphicsUnit.Pixel);
+                    else glyph = FindGlyph(glyphs, mean, tone, target, coverage, maximumDensity);
+                    var destination = new Rectangle(left, top, right - left, bottom - top);
+                    if (colorMode == AsciiColorMode.Monochrome)
+                        output.DrawImage(glyph.Image, destination, 0, 0, cellWidth, cellHeight, GraphicsUnit.Pixel);
+                    else
+                    {
+                        int foreground = colorMode == AsciiColorMode.Custom ? foregroundArgb :
+                            SampleSourceColor(pixels, source.Width, source.Height, x, y, columns, rows, glyph.Ink);
+                        DrawColoredGlyph(output, glyph.Image, destination, foreground, backgroundArgb);
+                    }
                 }
             }
             Bitmap completed = result;
@@ -104,6 +115,60 @@ internal static class AsciiRenderer
             result?.Dispose();
             foreach (var glyph in glyphs) glyph.Dispose();
         }
+    }
+
+    private static int SampleSourceColor(int[] pixels, int width, int height, int x, int y, int columns, int rows,
+        double[] ink)
+    {
+        double x0 = x * (double)width / columns, x1 = (x + 1d) * width / columns;
+        double y0 = y * (double)height / rows, y1 = (y + 1d) * height / rows;
+        int left = (int)x0, right = Math.Max(left + 1, (int)Math.Ceiling(x1));
+        int top = (int)y0, bottom = Math.Max(top + 1, (int)Math.Ceiling(y1));
+        double red = 0, green = 0, blue = 0, weight = 0;
+        double fallbackRed = 0, fallbackGreen = 0, fallbackBlue = 0, fallbackWeight = 0;
+        for (int e = top; e < Math.Min(bottom, height); e++)
+            for (int f = left; f < Math.Min(right, width); f++)
+            {
+                int pixel = pixels[e * width + f];
+                int alpha = (int)((uint)pixel >> 24);
+                if (alpha == 0) continue;
+                double area = (Math.Min(x1, f + 1d) - Math.Max(x0, f)) *
+                    (Math.Min(y1, e + 1d) - Math.Max(y0, e));
+                if (area <= 0) continue;
+                int inkX = Math.Clamp((int)(((f + 0.5 - x0) / (x1 - x0)) * SampleSide), 0, SampleSide - 1);
+                int inkY = Math.Clamp((int)(((e + 0.5 - y0) / (y1 - y0)) * SampleSide), 0, SampleSide - 1);
+                double selected = alpha * area * ink[inkY * SampleSide + inkX];
+                int r = pixel >> 16 & 255, g = pixel >> 8 & 255, b = pixel & 255;
+                red += r * selected; green += g * selected; blue += b * selected; weight += selected;
+                fallbackRed += r * alpha * area; fallbackGreen += g * alpha * area; fallbackBlue += b * alpha * area;
+                fallbackWeight += alpha * area;
+            }
+        if (weight == 0)
+        {
+            if (fallbackWeight == 0) return -1;
+            red = fallbackRed; green = fallbackGreen; blue = fallbackBlue; weight = fallbackWeight;
+        }
+        return Color.FromArgb((int)Math.Round(red / weight), (int)Math.Round(green / weight),
+            (int)Math.Round(blue / weight)).ToArgb();
+    }
+
+    private static void DrawColoredGlyph(Graphics output, Bitmap glyph, Rectangle destination,
+        int foregroundArgb, int backgroundArgb)
+    {
+        Color foreground = Color.FromArgb(foregroundArgb), background = Color.FromArgb(backgroundArgb);
+        float red = foreground.R / 255f - background.R / 255f;
+        float green = foreground.G / 255f - background.G / 255f;
+        float blue = foreground.B / 255f - background.B / 255f;
+        using var attributes = new ImageAttributes();
+        attributes.SetColorMatrix(new ColorMatrix(new[]
+        {
+            new[] { red, green, blue, 0f, 0f },
+            new[] { 0f, 0f, 0f, 0f, 0f },
+            new[] { 0f, 0f, 0f, 0f, 0f },
+            new[] { 0f, 0f, 0f, 1f, 0f },
+            new[] { background.R / 255f, background.G / 255f, background.B / 255f, 0f, 1f }
+        }));
+        output.DrawImage(glyph, destination, 0, 0, glyph.Width, glyph.Height, GraphicsUnit.Pixel, attributes);
     }
 
     private static Glyph CreateGlyph(char character, Font font, StringFormat format, int width, int height, bool inverted)
@@ -130,7 +195,8 @@ internal static class AsciiRenderer
 
             var glyph = new Glyph(image);
             var coverage = new double[glyph.Shape.Length];
-            glyph.Density = SampleCell(pixels, width, height, 0, 0, 1, 1, inverted, glyph.Shape, coverage);
+            glyph.Density = SampleCell(pixels, width, height, 0, 0, 1, 1, inverted, glyph.Ink, coverage);
+            Array.Copy(glyph.Ink, glyph.Shape, glyph.Shape.Length);
             return glyph;
         }
         catch
@@ -140,26 +206,27 @@ internal static class AsciiRenderer
         }
     }
 
-    private static Glyph FindGlyph(List<Glyph> glyphs, double mean, double[] target, double[] coverage)
+    private static Glyph FindGlyph(List<Glyph> glyphs, double mean, double tone, double[] target, double[] coverage,
+        double maximumDensity)
     {
-        if (mean <= 0) return glyphs.MinBy(glyph => glyph.Density)!;
-        if (mean >= 1) return glyphs.MaxBy(glyph => glyph.Density)!;
+        if (tone <= 0) return glyphs.MinBy(glyph => glyph.Density)!;
+        if (tone >= 1) return glyphs.MaxBy(glyph => glyph.Density)!;
         Glyph best = glyphs[0];
         double bestScore = double.MaxValue;
         double totalCoverage = coverage.Sum();
         foreach (var glyph in glyphs)
         {
-            double difference = mean - glyph.Density;
+            double difference = tone - glyph.Density;
             double score = difference * difference;
             if (score > bestScore) continue;
             // Compare local contrast too, so slashes and stems can follow edges instead of averaging them away.
             double shapeError = 0;
             for (int q = 0; q < target.Length; q++)
             {
-                double delta = (target[q] - mean) - glyph.Shape[q];
+                double delta = (target[q] - mean) / maximumDensity - glyph.Shape[q];
                 shapeError += delta * delta * coverage[q];
             }
-            score += 0.08 * shapeError / totalCoverage;
+            score += 0.25 * shapeError / totalCoverage;
             if (score >= bestScore) continue;
             bestScore = score;
             best = glyph;

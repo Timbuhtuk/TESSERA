@@ -62,7 +62,7 @@ internal static class NavigationChecks
                 {
                     ("sizeToolsMenu", new[] { "sizeMenuItem", "gridMenuItem", "finalistMenuItem", "pixelArtFinishMenuItem" }),
                     ("colorToolsMenu", new[] { "colorMenuItem", "smoothingMenuItem", "structureProbeMenuItem", "channelMenuItem", "infoMenuItem" }),
-                    ("filtersToolsMenu", new[] { "filtersMenuItem", "removeBackgroundMenuItem" }),
+                    ("filtersToolsMenu", new[] { "monochromeMenuItem", "sharpenMenuItem", "asciiMenuItem", "removeBackgroundMenuItem" }),
                     ("materialsToolsMenu", new[] { "materialMapsMenuItem", "inspectTilesMenuItem", "addToBoardMenuItem" })
                 })
                     Require(Get<MenuItem>(group).Items.Count == commands.Length &&
@@ -75,7 +75,7 @@ internal static class NavigationChecks
                     window.FindName("replaceColorMenuItem") is null, "Removed tools remain in navigation");
                 Require(window.FindName("basisMenu") is null, "Processing source still has a second menu selection");
                 int historyCount = source.Generations.Count;
-                foreach (string command in new[] { "colorMenuItem", "smoothingMenuItem", "structureProbeMenuItem", "contoursMenuItem", "gridLensMenuItem", "channelMenuItem", "filtersMenuItem", "finalistMenuItem", "pixelArtFinishMenuItem", "gridMenuItem", "infoMenuItem" })
+                foreach (string command in new[] { "colorMenuItem", "smoothingMenuItem", "structureProbeMenuItem", "contoursMenuItem", "gridLensMenuItem", "channelMenuItem", "monochromeMenuItem", "sharpenMenuItem", "asciiMenuItem", "finalistMenuItem", "pixelArtFinishMenuItem", "gridMenuItem", "infoMenuItem" })
                 {
                     NavigationTest.Click(window, command); Pump();
                     Require(Get<MenuItem>(command).IsChecked && Get<Bitmap>("_sourceImage") is not null,

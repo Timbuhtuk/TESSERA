@@ -13,7 +13,7 @@ public partial class MainWindow
     private MenuItem fileMenu = null!, toolsMenu = null!, viewMenu = null!, moreMenu = null!;
     private MenuItem openMenuItem = null!, saveMenuItem = null!, saveAllMenuItem = null!, saveDocumentMenuItem = null!, exportMenu = null!;
     private MenuItem createMenu = null!, returnMenuItem = null!;
-    private MenuItem sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, filtersMenuItem = null!, infoMenuItem = null!;
+    private MenuItem sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, infoMenuItem = null!;
     private MenuItem checkUpdatesMenuItem = null!, zoomMenu = null!, backgroundMenu = null!;
     private MenuItem openToolsMenu = null!;
     private sealed record ToolDefinition(string Title, double Height, GroupBox[] Groups);
@@ -88,7 +88,9 @@ public partial class MainWindow
         infoMenuItem = AddTool(colorToolsMenu, "infoMenuItem", "Инфо…", "info", 760, infoToolGroup);
 
         var filtersToolsMenu = NavigationItem("filtersToolsMenu", "Фильтры и фон"); toolsMenu.Items.Add(filtersToolsMenu);
-        filtersMenuItem = AddTool(filtersToolsMenu, "filtersMenuItem", "Фильтры…", "filters", 570, filtersToolGroup);
+        AddTool(filtersToolsMenu, "monochromeMenuItem", "Монохром…", "monochrome", 300, monochromeToolGroup);
+        AddTool(filtersToolsMenu, "sharpenMenuItem", "Резкость…", "sharpen", 390, sharpenToolGroup);
+        AddTool(filtersToolsMenu, "asciiMenuItem", "ASCII…", "ascii", 640, asciiToolGroup);
         AddNavigation(filtersToolsMenu, "removeBackgroundMenuItem", "Удалить фон…", () => NavigationImageActionAsync("background"));
 
         var materialsToolsMenu = NavigationItem("materialsToolsMenu", "Материалы и тайлы"); toolsMenu.Items.Add(materialsToolsMenu);

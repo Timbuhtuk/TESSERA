@@ -21,6 +21,7 @@ public partial class MainWindow
     {
         _gridLensGroup.Header = Localization.Text("Линза · сетка");
         var content = new StackPanel();
+        _gridLensVisible.Style = (Style)FindResource("Ts.SwitchBox");
         _gridLensVisible.Content = Localization.Text("Показывать сетку");
         _gridLensVisible.ToolTip = Localization.Text("Показывает линии только в обычном предпросмотре; результат и экспорт не меняются.");
         ToolTipService.SetShowOnDisabled(_gridLensVisible, true);

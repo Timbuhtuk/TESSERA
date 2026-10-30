@@ -5,12 +5,15 @@ using System.Windows.Automation;
 using Microsoft.Win32;
 using PixelArtDownscale;
 using Bitmap = System.Drawing.Bitmap;
+using DrawingColor = System.Drawing.Color;
 
 namespace DomainColorTest;
 
 public partial class MainWindow
 {
     private bool _updatingAsciiRamp;
+    private int _asciiForegroundArgb = DrawingColor.White.ToArgb();
+    private int _asciiBackgroundArgb = DrawingColor.Black.ToArgb();
 
     private void InitializeFilters()
     {
@@ -30,12 +33,46 @@ public partial class MainWindow
         asciiRenderButton.Click += (_, _) => RenderAsciiImage();
         asciiRampPresetInput.SelectionChanged += (_, _) => ApplyAsciiRampPreset();
         asciiCharactersInput.TextChanged += (_, _) => MarkAsciiRampCustom();
-        asciiDescription.Text = Localization.Text("Яркость и форма участков подбирают символы с учётом их плотности. Рендер сохраняет тон исходника; TXT рассчитан на тёмные символы на светлом фоне.");
-        asciiKeepSourceSizeInput.ToolTip = Localization.Text("Подбирает сетку по пропорциям символов и сохраняет размер исходника. Если выключить, каждый пиксель становится отдельным символом и изображение увеличивается.");
+        asciiDescription.Text = Localization.Text("Плотность и форма участков подбирают символы. PNG может использовать цвета исходника или выбранные цвета; TXT сохраняет только символы.");
+        asciiColumnsLabel.Text = Localization.Text("Ширина, 0 — авто");
+        asciiColumnsInput.ToolTip = Localization.Text("Количество символов в строке. 0 подбирает ширину автоматически; высота следует пропорциям исходника и символа.");
+        asciiColorModeLabel.Text = Localization.Text("Цвет символов");
+        ((System.Windows.Controls.ComboBoxItem)asciiColorModeInput.Items[0]).Content = Localization.Text("Монохром");
+        ((System.Windows.Controls.ComboBoxItem)asciiColorModeInput.Items[1]).Content = Localization.Text("Из исходника");
+        ((System.Windows.Controls.ComboBoxItem)asciiColorModeInput.Items[2]).Content = Localization.Text("Свой цвет");
+        asciiColorModeInput.SelectionChanged += (_, _) => UpdateAsciiColorControls();
+        asciiForegroundButton.Click += (_, _) => ChooseAsciiColor(foreground: true);
+        asciiBackgroundButton.Click += (_, _) => ChooseAsciiColor(foreground: false);
+        UpdateAsciiColorControls();
+        asciiKeepSourceSizeInput.ToolTip = Localization.Text("Сохраняет размер исходника. При выключении строит изображение в размере символьной сетки с учётом прямоугольной формы символов.");
         asciiInvertSourceInput.ToolTip = Localization.Text("Инвертирует яркость перед подбором символов. Прозрачные участки остаются пустыми.");
-        asciiInvertRenderInput.ToolTip = Localization.Text("Меняет цвета готового рендера: чёрные символы на белом фоне. Для TXT не применяется.");
+        asciiInvertRenderInput.ToolTip = Localization.Text("Меняет местами цвет символов и фона в PNG. Для TXT не применяется.");
+        asciiDitherInput.Content = Localization.Text("Упорядоченный дизеринг");
+        asciiDitherInput.ToolTip = Localization.Text("Смешивает соседние символы разной плотности, чтобы плавнее передать полутона. Для TXT и PNG.");
         ApplyAsciiRampPreset();
         RefreshFilterState();
+    }
+
+    private void UpdateAsciiColorControls()
+    {
+        if (asciiColorModeInput is null) return;
+        asciiForegroundButton.IsEnabled = asciiColorModeInput.SelectedIndex == (int)AsciiColorMode.Custom;
+        asciiBackgroundButton.IsEnabled = asciiColorModeInput.SelectedIndex != (int)AsciiColorMode.Monochrome;
+        asciiForegroundButton.Content = Localization.Text("Цвет символов") + ": " +
+            PaletteColorEntry.FormatHex(DrawingColor.FromArgb(_asciiForegroundArgb));
+        asciiBackgroundButton.Content = Localization.Text("Цвет фона") + ": " +
+            PaletteColorEntry.FormatHex(DrawingColor.FromArgb(_asciiBackgroundArgb));
+    }
+
+    private void ChooseAsciiColor(bool foreground)
+    {
+        int current = foreground ? _asciiForegroundArgb : _asciiBackgroundArgb;
+        var picker = new ColorReplaceWindow(DrawingColor.FromArgb(current), foreground ? "Цвет символов" : "Цвет фона")
+        { Owner = Window.GetWindow(asciiToolGroup) ?? this };
+        picker.ShowDialog();
+        if (picker.SelectedColor is not DrawingColor chosen) return;
+        if (foreground) _asciiForegroundArgb = chosen.ToArgb(); else _asciiBackgroundArgb = chosen.ToArgb();
+        UpdateAsciiColorControls();
     }
 
     private void ApplyAsciiRampPreset()
@@ -178,14 +215,19 @@ public partial class MainWindow
         string characters = asciiCharactersInput.Text;
         bool keepSourceSize = asciiKeepSourceSizeInput.IsChecked == true;
         bool invertSource = asciiInvertSourceInput.IsChecked == true;
+        bool dither = asciiDitherInput.IsChecked == true;
+        int columns = asciiColumnsInput.Value;
         using var input = (Bitmap)basis.Clone();
         SetProcessingState(true);
         statusLabel.Text = Localization.Text("Сохранение ASCII-текста…");
         try
         {
-            string text = await Task.Run(() => keepSourceSize
-                ? ImageFilters.ToAscii(input, characters, invertSource)
-                : ImageFilters.ToAsciiPerPixel(input, characters, invertSource));
+            string text = await Task.Run(() => columns > 0
+                ? ImageFilters.ToAsciiAtColumns(input, keepSourceSize ? Math.Min(columns, input.Width) : columns,
+                    characters, invertSource, dither)
+                : keepSourceSize
+                ? ImageFilters.ToAscii(input, characters, invertSource, dither)
+                : ImageFilters.ToAscii(input, input.Width, characters, invertSource, dither));
             string temporary = Path.Combine(Path.GetDirectoryName(output)!, $".{Path.GetFileName(output)}.{Guid.NewGuid():N}.tmp");
             try
             {
@@ -206,6 +248,10 @@ public partial class MainWindow
         bool keepSourceSize = asciiKeepSourceSizeInput.IsChecked == true;
         bool invertSource = asciiInvertSourceInput.IsChecked == true;
         bool invertRender = asciiInvertRenderInput.IsChecked == true;
+        bool dither = asciiDitherInput.IsChecked == true;
+        AsciiColorMode colorMode = (AsciiColorMode)asciiColorModeInput.SelectedIndex;
+        int foregroundArgb = _asciiForegroundArgb, backgroundArgb = _asciiBackgroundArgb;
+        int columns = asciiColumnsInput.Value;
         bool useResult = ReferenceEquals(basis, _downscaledResult);
         var document = _activeSource;
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
@@ -217,19 +263,21 @@ public partial class MainWindow
         {
             var created = await Task.Run(() =>
             {
-                using var output = ImageFilters.RenderAscii(input, keepSourceSize, characters, invertSource, invertRender);
+                using var output = ImageFilters.RenderAscii(input, keepSourceSize, characters, invertSource, invertRender,
+                    colorMode, foregroundArgb, backgroundArgb, columns, dither);
                 var generation = _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
                     Operation = "ASCII",
                     OperationId = ProcessingOperations.Ascii,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = new AsciiSettings { Characters = characters, KeepSourceSize = keepSourceSize, InvertSource = invertSource, InvertColors = invertRender } }),
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = new AsciiSettings { Characters = characters, KeepSourceSize = keepSourceSize, InvertSource = invertSource, InvertColors = invertRender,
+                        ColorMode = colorMode, ForegroundArgb = foregroundArgb, BackgroundArgb = backgroundArgb,
+                        Columns = columns, Dither = dither } }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = false,
                     Caption = $"ASCII · {output.Width} × {output.Height}",
-                    Log = keepSourceSize
-                        ? Localization.Format("ASCII автоматически рассчитан для {0} × {1} px. Размер исходника сохранён. Инверсия исходника: {2}; инверсия рендера: {3}.", input.Width, input.Height, invertSource, invertRender)
-                        : Localization.Format("ASCII один пиксель в один символ: {0} × {1} символов. Итог {2} × {3} px. Инверсия исходника: {4}; инверсия рендера: {5}.", input.Width, input.Height, output.Width, output.Height, invertSource, invertRender)
+                    Log = Localization.Format("ASCII: {0} × {1} px; цвет: {2}; ширина: {3}; инверсия исходника: {4}; инверсия рендера: {5}.",
+                        output.Width, output.Height, colorMode, columns == 0 ? "авто" : columns.ToString(), invertSource, invertRender)
                 });
                 return generation;
             });
