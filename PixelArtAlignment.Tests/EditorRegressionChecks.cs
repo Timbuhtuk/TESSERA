@@ -200,6 +200,7 @@ internal static class EditorRegressionChecks
             Invoke("SaveResult", export);
             using var saved = new Bitmap(export);
             EqualPixels(expected, saved, "Pixel-art finish PNG export");
+            UndoResult(document.SelectedGeneration!.Id, parent.Id, basis);
         }
 
         void VerifyStructure()
@@ -239,6 +240,20 @@ internal static class EditorRegressionChecks
                 Require(document.SelectedGeneration!.ParentGenerationId is null, "Source map retained a result parent");
             }
             EqualPixels(source, Get<Bitmap>("_sourceImage"), "Structure probe modified the source");
+            Guid mapId = document.SelectedGeneration!.Id;
+            var undo = Get<HistoryUndoStore>("_historyUndo").Undo() ?? throw new Exception("Structure map did not enter undo history");
+            Invoke("RestoreHistorySource", undo);
+            Require(document.Generations.All(g => g.Id != mapId), "Structure map survived undo");
+            UndoResult(document.SelectedGeneration!.Id, parent.Id, basis);
+        }
+
+        void UndoResult(Guid result, Guid parent, Bitmap expected)
+        {
+            var snapshot = Get<HistoryUndoStore>("_historyUndo").Undo() ?? throw new Exception("Saved result did not enter undo history");
+            Invoke("RestoreHistorySource", snapshot);
+            var active = Get<SourceEntry>("_activeSource");
+            Require(active.Generations.All(g => g.Id != result) && active.SelectedGeneration?.Id == parent, "Undo retained the new result or lost its previous selection");
+            EqualPixels(expected, Get<Bitmap>("_downscaledResult"), "Restored tool result after undo");
         }
 
         void VerifyExportProtection()

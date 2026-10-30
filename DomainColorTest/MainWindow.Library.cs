@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using PixelArtDownscale;
 using PixelArtAlignment;
 
@@ -277,7 +278,8 @@ public partial class MainWindow
         try
         {
             if (element.DataContext is SourceEntry source) RemoveSource(source);
-            else if (element.DataContext is GenerationEntry generation) RemoveGeneration(generation);
+            else if (element.DataContext is GenerationEntry generation)
+                RemoveGenerationWithUndo(generation, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
         }
         catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось удалить запись или открыть соседнюю: {0}", ex.Message); }
         finally { SetProcessingState(_processing); }

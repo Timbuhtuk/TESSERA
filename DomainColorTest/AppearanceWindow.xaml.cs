@@ -10,16 +10,32 @@ public partial class AppearanceWindow : Window
     private readonly Func<TesseraTheme, bool> _apply;
     private TesseraTheme _selected;
     private readonly Func<string, bool>? _applyLanguage;
+    private readonly Func<int, bool>? _applyUndoDepth;
     private string _language;
     private bool _updating;
 
-    public AppearanceWindow(TesseraTheme theme, Func<TesseraTheme, bool> apply, string language = "ru", Func<string, bool>? applyLanguage = null)
+    public AppearanceWindow(TesseraTheme theme, Func<TesseraTheme, bool> apply, string language = "ru", Func<string, bool>? applyLanguage = null,
+        int undoDepth = 5, Func<int, bool>? applyUndoDepth = null)
     {
         _apply = apply;
         _applyLanguage = applyLanguage;
+        _applyUndoDepth = applyUndoDepth;
         _language = language;
         InitializeComponent();
         _updating = true; languageInput.SelectedIndex = language == "en" ? 1 : 0; _updating = false;
+        historyUndoHeading.Text = Localization.Text("История отмены");
+        historyUndoLabel.Text = Localization.Text("Действий в буфере (1–64)");
+        historyUndoDescription.Text = Localization.Text("Ctrl+Z отменяет изменения дерева результатов. Буфер сохраняется между запусками.");
+        historyUndoDepthInput.Value = Math.Clamp(undoDepth, 1, 64);
+        historyUndoDepthInput.ValueChanged += (_, _) =>
+        {
+            if (_updating || _applyUndoDepth is null) return;
+            if (!_applyUndoDepth(historyUndoDepthInput.Value))
+            {
+                _updating = true; historyUndoDepthInput.Value = undoDepth; _updating = false;
+            }
+            else undoDepth = historyUndoDepthInput.Value;
+        };
         languageSavedHint.Visibility = language == Localization.Language ? Visibility.Collapsed : Visibility.Visible;
         SelectTheme(theme);
         updatesHeading.Text = Localization.Text("Обновления");

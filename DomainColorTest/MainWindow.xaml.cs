@@ -40,7 +40,12 @@ public partial class MainWindow : Window
         saveDialog.Title = Localization.Text("Сохранить результат");
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
+        _historyUndo = new HistoryUndoStore(libraryDirectory, _appearanceSettings.HistoryUndoDepth);
+        _historyUndo.RecoverPending();
         InitializeComponent();
+        PreviewKeyDown += HistoryUndoKeyDown;
+        insertHistoryInput.Content = Localization.Text("Вставить и пересчитать");
+        insertHistoryInput.ToolTip = Localization.Text("Следующая операция вставится после выбранного результата. Все последующие результаты будут пересчитаны.");
         InitializeSizeFactor();
         InitializeChannelTool();
         InitializeHistoryTrays();
@@ -330,8 +335,7 @@ public partial class MainWindow : Window
                 }
                 finally { result.CroppedSource.Dispose(); result.Downscaled.Dispose(); }
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Format("Готово · {0} × {1}. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)
@@ -606,8 +610,7 @@ public partial class MainWindow : Window
                         : Localization.Format("Выравнивание: {0:F3} с. Ячейка: {1} px.", result.ElapsedSeconds, result.CellSize)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Format("Готово. Ячейка {0} px. Результат сохранён в истории.", generation.CellSize);
         }
         catch (Exception ex)

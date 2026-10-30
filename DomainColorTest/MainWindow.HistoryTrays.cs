@@ -190,8 +190,21 @@ public partial class MainWindow
     private void PromoteHistoryBranch(GenerationEntry entry, int? insertion = null)
     {
         if (_branchLayout is null || _trayHistorySource?.Generations.Contains(entry) != true) return;
-        _branchLayout.Promote(entry.Id, CurrentBranchPresentation(), insertion);
-        RefreshHistoryLayout(); generationStrip.ScrollIntoView(entry); ScheduleTraySave();
+        var source = _trayHistorySource;
+        if (_branchLayout.RootOf(entry.Id) == entry.Id && insertion is null) return;
+        var transaction = _historyUndo.Begin(source, CurrentBranchPresentation());
+        try
+        {
+            _branchLayout.Promote(entry.Id, CurrentBranchPresentation(), insertion);
+            RefreshHistoryLayout(); generationStrip.ScrollIntoView(entry); WriteTrayState();
+            transaction.Commit();
+        }
+        catch (Exception ex)
+        {
+            try { RestoreHistorySource(transaction.Rollback()); }
+            catch (Exception rollback) { ex = new AggregateException(ex, rollback); }
+            ShowHistoryFailure(Localization.Text("Перенос ветки"), ex);
+        }
     }
 
     private void OpenHistoryContextMenu(GenerationEntry generation, FrameworkElement target)
@@ -203,7 +216,18 @@ public partial class MainWindow
         detach.Click += (_, _) => PromoteHistoryBranch(generation);
         var macro = new MenuItem { Header = Localization.Text("Создать макрос…") };
         macro.Click += (_, _) => CreateMacro(generation);
-        menu.Items.Add(detach); menu.Items.Add(macro);
+        var merge = new MenuItem { Header = Localization.Text("Объединить с веткой") };
+        if (_trayHistorySource is { } source && _branchLayout is { } layout)
+            foreach (var leaf in source.Generations.Where(g => layout.RootOf(g.Id) != layout.RootOf(generation.Id) &&
+                !source.Generations.Any(child => layout.DisplayParents[child.Id] == g.Id)))
+            {
+                var targetLeaf = leaf;
+                var item = new MenuItem { Header = targetLeaf.Label };
+                item.Click += (_, _) => MergeHistoryBranches(generation, targetLeaf);
+                merge.Items.Add(item);
+            }
+        merge.IsEnabled = merge.Items.Count > 0;
+        menu.Items.Add(detach); menu.Items.Add(merge); menu.Items.Add(macro);
         menu.PlacementTarget = target; menu.IsOpen = true;
     }
 
@@ -218,6 +242,14 @@ public partial class MainWindow
         if (!e.Data.GetDataPresent(GenerationDragFormat) || !IsHistoryDropTarget(e.OriginalSource as DependencyObject)) return false;
         bool supported = TryGetDraggedGeneration(e.Data, out var source, out var generation);
         bool valid = !_processing && supported && source == _activeSource;
+        if (valid && _branchLayout is { } branch &&
+            ItemsControl.ContainerFromElement(generationStrip, e.OriginalSource as DependencyObject) is ListBoxItem { Content: GenerationEntry target } &&
+            branch.RootOf(target.Id) != branch.RootOf(generation.Id))
+        {
+            e.Effects = DragDropEffects.Copy; e.Handled = true;
+            if (commit) MergeHistoryBranches(generation, target);
+            return true;
+        }
         int insertion = 0;
         if (valid && _branchLayout is { } layout)
         {
@@ -410,11 +442,16 @@ public partial class MainWindow
     {
         try
         {
-            Directory.CreateDirectory(_library.DirectoryPath);
-            File.WriteAllText(TrayStatePath + ".tmp", JsonSerializer.Serialize(_trayState));
-            File.Move(TrayStatePath + ".tmp", TrayStatePath, true);
+            WriteTrayState();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         { statusLabel.Text = Localization.Text("Не удалось сохранить расположение лент: ") + ex.Message; }
+    }
+
+    private void WriteTrayState()
+    {
+        Directory.CreateDirectory(_library.DirectoryPath);
+        File.WriteAllText(TrayStatePath + ".tmp", JsonSerializer.Serialize(_trayState));
+        File.Move(TrayStatePath + ".tmp", TrayStatePath, true);
     }
 }

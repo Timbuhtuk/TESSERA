@@ -97,8 +97,7 @@ public partial class MainWindow
                     Log = Localization.Text("Цвета переведены в оттенки серого. Размер и прозрачность сохранены.")
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Text("Монохром сохранён в истории.");
         }
         catch (Exception ex)
@@ -139,8 +138,7 @@ public partial class MainWindow
                     Log = Localization.Format("Локальная резкость {0}%, порог {1}. Размер и прозрачность сохранены.", strength, threshold)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Text("Резкость сохранена в истории.");
         }
         catch (Exception ex)
@@ -235,8 +233,7 @@ public partial class MainWindow
                 });
                 return generation;
             });
-            document.Generations.Add(created);
-            SelectGeneration(created);
+            if (!CommitGeneration(document, created)) return;
             statusLabel.Text = Localization.Text("ASCII-изображение сохранено в истории.");
         }
         catch (Exception ex)

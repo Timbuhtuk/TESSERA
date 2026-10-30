@@ -155,8 +155,7 @@ public partial class MainWindow
                     Log = Localization.Format("{0} × {1} → {2} × {3}. Одна ячейка — один пиксель. Неполные крайние ячейки сохранены.", source.Width, source.Height, compact.Width, compact.Height)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Format("Готово · {0} × {1}. Каждая ячейка стала одним пикселем. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)

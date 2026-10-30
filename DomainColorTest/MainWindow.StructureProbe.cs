@@ -166,10 +166,9 @@ public partial class MainWindow
                             options.DistinctDetailDistance)
                     });
             });
-            document.Generations.Add(generation);
+            if (!CommitGeneration(document, generation)) return;
             if (_workspaceReady) CloseDockedWorkspaceTool();
             else if (_toolWindows.TryGetValue("structure-probe", out var tool)) tool.Close();
-            SelectGeneration(generation);
             statusLabel.Text = Localization.Text(map ? "Карта структуры сохранена как результат." : "Проба структуры сохранена как результат.");
         }
         catch (Exception ex)

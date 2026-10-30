@@ -103,6 +103,10 @@
                 </RadioButton>
                 <TextBlock Text="{local:Translate TextFE0134C91109}" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,6" />
                 <Separator Margin="0,10,0,16" />
+                <TextBlock x:Name="historyUndoHeading" FontWeight="SemiBold" Margin="0,0,0,8" />
+                <DockPanel Margin="0,0,0,7"><TextBlock x:Name="historyUndoLabel" Width="220" VerticalAlignment="Center" /><local:IntegerInput x:Name="historyUndoDepthInput" Minimum="1" Maximum="64" Value="5" Width="90" HorizontalAlignment="Left" /></DockPanel>
+                <TextBlock x:Name="historyUndoDescription" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16" />
+                <Separator Margin="0,0,0,16" />
                 <TextBlock x:Name="updatesHeading" FontWeight="SemiBold" Margin="0,0,0,10" />
                 <StackPanel x:Name="updatesHost" />
             </StackPanel>

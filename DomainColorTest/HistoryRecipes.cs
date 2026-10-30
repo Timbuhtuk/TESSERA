@@ -9,6 +9,48 @@ internal static class HistoryRecipes
 {
     public static ProcessingRecipe Single(ProcessingStep step) => new() { Steps = [step] };
 
+    public static bool TryGetLocal(SourceEntry source, GenerationEntry entry, out ProcessingRecipe? recipe, out string reason)
+    {
+        recipe = entry.AppliedRecipe ?? RestoreLegacy(entry);
+        reason = "";
+        if (recipe is null && entry.RecipeSnapshot is { } snapshot)
+        {
+            ProcessingRecipe? parent = null;
+            if (entry.ParentGenerationId is { } parentId)
+                parent = source.Generations.FirstOrDefault(g => g.Id == parentId)?.RecipeSnapshot;
+            int prefix = parent?.Steps.Count ?? 0;
+            bool samePrefix = parent is null || snapshot.Steps.Take(prefix).Select(step => JsonSerializer.Serialize(step, WorkflowJson.Options))
+                .SequenceEqual(parent.Steps.Select(step => JsonSerializer.Serialize(step, WorkflowJson.Options)));
+            if (snapshot.Steps.Count > prefix && samePrefix)
+                recipe = new ProcessingRecipe { Steps = snapshot.Steps.Skip(prefix).ToArray() };
+        }
+        if (recipe is null)
+        {
+            reason = entry.RecipeUnavailableReason ?? Localization.Format("У результата «{0}» не сохранены параметры операции.", entry.Label);
+            return false;
+        }
+        try
+        {
+            if (recipe.Steps.Any(step => step.UsePreviousAlignment))
+            {
+                bool aligned = false;
+                var steps = new List<ProcessingStep>();
+                foreach (var step in recipe.Steps)
+                {
+                    steps.Add(step.UsePreviousAlignment && !aligned
+                        ? new ProcessingStep { OperationId = step.OperationId, CellSize = Math.Max(1, entry.CellSize) } : step);
+                    if (step.OperationId is ProcessingOperations.Align or ProcessingOperations.AlignLocalSnapped) aligned = true;
+                    else if (step.OperationId == ProcessingOperations.AlignLocal) aligned = false;
+                }
+                var normalized = new ProcessingRecipe { Steps = steps };
+                WorkflowExecutor.Validate(normalized);
+            }
+            else WorkflowExecutor.Validate(recipe);
+            return true;
+        }
+        catch (Exception ex) { reason = ex.Message; recipe = null; return false; }
+    }
+
     public static void Capture(SourceEntry source, GenerationEntry entry)
     {
         if (entry.RecipeSnapshot is not null) return;

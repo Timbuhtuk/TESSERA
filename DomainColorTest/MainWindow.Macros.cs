@@ -148,6 +148,7 @@ public partial class MainWindow
         SetProcessingState(true);
         _macroList.IsEnabled = _macroApply.IsEnabled = false; _macroCancel.Visibility = Visibility.Visible;
         int savedSteps = 0;
+        bool historyCommitFailed = false;
         try
         {
             using var output = await Task.Run(() => new WorkflowExecutor().Execute(input, applied, cancellation.Token,
@@ -168,10 +169,13 @@ public partial class MainWindow
                         Log = $"{macro.Name} · " + Localization.Format("Шаг {0}/{1}: {2}", stepProgress.Index, stepProgress.Count, name)
                     });
                     settings = stepSettings;
-                    document.Generations.Add(generation);
+                    if (!CommitGeneration(document, generation))
+                    {
+                        historyCommitFailed = true;
+                        throw new InvalidOperationException(Localization.Text("Не удалось сохранить шаг в истории."));
+                    }
                     parentId = generation.Id;
                     savedSteps++;
-                    SelectGeneration(generation);
                     statusLabel.Text = Localization.Format("Шаг {0}/{1}: {2}", stepProgress.Index, stepProgress.Count, name);
                 })));
             statusLabel.Text = Localization.Format("Макрос применён: {0}. Сохранено шагов: {1}.", macro.Name, savedSteps);
@@ -185,6 +189,7 @@ public partial class MainWindow
         {
             statusLabel.Text = Localization.Format("Макрос отменён. Сохранено шагов: {0}.", savedSteps);
         }
+        catch (WorkflowStepException) when (historyCommitFailed) { }
         catch (WorkflowStepException ex)
         {
             ShowMacroError(Localization.Format("Шаг {0}: {1}. {2} Сохранено шагов: {3}.",

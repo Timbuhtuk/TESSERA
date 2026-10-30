@@ -107,8 +107,7 @@ public partial class MainWindow
                         modeName, input.Width, input.Height, output.Width, output.Height, factor)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Format("Готово · TCR {0} {1}×, {2} × {3}.", modeName, factor, generation.Width, generation.Height);
         }
         catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось уменьшить изображение: {0}", ex.Message); }

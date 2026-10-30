@@ -215,6 +215,28 @@ public sealed partial class ImageLibrary(string directory)
         return entry;
     }
 
+    public void ReplaceGeneration(SourceEntry source, GenerationEntry entry, Bitmap result, Bitmap? crop = null)
+    {
+        string folder = GenerationDirectory(source, entry);
+        if (!Directory.Exists(folder)) throw new DirectoryNotFoundException(folder);
+        string png = Path.Combine(folder, "result.png");
+        string temporary = png + ".tmp";
+        try { SavePng(result, temporary); File.Move(temporary, png, overwrite: true); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        entry.Width = result.Width;
+        entry.Height = result.Height;
+        string cropPath = Path.Combine(folder, "crop.png");
+        if (entry.HasCrop && crop is null) throw new InvalidOperationException("Recomputed crop is missing.");
+        if (crop is not null) SavePng(crop, cropPath);
+        else if (File.Exists(cropPath)) File.Delete(cropPath);
+        entry.HasCrop = crop is not null;
+        entry.Thumbnail = ReadThumbnail(png);
+        WriteRecord(Path.Combine(folder, "generation.json"), entry, overwrite: true);
+    }
+
+    public void DeleteUnpublishedGeneration(SourceEntry source, GenerationEntry entry)
+        => RemoveEntryDirectory(GenerationDirectory(source, entry));
+
     public void RemoveSource(SourceEntry source) => RemoveEntryDirectory(SourceDirectory(source));
 
     public SourceEntry Clone(SourceEntry source, Guid id, string name)

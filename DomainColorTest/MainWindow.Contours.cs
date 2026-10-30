@@ -191,9 +191,8 @@ public partial class MainWindow
                             Localization.Text(options.ProtectDetails ? "Да" : "Нет"))
                     });
             });
-            document.Generations.Add(generation);
+            if (!CommitGeneration(document, generation)) return;
             CloseContourTool();
-            SelectGeneration(generation);
             statusLabel.Text = Localization.Text("Карта кандидатов сохранена в истории как результат.");
         }
         catch (Exception ex)

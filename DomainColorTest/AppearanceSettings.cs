@@ -18,6 +18,7 @@ public sealed class AppearanceSettings
 
     public TesseraTheme Theme { get; set; } = TesseraTheme.Dark;
     public string Language { get; set; } = "ru";
+    public int HistoryUndoDepth { get; set; } = 5;
 
     public static AppearanceSettings Load(string path)
     {
@@ -27,6 +28,7 @@ public sealed class AppearanceSettings
             var settings = JsonSerializer.Deserialize<AppearanceSettings>(File.ReadAllText(path), JsonOptions);
             if (settings is null || !Enum.IsDefined(settings.Theme)) return new AppearanceSettings();
             if (settings.Language is not ("ru" or "en")) settings.Language = "ru";
+            settings.HistoryUndoDepth = Math.Clamp(settings.HistoryUndoDepth, 1, 64);
             return settings;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
@@ -39,6 +41,7 @@ public sealed class AppearanceSettings
     {
         if (!Enum.IsDefined(Theme)) throw new ArgumentOutOfRangeException(nameof(Theme));
         if (Language is not ("ru" or "en")) throw new ArgumentOutOfRangeException(nameof(Language));
+        if (HistoryUndoDepth is < 1 or > 64) throw new ArgumentOutOfRangeException(nameof(HistoryUndoDepth));
         path = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";

@@ -78,6 +78,7 @@ public partial class MainWindow
             });
 
         var tool = new EditorToolWindow(this, key, title, content, height);
+        tool.PreviewKeyDown += HistoryUndoKeyDown;
         tool.Activated += (_, _) => { _cropToolActive = key == "size"; UpdateCropPreview(); SetActiveLivePreviewTool(key); };
         tool.Closed += (_, _) =>
         {
