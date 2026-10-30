@@ -219,8 +219,10 @@ public partial class MainWindow
             if (moodboardWorkspace.HasBoard && !moodboardWorkspace.CanLeave()) return;
             var board = new WorkspaceAsset { Kind = WorkspaceAssetKind.Board, Name = name, ContentFile = "content.tboard" };
             string path = _workspaceCatalog.ContentPath(board); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            ShowMoodboardWorkspace(); moodboardWorkspace.CreateWorkspaceBoard(1024, 768); await moodboardWorkspace.SaveToFileAsync(path);
-            _workspaceCatalog.State.Assets.Add(board); AddNewWorkspaceAsset(board); _workspaceActive = board; moodboardWorkspace.WorkspaceSavePath = path;
+            ShowMoodboardWorkspace(); moodboardWorkspace.CreateWorkspaceBoard(1024, 768);
+            moodboardWorkspace.WorkspaceSavePath = path;
+            await moodboardWorkspace.SaveToFileAsync(path);
+            _workspaceCatalog.State.Assets.Add(board); AddNewWorkspaceAsset(board); _workspaceActive = board;
             UpdateDocumentPreview(board); return;
         }
         if (action == "new-tiles")
