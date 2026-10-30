@@ -28,6 +28,7 @@
   <ItemGroup>
     <Resource Include="Assets\app.ico" />
     <Resource Include="Assets\settings.svg" />
+    <Resource Include="Assets\ResultIcons\*.svg" />
     <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
     <EmbeddedResource Include="$(ReleaseNotesFile)" LogicalName="Tessera.ReleaseNotes.json" />
     <Resource Include="Assets\app-icon.png" />

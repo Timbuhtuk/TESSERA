@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <style>.icon{fill:none;stroke:#e9eef2;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.accent{stroke:#64d8ff}</style>
+  <g class="icon">
+    <rect x="2" y="4" width="7" height="7" />
+    <rect class="accent" x="15" y="13" width="7" height="7" />
+    <path d="M8 17h5m-2-3 3 3-3 3M16 7h-5m2-3-3 3 3 3" />
+  </g>
+</svg>

@@ -14,6 +14,7 @@ public sealed class TrayTemplateSelector : DataTemplateSelector
         {
             TrayFolderHeader => "TrayFolderTemplate",
             HistorySourceRoot => "HistorySourceTemplate",
+            GenerationEntry => "GenerationCardTemplate",
             _ => "TrayCardTemplate"
         });
 }

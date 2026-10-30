@@ -19,6 +19,20 @@
     <SolidColorBrush x:Key="HoverBrush" Color="{DynamicResource Ts.HoverColor}" />
     <SolidColorBrush x:Key="PressedBrush" Color="{DynamicResource Ts.PressedColor}" />
 
+    <DataTemplate x:Key="WrappedToolTipText">
+        <TextBlock Text="{Binding}" TextWrapping="Wrap" MaxWidth="380" />
+    </DataTemplate>
+    <Style TargetType="{x:Type ToolTip}">
+        <Setter Property="Background" Value="{DynamicResource Ts.Raised}" />
+        <Setter Property="Foreground" Value="{DynamicResource Ts.Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Ts.BorderStrong}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="FontFamily" Value="{DynamicResource Ts.UiFont}" />
+        <Setter Property="MaxWidth" Value="400" />
+        <Setter Property="ContentTemplateSelector"><Setter.Value><local:WrappedToolTipSelector TextTemplate="{StaticResource WrappedToolTipText}" /></Setter.Value></Setter>
+    </Style>
+
     <Style x:Key="Ts.SwitchBox" TargetType="{x:Type CheckBox}">
         <Setter Property="Foreground" Value="{DynamicResource Ts.Text}" />
         <Setter Property="FontFamily" Value="{DynamicResource Ts.UiFont}" />
