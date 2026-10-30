@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Отдельные фильтры и цветной ASCII",
-        "en": "Separate filters and color ASCII"
+        "ru": "Резкость: меньше цветовых выбросов",
+        "en": "Sharpen: fewer color outliers"
       },
       "notes": {
-        "ru": "- Фильтры и фон: монохром, резкость и ASCII открываются как отдельные инструменты. Переключатели инструментов получили вид свитч-боксов.\n- ASCII: цвет символов можно брать из исходника или задавать вручную, отдельно выбирая фон. Настраиваемая ширина — до 512 символов; 0 включает автоматический выбор.\n- ASCII: TXT и PNG учитывают прямоугольные пропорции символов. Более точный подбор формы сохраняет горизонтальные и вертикальные детали; цвет берётся из области штрихов выбранного знака.\n- ASCII: шрифт по умолчанию уменьшен для большей детализации. Опциональный упорядоченный дизеринг передаёт полутона; цвет, ширина и дизеринг сохраняются в истории и макросах. TXT остаётся текстовым, цвет применяется к PNG.",
-        "en": "- Filters and background: Monochrome, Sharpen and ASCII open as separate tools. Tool checkboxes now use switch controls.\n- ASCII: use source colors or choose a character color and background separately. Set a width of up to 512 characters; 0 selects it automatically.\n- ASCII: TXT and PNG account for rectangular character proportions. More precise shape matching retains horizontal and vertical details, and samples color beneath the chosen glyph strokes.\n- ASCII: a smaller default font adds detail. Optional ordered dithering represents midtones; color, width and dithering are saved in history and macros. TXT remains plain text; color applies to PNG."
+        "ru": "- Резкость: уменьшено появление одиночных оттенков, резко выбивающихся из соседних цветов. Плавные переходы и новые промежуточные оттенки сохраняются.",
+        "en": "- Sharpen: reduced isolated colors that stand out sharply from their neighbors. Smooth transitions and new intermediate shades remain available."
       }
     },
     {

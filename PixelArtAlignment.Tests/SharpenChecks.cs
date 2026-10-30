@@ -27,6 +27,8 @@ internal static class SharpenChecks
         Require(result.Size == source.Size, "Sharpen changed dimensions");
         Require(result.GetPixel(3, 1).R < source.GetPixel(3, 1).R &&
             result.GetPixel(4, 1).R > source.GetPixel(4, 1).R, "Blurred boundary did not become steeper");
+        Require(result.GetPixel(3, 1).R is > 0 and < 64 && result.GetPixel(4, 1).R is > 191 and < 255,
+            "Sharpen stopped creating useful intermediate colors");
         for (int y = 0; y < result.Height; y++)
         for (int x = 0; x < result.Width; x++)
         {
@@ -39,6 +41,16 @@ internal static class SharpenChecks
         Equal(source, off);
         Equal(source, gated);
         Require(source.GetPixel(3, 1).R == 64, "Sharpen modified the source");
+
+        using var mixed = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
+        for (int y = 0; y < 3; y++)
+        for (int x = 0; x < 3; x++) mixed.SetPixel(x, y, Color.FromArgb(20, 20, 120));
+        mixed.SetPixel(0, 0, Color.FromArgb(220, 30, 30));
+        mixed.SetPixel(2, 0, Color.FromArgb(30, 220, 30));
+        mixed.SetPixel(1, 1, Color.FromArgb(100, 100, 100));
+        using var mixedResult = ImageFilters.Sharpen(mixed, 100, 0);
+        Require(mixedResult.GetPixel(1, 1).ToArgb() == mixed.GetPixel(1, 1).ToArgb(),
+            "Sharpen combined unrelated red and green neighbors into a yellow outlier");
 
         using var transparent = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
         for (int y = 0; y < 3; y++)
