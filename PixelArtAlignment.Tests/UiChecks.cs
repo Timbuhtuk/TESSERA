@@ -428,21 +428,22 @@ internal static class UiChecks
             }
             Require(Get<TextBlock>("infoSourceSummary").Text.Contains($"{source.Width} × {source.Height}") &&
                 Get<TextBlock>("infoSourceSummary").Text.Contains($"{ImageColorTools.CountColors(source):N0}") &&
-                Get<ItemsControl>("infoPaletteList").Items.Count == ImageColorTools.CountColors(source),
-                "Info did not count and list visible source colors");
+                Get<ColorTreemap>("infoColorTreemap").Areas.Count == ImageColorTools.CountColors(source),
+                "Info did not count and map visible source colors");
             Require(Get<TextBlock>("infoResultSummary").Text == "Пока нет результата",
                 "Info retained an old result after switching source");
             Color oldColor = source.GetPixel(0, 0);
-            var colorEntry = Get<ItemsControl>("infoPaletteList").Items.Cast<PaletteColorEntry>()
-                .Single(color => color.Color.ToArgb() == Color.FromArgb(oldColor.R, oldColor.G, oldColor.B).ToArgb());
-            Invoke("InfoColorClick", new Button { DataContext = colorEntry }, new RoutedEventArgs(Button.ClickEvent));
+            var colorEntry = Get<ColorTreemap>("infoColorTreemap").Areas
+                .Single(color => color.Color?.ToArgb() == Color.FromArgb(oldColor.R, oldColor.G, oldColor.B).ToArgb());
+            Get<ColorTreemap>("infoColorTreemap").SelectColor(colorEntry.Color!.Value);
             var replaceTool = infoTool!.OwnedWindows.OfType<ColorReplaceWindow>().Single(tool => tool.IsVisible);
             var replaceFrame = (Border)replaceTool.FindName("dialogFrame");
             Require(ReferenceEquals(replaceFrame.Style, replaceTool.FindResource("Ts.DialogBorder")),
                 "Color replacement did not use the StoryBook dialog frame");
             var selectedColor = (PaletteColorEntry)((ListBox)replaceTool.FindName("paletteList")).SelectedItem;
-            Require(selectedColor.Hex == colorEntry.Hex &&
-                ((TextBox)replaceTool.FindName("newHexInput")).Text == colorEntry.Hex &&
+            string selectedHex = PaletteColorEntry.FormatHex(colorEntry.Color!.Value);
+            Require(selectedColor.Hex == selectedHex &&
+                ((TextBox)replaceTool.FindName("newHexInput")).Text == selectedHex &&
                 ((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly,
                 "Replacement palette did not preselect the clicked color");
             double initialHue = (double)typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(replaceTool)!;
@@ -496,9 +497,11 @@ internal static class UiChecks
             {
                 Pump(); Thread.Sleep(5);
             }
-            Require(Get<TextBlock>("infoPaletteStatus").Text.Contains("Список доступен до 1024") &&
-                Get<ItemsControl>("infoPaletteList").Items.Count == 0,
-                "Info attempted to display a palette above its 1024-color limit");
+            var manyAreas = Get<ColorTreemap>("infoColorTreemap").Areas;
+            Require(Get<TextBlock>("infoPaletteStatus").Text.Contains("1024 самых частых") &&
+                manyAreas.Count == 1025 && manyAreas[^1].Color is null && manyAreas[^1].Pixels == 32 &&
+                manyAreas.Sum(area => area.Pixels) == 1056,
+                "Info did not group the tail of a palette above its 1024-color limit");
             Require(Get<Button>("infoManualReplaceButton").Visibility == Visibility.Visible,
                 "Info did not offer HEX replacement for a large palette");
             Click("infoManualReplaceButton"); Pump();

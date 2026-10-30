@@ -220,6 +220,28 @@ internal static class WorkspaceChecks
             hover.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount) { RoutedEvent = System.Windows.Input.Mouse.MouseLeaveEvent });
             Require(hover.Background is SolidColorBrush { IsFrozen: false }, "Frozen theme brushes remain safe for hover motion");
 
+            var existingBoards = window.Workspace.State.Assets.Select(a => a.Id).ToHashSet();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                var overlay = Get<Grid>(browser, "browserGrid").Children.OfType<Grid>().Last();
+                var panel = (StackPanel)((Border)overlay.Children[0]).Child;
+                ((TextBox)((StackPanel)panel.Children[1]).Children[1]).Text = "Created board";
+                ((Button)((WrapPanel)panel.Children[2]).Children[1]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }));
+            Wait(Action("new-board", board));
+            var createdBoard = window.Workspace.State.Assets.Single(a => !existingBoards.Contains(a.Id));
+            string createdPath = window.Workspace.ContentPath(createdBoard);
+            Require(createdBoard.Kind == WorkspaceAssetKind.Board && File.Exists(createdPath) &&
+                new WorkspaceCatalog(libraryRoot).State.Assets.Any(a => a.Id == createdBoard.Id),
+                "New board was not saved and registered in its own library");
+            var createdReload = new MoodboardWorkspace(); createdReload.LoadFromFile(createdPath);
+            Require(createdReload.HasBoard, "New workspace board did not survive reopening");
+            bool rejectedInternalExport = false;
+            try { boardEditor.SaveToFile(Path.Combine(libraryRoot, "forbidden.tboard")); }
+            catch (InvalidOperationException) { rejectedInternalExport = true; }
+            Require(rejectedInternalExport, "Board creation bypassed unrelated library export protection");
+            Require(!File.Exists(Path.Combine(libraryRoot, "forbidden.tboard")), "Board creation bypassed unrelated library export protection");
+
             Task Action(string name, WorkspaceAsset selectedAsset) => (Task)typeof(MainWindow).GetMethod("WorkspaceActionAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [name, selectedAsset])!;
             Task Open(Guid id) => window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == id));
             HashSet<Guid> SourceIds() => sources.Items.OfType<SourceEntry>().Select(s => s.Id).ToHashSet();

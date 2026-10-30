@@ -10,8 +10,8 @@ public partial class MainWindow
 {
     private readonly GroupBox _gridLensGroup = new();
     private readonly CheckBox _gridLensVisible = new() { IsChecked = true };
-    private readonly IntegerInput _gridLensWidth = new() { Minimum = 2, Maximum = 2048, Value = 16 };
-    private readonly IntegerInput _gridLensHeight = new() { Minimum = 2, Maximum = 2048, Value = 16 };
+    private readonly IntegerInput _gridLensWidth = new() { Minimum = 1, Maximum = 2048, Value = 16 };
+    private readonly IntegerInput _gridLensHeight = new() { Minimum = 1, Maximum = 2048, Value = 16 };
     private readonly IntegerInput _gridLensOffsetX = new() { Minimum = 0, Maximum = 15, Value = 0 };
     private readonly IntegerInput _gridLensOffsetY = new() { Minimum = 0, Maximum = 15, Value = 0 };
     private readonly Button _gridLensColorButton = new();

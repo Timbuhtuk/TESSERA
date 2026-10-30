@@ -212,22 +212,7 @@
                             <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,3,0,12" />
                             <TextBlock x:Name="infoBasisLabel" Text="{local:Translate Text5BD4F6E8307B}" FontWeight="SemiBold" />
                             <TextBlock x:Name="infoPaletteStatus" Text="{local:Translate TextDEEA9C26AAEA}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,4,0,10" TextWrapping="Wrap" />
-                            <ScrollViewer MaxHeight="325" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                <ItemsControl x:Name="infoPaletteList" AutomationProperties.Name="{local:Translate TextB676697E1180}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Button HorizontalContentAlignment="Stretch" Padding="8,5" Margin="0,0,0,4" Click="InfoColorClick" ToolTip="{local:Translate TextD15BDF7376E7}">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                                                    <Border Width="24" Height="24" Background="{Binding Brush}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" HorizontalAlignment="Left" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Hex}" FontFamily="{StaticResource UiFont}" VerticalAlignment="Center" />
-                                                    <TextBlock Grid.Column="2" Text="›" FontSize="18" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" />
-                                                </Grid>
-                                            </Button>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                            <local:ColorTreemap x:Name="infoColorTreemap" Height="260" AutomationProperties.Name="Карта цветов изображения" />
                             <Button x:Name="infoManualReplaceButton" Content="{local:Translate Text1E08BCEFE56A}" Margin="0,10,0,0" Visibility="Collapsed" />
                         </StackPanel>
                     </GroupBox>

@@ -96,7 +96,7 @@ public partial class MainWindow
                 }
                 catch (Exception ex) { throw new InvalidOperationException($"{old.Label} ({old.OperationId ?? old.Operation}): {ex.Message}", ex); }
                 var record = JsonSerializer.Deserialize<GenerationEntry>(JsonSerializer.Serialize(old))!;
-                record.Settings = RecomputedSettings(actualParent.Settings, local!, resolvedCell);
+                record.Settings = RecomputedSettings(actualParent.Settings, local!, resolvedCell, result);
                 if (resolvedCell is { } cell) record.Settings.CellSize = record.CellSize = cell;
                 if (old.ParentGenerationId == anchor.Id) record.ParentGenerationId = inserted.Id;
                 var parentSnapshot = parent.Id == inserted.Id ? inserted.RecipeSnapshot :
@@ -133,13 +133,13 @@ public partial class MainWindow
         return new ProcessingRecipe { Steps = steps };
     }
 
-    private static EditorSettings RecomputedSettings(EditorSettings parent, ProcessingRecipe recipe, int? cellSize)
+    private static EditorSettings RecomputedSettings(EditorSettings parent, ProcessingRecipe recipe, int? cellSize, Bitmap output)
     {
         var settings = WorkflowJson.Snapshot(parent);
         foreach (var step in recipe.Steps)
         {
             int width = settings.Downscale.TargetWidth, height = settings.Downscale.TargetHeight;
-            settings = MacroStepSettings(settings, step, cellSize);
+            settings = MacroStepSettings(settings, step, cellSize, output);
             if (step.OperationId is not (ProcessingOperations.Resize or ProcessingOperations.Profile))
             {
                 var options = JsonSerializer.SerializeToNode(settings.Downscale)!;
@@ -235,7 +235,7 @@ public partial class MainWindow
                         stepCompleted: (step, _) => resolvedCell = step.CellSize); }
                     catch (Exception ex) { throw new InvalidOperationException($"{original.Label} ({original.OperationId ?? original.Operation}): {ex.Message}", ex); }
                     var copy = JsonSerializer.Deserialize<GenerationEntry>(JsonSerializer.Serialize(original))!;
-                    copy.Settings = RecomputedSettings(parent.Settings, local!, resolvedCell);
+                    copy.Settings = RecomputedSettings(parent.Settings, local!, resolvedCell, result);
                     copy.Id = Guid.NewGuid(); copy.CreatedAt = DateTimeOffset.Now;
                     if (resolvedCell is { } cell) copy.Settings.CellSize = copy.CellSize = cell;
                     copy.ParentGenerationId = parent.Id; copy.AppliedRecipe = local;

@@ -50,9 +50,13 @@ internal static class GridLensChecks
             preview.Zoom = 4; Pump();
             byte[] zoomed = Capture(preview);
             Require(CountPixels(zoomed, 360, 300, 1) > 20, "Grid vanished after zooming");
+            preview.GridLens = new PreviewGridLens(1, 1, 0, 0, MediaColor.FromArgb(255, 255, 0, 0));
+            byte[] singlePixel = Capture(preview);
+            Require(!zoomed.SequenceEqual(singlePixel) && CountPixels(singlePixel, 360, 300, 0) > 50,
+                "One-pixel grid did not render");
             preview.GridLens = null;
             byte[] cleared = Capture(preview);
-            Require(!zoomed.SequenceEqual(cleared), "Closing the lens left lines on the preview");
+            Require(!singlePixel.SequenceEqual(cleared), "Closing the lens left lines on the preview");
             using var current = new MemoryStream(); bitmap.Save(current, ImageFormat.Png);
             Require(original.ToArray().SequenceEqual(current.ToArray()) && ReferenceEquals(preview.Image, bitmap),
                 "Preview grid changed source pixels or exported image data");
@@ -111,6 +115,15 @@ internal static class GridLensChecks
             NavigationTest.Click(editor, "gridLensMenuItem"); Pump();
             Require(gridItem.IsChecked && source.GridLens.HasValue,
                 "Preview grid could not reopen after leaving alternative preview");
+            var width = Get<IntegerInput>(editor, "_gridLensWidth");
+            var height = Get<IntegerInput>(editor, "_gridLensHeight");
+            var offsetX = Get<IntegerInput>(editor, "_gridLensOffsetX");
+            var offsetY = Get<IntegerInput>(editor, "_gridLensOffsetY");
+            offsetX.Value = 3; offsetY.Value = 2;
+            width.Value = 1; height.Value = 1; Pump();
+            Require(width.Minimum == 1 && height.Minimum == 1 && offsetX.Maximum == 0 && offsetY.Maximum == 0 &&
+                offsetX.Value == 0 && offsetY.Value == 0 && source.GridLens is { CellWidth: 1, CellHeight: 1, OffsetX: 0, OffsetY: 0 },
+                "One-pixel lens steps or offset bounds are incorrect");
         }
         finally { editor.Close(); Pump(); }
 
