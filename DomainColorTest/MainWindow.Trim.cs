@@ -35,8 +35,7 @@ public partial class MainWindow
                     Log = Localization.Format("Прозрачные края обрезаны: {0} × {1} → {2} × {3}. Учтены пиксели с альфой от 1 до 255.", input.Width, input.Height, output.Width, output.Height)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Format("Обрезка сохранена в истории · {0} × {1}.", generation.Width, generation.Height);
         }
         catch (Exception ex)

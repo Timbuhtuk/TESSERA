@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "История: вставка, объединение веток и отмена",
+        "en": "History: insertion, branch merging and undo"
+      },
+      "notes": {
+        "ru": "- История: справа в заголовке дерева добавлен одноразовый переключатель «Вставить и пересчитать». Следующий шаг вставляется после выбранного результата, а последующие результаты пересчитываются с учётом изменения.\n- Ветки: выбранную цепочку можно применить к конечному результату другой ветки перетаскиванием или через контекстное меню. Исходная ветка сохраняется; для ветки с развилками выберите конечную ноду нужного пути.\n- Отмена: Ctrl+Z отменяет добавление отдельных результатов, в том числе шагов макроса, удаление, вставку и изменения веток. Буфер сохраняется между запусками; в настройках можно выбрать 1–64 действия, по умолчанию — 5.\n- Удаление: Shift + крестик удаляет выбранный результат и следующие узлы его ветки. Удалённые результаты макросов не возвращаются при повторном открытии проекта.\n- Ошибки пересчёта: модальное окно называет результат, операцию и причину сбоя; неудачная вставка не меняет цепочку, а переключатель остаётся включённым для повторной попытки.",
+        "en": "- History: a one-shot Insert and recompute switch appears at the right of the results heading. The next step is inserted after the selected result, and following results are recomputed with the change.\n- Branches: apply a selected chain to the last result of another branch by dragging it or using the context menu. The source branch is preserved; for a forked branch, select the final node of the intended path.\n- Undo: Ctrl+Z reverses individual result additions, including macro steps, deletion, insertion and branch changes. The buffer survives restarting Tessera; choose 1–64 actions in Settings, with 5 by default.\n- Deletion: Shift + the remove button deletes the selected result and subsequent nodes in its branch. Deleted macro results stay deleted when reopening a project.\n- Recompute errors: a modal identifies the result, operation and cause. A failed insertion leaves the chain unchanged and keeps the switch enabled for retry."
+      }
+    },
+    {
+      "version": "2.16.0",
+      "title": {
         "ru": "Размер и кадр: масштаб по коэффициенту",
         "en": "Size and frame: scale by a factor"
       },

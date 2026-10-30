@@ -48,10 +48,9 @@ public partial class MainWindow
                           $"цветов: {(options.ColorCount == 0 ? "без ограничения" : options.ColorCount)}."
                 });
             });
-            document.Generations.Add(generation);
+            if (!CommitGeneration(document, generation)) return;
             if (_workspaceReady) CloseDockedWorkspaceTool();
             else if (_toolWindows.TryGetValue("pixel-art-finish", out var tool)) tool.Close();
-            SelectGeneration(generation);
             statusLabel.Text = Localization.Format("Готово · {0} × {1}. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)

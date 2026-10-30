@@ -101,8 +101,8 @@ public partial class MainWindow
             OperationId = "manual.tile", RecipeUnavailableReason = Localization.Text("Цепочка содержит ручное исправление тайла. Этот шаг нельзя воспроизвести макросом."), ParentGenerationId = origin.Generation?.Id,
             PreservesTransparency = true, Settings = origin.Generation?.Settings ?? origin.Source.DraftSettings ?? new()
         });
-        origin.Source.Generations.Add(entry); origin.Source.SelectedGeneration = entry;
-        if (origin.Source == _activeSource) { SelectGeneration(entry); ProcessingBasis = 1; }
+        if (!CommitGeneration(origin.Source, entry)) return;
+        if (origin.Source == _activeSource) ProcessingBasis = 1;
         SynchronizeWorkspace();
     }
 }

@@ -274,8 +274,8 @@ public partial class MainWindow
         var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = parentId, PreservesTransparency = true, Settings = settings,
             OperationId = manual ? "manual.erase" : step?.OperationId, AppliedRecipe = step is null || manual ? null : HistoryRecipes.Single(step),
             RecipeUnavailableReason = manual ? Localization.Text("Цепочка содержит ручной ластик. Этот шаг нельзя воспроизвести макросом.") : step is null ? Localization.Text("Параметры операции не сохранены.") : null });
-        target.Generations.Add(entry); target.SelectedGeneration = entry;
-        if (target == _activeSource) { SelectGeneration(entry); ProcessingBasis = 1; }
+        if (!CommitGeneration(target, entry)) return;
+        if (target == _activeSource) ProcessingBasis = 1;
         SynchronizeWorkspace();
     }
     private void ExportWorkspaceImage()

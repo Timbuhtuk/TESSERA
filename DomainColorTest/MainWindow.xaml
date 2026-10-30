@@ -123,7 +123,11 @@
                 <Grid.RowDefinitions><RowDefinition x:Name="trayHeight" Height="120" MinHeight="120" /><RowDefinition Height="6" /><RowDefinition Height="*" MinHeight="240" /><RowDefinition Height="Auto" /><RowDefinition x:Name="sourceLibraryHeight" Height="0" /></Grid.RowDefinitions>
                 <Grid x:Name="historyRow" Grid.Row="0">
                     <DockPanel x:Name="resultTray">
-                        <TextBlock x:Name="resultCaption" DockPanel.Dock="Top" Text="{local:Translate Text5839549C1984}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                        <Grid DockPanel.Dock="Top">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock x:Name="resultCaption" Grid.Column="0" Text="{local:Translate Text5839549C1984}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
+                            <CheckBox x:Name="insertHistoryInput" Grid.Column="1" Content="Вставить и пересчитать" ToolTip="Следующая операция вставится после выбранного результата. Все последующие результаты будут пересчитаны." HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        </Grid>
                         <local:VirtualizingTray x:Name="generationStrip" AutomationProperties.Name="{local:Translate Text0ABF4F397ACF}">
                             <local:VirtualizingTray.Style><Style TargetType="ListBox" BasedOn="{StaticResource Filmstrip}">
                                 <Style.Triggers><Trigger Property="HasItems" Value="False"><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers>

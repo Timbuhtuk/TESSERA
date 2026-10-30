@@ -18,7 +18,8 @@ public partial class MainWindow
             return;
         }
 
-        _appearanceWindow = new AppearanceWindow(_appearanceSettings.Theme, ApplyAppearance, _appearanceSettings.Language, ApplyLanguage) { Owner = this };
+        _appearanceWindow = new AppearanceWindow(_appearanceSettings.Theme, ApplyAppearance, _appearanceSettings.Language, ApplyLanguage,
+            _appearanceSettings.HistoryUndoDepth, ApplyUndoDepth) { Owner = this };
         _appearanceWindow.SetUpdateButton(updateButton);
         _appearanceWindow.Closed += (_, _) => _appearanceWindow = null;
         _appearanceWindow.Show();
@@ -26,7 +27,7 @@ public partial class MainWindow
 
     private bool ApplyAppearance(TesseraTheme theme)
     {
-        var settings = new AppearanceSettings { Theme = theme, Language = _appearanceSettings.Language };
+        var settings = new AppearanceSettings { Theme = theme, Language = _appearanceSettings.Language, HistoryUndoDepth = _appearanceSettings.HistoryUndoDepth };
         try
         {
             settings.Save(_appearancePath);
@@ -45,11 +46,25 @@ public partial class MainWindow
 
     private bool ApplyLanguage(string language)
     {
-        var settings = new AppearanceSettings { Theme = _appearanceSettings.Theme, Language = language };
+        var settings = new AppearanceSettings { Theme = _appearanceSettings.Theme, Language = language, HistoryUndoDepth = _appearanceSettings.HistoryUndoDepth };
         try { settings.Save(_appearancePath); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("Не удалось сохранить язык. ") + e.Message, Localization.Text("Настройки"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+        _appearanceSettings = settings;
+        return true;
+    }
+
+    private bool ApplyUndoDepth(int depth)
+    {
+        var settings = new AppearanceSettings { Theme = _appearanceSettings.Theme, Language = _appearanceSettings.Language, HistoryUndoDepth = depth };
+        try { settings.Save(_appearancePath); _historyUndo.SetCapacity(depth); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("Не удалось сохранить размер буфера отмены. ") + ex.Message,
+                Localization.Text("Настройки"), MessageBoxButton.OK, MessageBoxImage.Warning);
             return false;
         }
         _appearanceSettings = settings;

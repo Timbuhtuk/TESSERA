@@ -98,8 +98,7 @@ public partial class MainWindow
                             : Localization.Format("{0}: размер {1} × {2} сохранён.", colorOperation, result.Width, result.Height)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Format("Готово · {0} × {1}. Результат сохранён в истории.", generation.Width, generation.Height);
         }
         catch (Exception ex)

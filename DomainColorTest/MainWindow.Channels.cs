@@ -135,8 +135,7 @@ public partial class MainWindow
                     Log = Localization.Format("Изменён канал {0}. Остальные каналы и размер сохранены.", change)
                 });
             });
-            document.Generations.Add(generation);
-            SelectGeneration(generation);
+            if (!CommitGeneration(document, generation)) return;
             statusLabel.Text = Localization.Text("Изменение канала сохранено в истории.");
         }
         catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось изменить канал: {0}", ex.Message); }
