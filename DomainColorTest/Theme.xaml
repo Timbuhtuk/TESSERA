@@ -19,6 +19,40 @@
     <SolidColorBrush x:Key="HoverBrush" Color="{DynamicResource Ts.HoverColor}" />
     <SolidColorBrush x:Key="PressedBrush" Color="{DynamicResource Ts.PressedColor}" />
 
+    <Style x:Key="Ts.SwitchBox" TargetType="{x:Type CheckBox}">
+        <Setter Property="Foreground" Value="{DynamicResource Ts.Text}" />
+        <Setter Property="FontFamily" Value="{DynamicResource Ts.UiFont}" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type CheckBox}">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border x:Name="FocusBorder" BorderBrush="Transparent" BorderThickness="1" Padding="2" Margin="0,0,8,0">
+                            <Border Width="42" Height="22" CornerRadius="11" Background="{DynamicResource Ts.Text}">
+                                <Canvas>
+                                    <Ellipse x:Name="SwitchThumb" Width="14" Height="14" Canvas.Left="4" Canvas.Top="4" Fill="{DynamicResource Ts.Canvas}" />
+                                </Canvas>
+                            </Border>
+                        </Border>
+                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                          ContentStringFormat="{TemplateBinding ContentStringFormat}" RecognizesAccessKey="True" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="SwitchThumb" Property="Canvas.Left" Value="24" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="FocusBorder" Property="BorderBrush" Value="{DynamicResource Ts.TextSecondary}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="{x:Type ScrollViewer}">
         <Setter Property="Background" Value="{DynamicResource Ts.Canvas}" />
         <Setter Property="Template">

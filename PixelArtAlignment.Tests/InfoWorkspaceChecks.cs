@@ -5,6 +5,8 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using DomainColorTest;
 using Color = System.Drawing.Color;
+using Size = System.Windows.Size;
+using Point = System.Windows.Point;
 
 namespace PixelArtAlignment.Tests;
 
@@ -22,6 +24,26 @@ internal static class InfoWorkspaceChecks
     private static void Verify()
     {
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+        var inputMap = new ColorTreemap { Width = 300, Height = 100 };
+        var inputHost = new Window { Content = inputMap, Width = 320, Height = 140, Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+        try
+        {
+            inputHost.Show(); Pump();
+            inputMap.SetAreas([new ColorArea(Color.Red, 6), new ColorArea(Color.Blue, 2), new ColorArea(null, 2)]);
+            inputMap.Measure(new Size(300, 100)); inputMap.Arrange(new Rect(0, 0, 300, 100)); inputMap.UpdateLayout();
+            Color? selectedColor = null; inputMap.ColorSelected += color => selectedColor = color;
+            var blueArea = inputMap.BoundsFor(Color.Blue)!.Value;
+            Require(inputMap.SelectColorAt(new Point(blueArea.X + blueArea.Width / 2, blueArea.Y + blueArea.Height / 2)) && selectedColor == Color.Blue,
+                "Treemap pointer hit area did not activate its color");
+            Require(!inputMap.SelectColorAt(new Point(-1, -1)), "Treemap activated outside its bounds");
+            foreach (var key in new[] { System.Windows.Input.Key.Home, System.Windows.Input.Key.Enter, System.Windows.Input.Key.End, System.Windows.Input.Key.Space })
+            {
+                inputMap.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(inputMap)!, 0, key) { RoutedEvent = System.Windows.Input.Keyboard.KeyDownEvent });
+                if (key == System.Windows.Input.Key.Enter) Require(selectedColor == Color.Red, "Treemap keyboard activation did not select the first color");
+            }
+            Require(selectedColor == Color.Blue && inputMap.Focusable, "Treemap keyboard navigation did not skip the grouped area");
+        }
+        finally { inputHost.Close(); Pump(); }
         string folder = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "image-info-" + Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(folder);
         string path = Path.Combine(folder, "rgba.png");
@@ -42,8 +64,15 @@ internal static class InfoWorkspaceChecks
             var asset = window.Workspace!.State.Assets.Single();
             Wait(window.OpenWorkspaceAssetAsync(asset));
             NavigationTest.Click(window, "infoMenuItem");
-            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("4 × 2") && Get<ItemsControl>(window, "infoPaletteList").Items.Count == 3,
+            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("4 × 2") && Get<ColorTreemap>(window, "infoColorTreemap").Areas.Count == 3,
                 "Docked information does not see the image opened in the workspace editor");
+            var treemap = Get<ColorTreemap>(window, "infoColorTreemap");
+            Require(treemap.Areas.Sum(area => area.Pixels) == 7 && treemap.Areas.Single(area => area.Color?.ToArgb() == Color.Red.ToArgb()).Pixels == 2,
+                "Color map did not count visible RGB pixels");
+            var redBounds = treemap.BoundsFor(Color.Red)!.Value;
+            Capture(treemap, Path.Combine(folder, "treemap-visible-colors.png"));
+            Require(Math.Abs(redBounds.Width * redBounds.Height / (treemap.ActualWidth * treemap.ActualHeight) - 2.0 / 7) < .01,
+                "Color map area is not proportional to the red pixel count");
             Require(Window.GetWindow(Get<TextBlock>(window, "infoSourceSummary")) == window, "Information did not use the docked workspace");
             Require(Get<TextBlock>(window, "infoResultSummary").Text == "Пока нет результата", "Source-only image pretends to have a result");
             string details = Get<TextBlock>(window, "infoSourceDetails").Text;
@@ -59,7 +88,7 @@ internal static class InfoWorkspaceChecks
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             Until(() => Get<TextBlock>(window, "infoResultSummary").Text.Contains("8 × 4") &&
                 ReferenceEquals(Field<Bitmap>(window, "_infoBasisShown"), Field<Bitmap>(window, "_downscaledResult")), "Result information or selected basis did not update");
-            PaletteButton(window, Color.Red).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            treemap.SelectColor(Color.Red); Pump();
             var dialog = window.OwnedWindows.OfType<ColorReplaceWindow>().Single();
             Require(dialog.Owner == window, "Docked replacement dialog has the wrong owner");
             Get<TextBox>(dialog, "newHexInput").Text = "#112233";
@@ -75,8 +104,8 @@ internal static class InfoWorkspaceChecks
             Require(File.ReadAllBytes(path).SequenceEqual(original) && Field<Bitmap>(window, "_sourceImage").GetPixel(2, 0).ToArgb() == Color.Red.ToArgb(), "Replacement modified the original");
 
             Get<ListBox>(window, "generationStrip").SelectedItem = parent; Pump();
-            Until(() => Get<ItemsControl>(window, "infoPaletteList").Items.Cast<PaletteColorEntry>().Any(c => c.Color.ToArgb() == Color.Red.ToArgb()), "History selection did not refresh the palette");
-            PaletteButton(window, Color.Red).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            Until(() => treemap.Areas.Any(c => c.Color?.ToArgb() == Color.Red.ToArgb()), "History selection did not refresh the palette");
+            treemap.SelectColor(Color.Red); Pump();
             dialog = window.OwnedWindows.OfType<ColorReplaceWindow>().Single();
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0; Pump();
             Require(!dialog.IsVisible, "Changing the processing basis left a stale replacement dialog open");
@@ -103,6 +132,26 @@ internal static class InfoWorkspaceChecks
             DomainColorTest.Localization.Initialize("en");
             NavigationTest.Click(window, "sizeMenuItem"); NavigationTest.Click(window, "infoMenuItem");
             Until(() => Get<TextBlock>(window, "infoSourceDetails").Text.Contains("Grayscale"), "Extended information is not localized");
+            DomainColorTest.Localization.Initialize("ru");
+            string manyPath = Path.Combine(folder, "many-colors.png");
+            using (var many = new Bitmap(33, 32))
+            {
+                for (int q = 0; q < 1056; q++) many.SetPixel(q % 33, q / 33, Color.FromArgb(255, (q >> 16) & 255, (q >> 8) & 255, q & 255));
+                many.Save(manyPath);
+            }
+            Wait(window.ImportWorkspaceFilesAsync([manyPath]));
+            Wait(window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Last()));
+            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("33 × 32") && treemap.Areas.Count == 1025,
+                "Large color map did not refresh");
+            Require(treemap.Areas[^1].Color is null && treemap.Areas[^1].Pixels == 32 &&
+                treemap.Areas.Sum(area => area.Pixels) == 1056 && Get<Button>(window, "infoManualReplaceButton").IsVisible,
+                "Large color map did not group the tail or keep manual replacement available");
+            Capture(treemap, Path.Combine(folder, "treemap-1056-colors.png"));
+            Get<Button>(window, "infoManualReplaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            var manual = Window.GetWindow(Get<GroupBox>(window, "infoToolGroup"))!.OwnedWindows.OfType<ColorReplaceWindow>().Single();
+            Require(Get<TextBox>(manual, "oldHexInput").IsReadOnly == false && Get<FrameworkElement>(manual, "paletteSection").Visibility == Visibility.Collapsed,
+                "Large color map did not keep the manual HEX replacement mode");
+            manual.Close(); Pump();
         }
         finally { window.Close(); Pump(); DomainColorTest.Localization.Initialize("ru"); }
 
@@ -120,11 +169,16 @@ internal static class InfoWorkspaceChecks
         Console.WriteLine("  Image information: docked source/result, replacement from Info, history/alpha, basis/image changes, panel closure, details, narrow layout, EN and floating compatibility passed.");
     }
 
-    private static Button PaletteButton(MainWindow window, Color color)
+    private static void Capture(FrameworkElement element, string path)
     {
-        Pump();
-        return Descendants(Get<ItemsControl>(window, "infoPaletteList")).OfType<Button>().First(button => button.DataContext is PaletteColorEntry entry && entry.Color.ToArgb() == color.ToArgb());
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(Math.Max(1, (int)Math.Ceiling(element.ActualWidth)), Math.Max(1, (int)Math.Ceiling(element.ActualHeight)), 96, 96, PixelFormats.Pbgra32);
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen()) context.DrawRectangle(new VisualBrush(element), null, new Rect(0, 0, bitmap.PixelWidth, bitmap.PixelHeight));
+        bitmap.Render(drawing);
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder(); encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using var file = File.Create(path); encoder.Save(file);
     }
+
     private static IEnumerable<DependencyObject> Descendants(DependencyObject item)
     {
         for (int q = 0; q < VisualTreeHelper.GetChildrenCount(item); q++)

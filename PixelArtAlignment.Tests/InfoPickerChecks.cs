@@ -41,10 +41,9 @@ internal static class InfoPickerChecks
             AwaitInfo();
             var source = Get<PixelPreview>(window, "sourcePreview");
             var result = Get<PixelPreview>(window, "resultPreview");
-            var palette = Get<ItemsControl>(window, "infoPaletteList").Items.Cast<PaletteColorEntry>().ToArray();
-            ToolImprovementsChecks.Require(palette.Length == 2, "Info color palette did not populate in " + (docked ? "docked" : "floating") + " host");
-            var red = palette.Single(item => item.Color.ToArgb() == Color.Red.ToArgb());
-            Call(window, "InfoColorClick", new Button { DataContext = red }, new RoutedEventArgs(Button.ClickEvent));
+            var treemap = Get<ColorTreemap>(window, "infoColorTreemap");
+            ToolImprovementsChecks.Require(treemap.Areas.Count == 2, "Info color map did not populate in " + (docked ? "docked" : "floating") + " host");
+            treemap.SelectColor(Color.Red);
             var dialog = (ColorReplaceWindow)Field(window, "_replaceWindow")!;
             ToolImprovementsChecks.Require(dialog.IsVisible && source.HighlightRgb == 0xFF0000 && result.HighlightRgb is null,
                 "Selecting a swatch did not highlight its exact current source basis");

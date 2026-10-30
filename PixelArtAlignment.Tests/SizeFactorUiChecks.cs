@@ -63,6 +63,7 @@ internal static class SizeFactorUiChecks
             NavigationTest.Click(window, "scaleOnlyButton"); Wait();
             Require(Get<Bitmap>("_downscaledResult").Size == new System.Drawing.Size(2, 2), "Half scale produced the wrong dimensions");
             var first = Get<SourceEntry>("_activeSource").SelectedGeneration!;
+            Require(first.AppliedRecipe?.Steps.Single().ResizeFactor?.Factor == 0.5 && first.AppliedRecipe.Steps.Single().Downscale is null, "Scale was recorded as fixed pixels");
 
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             factor.Text = "1.5";
@@ -81,6 +82,26 @@ internal static class SizeFactorUiChecks
             string output = Path.Combine(folder, "result.png"); Invoke("SaveResult", output);
             var store = new MacroStore(libraryPath);
             var macro = store.Save(new MacroDefinition { Name = "Fractional scale chain", Steps = WorkflowJson.Snapshot(second.RecipeSnapshot!).Steps });
+            string macroJson = File.ReadAllText(store.PathFor(macro.Id));
+            Require(!macroJson.Contains("targetWidth", StringComparison.OrdinalIgnoreCase) &&
+                !macroJson.Contains("targetHeight", StringComparison.OrdinalIgnoreCase), "Factor macro saved resolved pixel dimensions");
+            using (var other = new Bitmap(10, 7))
+            using (var replay = new WorkflowExecutor().Execute(other, new ProcessingRecipe { Steps = MacroStore.Read(store.PathFor(macro.Id)).Steps }))
+                Require(replay.Size == new System.Drawing.Size(8, 6), "Factor macro did not use the new input dimensions");
+
+            Invoke("SelectGeneration", first);
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
+            Get<CheckBox>("insertHistoryInput").IsChecked = true;
+            factor.Text = "2";
+            NavigationTest.Click(window, "scaleOnlyButton"); Wait();
+            var recomputed = Get<SourceEntry>("_activeSource").Generations.Single(g => g.Id == second.Id);
+            Require(recomputed.Width == 6 && recomputed.Height == 6 && recomputed.Settings.Downscale.TargetWidth == 6 && recomputed.Settings.Downscale.TargetHeight == 6,
+                "Relative-scale descendant retained stale dimensions after insertion");
+            Invoke("RestoreHistorySource", Get<HistoryUndoStore>("_historyUndo").Undo() ?? throw new Exception("Factor insertion undo is empty"));
+            second = Get<SourceEntry>("_activeSource").Generations.Single(g => g.Id == second.Id);
+            Invoke("SelectGeneration", second);
+            Require(second.Width == 3 && second.Settings.Downscale.TargetWidth == 3, "Factor insertion undo lost its previous dimensions");
+            Get<RadioButton>("scaleFactorModeInput").IsChecked = true;
 
             foreach (string invalid in new[] { "0", "-1", "NaN", "Infinity", "1e309", "999999999999", "abc", "" })
             {
@@ -108,9 +129,40 @@ internal static class SizeFactorUiChecks
                     "Factor chain did not survive reopening the workspace");
             }
             finally { reopened.Close(); Pump(); }
+            string otherInput = Path.Combine(folder, "other-input.png"), otherOutput = Path.Combine(folder, "other-output.png");
+            using (var image = new Bitmap(10, 7))
+            {
+                for (int y = 0; y < image.Height; y++) for (int x = 0; x < image.Width; x++)
+                    image.SetPixel(x, y, Color.FromArgb((x + y * 10) * 7 % 256, x * 24, y * 37, 155));
+                image.Save(otherInput);
+            }
+            string otherSourceHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(otherInput)));
+            window = new MainWindow(libraryPath) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+            window.EnableWorkspacePrototype(); window.Show(); Pump();
+            WaitTask(window.ImportWorkspaceFilesAsync([otherInput]));
+            Guid otherAsset = window.Workspace!.State.Assets.Single(a => a.Id != asset).Id;
+            WaitTask(window.OpenWorkspaceAssetAsync(window.Workspace.State.Assets.Single(a => a.Id == otherAsset)));
+            NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
+            Invoke("RefreshMacros", macro.Id);
+            Get<ListBox>("_macroList").SelectedItem = Get<ListBox>("_macroList").Items.Cast<MacroDefinition>().Single(m => m.Id == macro.Id);
+            WaitTask((Task)Invoke("ApplySelectedMacroAsync")!);
+            var scaled = Get<SourceEntry>("_activeSource");
+            Require(scaled.Generations.Count == 2 && scaled.Generations[0].Width == 5 && scaled.Generations[0].Height == 4 &&
+                scaled.Generations[0].Settings.Downscale.TargetWidth == 5 && scaled.Generations[0].Settings.Downscale.TargetHeight == 4 &&
+                scaled.Generations[1].Width == 8 && scaled.Generations[1].Height == 6 &&
+                scaled.Generations[1].Settings.Downscale.TargetWidth == 8 && scaled.Generations[1].Settings.Downscale.TargetHeight == 6,
+                "GUI factor macro did not preserve resolved per-step metadata on a different input");
+            Invoke("SaveResult", otherOutput); window.Close(); Pump();
+            window = new MainWindow(libraryPath) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+            window.EnableWorkspacePrototype(); window.Show(); Pump();
+            WaitTask(window.OpenWorkspaceAssetAsync(window.Workspace!.State.Assets.Single(a => a.Id == otherAsset)));
+            Require(Get<SourceEntry>("_activeSource").Generations[^1].Settings.Downscale.TargetWidth == 8, "Relative macro metadata did not survive reopening");
+            using (var saved = ImageLibrary.ReadBitmap(otherOutput)) Equal(saved, Get<Bitmap>("_downscaledResult"));
+            Require(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(otherInput))) == otherSourceHash, "Relative macro changed the other source");
             Require(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(imagePath))) == sourceHash, "Factor processing changed the source file");
             string manifest = Path.Combine(folder, "evidence.json");
-            File.WriteAllText(manifest, JsonSerializer.Serialize(new { language, docked, input = imagePath, sourceHash, output, macro = store.PathFor(macro.Id), restartVerified = true }));
+            File.WriteAllText(manifest, JsonSerializer.Serialize(new { language, docked, input = imagePath, sourceHash, output, macro = store.PathFor(macro.Id), restartVerified = true,
+                otherInput, otherOutput, otherSourceHash, otherRestartVerified = true, factorInsertionVerified = true }));
             Console.WriteLine("Size factor evidence: " + manifest);
         }
         finally { if (window.IsVisible) window.Close(); Pump(); }

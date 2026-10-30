@@ -42,9 +42,7 @@ public partial class MainWindow
         if (scaleFactorModeInput.IsChecked != true) return true;
 
         Bitmap? basis = ProcessingBasis == 1 ? _downscaledResult : _sourceImage;
-        if (basis is null || !double.TryParse(scaleFactorInput.Text.Trim().Replace(',', '.'),
-                NumberStyles.Float, CultureInfo.InvariantCulture, out double factor) ||
-            !double.IsFinite(factor) || factor <= 0) return false;
+        if (basis is null || !TryGetScaleFactor(out double factor)) return false;
 
         double scaledWidth = Math.Round(basis.Width * factor, MidpointRounding.AwayFromZero);
         double scaledHeight = Math.Round(basis.Height * factor, MidpointRounding.AwayFromZero);
@@ -53,4 +51,8 @@ public partial class MainWindow
         height = Math.Max(1, (int)scaledHeight);
         return true;
     }
+
+    private bool TryGetScaleFactor(out double factor) =>
+        double.TryParse(scaleFactorInput.Text.Trim().Replace(',', '.'), NumberStyles.Float,
+            CultureInfo.InvariantCulture, out factor) && double.IsFinite(factor) && factor > 0;
 }

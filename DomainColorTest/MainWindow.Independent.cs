@@ -46,6 +46,7 @@ public partial class MainWindow
         var basis = useResult ? _downscaledResult! : _sourceImage;
         bool changeSize = operation == IndependentOperation.Size;
         bool neighborColors = operation == IndependentOperation.NeighborColors;
+        double? scaleFactor = changeSize && scaleFactorModeInput.IsChecked == true && TryGetScaleFactor(out double factor) ? factor : null;
         bool enlarged = changeSize && (options.TargetWidth > basis.Width || options.TargetHeight > basis.Height);
 
         var document = _activeSource;
@@ -83,7 +84,9 @@ public partial class MainWindow
                     Settings = settings,
                     OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
                     AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
-                        Downscale = options, ConnectedPalette = !changeSize && !neighborColors ? settings.ConnectedPalette : null }),
+                        Downscale = scaleFactor is null ? options : null,
+                        ResizeFactor = scaleFactor is { } value ? ResizeFactorSettings.From(options, value) : null,
+                        ConnectedPalette = !changeSize && !neighborColors ? settings.ConnectedPalette : null }),
                     Operation = changeSize ? enlarged ? Localization.Text("Увеличение") : Localization.Text("Размер") :
                         neighborColors ? Localization.Text("Сглаживание") : colorOperation,
                     ParentGenerationId = parentId,

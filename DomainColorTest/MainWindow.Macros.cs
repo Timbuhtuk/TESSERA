@@ -156,7 +156,7 @@ public partial class MainWindow
                 {
                     ProcessingStep step = macro.Steps[stepProgress.Index - 1];
                     string name = StepName(step.OperationId);
-                    EditorSettings stepSettings = MacroStepSettings(settings, step, stepProgress.CellSize);
+                    EditorSettings stepSettings = MacroStepSettings(settings, step, stepProgress.CellSize, image);
                     var generation = _library.SaveGeneration(document, image, null, new GenerationEntry
                     {
                         Operation = name, OperationId = step.OperationId,
@@ -204,10 +204,12 @@ public partial class MainWindow
         }
     }
 
-    private static EditorSettings MacroStepSettings(EditorSettings settings, ProcessingStep step, int? cellSize)
+    private static EditorSettings MacroStepSettings(EditorSettings settings, ProcessingStep step, int? cellSize, Bitmap? output = null)
     {
         var result = WorkflowJson.Snapshot(settings);
         if (step.Downscale is not null) result.Downscale = WorkflowJson.Snapshot(step.Downscale);
+        if (step.ResizeFactor is { } factor && output is not null)
+            result.Downscale = factor.ToOptions(output.Width, output.Height);
         if (step.OperationId is ProcessingOperations.Colors or ProcessingOperations.ConnectedPalette)
         {
             result.ConnectedPalette = step.ConnectedPalette is null ? null : WorkflowJson.Snapshot(step.ConnectedPalette);
