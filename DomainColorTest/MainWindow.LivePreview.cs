@@ -14,7 +14,7 @@ public partial class MainWindow
     private int _livePreviewRevision;
     private bool _livePreviewBusy;
     private Bitmap? _livePreviewBitmap;
-    private Bitmap? _approvedLargeColorBasis, _approvedLargeSmoothingBasis, _approvedLargeSharpenBasis;
+    private Bitmap? _approvedLargeColorBasis, _approvedLargeSmoothingBasis, _approvedLargeSharpenBasis, _approvedLargeAsciiBasis;
     private bool _largePreviewDecisionPending;
     private string? _activeLivePreviewTool;
     private string? ActiveLivePreviewTool => _activeLivePreviewTool;
@@ -24,7 +24,7 @@ public partial class MainWindow
         trimTransparentButton.Content = Localization.Text("Обрезать прозрачные края");
         trimTransparentButton.ToolTip = Localization.Text("Обрезать изображение по крайним пикселям с альфой больше нуля.");
         livePreviewBadgeText.Text = Localization.Text("ПРЕДПРОСМОТР");
-        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput, sharpenLivePreviewInput })
+        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput, sharpenLivePreviewInput, asciiLivePreviewInput })
         {
             check.Content = Localization.Text("Живой предпросмотр");
             check.ToolTip = Localization.Text("Показывать результат настройки без сохранения в историю.");
@@ -34,7 +34,7 @@ public partial class MainWindow
             _livePreviewTimer.Stop();
             await RenderLiveToolPreviews();
         };
-        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput, sharpenLivePreviewInput })
+        foreach (var check in new[] { colorLivePreviewInput, smoothingLivePreviewInput, sharpenLivePreviewInput, asciiLivePreviewInput })
         {
             check.Checked += (_, _) => ChangeLivePreview(check);
             check.Unchecked += (_, _) => ChangeLivePreview(check);
@@ -43,10 +43,15 @@ public partial class MainWindow
             slider.ValueChanged += (_, _) => ScheduleLiveToolPreviews();
         foreach (var input in new[] { quantizationColorsInput, paletteStepInput, localColorPassesInput })
             input.ValueChanged += (_, _) => ScheduleLiveToolPreviews();
+        asciiColumnsInput.ValueChanged += (_, _) => ScheduleLiveToolPreviews();
+        asciiCharactersInput.TextChanged += (_, _) => ScheduleLiveToolPreviews();
+        asciiRampPresetInput.SelectionChanged += (_, _) => ScheduleLiveToolPreviews();
+        asciiColorModeInput.SelectionChanged += (_, _) => ScheduleLiveToolPreviews();
         foreach (var combo in new[] { quantizationInput, paletteInput })
             combo.SelectionChanged += (_, _) => ScheduleLiveToolPreviews();
         foreach (var toggle in new ToggleButton[] { quantizationColorModeInput, paletteColorModeInput, colorWeightsInput,
-                     ditheringInput, localDetailGuardInput })
+                     ditheringInput, localDetailGuardInput, asciiKeepSourceSizeInput, asciiInvertSourceInput,
+                     asciiInvertRenderInput, asciiDitherInput })
         {
             toggle.Checked += (_, _) => ScheduleLiveToolPreviews();
             toggle.Unchecked += (_, _) => ScheduleLiveToolPreviews();
@@ -65,7 +70,7 @@ public partial class MainWindow
 
     private void SetActiveLivePreviewTool(string? key)
     {
-        string? next = key is "color" or "smoothing" or "sharpen" or "contours" or "structure-probe" ? key : null;
+        string? next = key is "color" or "smoothing" or "sharpen" or "contours" or "structure-probe" or "ascii" ? key : null;
         if (_activeLivePreviewTool == next) { ScheduleLiveToolPreviews(); return; }
         _activeLivePreviewTool = next;
         ClearDisplayedLivePreview();
@@ -99,15 +104,18 @@ public partial class MainWindow
             if (answer != MessageBoxResult.Yes) { check.IsChecked = false; return; }
             if (ReferenceEquals(check, colorLivePreviewInput)) _approvedLargeColorBasis = basis;
             else if (ReferenceEquals(check, smoothingLivePreviewInput)) _approvedLargeSmoothingBasis = basis;
-            else _approvedLargeSharpenBasis = basis;
+            else if (ReferenceEquals(check, sharpenLivePreviewInput)) _approvedLargeSharpenBasis = basis;
+            else _approvedLargeAsciiBasis = basis;
         }
         if (check.IsChecked != true)
         {
             if (ReferenceEquals(check, colorLivePreviewInput)) _approvedLargeColorBasis = null;
             else if (ReferenceEquals(check, smoothingLivePreviewInput)) _approvedLargeSmoothingBasis = null;
-            else _approvedLargeSharpenBasis = null;
+            else if (ReferenceEquals(check, sharpenLivePreviewInput)) _approvedLargeSharpenBasis = null;
+            else _approvedLargeAsciiBasis = null;
             string key = ReferenceEquals(check, colorLivePreviewInput) ? "color" :
-                ReferenceEquals(check, smoothingLivePreviewInput) ? "smoothing" : "sharpen";
+                ReferenceEquals(check, smoothingLivePreviewInput) ? "smoothing" :
+                ReferenceEquals(check, sharpenLivePreviewInput) ? "sharpen" : "ascii";
             if (_activeLivePreviewTool == key) ClearDisplayedLivePreview();
         }
         ScheduleLiveToolPreviews();
@@ -144,12 +152,15 @@ public partial class MainWindow
                 smoothingLivePreviewInput.IsChecked = false;
             if (sharpenLivePreviewInput.IsChecked == true && !ReferenceEquals(basis, _approvedLargeSharpenBasis))
                 sharpenLivePreviewInput.IsChecked = false;
+            if (asciiLivePreviewInput.IsChecked == true && !ReferenceEquals(basis, _approvedLargeAsciiBasis))
+                asciiLivePreviewInput.IsChecked = false;
         }
         bool enabled = _activeLivePreviewTool switch
         {
             "color" => colorLivePreviewInput.IsChecked == true,
             "smoothing" => smoothingLivePreviewInput.IsChecked == true,
             "sharpen" => sharpenLivePreviewInput.IsChecked == true,
+            "ascii" => asciiLivePreviewInput.IsChecked == true,
             _ => false
         };
         if (!IsLoaded || _processing || basis is null || !enabled)
@@ -166,19 +177,29 @@ public partial class MainWindow
         bool color = _activeLivePreviewTool == "color" && colorLivePreviewInput.IsChecked == true && colorToolGroup.IsVisible;
         bool smooth = _activeLivePreviewTool == "smoothing" && smoothingLivePreviewInput.IsChecked == true && smoothingToolGroup.IsVisible;
         bool sharpen = _activeLivePreviewTool == "sharpen" && sharpenLivePreviewInput.IsChecked == true && sharpenToolGroup.IsVisible;
-        if (!color && !smooth && !sharpen) { ClearDisplayedLivePreview(); return; }
+        bool ascii = _activeLivePreviewTool == "ascii" && asciiLivePreviewInput.IsChecked == true && asciiToolGroup.IsVisible;
+        if (!color && !smooth && !sharpen && !ascii) { ClearDisplayedLivePreview(); return; }
 
         int revision = _livePreviewRevision;
         var options = color || smooth ? BuildOptionsFromUi() : null;
         var connected = color ? BuildConnectedPaletteOptions() : null;
         int strength = sharpenStrengthInput.Value, threshold = sharpenThresholdInput.Value;
+        string characters = asciiCharactersInput.Text;
+        bool keepSourceSize = asciiKeepSourceSizeInput.IsChecked == true;
+        bool invertSource = asciiInvertSourceInput.IsChecked == true, invertRender = asciiInvertRenderInput.IsChecked == true;
+        bool dither = asciiDitherInput.IsChecked == true;
+        int columns = asciiColumnsInput.Value, foregroundArgb = _asciiForegroundArgb, backgroundArgb = _asciiBackgroundArgb;
+        AsciiColorMode colorMode = (AsciiColorMode)asciiColorModeInput.SelectedIndex;
         using var source = (Bitmap)basis.Clone();
         _livePreviewBusy = true;
         using var operation = BeginOperationProgress(this, preview: true);
         Bitmap? result = null;
         try
         {
-            result = await Task.Run(() => sharpen ? ImageFilters.Sharpen(source, strength, threshold, progress: operation.Work) : color
+            result = await Task.Run(() => ascii
+                ? ImageFilters.RenderAscii(source, keepSourceSize, characters, invertSource, invertRender, colorMode,
+                    foregroundArgb, backgroundArgb, columns, dither, ImageFilters.DefaultAsciiFontSize, operation.Work)
+                : sharpen ? ImageFilters.Sharpen(source, strength, threshold, progress: operation.Work) : color
                 ? PaletteProcessor.Apply(source, options!, connected, operation.Work)
                 : IndependentImageProcessor.ApplyNeighborColors(source, options!, operation.Work));
             if (revision != _livePreviewRevision || _processing) return;

@@ -82,7 +82,7 @@ public sealed class GenerationEntry : INotifyPropertyChanged
     [JsonIgnore] public string PresentationHint
     {
         get => _presentationHint;
-        set { if (_presentationHint == value) return; _presentationHint = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Description))); }
+        set { if (_presentationHint == value) return; _presentationHint = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Description))); PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ResultTreeDescription))); }
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     [JsonIgnore] public bool IsHeader => false;
@@ -91,10 +91,8 @@ public sealed class GenerationEntry : INotifyPropertyChanged
         ? Settings.SnapToGlobalGrid ? "Локальная сетка с привязкой {0} px · {1:HH:mm:ss}" : "Локальная сетка {0} px · {1:HH:mm:ss}"
         : "Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
         : $"{(Operation.Length > 0 ? (OperationId == ProcessingOperations.Macro ? Operation : Localization.StoredText(Operation)) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
-    [JsonIgnore] public string ResultTreeLabel => ResultIcon.Supports(OperationId)
-        ? IsAlignment ? $"{CellSize} px · {CreatedAt:HH:mm:ss}" : $"{(IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}"
-        : Label;
     [JsonIgnore] public string Description => $"{(OperationId == ProcessingOperations.Macro ? Caption : Localization.StoredText(Caption))}\n{CreatedAt:dd.MM.yyyy HH:mm:ss}\n{PresentationHint}\n{Localization.StoredText(Log)}";
+    [JsonIgnore] public string ResultTreeDescription => $"{Label}\n{Width} × {Height} px\n{Description}";
     [JsonIgnore] public string RemoveDescription => Localization.Format("Удалить результат «{0}» из истории", Label);
     [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
 }

@@ -39,7 +39,6 @@ public partial class MainWindow
         _progressHide.Stop();
         _visibleProgress = operation;
         busyIndicator.Value = 0;
-        progressPercent.Text = "0%";
         if (label is not null) statusLabel.Text = label;
         RefreshOperationProgressVisibility();
         return operation;
@@ -56,7 +55,6 @@ public partial class MainWindow
             return;
         }
         busyIndicator.Value = Math.Max(busyIndicator.Value, value * 100);
-        progressPercent.Text = $"{(int)Math.Floor(busyIndicator.Value)}%";
         if (completed == true) _progressHide.Start();
         RefreshOperationProgressVisibility();
     }

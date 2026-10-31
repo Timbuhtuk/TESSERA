@@ -14,7 +14,7 @@ Image operations accept an optional `IProgress<double>` with fractions between 0
 
 The processing range ends at 95%; only successful publication of the file, preview or history result completes the UI at 100%. Success stays visible for 350 ms. Cancellation, failure and stale previews dispose their stream without showing success. Opaque system decoders/encoders retain the last confirmed fraction; progress is not an estimate of elapsed or remaining time.
 
-The footer uses a 240 DIP by 14 DIP Cells bar and a numeric percentage. Below 760 DIP window width the bar shrinks to 180 DIP. Stage/file status stays on the left. Styles and foreground/background colors follow the selected application theme.
+The footer uses a 240 DIP by 14 DIP Cells bar without a numeric percentage. Below 760 DIP window width the bar shrinks to 180 DIP. Stage/file status stays on the left. Styles and foreground/background colors follow the selected application theme.
 
 ## Verification
 
@@ -26,7 +26,7 @@ dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --progress
 dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --ui --invariants
 ```
 
-The focused progress checks cover pixel/alpha parity, intermediate callbacks, parallel ranges, early completion, cancellation, validation failures, macro substeps and Aseprite publication. WPF checks verify all 20 cells, three themes, narrow layouts, percentage updates, stale callbacks, preview priority, throttling and the completion timer. Captures are written to `artifacts/wpf/progress`.
+The focused progress checks cover pixel/alpha parity, intermediate callbacks, parallel ranges, early completion, cancellation, validation failures, macro substeps and Aseprite publication. WPF checks verify all 20 cells, three themes, narrow layouts, value updates without a percentage label, stale callbacks, preview priority, throttling and the completion timer. Captures are written to `artifacts/wpf/progress`.
 
 ## Validation on 2026-10-30
 
