@@ -38,7 +38,7 @@ Move the mouse over the preview image to move the light. **Normal** and **AO** t
 
 The workspace creates `_height.png`, `_normal.png` and `_ao.png` assets alongside the source in the current project folder (or leaves them unassigned when the source has no project). Completed edits are saved automatically after a short idle period. **Return to asset**, closing the tool, and **File → Save project / Ctrl+S** also save pending work without a file dialog. Original pixels, editable Height, independent Normal/AO layers and generation settings stay inside the library. Opening Tools again from the source or any generated map restores the same editing session, including after restarting Tessera. A processed result has its own separate map session. Repeated edits update existing map assets rather than creating duplicates; independent copies remain ordinary image copies.
 
-Individual **PNG** buttons export one current map; **Export maps…** writes all three maps to an external location. PNGs contain the flattened result. Export remains optional and cannot overwrite an imported source or the internal Tessera library.
+Individual **PNG** buttons export one current map; **Export maps…** writes all three maps to an external location. PNGs contain the flattened result. Export remains optional and can replace an existing external image after confirmation; the internal Tessera library remains protected.
 
 Open images from **File → Open**, with Ctrl+O or by drag and drop. The home screen shows your library, image dimensions and result counts. Open a card to edit its source. The back arrow returns to the library; the layout adapts to narrower windows.
 
