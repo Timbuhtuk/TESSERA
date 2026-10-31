@@ -35,7 +35,19 @@ public static class ImageColorTools
 
     /// <summary>Заменяет RGB-цвет у видимых пикселей, сохраняя прозрачность и исходное изображение.</summary>
     public static Bitmap ReplaceColor(Bitmap source, Color oldColor, Color newColor)
+        => ReplaceColor(source, oldColor, newColor, progress: null);
+
+    public static Bitmap ReplaceColor(Bitmap source, Color oldColor, Color newColor, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReplaceColorWithProgress(source, oldColor, newColor, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ReplaceColorWithProgress(Bitmap source, Color oldColor, Color newColor, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         var result = source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);
         var area = new Rectangle(0, 0, result.Width, result.Height);
@@ -55,6 +67,8 @@ public static class ImageColorTools
                         if ((uint)row[x] >> 24 != 0 && (row[x] & 0xFFFFFF) == oldRgb)
                             row[x] = (row[x] & unchecked((int)0xFF000000)) | newRgb;
                     Marshal.Copy(row, 0, address, row.Length);
+
+                    tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)result.Height) / 1.0);
                 }
             }
             finally { result.UnlockBits(bits); }

@@ -157,6 +157,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             if (version != _infoRefreshVersion) return;
             _infoSnapshotReady = false;
             _infoSourceShown = _infoResultShown = _infoBasisShown = null;
@@ -338,7 +339,7 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                using var output = ImageColorTools.ReplaceColor(input, oldColor, newColor);
+                using var output = ImageColorTools.ReplaceColor(input, oldColor, newColor, CurrentProcessingProgress);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
@@ -356,6 +357,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Format("Не удалось заменить цвет: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }

@@ -4,7 +4,19 @@ namespace PixelArtDownscale;
 internal static class PaletteDithering
 {
     public static int[] Apply(int[] pixels, int width, int height, IReadOnlyList<int> palette)
+        => Apply(pixels, width, height, palette, progress: null);
+
+    public static int[] Apply(int[] pixels, int width, int height, IReadOnlyList<int> palette, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ApplyWithProgress(pixels, width, height, palette, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static int[] ApplyWithProgress(int[] pixels, int width, int height, IReadOnlyList<int> palette, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         var index = new LabPaletteIndex(palette);
         var linear = palette.Select(ColorSpace.ToLinear).ToArray();
         int[] output = new int[pixels.Length];
@@ -45,6 +57,8 @@ internal static class PaletteDithering
             }
             (current, next) = (next, current);
             Array.Clear(next);
+
+            tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 1.0);
         }
         return output;
     }

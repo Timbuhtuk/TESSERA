@@ -177,7 +177,8 @@ public partial class MainWindow
                     parentId = generation.Id;
                     savedSteps++;
                     statusLabel.Text = Localization.Format("Шаг {0}/{1}: {2}", stepProgress.Index, stepProgress.Count, name);
-                })));
+                }), operationProgress: CurrentProcessingProgress));
+            CompleteProcessingProgress();
             statusLabel.Text = Localization.Format("Макрос применён: {0}. Сохранено шагов: {1}.", macro.Name, savedSteps);
         }
         catch (WorkflowCanceledException ex)

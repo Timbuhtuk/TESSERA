@@ -9,8 +9,16 @@ public static class PngWriter
     private static readonly uint[] CrcTable = BuildCrcTable();
 
     /// <summary>Записывает straight RGBA PNG без изменения цвета и альфы. Поток остаётся открытым.</summary>
-    public static void Write(Stream output, RgbaImage image, bool isSrgb = false, CancellationToken cancellationToken = default)
+    public static void Write(Stream output, RgbaImage image, bool isSrgb = false, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        WriteWithProgress(output, image, isSrgb, cancellationToken, tracking);
+        tracking.Report(1);
+    }
+
+    private static void WriteWithProgress(Stream output, RgbaImage image, bool isSrgb, CancellationToken cancellationToken, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(image);
         if (!output.CanWrite) throw new ArgumentException("Поток не допускает запись.", nameof(output));
@@ -34,6 +42,8 @@ public static class PngWriter
                 cancellationToken.ThrowIfCancellationRequested();
                 zlib.WriteByte(0);
                 zlib.Write(image.Rgba.Span.Slice(y * stride, stride));
+
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)image.Height) / 1.0);
             }
         }
         cancellationToken.ThrowIfCancellationRequested();

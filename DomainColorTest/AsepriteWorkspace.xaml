@@ -23,14 +23,14 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
             <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <StackPanel x:Name="sheetHeaderActions" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="sheetOpenButton" Content="{local:Translate Text753CB453EF62}" Margin="0,0,7,0" ToolTip="{local:Translate TextAA489583B64F}"/>
                     <Button x:Name="sheetSaveButton" Content="{local:Translate Text001F4F54EC6B}" Margin="0,0,7,0" IsEnabled="False"/>
                     <Button x:Name="sheetSaveAllButton" Content="{local:Translate Text4A41402E808B}" Style="{StaticResource PrimaryButton}" Margin="0,0,7,0" IsEnabled="False"/>
                     <Button x:Name="sheetCancelButton" Content="{local:Translate Text7C47F7292BA4}" Visibility="Collapsed"/>
                 </StackPanel>
                 <Button x:Name="sheetBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="{local:Translate TextAD94907F6423}" AutomationProperties.Name="{local:Translate TextAD94907F6423}"/>
-                <TextBlock Text="{local:Translate Text46F655DF7238}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                <TextBlock Text="{local:Translate Text46F655DF7238}" ToolTip="{local:Translate Text46F655DF7238}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
             </DockPanel>
         </Border>
         <Grid x:Name="sheetWorkspaceGrid" Grid.Row="1">

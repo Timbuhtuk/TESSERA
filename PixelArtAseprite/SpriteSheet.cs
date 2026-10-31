@@ -7,7 +7,15 @@ public sealed class SpriteSheet
     private SpriteSheet(RgbaImage image, SpriteSheetMetadata metadata) { Image = image; Metadata = metadata; }
 
     public static SpriteSheet Create(AsepriteDocument document, AsepriteExportOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = CreateWithProgress(document, options, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static SpriteSheet CreateWithProgress(AsepriteDocument document, AsepriteExportOptions? options, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(document);
         options ??= new AsepriteExportOptions();
@@ -40,13 +48,22 @@ public sealed class SpriteSheet
             int y = checked((int)((q / columns) * (document.Height + (long)options.Padding)));
             CopyFrame(document, document.Frames[q], image.Pixels, x, y, image.Width, cancellationToken);
             frames.Add(new SheetFrame(q, x, y, document.Width, document.Height, document.Frames[q].DurationMs));
+            tracking.Report((q + 1.0) / count);
         }
         return new SpriteSheet(image, new SpriteSheetMetadata
         {
-            Image = Path.GetFileNameWithoutExtension(document.Source) + ".png", Source = document.Source, SourceSha256 = document.SourceSha256,
-            SheetSize = new ImageSize(image.Width, image.Height), FrameSize = new ImageSize(document.Width, document.Height),
-            Layout = options.Layout.ToString().ToLowerInvariant(), Columns = columns, Rows = rows, Padding = options.Padding,
-            TotalDurationMs = document.TotalDurationMs, Tags = document.Tags, Frames = frames.AsReadOnly()
+            Image = Path.GetFileNameWithoutExtension(document.Source) + ".png",
+            Source = document.Source,
+            SourceSha256 = document.SourceSha256,
+            SheetSize = new ImageSize(image.Width, image.Height),
+            FrameSize = new ImageSize(document.Width, document.Height),
+            Layout = options.Layout.ToString().ToLowerInvariant(),
+            Columns = columns,
+            Rows = rows,
+            Padding = options.Padding,
+            TotalDurationMs = document.TotalDurationMs,
+            Tags = document.Tags,
+            Frames = frames.AsReadOnly()
         });
     }
 

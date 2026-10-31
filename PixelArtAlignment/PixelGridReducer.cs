@@ -1,3 +1,4 @@
+using PixelArtDownscale;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
@@ -7,7 +8,19 @@ namespace PixelArtAlignment;
 public static class PixelGridReducer
 {
     public static Bitmap Reduce(Bitmap aligned, int cellSize)
+        => Reduce(aligned, cellSize, progress: null);
+
+    public static Bitmap Reduce(Bitmap aligned, int cellSize, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReduceWithProgress(aligned, cellSize, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ReduceWithProgress(Bitmap aligned, int cellSize, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(aligned);
         if (cellSize < 2) throw new ArgumentOutOfRangeException(nameof(cellSize), "Cell size must be at least 2.");
         int width = (aligned.Width - 1) / cellSize + 1;
@@ -39,6 +52,8 @@ public static class PixelGridReducer
                             if (actual != expected && ((uint)actual >> 24 != 0 || (uint)expected >> 24 != 0))
                                 throw new ArgumentException("Изображение не совпадает с этой сеткой. Сначала выполните выравнивание.", nameof(aligned));
                         }
+
+                        tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)copy.Height) / 1.0);
                     }
                 }
                 finally { output.UnlockBits(destination); }

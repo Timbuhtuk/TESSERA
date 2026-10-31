@@ -5,17 +5,25 @@ public static class ColorQuantizer
     private const int KMeansIterations = 5;
 
     public static Bitmap Quantize(Bitmap source, int colorCount, QuantizationMethod method, int threadCount = 1,
-        bool useColorWeights = false)
+        bool useColorWeights = false, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = QuantizeWithProgress(source, colorCount, method, threadCount, useColorWeights, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap QuantizeWithProgress(Bitmap source, int colorCount, QuantizationMethod method, int threadCount, bool useColorWeights, ProcessingProgress tracking)
     {
         ValidateColorCount(colorCount);
-        var (width, height, pixels, uniqueColors) = ReadPixels(source, threadCount);
+        var (width, height, pixels, uniqueColors) = ReadPixels(source, threadCount, tracking.Slice(0, 3));
 
         if (uniqueColors.Count <= colorCount)
             return (Bitmap)source.Clone();
 
         var weights = useColorWeights ? CountColors(pixels.Where(p => (uint)p >> 24 > 0).Select(p => p & 0xFFFFFF)) : null;
-        var lookup = BuildLookup(uniqueColors, colorCount, method, weights);
-        return ApplyLookup(source, width, height, pixels, lookup, threadCount);
+        var lookup = BuildLookup(uniqueColors, colorCount, method, weights, tracking.Slice(1, 3));
+        return ApplyLookup(source, width, height, pixels, lookup, threadCount, tracking.Slice(2, 3));
     }
 
     internal static void ValidateColorCount(int colorCount)
@@ -34,7 +42,15 @@ public static class ColorQuantizer
     }
 
     internal static Dictionary<int, int> BuildLookup(HashSet<int> uniqueColors, int colorCount, QuantizationMethod method,
-        IReadOnlyDictionary<int, int>? weights = null)
+        IReadOnlyDictionary<int, int>? weights = null, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = BuildLookupWithProgress(uniqueColors, colorCount, method, weights, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Dictionary<int, int> BuildLookupWithProgress(HashSet<int> uniqueColors, int colorCount, QuantizationMethod method, IReadOnlyDictionary<int, int>? weights, ProcessingProgress tracking)
     {
         ValidateColorCount(colorCount);
         if (uniqueColors.Count <= colorCount)
@@ -42,22 +58,38 @@ public static class ColorQuantizer
 
         var palette = method switch
         {
-            QuantizationMethod.MedianCut => BuildMedianCutPalette(uniqueColors, colorCount, weights),
-            QuantizationMethod.KMeansLab => BuildKMeansLabPalette(uniqueColors, colorCount, weights),
-            QuantizationMethod.KMeansLinear => BuildKMeansLinearPalette(uniqueColors, colorCount, weights),
-            _ => BuildKMeansLabPalette(uniqueColors, colorCount, weights)
+            QuantizationMethod.MedianCut => BuildMedianCutPalette(uniqueColors, colorCount, weights, tracking.Slice(0, 2)),
+            QuantizationMethod.KMeansLab => BuildKMeansLabPalette(uniqueColors, colorCount, weights, tracking.Slice(0, 2)),
+            QuantizationMethod.KMeansLinear => BuildKMeansLinearPalette(uniqueColors, colorCount, weights, tracking.Slice(0, 2)),
+            _ => BuildKMeansLabPalette(uniqueColors, colorCount, weights, tracking.Slice(0, 2))
         };
 
         var lookup = new Dictionary<int, int>();
         var paletteIndex = new LabPaletteIndex(palette);
+        int mapped = 0;
         foreach (int packed in uniqueColors)
+        {
             lookup[packed] = palette[paletteIndex.Nearest(packed)];
+            tracking.Report(.5 + .5 * ++mapped / uniqueColors.Count);
+        }
 
         return lookup;
     }
 
     private static (int Width, int Height, int[] Pixels, HashSet<int> UniqueColors) ReadPixels(Bitmap source, int threadCount)
+        => ReadPixels(source, threadCount, progress: null);
+
+    private static (int Width, int Height, int[] Pixels, HashSet<int> UniqueColors) ReadPixels(Bitmap source, int threadCount, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReadPixelsWithProgress(source, threadCount, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static (int Width, int Height, int[] Pixels, HashSet<int> UniqueColors) ReadPixelsWithProgress(Bitmap source, int threadCount, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         int width;
         int height;
         int[] pixels;
@@ -74,6 +106,8 @@ public static class ColorQuantizer
                 {
                     for (int x = 0; x < width; x++)
                         pixels[y * width + x] = (buffer.GetAlpha(x, y) << 24) | buffer.GetPackedColor(x, y);
+
+                    tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 1.0);
                 }
             });
         }
@@ -83,7 +117,19 @@ public static class ColorQuantizer
     }
 
     private static Bitmap ApplyLookup(Bitmap source, int width, int height, int[] pixels, Dictionary<int, int> lookup, int threadCount)
+        => ApplyLookup(source, width, height, pixels, lookup, threadCount, progress: null);
+
+    private static Bitmap ApplyLookup(Bitmap source, int width, int height, int[] pixels, Dictionary<int, int> lookup, int threadCount, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ApplyLookupWithProgress(source, width, height, pixels, lookup, threadCount, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ApplyLookupWithProgress(Bitmap source, int width, int height, int[] pixels, Dictionary<int, int> lookup, int threadCount, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         var result = BitmapFactory.CreateLike(source, width, height);
         using var writeBuffer = BitmapBuffer.FromWritableBitmap(result);
 
@@ -99,6 +145,8 @@ public static class ColorQuantizer
                     writeBuffer.SetPackedColor(x, y, alpha == 0 ? packed : lookup[packed]);
                     writeBuffer.SetAlpha(x, y, alpha);
                 }
+
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 1.0);
             }
         });
 
@@ -108,8 +156,20 @@ public static class ColorQuantizer
 
     private static List<int> BuildMedianCutPalette(HashSet<int> uniqueColors, int colorCount,
         IReadOnlyDictionary<int, int>? weights)
+        => BuildMedianCutPalette(uniqueColors, colorCount, weights, progress: null);
+
+    private static List<int> BuildMedianCutPalette(HashSet<int> uniqueColors, int colorCount,
+        IReadOnlyDictionary<int, int>? weights, IProgress<double>? progress = null)
     {
-        var boxes = MedianCutBoxes(uniqueColors.ToList(), colorCount, weights);
+        var tracking = new ProcessingProgress(progress);
+        var result = BuildMedianCutPaletteWithProgress(uniqueColors, colorCount, weights, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static List<int> BuildMedianCutPaletteWithProgress(HashSet<int> uniqueColors, int colorCount, IReadOnlyDictionary<int, int>? weights, ProcessingProgress tracking)
+    {
+        var boxes = MedianCutBoxes(uniqueColors.ToList(), colorCount, weights, tracking);
         return boxes
             .Select(box =>
             {
@@ -122,6 +182,18 @@ public static class ColorQuantizer
 
     private static List<List<int>> MedianCutBoxes(List<int> colors, int targetCount,
         IReadOnlyDictionary<int, int>? weights)
+        => MedianCutBoxes(colors, targetCount, weights, progress: null);
+
+    private static List<List<int>> MedianCutBoxes(List<int> colors, int targetCount,
+        IReadOnlyDictionary<int, int>? weights, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = MedianCutBoxesWithProgress(colors, targetCount, weights, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static List<List<int>> MedianCutBoxesWithProgress(List<int> colors, int targetCount, IReadOnlyDictionary<int, int>? weights, ProcessingProgress tracking)
     {
         var boxes = new List<List<int>> { new List<int>(colors) };
 
@@ -173,6 +245,7 @@ public static class ColorQuantizer
             boxes.RemoveAt(bestBoxIndex);
             boxes.Add(left);
             boxes.Add(right);
+            tracking.Report((double)boxes.Count / targetCount);
         }
 
         return boxes;
@@ -243,6 +316,18 @@ public static class ColorQuantizer
 
     private static List<int> BuildKMeansLabPalette(HashSet<int> uniqueColors, int colorCount,
         IReadOnlyDictionary<int, int>? weights)
+        => BuildKMeansLabPalette(uniqueColors, colorCount, weights, progress: null);
+
+    private static List<int> BuildKMeansLabPalette(HashSet<int> uniqueColors, int colorCount,
+        IReadOnlyDictionary<int, int>? weights, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = BuildKMeansLabPaletteWithProgress(uniqueColors, colorCount, weights, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static List<int> BuildKMeansLabPaletteWithProgress(HashSet<int> uniqueColors, int colorCount, IReadOnlyDictionary<int, int>? weights, ProcessingProgress tracking)
     {
         var centroids = uniqueColors
             .Take(colorCount)
@@ -250,6 +335,7 @@ public static class ColorQuantizer
             .ToList();
 
         var allColors = uniqueColors.ToList();
+        int assigned = 0;
 
         for (int iteration = 0; iteration < KMeansIterations; iteration++)
         {
@@ -260,6 +346,7 @@ public static class ColorQuantizer
             {
                 int nearest = paletteIndex.Nearest(packed);
                 buckets[nearest].Add(packed);
+                if ((++assigned & 255) == 0) tracking.Report((double)assigned / ((long)allColors.Count * KMeansIterations));
             }
 
             for (int i = 0; i < centroids.Count; i++)
@@ -277,12 +364,25 @@ public static class ColorQuantizer
 
     private static List<int> BuildKMeansLinearPalette(HashSet<int> uniqueColors, int colorCount,
         IReadOnlyDictionary<int, int>? weights)
+        => BuildKMeansLinearPalette(uniqueColors, colorCount, weights, progress: null);
+
+    private static List<int> BuildKMeansLinearPalette(HashSet<int> uniqueColors, int colorCount,
+        IReadOnlyDictionary<int, int>? weights, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = BuildKMeansLinearPaletteWithProgress(uniqueColors, colorCount, weights, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static List<int> BuildKMeansLinearPaletteWithProgress(HashSet<int> uniqueColors, int colorCount, IReadOnlyDictionary<int, int>? weights, ProcessingProgress tracking)
     {
         var centroids = uniqueColors
             .Take(colorCount)
             .ToList();
 
         var allColors = uniqueColors.ToList();
+        int assigned = 0;
 
         for (int iteration = 0; iteration < KMeansIterations; iteration++)
         {
@@ -293,6 +393,7 @@ public static class ColorQuantizer
             {
                 int nearest = paletteIndex.Nearest(packed);
                 buckets[nearest].Add(packed);
+                if ((++assigned & 255) == 0) tracking.Report((double)assigned / ((long)allColors.Count * KMeansIterations));
             }
 
             for (int i = 0; i < centroids.Count; i++)

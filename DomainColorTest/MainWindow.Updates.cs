@@ -57,6 +57,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             if (_updatesClosed) return;
             updateButton.Content = UpdateButtonText();
             if (showResult) TesseraDialog.Show(this, Localization.Format("Не удалось проверить обновления: {0}", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -116,6 +117,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             if (!_updatesClosed) TesseraDialog.Show(this, Localization.Format("Не удалось обновить Tessera: {0}", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally

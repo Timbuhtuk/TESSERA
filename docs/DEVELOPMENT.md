@@ -40,7 +40,7 @@ Checks generate their own images and temporary libraries. They do not use the us
 Historical project and namespace names are retained:
 
 - `DomainColorTest`: WPF desktop application, including its embedded assets.
-- `Tessera.WpfStyles` **0.1.0**: shared WPF theme, controls and fonts restored from [NuGet.org](https://www.nuget.org/packages/Tessera.WpfStyles/0.1.0) through `PackageReference` in the desktop and UI-check projects. Run `dotnet restore Pixelizator.sln` before building; no local style project or copied DLL is required. Theme/font pack URIs retain the `Tessera.WpfStyles` assembly name. Font license texts remain under `DomainColorTest/Assets/Fonts` and ship in the desktop archive. See [package migration verification](WPF_STYLES_NUGET_QA.md).
+- `Tessera.WpfStyles` 0.2.0: restored from the checked-in `.nuget/local-packages` feed using the repository `NuGet.Config`. Source mapping reserves this package ID for that local feed; other dependencies use NuGet.org. No adjacent style-library checkout or manually copied DLL is required. Font licenses remain in `DomainColorTest/Assets/Fonts`. See [operation progress](PROGRESS.md) for reporting and validation.
 - `PixelArtDownscale`: downscaling, quantization, palettes, sprites and [ICO export](../PixelArtDownscale/ICO.md).
 - `PixelArtAlignment`: [grid alignment and cell reduction](../PixelArtAlignment/README.md).
 - `PixelArtAseprite`: offline [Aseprite decoding and sprite sheet export](../PixelArtAseprite/README.md).

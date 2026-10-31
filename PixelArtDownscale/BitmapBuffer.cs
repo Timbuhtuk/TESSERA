@@ -98,7 +98,19 @@ public sealed class BitmapBuffer : IDisposable
 public static class BitmapFactory
 {
     public static Bitmap CropTransparentEdges(Bitmap source)
+        => CropTransparentEdges(source, progress: null);
+
+    public static Bitmap CropTransparentEdges(Bitmap source, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = CropTransparentEdgesWithProgress(source, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap CropTransparentEdgesWithProgress(Bitmap source, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         if (!Image.IsAlphaPixelFormat(source.PixelFormat) && !source.PixelFormat.HasFlag(PixelFormat.Indexed))
             return (Bitmap)source.Clone();
@@ -108,11 +120,14 @@ public static class BitmapFactory
         using (var pixels = BitmapBuffer.FromBitmap(argb))
         {
             for (int y = 0; y < source.Height; y++)
-            for (int x = 0; x < source.Width; x++)
             {
-                if (pixels.GetAlpha(x, y) == 0) continue;
-                left = Math.Min(left, x); top = Math.Min(top, y);
-                right = Math.Max(right, x); bottom = Math.Max(bottom, y);
+                for (int x = 0; x < source.Width; x++)
+                {
+                    if (pixels.GetAlpha(x, y) == 0) continue;
+                    left = Math.Min(left, x); top = Math.Min(top, y);
+                    right = Math.Max(right, x); bottom = Math.Max(bottom, y);
+                }
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)source.Height) / 1.0);
             }
         }
         if (right < 0) return new Bitmap(1, 1, PixelFormat.Format32bppArgb);

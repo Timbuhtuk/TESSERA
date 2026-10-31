@@ -7,7 +7,15 @@ public static class AsepriteConverter
     public static JsonSerializerOptions JsonOptions => new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     public static AsepriteExportResult Convert(string inputPath, string outputDirectory, AsepriteExportOptions? options = null,
-        AsepriteLimits? limits = null, CancellationToken cancellationToken = default)
+        AsepriteLimits? limits = null, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ConvertWithProgress(inputPath, outputDirectory, options, limits, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static AsepriteExportResult ConvertWithProgress(string inputPath, string outputDirectory, AsepriteExportOptions? options, AsepriteLimits? limits, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
@@ -20,28 +28,41 @@ public static class AsepriteConverter
         string? inspectionPath = options.IncludeInspection ? Path.Combine(directory, name + ".inspection.json") : null;
         string[] targets = inspectionPath is null ? [imagePath, jsonPath] : [imagePath, jsonPath, inspectionPath];
         foreach (string target in targets) CheckTarget(target);
-        var document = AsepriteReader.Read(input, limits, cancellationToken);
-        var sheet = SpriteSheet.Create(document, options, cancellationToken);
+        var document = AsepriteReader.Read(input, limits, cancellationToken, tracking.Slice(0, 4));
+        var sheet = SpriteSheet.Create(document, options, cancellationToken, tracking.Slice(1, 4));
         cancellationToken.ThrowIfCancellationRequested();
         Directory.CreateDirectory(directory);
         var staged = new List<string>();
         var published = new List<string>();
         try
         {
-            using (var stream = Stage()) PngWriter.Write(stream, sheet.Image, document.IsSrgb, cancellationToken);
+            using (var stream = Stage()) PngWriter.Write(stream, sheet.Image, document.IsSrgb, cancellationToken, tracking.Slice(2, 4));
             using (var stream = Stage()) JsonSerializer.Serialize(stream, sheet.Metadata, JsonOptions);
             if (inspectionPath is not null)
             {
                 using var stream = Stage();
                 JsonSerializer.Serialize(stream, new
                 {
-                    schema = "aseprite-inspection/v1", document.Source, document.SourceSha256,
-                    document.Width, document.Height, depth = 32, layer = document.LayerName, document.Layers,
-                    profile = document.IsSrgb ? "srgb" : "unspecified", frameCount = document.Frames.Count,
-                    document.TotalDurationMs, document.Tags, document.Warnings,
-                    frames = document.Frames.Select(f => new { f.Index, f.DurationMs,
+                    schema = "aseprite-inspection/v1",
+                    document.Source,
+                    document.SourceSha256,
+                    document.Width,
+                    document.Height,
+                    depth = 32,
+                    layer = document.LayerName,
+                    document.Layers,
+                    profile = document.IsSrgb ? "srgb" : "unspecified",
+                    frameCount = document.Frames.Count,
+                    document.TotalDurationMs,
+                    document.Tags,
+                    document.Warnings,
+                    frames = document.Frames.Select(f => new
+                    {
+                        f.Index,
+                        f.DurationMs,
                         cel = f.Cel is { } first ? new { first.Type, first.X, first.Y, first.LinkedFrame, first.Image!.Width, first.Image.Height } : null,
-                        cels = f.Cels.Select(cel => new { cel!.LayerIndex, cel.Type, cel.X, cel.Y, cel.LinkedFrame, cel.Image!.Width, cel.Image.Height }) })
+                        cels = f.Cels.Select(cel => new { cel!.LayerIndex, cel.Type, cel.X, cel.Y, cel.LinkedFrame, cel.Image!.Width, cel.Image.Height })
+                    })
                 }, JsonOptions);
             }
             for (int q = 0; q < targets.Length; q++)
@@ -49,6 +70,7 @@ public static class AsepriteConverter
                 cancellationToken.ThrowIfCancellationRequested();
                 File.Move(staged[q], targets[q], overwrite: false);
                 published.Add(targets[q]);
+                tracking.Report((3 + (q + 1.0) / targets.Length) / 4);
             }
         }
         catch (Exception failure)

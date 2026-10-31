@@ -201,6 +201,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             try { RestoreHistorySource(transaction.Rollback()); }
             catch (Exception rollback) { ex = new AggregateException(ex, rollback); }
             ShowHistoryFailure(Localization.Text("Перенос ветки"), ex);
@@ -357,8 +358,12 @@ public partial class MainWindow
                         if (folder.Id is { } id && !seen.Add(id)) continue;
                         bool collapsed = folder.Id is { } fid && _trayState.CollapsedFolders.Contains(fid);
                         var selectedFolder = folder.Id;
-                        items.Add(new TrayFolderHeader { FolderId = folder.Id, Label = (collapsed ? "▸ " : "▾ ") + folder.Name,
-                            Activate = () => NavigateSourceFolder(selectedFolder, toggle: true) });
+                        items.Add(new TrayFolderHeader
+                        {
+                            FolderId = folder.Id,
+                            Label = (collapsed ? "▸ " : "▾ ") + folder.Name,
+                            Activate = () => NavigateSourceFolder(selectedFolder, toggle: true)
+                        });
                         positions.Add(new Rect(4 + folder.Depth * 16, y, 280, 26)); y += 28;
                         if (collapsed) continue;
                         var images = InFolder(folder.Id).ToArray();

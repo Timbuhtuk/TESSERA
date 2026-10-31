@@ -12,12 +12,12 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
             <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <StackPanel x:Name="backgroundHeaderActions" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="backgroundOpenButton" Content="{local:Translate Text0DF7E1837013}" Margin="0,0,7,0"/>
                     <Button x:Name="backgroundSaveButton" Content="{local:Translate Text28C52564AA90}" Style="{StaticResource PrimaryButton}" IsEnabled="False"/>
                 </StackPanel>
                 <Button x:Name="backgroundBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="{local:Translate TextAD94907F6423}" AutomationProperties.Name="{local:Translate TextAD94907F6423}"/>
-                <TextBlock Text="{local:Translate Text3F3E245106F1}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+                <TextBlock Text="{local:Translate Text3F3E245106F1}" ToolTip="{local:Translate Text3F3E245106F1}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
             </DockPanel>
         </Border>
         <Grid x:Name="backgroundContent" Grid.Row="1">

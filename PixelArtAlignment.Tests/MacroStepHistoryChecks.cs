@@ -69,7 +69,23 @@ internal static class MacroStepHistoryChecks
             var list = Get<ListBox>(window, "_macroList");
             list.SelectedItem = Get<ObservableCollection<MacroDefinition>>(window, "_macros").Single(m => m.Id == normal.Id);
             window.ProcessingBasis = 0;
-            Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!);
+            bool prematureCompletion = false;
+            var indicator = Get<ProgressBar>(window, "busyIndicator");
+            NotifyCollectionChangedEventHandler observeProgress = (_, e) =>
+            {
+                if (e.Action != NotifyCollectionChangedAction.Add || document.Generations.Count >= 5) return;
+                Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+                {
+                    var active = Get<OperationProgressSession?>(window, "_mainProgress");
+                    if (document.Generations.Count < 5 &&
+                        (active is null || active.IsFinished || indicator.Value >= 100))
+                        prematureCompletion = true;
+                }));
+            };
+            document.Generations.CollectionChanged += observeProgress;
+            try { Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!); }
+            finally { document.Generations.CollectionChanged -= observeProgress; }
+            Require(!prematureCompletion && indicator.Value == 100, "Macro progress completed before its last history result was saved");
             Require(dialogText is null && document.Generations.Count == 5, "Five-step macro did not create exactly five results: " + dialogText);
             for (int q = 0; q < 5; q++)
             {
@@ -110,6 +126,8 @@ internal static class MacroStepHistoryChecks
             finally { document.Generations.CollectionChanged -= cancel; }
             Require(cancelClicked && document.Generations.Count == 11 && document.Generations[^1].ParentGenerationId == parent,
                 "Cancellation discarded a finished step or created an unfinished card");
+            Require(indicator.Value < 100 && Get<FrameworkElement>(window, "operationProgressPanel").Visibility == Visibility.Collapsed,
+                "Canceled macro progress claimed success");
             string savedOne = language == "en" ? "Saved steps: 1" : "Сохранено шагов: 1";
             Require(Get<TextBlock>(window, "statusLabel").Text.Contains(savedOne), "Cancellation status is untranslated or has the wrong saved count");
             window.ProcessingBasis = 0;
@@ -117,6 +135,8 @@ internal static class MacroStepHistoryChecks
             Wait((Task)Invoke(window, "ApplySelectedMacroAsync")!);
             Require(document.Generations.Count == 12 && document.Generations[^1].ParentGenerationId is null && document.Generations[^1].OperationId == ProcessingOperations.Resize,
                 "Runtime failure discarded the completed prefix or saved the failed step");
+            Require(indicator.Value < 100 && Get<FrameworkElement>(window, "operationProgressPanel").Visibility == Visibility.Collapsed,
+                "Failed macro progress claimed success");
             Require(dialogText?.Contains(language == "en" ? "Step 2" : "Шаг 2") == true && dialogText.Contains(savedOne), "Failure status lost its step, count or language");
             Require(document.Generations.All(g => g.OperationId != ProcessingOperations.Macro), "An extra aggregate macro result was created");
             Equal(source, Get<Bitmap>(window, "_sourceImage"));
@@ -134,7 +154,7 @@ internal static class MacroStepHistoryChecks
             finally { reopened.Close(); Pump(); }
             Require(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))) == sourceHash, "Macro processing changed the original file");
             string manifest = Path.Combine(folder, "evidence.json");
-            File.WriteAllText(manifest, JsonSerializer.Serialize(new { language, docked, input, sourceSha256 = sourceHash, output = exported, macro = replayPath, failingMacro = store.PathFor(failing.Id), savedResults = 12, canceledPrefix = 1, failedPrefix = 1, restartVerified = true }));
+            File.WriteAllText(manifest, JsonSerializer.Serialize(new { language, docked, input, sourceSha256 = sourceHash, output = exported, macro = replayPath, failingMacro = store.PathFor(failing.Id), savedResults = 12, canceledPrefix = 1, failedPrefix = 1, restartVerified = true, macroProgressVerified = true }));
             Console.WriteLine("Macro step history evidence: " + manifest);
         }
         finally { dialogWatch.Stop(); if (window.IsVisible) window.Close(); Pump(); }

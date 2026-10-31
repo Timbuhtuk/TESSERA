@@ -121,7 +121,7 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                using var output = ImageFilters.Monochrome(input);
+                using var output = ImageFilters.Monochrome(input, CurrentProcessingProgress);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
@@ -139,6 +139,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Format("Не удалось применить монохром: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
@@ -161,14 +162,17 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                using var output = ImageFilters.Sharpen(input, strength, threshold);
+                using var output = ImageFilters.Sharpen(input, strength, threshold, progress: CurrentProcessingProgress);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
                     Operation = Localization.Text("Резкость"),
                     OperationId = ProcessingOperations.Sharpen,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Sharpen,
-                        Sharpen = new SharpenSettings { Strength = strength, Threshold = threshold } }),
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
+                    {
+                        OperationId = ProcessingOperations.Sharpen,
+                        Sharpen = new SharpenSettings { Strength = strength, Threshold = threshold }
+                    }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = Localization.Format("РЕЗКОСТЬ · {0}% · {1} × {2}", strength, output.Width, output.Height),
@@ -180,6 +184,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Format("Не удалось повысить резкость: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }
@@ -224,10 +229,10 @@ public partial class MainWindow
         {
             string text = await Task.Run(() => columns > 0
                 ? ImageFilters.ToAsciiAtColumns(input, keepSourceSize ? Math.Min(columns, input.Width) : columns,
-                    characters, invertSource, dither)
+                    characters, invertSource, dither, progress: CurrentProcessingProgress)
                 : keepSourceSize
-                ? ImageFilters.ToAscii(input, characters, invertSource, dither)
-                : ImageFilters.ToAscii(input, input.Width, characters, invertSource, dither));
+                ? ImageFilters.ToAscii(input, characters, invertSource, dither, progress: CurrentProcessingProgress)
+                : ImageFilters.ToAscii(input, input.Width, characters, invertSource, dither, progress: CurrentProcessingProgress));
             string temporary = Path.Combine(Path.GetDirectoryName(output)!, $".{Path.GetFileName(output)}.{Guid.NewGuid():N}.tmp");
             try
             {
@@ -235,6 +240,7 @@ public partial class MainWindow
                 File.Move(temporary, output, true);
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
+            CompleteProcessingProgress();
             statusLabel.Text = Localization.Format("ASCII-текст сохранён: {0}", output);
         }
         finally { SetProcessingState(false); }
@@ -264,15 +270,29 @@ public partial class MainWindow
             var created = await Task.Run(() =>
             {
                 using var output = ImageFilters.RenderAscii(input, keepSourceSize, characters, invertSource, invertRender,
-                    colorMode, foregroundArgb, backgroundArgb, columns, dither);
+                    colorMode, foregroundArgb, backgroundArgb, columns, dither, ImageFilters.DefaultAsciiFontSize, CurrentProcessingProgress);
                 var generation = _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
                     Operation = "ASCII",
                     OperationId = ProcessingOperations.Ascii,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = new AsciiSettings { Characters = characters, KeepSourceSize = keepSourceSize, InvertSource = invertSource, InvertColors = invertRender,
-                        ColorMode = colorMode, ForegroundArgb = foregroundArgb, BackgroundArgb = backgroundArgb,
-                        Columns = columns, Dither = dither } }),
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
+                    {
+                        OperationId = ProcessingOperations.Ascii,
+                        Ascii = new AsciiSettings
+                        {
+                            FontSize = ImageFilters.DefaultAsciiFontSize,
+                            Characters = characters,
+                            KeepSourceSize = keepSourceSize,
+                            InvertSource = invertSource,
+                            InvertColors = invertRender,
+                            ColorMode = colorMode,
+                            ForegroundArgb = foregroundArgb,
+                            BackgroundArgb = backgroundArgb,
+                            Columns = columns,
+                            Dither = dither
+                        }
+                    }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = false,
                     Caption = $"ASCII · {output.Width} × {output.Height}",
@@ -286,6 +306,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Format("Не удалось отрендерить ASCII: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }

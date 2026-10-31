@@ -16,8 +16,18 @@ public static class BackgroundRemover
         => Remove(source, BackgroundRemovalMode.GlobalColor, tolerance, background, cancellationToken);
 
     public static Bitmap Remove(Bitmap source, BackgroundRemovalMode mode, int tolerance = 8, Color? background = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = RemoveWithProgress(source, mode, tolerance, background, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap RemoveWithProgress(Bitmap source, BackgroundRemovalMode mode, int tolerance, Color? background, CancellationToken cancellationToken, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
+        int progressRows1 = 0;
         ArgumentNullException.ThrowIfNull(source);
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         if (tolerance is < 0 or > 100) throw new ArgumentOutOfRangeException(nameof(tolerance), "Допуск должен быть от 0 до 100.");
@@ -35,12 +45,14 @@ public static class BackgroundRemover
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     Marshal.Copy(IntPtr.Add(bits.Scan0, y * bits.Stride), pixels, y * stride, stride);
+
+                    tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)source.Height) / 3.0);
                 }
                 Color? color = background ?? DetectBackground(pixels, source.Width, source.Height, cancellationToken);
                 if (color is null) return result;
                 int delta = (int)Math.Round(tolerance * 255.0 / 100);
                 if (mode == BackgroundRemovalMode.EdgeConnected)
-                    RemoveFromEdges(pixels, source.Width, source.Height, color.Value, delta, cancellationToken);
+                    RemoveFromEdges(pixels, source.Width, source.Height, color.Value, delta, cancellationToken, tracking.Slice(1, 3));
                 for (int y = 0; y < source.Height; y++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -56,6 +68,8 @@ public static class BackgroundRemover
                         }
                     }
                     Marshal.Copy(pixels, y * stride, IntPtr.Add(bits.Scan0, y * bits.Stride), stride);
+
+                    tracking.Report((1 + Interlocked.Increment(ref progressRows1) / (double)source.Height) / 3.0);
                 }
             }
             finally { result.UnlockBits(bits); }
@@ -66,6 +80,16 @@ public static class BackgroundRemover
     }
 
     private static void RemoveFromEdges(byte[] pixels, int width, int height, Color color, int delta, CancellationToken cancellationToken)
+        => RemoveFromEdges(pixels, width, height, color, delta, cancellationToken, progress: null);
+
+    private static void RemoveFromEdges(byte[] pixels, int width, int height, Color color, int delta, CancellationToken cancellationToken, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        RemoveFromEdgesWithProgress(pixels, width, height, color, delta, cancellationToken, tracking);
+        tracking.Report(1);
+    }
+
+    private static void RemoveFromEdgesWithProgress(byte[] pixels, int width, int height, Color color, int delta, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         var visited = new bool[checked(width * height)];
         var pending = new Queue<int>();
@@ -86,6 +110,7 @@ public static class BackgroundRemover
         while (pending.TryDequeue(out int q))
         {
             if ((processed++ & 1023) == 0) cancellationToken.ThrowIfCancellationRequested();
+            if ((processed & 1023) == 0) tracking.Report((double)processed / ((long)width * height));
             int x = q % width;
             // Только четыре соседа: диагональный контакт не пробивает замкнутый контур.
             if (x > 0) Visit(q - 1);

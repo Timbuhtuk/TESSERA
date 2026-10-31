@@ -13,6 +13,6 @@
     <Using Include="System.IO" />
     <ProjectReference Include="..\PixelArtAlignment\PixelArtAlignment.csproj" />
     <ProjectReference Include="..\DomainColorTest\DomainColorTest.csproj" />
-    <PackageReference Include="Tessera.WpfStyles" Version="0.1.0" />
+    <PackageReference Include="Tessera.WpfStyles" Version="0.2.0" />
   </ItemGroup>
 </Project>

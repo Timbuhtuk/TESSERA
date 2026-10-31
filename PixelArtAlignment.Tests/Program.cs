@@ -1,8 +1,26 @@
 using PixelArtAlignment.Tests;
 
+if (args is ["--progress"])
+{
+    int errors = 0;
+    ProgressChecks.Run((name, run) =>
+    {
+        try { run(); Console.WriteLine("PASS " + name); }
+        catch (Exception e) { errors++; Console.WriteLine("FAIL " + name + ": " + e); }
+    });
+    Exception? uiError = null;
+    var ui = new Thread(() => { try { ProgressUiChecks.Run(); } catch (Exception e) { uiError = e; } }) { IsBackground = true };
+    ui.SetApartmentState(ApartmentState.STA); ui.Start();
+    if (!ui.Join(TimeSpan.FromSeconds(90))) { errors++; Console.WriteLine("FAIL Progress WPF timeout"); }
+    else if (uiError is not null) { errors++; Console.WriteLine("FAIL Progress WPF: " + uiError); }
+    else Console.WriteLine("PASS Progress WPF lifecycle and themes");
+    return errors == 0 ? 0 : 1;
+}
+
+
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("PixelArtAlignment.Tests: --compact-switch, --relative-resize, --ascii, --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("PixelArtAlignment.Tests: --progress, --compact-switch, --relative-resize, --ascii, --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Programmatic editor regression checks without native input: --editor-regressions");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
@@ -101,6 +119,7 @@ if (args.Contains("--invariants")) Check("Canvas, source colors, alpha, idempote
 if (args.Contains("--invariants")) FinalistInvariantChecks.Run(Check);
 if (args.Contains("--ui")) Check("TCR modes, history, macro recipes and PNG in WPF", FinalistUiChecks.Run);
 if (args.Contains("--invariants")) IconExportChecks.Run(Check);
+if (args.Contains("--invariants")) ProgressChecks.Run(Check);
 if (args.Contains("--invariants")) IndependentImageProcessorChecks.Run(Check);
 if (args.Contains("--invariants")) ImageColorToolsChecks.Run(Check);
 if (args.Contains("--invariants") || args.Contains("--channels")) ChannelAdjustmentChecks.Run(Check);

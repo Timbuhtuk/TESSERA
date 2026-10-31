@@ -22,13 +22,22 @@ internal static class AsciiRenderer
 
     public static Bitmap Render(Bitmap source, int[] pixels, bool keepSourceSize, string characters,
         bool invertSource, bool invertColors, AsciiColorMode colorMode, int foregroundArgb,
-        int backgroundArgb, int requestedColumns, bool dither)
+        int backgroundArgb, int requestedColumns, bool dither, int fontSize, IProgress<double>? progress = null)
     {
-        using var font = new Font(FontFamily.GenericMonospace, ImageFilters.DefaultAsciiFontSize,
+        var tracking = new ProcessingProgress(progress);
+        var result = RenderWithProgress(source, pixels, keepSourceSize, characters, invertSource, invertColors, colorMode, foregroundArgb, backgroundArgb, requestedColumns, dither, fontSize, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap RenderWithProgress(Bitmap source, int[] pixels, bool keepSourceSize, string characters, bool invertSource, bool invertColors, AsciiColorMode colorMode, int foregroundArgb, int backgroundArgb, int requestedColumns, bool dither, int fontSize, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
+        using var font = new Font(FontFamily.GenericMonospace, fontSize,
             FontStyle.Regular, GraphicsUnit.Pixel);
         using var format = (StringFormat)StringFormat.GenericTypographic.Clone();
         format.FormatFlags |= StringFormatFlags.NoWrap | StringFormatFlags.MeasureTrailingSpaces;
-        var cell = ImageFilters.MeasureAsciiCell(ImageFilters.DefaultAsciiFontSize);
+        var cell = ImageFilters.MeasureAsciiCell(fontSize);
         int cellWidth = cell.Width, cellHeight = cell.Height;
 
         int columns = requestedColumns > 0 ? requestedColumns : keepSourceSize
@@ -101,6 +110,8 @@ internal static class AsciiRenderer
                         DrawColoredGlyph(output, glyph.Image, destination, foreground, backgroundArgb);
                     }
                 }
+
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)rows) / 1.0);
             }
             Bitmap completed = result;
             result = null;

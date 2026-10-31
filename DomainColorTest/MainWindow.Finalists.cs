@@ -28,8 +28,13 @@ public partial class MainWindow
         AddMode(_mixedMode, "50 / 50", "Равная смесь T3/p44 и P5/OFF в sRGB с учётом прозрачности.");
         _t3Mode.IsChecked = true;
         var factorRow = new DockPanel { Margin = new Thickness(0, 3, 0, 3) };
-        factorRow.Children.Add(new TextBlock { Text = Localization.Text("Кратность сжатия (2–64)"),
-            Width = 132, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center });
+        factorRow.Children.Add(new TextBlock
+        {
+            Text = Localization.Text("Кратность сжатия (2–64)"),
+            Width = 132,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center
+        });
         _finalistFactor.MaxDropDownHeight = 240;
         _finalistFactor.ItemsSource = Enumerable.Range(FinalistReducer.MinFactor,
             FinalistReducer.MaxFactor - FinalistReducer.MinFactor + 1);
@@ -92,14 +97,18 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                using var output = FinalistReducer.Reduce(input, mode, factor);
+                using var output = FinalistReducer.Reduce(input, mode, factor, CurrentProcessingProgress);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
                     Operation = $"TCR {modeName} {factor}×",
                     OperationId = ProcessingOperations.FinalistReduce,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.FinalistReduce,
-                        FinalistMode = mode, FinalistFactor = factor }),
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
+                    {
+                        OperationId = ProcessingOperations.FinalistReduce,
+                        FinalistMode = mode,
+                        FinalistFactor = factor
+                    }),
                     ParentGenerationId = parentId,
                     PreservesTransparency = true,
                     Caption = $"TCR {modeName} {factor}× · {output.Width} × {output.Height}",

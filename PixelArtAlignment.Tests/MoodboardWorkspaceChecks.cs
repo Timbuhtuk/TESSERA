@@ -19,7 +19,7 @@ internal static class MoodboardWorkspaceChecks
     public static void Run()
     {
         Exception? failure = null;
-        var thread = new Thread(() => { try { Verify(); VerifyFileProtection(); } catch (Exception ex) { failure = ex; } }) { IsBackground = true };
+        var thread = new Thread(() => { try { Verify(); VerifyFileProtection(); VerifyWorkspaceCreation(); } catch (Exception ex) { failure = ex; } }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         if (!thread.Join(TimeSpan.FromSeconds(120))) throw new Exception("Moodboard check timed out");
@@ -329,6 +329,39 @@ internal static class MoodboardWorkspaceChecks
         try { action(); }
         catch (InvalidOperationException) { return; }
         throw new Exception("Unsafe board output path was accepted");
+    }
+
+    private static void VerifyWorkspaceCreation()
+    {
+        string folder = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "new-board-" + Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(folder);
+        var window = new MainWindow(folder) { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+        try
+        {
+            window.EnableWorkspacePrototype(); window.Show(); Pump();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.ApplicationIdle, new Action(() =>
+            {
+                var browser = window.Browser!;
+                var grid = (Grid)typeof(WorkspaceBrowser).GetField("browserGrid", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(browser)!;
+                var overlay = grid.Children.OfType<Grid>().Single(child => Panel.GetZIndex(child) == 20);
+                var panel = (StackPanel)((Border)overlay.Children[0]).Child;
+                var content = (StackPanel)panel.Children[1];
+                ((TextBox)content.Children[1]).Text = "Audit board";
+                ((Button)((WrapPanel)panel.Children[2]).Children[1]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            }));
+            var task = (Task)typeof(MainWindow).GetMethod("WorkspaceActionAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(window, ["new-board", null])!;
+            AwaitWithPump(task);
+            var board = window.Workspace!.State.Assets.Single(asset => asset.Kind == WorkspaceAssetKind.Board && asset.Name == "Audit board");
+            string path = window.Workspace.ContentPath(board);
+            Require(File.Exists(path), "New workspace board has no saved document");
+            Require(new WorkspaceCatalog(folder).State.Assets.Any(asset => asset.Id == board.Id),
+                "New workspace board was not retained in the library catalog");
+            var reopened = new MoodboardWorkspace(); reopened.LoadFromFile(path);
+            Require(reopened.HasBoard && reopened.WorkspaceWidth == 1024 && reopened.WorkspaceHeight == 768,
+                "New workspace board could not be reopened");
+        }
+        finally { window.Close(); Pump(); }
     }
 
     private static T GetBoard<T>(MoodboardWorkspace board, string name) =>

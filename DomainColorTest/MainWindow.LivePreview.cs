@@ -174,18 +174,20 @@ public partial class MainWindow
         int strength = sharpenStrengthInput.Value, threshold = sharpenThresholdInput.Value;
         using var source = (Bitmap)basis.Clone();
         _livePreviewBusy = true;
+        using var operation = BeginOperationProgress(this, preview: true);
         Bitmap? result = null;
         try
         {
-            result = await Task.Run(() => sharpen ? ImageFilters.Sharpen(source, strength, threshold) : color
-                ? PaletteProcessor.Apply(source, options!, connected)
-                : IndependentImageProcessor.ApplyNeighborColors(source, options!));
+            result = await Task.Run(() => sharpen ? ImageFilters.Sharpen(source, strength, threshold, progress: operation.Work) : color
+                ? PaletteProcessor.Apply(source, options!, connected, operation.Work)
+                : IndependentImageProcessor.ApplyNeighborColors(source, options!, operation.Work));
             if (revision != _livePreviewRevision || _processing) return;
             ClearDisplayedLivePreview();
             _livePreviewBitmap = result;
             resultPreview.Image = result;
             livePreviewFrame.Visibility = livePreviewBadge.Visibility = Visibility.Visible;
             result = null;
+            operation.Complete();
             UpdateNavigationState();
         }
         catch (Exception ex)

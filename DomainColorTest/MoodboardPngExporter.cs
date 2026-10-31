@@ -1,3 +1,4 @@
+using PixelArtDownscale;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
@@ -16,6 +17,16 @@ internal static class MoodboardPngExporter
     private const long ImageCacheLimit = 128L * 1024 * 1024;
 
     public static void Export(string path, int width, int height, Color background, IReadOnlyList<MoodboardRenderLayer> layers)
+        => Export(path, width, height, background, layers, progress: null);
+
+    public static void Export(string path, int width, int height, Color background, IReadOnlyList<MoodboardRenderLayer> layers, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        ExportWithProgress(path, width, height, background, layers, tracking);
+        tracking.Report(1);
+    }
+
+    private static void ExportWithProgress(string path, int width, int height, Color background, IReadOnlyList<MoodboardRenderLayer> layers, ProcessingProgress tracking)
     {
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -43,6 +54,7 @@ internal static class MoodboardPngExporter
                     if (active.Count == 0)
                     {
                         for (int row = 0; row < bandHeight; row++) png.WriteRow(backgroundRow);
+                        tracking.Report((top + bandHeight) / (double)height);
                         continue;
                     }
                     var band = new RenderTargetBitmap(width, bandHeight, 96, 96, PixelFormats.Pbgra32);
@@ -62,6 +74,7 @@ internal static class MoodboardPngExporter
                             rgb[x * 3 + 2] = pixels[x * 4];
                         }
                         png.WriteRow(rgb);
+                        tracking.Report((top + row + 1.0) / height);
                     }
                 }
             }

@@ -43,6 +43,10 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     public bool CanAcceptFiles => !_saving && !_disposed;
     public event EventHandler? BackRequested;
     public event EventHandler? BusyChanged;
+    public Func<string, bool, OperationProgressSession>? ProgressFactory { get; set; }
+    private OperationProgressSession BeginProgress(string label, bool preview = false)
+        => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
+
     public event Action<string>? StatusChanged;
 
     public AsepriteWorkspace()
@@ -70,6 +74,9 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     private void UpdateLayoutForWidth()
     {
         bool compact = ActualWidth < 900;
+        bool compactHeader = ActualWidth < 700;
+        DockPanel.SetDock(sheetHeaderActions, compactHeader ? Dock.Bottom : Dock.Right);
+        sheetHeaderActions.Margin = compactHeader ? new Thickness(0, 8, 0, 0) : new Thickness();
         sheetWorkspaceGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 260, compact ? GridUnitType.Star : GridUnitType.Pixel);
         sheetWorkspaceGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
         sheetWorkspaceGrid.RowDefinitions[0].Height = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
@@ -119,7 +126,8 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     private AsepriteExportOptions Options() => new()
     {
         Layout = (SpriteSheetLayout)Math.Clamp(sheetLayout.SelectedIndex, 0, 2),
-        Columns = sheetColumns.Value, Padding = sheetPadding.Value
+        Columns = sheetColumns.Value,
+        Padding = sheetPadding.Value
     };
 
     private void ScheduleRebuild()
@@ -150,10 +158,20 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         var options = Options();
         UpdateControls();
         int converted = 0, failed = 0;
+        OperationProgressSession? operation = null;
+        int batchTotal = 0, batchDone = 0, batchFailures = 0;
         try
         {
             while (_pending.TryDequeue(out var entry))
             {
+                if (operation is null || batchDone == batchTotal)
+                {
+                    if (operation is not null && batchFailures == 0) operation.Complete();
+                    operation?.Dispose();
+                    operation = BeginProgress(Localization.Text("Конвертация Aseprite…"));
+                    batchTotal = _pending.Count + 1; batchDone = batchFailures = 0;
+                }
+                var fileProgress = operation.Work.Slice(batchDone, batchTotal);
                 entry.Pending = true; entry.State = Localization.Text("Конвертация…"); entry.Refresh();
                 StatusChanged?.Invoke(Localization.Format("Конвертация: {0}. Осталось: {1}", entry.Label, _pending.Count));
                 string output = Path.Combine(entry.Directory, Guid.NewGuid().ToString("N"));
@@ -162,8 +180,8 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                     cancellation.Token.ThrowIfCancellationRequested();
                     var result = await Task.Run(() =>
                     {
-                        EnsureSnapshot(entry, cancellation.Token);
-                        var convertedResult = AsepriteConverter.Convert(entry.Snapshot, output, options, cancellationToken: cancellation.Token);
+                        EnsureSnapshot(entry, cancellation.Token, fileProgress.Range(0, .2));
+                        var convertedResult = AsepriteConverter.Convert(entry.Snapshot, output, options, cancellationToken: cancellation.Token, progress: fileProgress.Range(.2, .8));
                         return (Result: convertedResult, Thumbnail: LoadThumbnail(convertedResult.ImagePath, convertedResult.Width, convertedResult.Height));
                     });
                     if (_disposed) return;
@@ -185,10 +203,12 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 catch (Exception ex)
                 {
                     FinishUnsuccessfulConversion(entry, Localization.Text("Ошибка"), ex.Message);
-                    DeleteCache(output); failed++;
+                    DeleteCache(output); failed++; batchFailures++;
                 }
+                batchDone++; fileProgress.Report(1);
                 UpdateControls();
             }
+            if (batchFailures == 0) operation?.Complete();
             StatusChanged?.Invoke(Localization.Format("Готово: {0}. Ошибок: {1}. Сохранение — PNG и JSON для каждой анимации.", converted, failed));
         }
         catch (OperationCanceledException)
@@ -198,6 +218,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         }
         finally
         {
+            operation?.Dispose();
             _converting = false; _cancellation = null;
             if (_disposed) DeleteCache(_session);
             else { UpdateSelection(); UpdateControls(); }
@@ -214,7 +235,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         entry.Refresh();
     }
 
-    private static void EnsureSnapshot(SheetEntry entry, CancellationToken token)
+    private static void EnsureSnapshot(SheetEntry entry, CancellationToken token, IProgress<double>? progress = null)
     {
         if (File.Exists(entry.Snapshot)) return;
         Directory.CreateDirectory(Path.GetDirectoryName(entry.Snapshot)!);
@@ -231,6 +252,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                     total = checked(total + read);
                     if (total > 64 * 1024 * 1024) throw new InvalidDataException(Localization.Text("Файл превышает допустимый размер 64 МБ."));
                     output.Write(buffer, 0, read);
+                    progress?.Report((double)total / Math.Max(1, input.Length));
                 }
             }
             token.ThrowIfCancellationRequested();
@@ -288,6 +310,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         if (IsBusy || _disposed) return Array.Empty<SaveResult>();
         var entries = all ? _entries.Where(e => e.Ready).ToArray() : sheetStrip.SelectedItem is SheetEntry { Ready: true } entry ? new[] { entry } : [];
         var results = new List<SaveResult>();
+        using var operation = BeginProgress(Localization.Text("Сохранение анимаций…"));
         _saving = true;
         using var cancellation = new CancellationTokenSource(); _cancellation = cancellation;
         UpdateControls();
@@ -299,13 +322,15 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 StatusChanged?.Invoke(Localization.Format("Сохранение: {0}", item.Label));
                 try
                 {
-                    string path = await Task.Run(() => ExportReady(item, directory, cancellation.Token));
+                    string path = await Task.Run(() => ExportReady(item, directory, cancellation.Token, operation.Work.Slice(results.Count, entries.Length)));
                     results.Add(new SaveResult(item.InputPath, path, null));
                     item.State = Localization.Text("Сохранён"); item.Detail = path; item.Refresh();
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex) { results.Add(new SaveResult(item.InputPath, null, ex.Message)); item.State = Localization.Text("Ошибка сохранения"); item.Detail = ex.Message; item.Refresh(); }
+                operation.Work.Report((double)results.Count / entries.Length);
             }
+            if (results.All(r => r.Error is null)) operation.Complete();
             StatusChanged?.Invoke(Localization.Format("Сохранено: {0}. Ошибок: {1}. Папка: {2}", results.Count(r => r.Error is null), results.Count(r => r.Error is not null), directory));
         }
         catch (OperationCanceledException) { StatusChanged?.Invoke(Localization.Format("Сохранение отменено. Сохранено: {0}.", results.Count(r => r.Error is null))); }
@@ -313,7 +338,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         return results;
     }
 
-    private static string ExportReady(SheetEntry entry, string directory, CancellationToken token)
+    private static string ExportReady(SheetEntry entry, string directory, CancellationToken token, IProgress<double>? progress = null)
     {
         directory = Path.GetFullPath(directory);
         Directory.CreateDirectory(directory);
@@ -326,7 +351,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         try
         {
             token.ThrowIfCancellationRequested();
-            File.Copy(entry.Result!.ImagePath, stagedPng, false);
+            ProgressFile.Copy(entry.Result!.ImagePath, stagedPng, progress, token);
             var metadata = JsonNode.Parse(File.ReadAllText(entry.Result.JsonPath))!;
             metadata["image"] = name + ".png";
             File.WriteAllText(stagedJson, metadata.ToJsonString(AsepriteConverter.JsonOptions));

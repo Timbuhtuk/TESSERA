@@ -11,7 +11,7 @@ public enum AsciiColorMode { Monochrome, Source, Custom }
 public static class ImageFilters
 {
     public const string DefaultAsciiRamp = "@#S08Xx+=-;:, .";
-    public const int DefaultAsciiFontSize = 10;
+    public const int DefaultAsciiFontSize = 16;
     public static IReadOnlyList<AsciiRampPreset> AsciiRampPresets { get; } =
     [
         new("Standard", DefaultAsciiRamp),
@@ -21,11 +21,23 @@ public static class ImageFilters
     ];
 
     public static Bitmap Monochrome(Bitmap source)
+        => Monochrome(source, progress: null);
+
+    public static Bitmap Monochrome(Bitmap source, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = MonochromeWithProgress(source, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap MonochromeWithProgress(Bitmap source, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         int[] pixels = ReadArgb(source);
         for (int q = 0; q < pixels.Length; q++)
         {
+            if (q % source.Width == 0) tracking.Report((double)q / pixels.Length);
             int argb = pixels[q];
             int alpha = (int)((uint)argb >> 24);
             if (alpha == 0) continue;
@@ -36,7 +48,15 @@ public static class ImageFilters
     }
 
     /// <summary>Alpha-aware 3×3 unsharp mask. Each change follows a nearby color transition to avoid isolated color outliers.</summary>
-    public static Bitmap Sharpen(Bitmap source, int strength = 100, int threshold = 4, CancellationToken cancellationToken = default)
+    public static Bitmap Sharpen(Bitmap source, int strength = 100, int threshold = 4, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var output = SharpenWithProgress(source, strength, threshold, cancellationToken, tracking);
+        tracking.Report(1);
+        return output;
+    }
+
+    private static Bitmap SharpenWithProgress(Bitmap source, int strength, int threshold, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (strength is < 0 or > 200) throw new ArgumentOutOfRangeException(nameof(strength));
@@ -105,46 +125,79 @@ public static class ImageFilters
                 }
                 result[index] = alpha << 24 | bestR << 16 | bestG << 8 | bestB;
             }
+            tracking.Report((y + 1.0) / height);
         }
         return WriteArgb(result, width, height);
     }
 
     public static string ToAscii(Bitmap source, int columns, string characters = DefaultAsciiRamp,
-        bool invertSource = false, bool dither = false)
+        bool invertSource = false, bool dither = false, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ToAsciiWithProgress(source, columns, characters, invertSource, dither, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static string ToAsciiWithProgress(Bitmap source, int columns, string characters, bool invertSource, bool dither, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (columns < 1)
             throw new ArgumentOutOfRangeException(nameof(columns), "Ширина ASCII должна быть положительной.");
         var cell = MeasureAsciiCell(DefaultAsciiFontSize);
         int rows = CalculateAsciiRows(source.Width, source.Height, columns, cell.Width, cell.Height);
-        return ToAscii(source, columns, rows, characters, invertSource, dither);
+        return ToAscii(source, columns, rows, characters, invertSource, dither, tracking);
     }
 
     public static string ToAscii(Bitmap source, string characters = DefaultAsciiRamp,
-        bool invertSource = false, bool dither = false)
+        bool invertSource = false, bool dither = false, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ToAsciiWithProgress(source, characters, invertSource, dither, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static string ToAsciiWithProgress(Bitmap source, string characters, bool invertSource, bool dither, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         var cell = MeasureAsciiCell(DefaultAsciiFontSize);
         int columns = Math.Max(1, (int)Math.Round(source.Width / (double)cell.Width));
         int rows = CalculateAsciiRows(source.Width, source.Height, columns, cell.Width, cell.Height);
-        return ToAscii(source, columns, rows, characters, invertSource, dither);
+        return ToAscii(source, columns, rows, characters, invertSource, dither, tracking);
     }
 
     public static string ToAsciiPerPixel(Bitmap source, string characters = DefaultAsciiRamp,
-        bool invertSource = false, bool dither = false)
+        bool invertSource = false, bool dither = false, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ToAsciiPerPixelWithProgress(source, characters, invertSource, dither, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static string ToAsciiPerPixelWithProgress(Bitmap source, string characters, bool invertSource, bool dither, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
-        return ToAscii(source, source.Width, source.Height, characters, invertSource, dither);
+        return ToAscii(source, source.Width, source.Height, characters, invertSource, dither, tracking);
     }
 
     public static string ToAsciiAtColumns(Bitmap source, int columns, string characters = DefaultAsciiRamp,
-        bool invertSource = false, bool dither = false)
+        bool invertSource = false, bool dither = false, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ToAsciiAtColumnsWithProgress(source, columns, characters, invertSource, dither, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static string ToAsciiAtColumnsWithProgress(Bitmap source, int columns, string characters, bool invertSource, bool dither, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (columns is < 1 or > 512) throw new ArgumentOutOfRangeException(nameof(columns));
         var cell = MeasureAsciiCell(DefaultAsciiFontSize);
         int rows = CalculateAsciiRows(source.Width, source.Height, columns, cell.Width, cell.Height);
-        return ToAscii(source, columns, rows, characters, invertSource, dither);
+        return ToAscii(source, columns, rows, characters, invertSource, dither, tracking);
     }
 
     internal static int CalculateAsciiRows(int width, int height, int columns, int cellWidth, int cellHeight)
@@ -158,15 +211,24 @@ public static class ImageFilters
     public static Bitmap RenderAscii(Bitmap source, bool keepSourceSize = true, string characters = DefaultAsciiRamp,
         bool invertSource = false, bool invertColors = false, AsciiColorMode colorMode = AsciiColorMode.Monochrome,
         int foregroundArgb = -1, int backgroundArgb = unchecked((int)0xFF000000), int columns = 0,
-        bool dither = false)
+        bool dither = false, int fontSize = DefaultAsciiFontSize, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = RenderAsciiWithProgress(source, keepSourceSize, characters, invertSource, invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither, fontSize, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap RenderAsciiWithProgress(Bitmap source, bool keepSourceSize, string characters, bool invertSource, bool invertColors, AsciiColorMode colorMode, int foregroundArgb, int backgroundArgb, int columns, bool dither, int fontSize, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         if (string.IsNullOrEmpty(characters) || characters.Contains('\r') || characters.Contains('\n'))
             throw new ArgumentException("Набор ASCII должен содержать символы яркости в одной строке.", nameof(characters));
         if (!Enum.IsDefined(colorMode)) throw new ArgumentOutOfRangeException(nameof(colorMode));
         if (columns is < 0 or > 512) throw new ArgumentOutOfRangeException(nameof(columns));
+        if (fontSize is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(fontSize));
         return AsciiRenderer.Render(source, ReadArgb(source), keepSourceSize, characters, invertSource,
-            invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither);
+            invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither, fontSize, tracking);
     }
 
     public static Bitmap RenderAscii(string text, int fontSize = DefaultAsciiFontSize, bool invertColors = false)
@@ -228,7 +290,19 @@ public static class ImageFilters
     }
 
     private static string ToAscii(Bitmap source, int columns, int rows, string characters, bool invertSource, bool dither)
+        => ToAscii(source, columns, rows, characters, invertSource, dither, progress: null);
+
+    private static string ToAscii(Bitmap source, int columns, int rows, string characters, bool invertSource, bool dither, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ToAsciiWithProgress(source, columns, rows, characters, invertSource, dither, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static string ToAsciiWithProgress(Bitmap source, int columns, int rows, string characters, bool invertSource, bool dither, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         if (string.IsNullOrEmpty(characters) || characters.Contains('\r') || characters.Contains('\n'))
             throw new ArgumentException("Набор ASCII должен содержать символы яркости в одной строке.", nameof(characters));
         long characterCount = (long)rows * columns + (long)Math.Max(0, rows - 1) * Environment.NewLine.Length;
@@ -268,6 +342,8 @@ public static class ImageFilters
                 text.Append(characters[Math.Clamp(index, 0, characters.Length - 1)]);
             }
             if (y + 1 < rows) text.AppendLine();
+
+            tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)rows) / 1.0);
         }
         return text.ToString();
     }

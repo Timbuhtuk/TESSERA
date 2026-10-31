@@ -132,13 +132,15 @@ public partial class MainWindow
             return;
         }
         if (_processing) return;
+        string[] progressFiles = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        int progressDone = 0;
         SetProcessingState(true);
         var failures = new List<string>();
         SourceEntry? selected = null;
         int added = 0;
         try
         {
-            foreach (string path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string path in progressFiles)
             {
                 try
                 {
@@ -149,8 +151,10 @@ public partial class MainWindow
                     selected = source;
                 }
                 catch (Exception ex) { failures.Add($"{Path.GetFileName(path)}: {ex.Message}"); }
+                CurrentProcessingProgress?.Report((double)++progressDone / progressFiles.Length);
             }
             if (selected is not null) SelectSource(selected);
+            if (failures.Count == 0) CompleteProcessingProgress();
             statusLabel.Text = failures.Count == 0
                 ? Localization.Format("Добавлено: {0}. Исходников в ленте: {1}. История сохраняется автоматически.", added, _sources.Count)
                 : Localization.Format("Добавлено: {0}. Не удалось открыть: {1}. {2}", added, failures.Count, failures[0]);
@@ -388,7 +392,8 @@ public partial class MainWindow
         ContourMinimumSimilarNeighbors = contourNeighborCountInput.Value,
         ContourMinimumAgreement = contourAgreementInput.Value,
         ContourMinimumOpposition = contourOppositionInput.Value,
-        DetectGrid = detectGridInput.IsChecked == true, AlignmentMode = SelectedGridAlignmentMode,
+        DetectGrid = detectGridInput.IsChecked == true,
+        AlignmentMode = SelectedGridAlignmentMode,
         SnapToGlobalGrid = SelectedGridAlignmentMode == GridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
         AspectLock = aspectLock.IsChecked == true
     };

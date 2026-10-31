@@ -24,8 +24,17 @@ public sealed class ChannelAdjustmentOptions
 public static class ChannelAdjustment
 {
     /// <summary>Changes one straight RGBA channel, including hidden RGB, without modifying the source.</summary>
-    public static Bitmap Apply(Bitmap source, ChannelAdjustmentOptions options, CancellationToken cancellationToken = default)
+    public static Bitmap Apply(Bitmap source, ChannelAdjustmentOptions options, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ApplyWithProgress(source, options, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ApplyWithProgress(Bitmap source, ChannelAdjustmentOptions options, CancellationToken cancellationToken, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
         options.Validate();
@@ -58,6 +67,8 @@ public static class ChannelAdjustment
                         row[x] = (row[x] & mask) | (values[current] << shift);
                     }
                     Marshal.Copy(row, 0, address, row.Length);
+
+                    tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)result.Height) / 1.0);
                 }
             }
             finally { result.UnlockBits(bits); }
