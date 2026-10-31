@@ -228,7 +228,14 @@ public partial class MainWindow
                 merge.Items.Add(item);
             }
         merge.IsEnabled = merge.Items.Count > 0;
+        var remove = new MenuItem { Header = generation.RemoveDescription, IsEnabled = !_processing };
+        remove.Click += (_, _) =>
+        {
+            if (_processing) return;
+            RemoveGenerationWithUndo(generation, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
+        };
         menu.Items.Add(detach); menu.Items.Add(merge); menu.Items.Add(macro);
+        menu.Items.Add(new Separator()); menu.Items.Add(remove);
         menu.PlacementTarget = target; menu.IsOpen = true;
     }
 

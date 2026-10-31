@@ -73,6 +73,7 @@ public partial class MainWindow
         if (picker.SelectedColor is not DrawingColor chosen) return;
         if (foreground) _asciiForegroundArgb = chosen.ToArgb(); else _asciiBackgroundArgb = chosen.ToArgb();
         UpdateAsciiColorControls();
+        ScheduleLiveToolPreviews();
     }
 
     private void ApplyAsciiRampPreset()
@@ -263,6 +264,7 @@ public partial class MainWindow
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
         var settings = CaptureSettings();
         using var input = (Bitmap)basis.Clone();
+        asciiLivePreviewInput.IsChecked = false;
         SetProcessingState(true);
         statusLabel.Text = Localization.Text("Рендер ASCII-изображения…");
         try

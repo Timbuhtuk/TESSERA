@@ -23,11 +23,11 @@ internal static class ProgressUiChecks
             window.Show(); Pump();
             var indicator = (ProgressBar)window.FindName("busyIndicator");
             var panel = (StackPanel)window.FindName("operationProgressPanel");
-            var label = (TextBlock)window.FindName("progressPercent");
+            Require(window.FindName("progressPercent") is null, "The footer still contains a numeric percent label");
             Require(!indicator.IsIndeterminate && panel.Visibility == Visibility.Collapsed, "Idle progress is visible or indeterminate");
             using var first = Begin();
             first.Report(.25); Pump();
-            Require(indicator.Value == 25 && label.Text == "25%", "The footer did not receive actual work");
+            Require(indicator.Value == 25, "The footer did not receive actual work");
             using var second = Begin();
             second.Report(.5); first.Complete(); Pump();
             Require(indicator.Value == 50, "A late callback replaced a newer operation");
@@ -47,7 +47,7 @@ internal static class ProgressUiChecks
                 window.Width = 1220; Pump();
             }
             second.Complete(); Pump();
-            Require(indicator.Value == 100 && label.Text == "100%", "Success did not reach 100%");
+            Require(indicator.Value == 100, "Success did not reach 100%");
             Capture(window, Path.Combine(directory, "completed.png"));
             Thread.Sleep(370); Pump();
             Require(panel.Visibility == Visibility.Collapsed, "Completed progress did not hide");

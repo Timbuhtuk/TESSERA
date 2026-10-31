@@ -68,9 +68,10 @@ internal static class LibraryRemovalChecks
             Require(!original.Generations.Contains(selected!) && original.SelectedGeneration == original.Generations[^1] && generations.SelectedItem == original.SelectedGeneration, "Selected result did not switch to neighbour: " + Get<TextBlock>("statusLabel").Text);
             Invoke("SetProcessingState", true);
             var blocked = original.Generations[0];
-            var button = RemoveButton(generations, blocked);
-            Require(!button.IsEnabled, "Delete button is enabled during processing");
-            button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            var remove = RemoveResultAction(generations, blocked);
+            Require(!remove.IsEnabled, "Delete result action is enabled during processing");
+            try { remove.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); }
+            finally { ((ContextMenu)remove.Parent).IsOpen = false; Pump(); }
             Require(original.Generations.Contains(blocked) && File.Exists(library.ResultPath(original, blocked)), "Busy deletion was allowed");
             Capture("thumbnail-scrollbars-busy.png");
             Invoke("SetProcessingState", false);
@@ -116,7 +117,7 @@ internal static class LibraryRemovalChecks
             Require(seeded.All(s => File.Exists(s.OriginalPath)) && File.Exists(exported), "Deletion touched original/exported files");
             Invoke("LoadImage", seeded[0].OriginalPath); Pump();
             Require(sources.Items.Count == 1 && Get<Button>("processButton").IsEnabled, "Cannot import after deleting all sources");
-            Console.WriteLine("  Deletion/theme: thumbnail buttons, neighbouring selections, busy/locked files, restart, independent copies, originals/export protection and both scrollbar axes passed.");
+            Console.WriteLine("  Deletion/theme: result context menu, source buttons, neighbouring selections, busy/locked files, restart, independent copies, originals/export protection and both scrollbar axes passed.");
         }
         finally { Invoke("SetProcessingState", false); window.Close(); }
 
@@ -133,7 +134,29 @@ internal static class LibraryRemovalChecks
             var container = (ListBoxItem)strip.ItemContainerGenerator.ContainerFromItem(entry);
             return Descendants<Button>(container).Single();
         }
-        void Remove(ListBox strip, object entry) { RemoveButton(strip, entry).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
+        MenuItem RemoveResultAction(ListBox strip, GenerationEntry entry)
+        {
+            strip.ScrollIntoView(entry); Pump();
+            var container = (ListBoxItem)strip.ItemContainerGenerator.ContainerFromItem(entry);
+            Invoke("OpenHistoryContextMenu", entry, container); Pump();
+            var menu = PresentationSource.CurrentSources.Cast<PresentationSource>()
+                .Select(source => source.RootVisual).OfType<DependencyObject>()
+                .SelectMany(Descendants<ContextMenu>)
+                .Single(menu => menu.IsOpen && ReferenceEquals(menu.PlacementTarget, container));
+            return menu.Items.OfType<MenuItem>().Single(item => Equals(item.Header, entry.RemoveDescription));
+        }
+        void Remove(ListBox strip, object entry)
+        {
+            if (entry is GenerationEntry generation)
+            {
+                var remove = RemoveResultAction(strip, generation);
+                Require(remove.IsEnabled, "Idle result deletion is disabled");
+                try { remove.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); }
+                finally { ((ContextMenu)remove.Parent).IsOpen = false; }
+            }
+            else RemoveButton(strip, entry).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Pump();
+        }
         void VerifyStyle(ScrollBar bar)
         {
             Require(ReferenceEquals(bar.Style, Window.GetWindow(bar)!.FindResource(typeof(ScrollBar))), "Scrollbar escaped the Tessera.WpfStyles theme");

@@ -12,8 +12,7 @@ public sealed class ResultIcon : FrameworkElement
     private static readonly Brush AccentBrush = new SolidColorBrush(Color.FromRgb(0x64, 0xd8, 0xff));
     static ResultIcon() { MainBrush.Freeze(); AccentBrush.Freeze(); }
     public static readonly DependencyProperty OperationIdProperty = DependencyProperty.Register(nameof(OperationId), typeof(string), typeof(ResultIcon),
-        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender, (element, args) =>
-            ((ResultIcon)element).Visibility = Supports((string?)args.NewValue) ? Visibility.Visible : Visibility.Collapsed));
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
     public static readonly DependencyProperty ForegroundProperty = Control.ForegroundProperty.AddOwner(typeof(ResultIcon),
         new FrameworkPropertyMetadata(MainBrush, FrameworkPropertyMetadataOptions.AffectsRender));
 
@@ -35,12 +34,18 @@ public sealed class ResultIcon : FrameworkElement
     protected override void OnRender(DrawingContext context)
     {
         base.OnRender(context);
-        if (!Supports(OperationId)) return;
-
         double size = Math.Min(ActualWidth, ActualHeight);
         context.PushTransform(new TranslateTransform((ActualWidth - size) / 2, (ActualHeight - size) / 2));
         context.PushTransform(new ScaleTransform(size / 24, size / 24));
-        foreach (var shape in ReadShapes(OperationId!))
+        if (!Supports(OperationId))
+        {
+            var pen = new Pen(Foreground, 1.7) { LineJoin = PenLineJoin.Round };
+            context.DrawRoundedRectangle(null, pen, new Rect(4, 3, 16, 18), 1, 1);
+            context.DrawLine(pen, new Point(8, 9), new Point(16, 9));
+            context.DrawLine(pen, new Point(8, 13), new Point(16, 13));
+            context.DrawLine(pen, new Point(8, 17), new Point(13, 17));
+        }
+        else foreach (var shape in ReadShapes(OperationId!))
         {
             Brush color = shape.Accent ? AccentBrush : Foreground;
             Pen? pen = shape.Stroke ? new Pen(color, 1.7)

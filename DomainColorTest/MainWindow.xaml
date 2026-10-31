@@ -14,15 +14,12 @@
                 </Grid>
             </DataTemplate>
         <DataTemplate x:Key="GenerationCardTemplate">
-            <Grid Width="112" ToolTip="{Binding Description}" AutomationProperties.Name="{Binding Label}">
-                <StackPanel>
-                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
-                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                        <local:ResultIcon OperationId="{Binding OperationId}" Foreground="{DynamicResource Ts.Text}" Width="16" Height="16" Margin="0,0,3,0" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding ResultTreeLabel}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                </StackPanel>
-                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
+            <Grid Width="112" Height="58" ClipToBounds="True" ToolTip="{Binding ResultTreeDescription}" AutomationProperties.Name="{Binding Label}">
+                <Border Background="{DynamicResource Ts.Thumbnail}" />
+                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                <Polygon Points="0,58 112,0 112,58" Fill="{DynamicResource Ts.Raised}" />
+                <Line X1="0" Y1="58" X2="112" Y2="0" Stroke="{DynamicResource Ts.Border}" StrokeThickness="1" />
+                <local:ResultIcon OperationId="{Binding OperationId}" Foreground="{DynamicResource Ts.Text}" Width="32" Height="32" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,5" IsHitTestVisible="False" />
             </Grid>
         </DataTemplate>
         <DataTemplate x:Key="HistorySourceTemplate">
@@ -208,6 +205,7 @@
                             <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="asciiInvertSourceInput" Content="{local:Translate TextC3E9D9E23A80}" ToolTip="{local:Translate TextAC973FF3D49E}" />
                             <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="asciiInvertRenderInput" Content="{local:Translate TextC52297B9CBB7}" ToolTip="{local:Translate Text99720CFB9622}" />
                             <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="asciiDitherInput" Content="Упорядоченный дизеринг" ToolTip="Смешивает соседние символы разной плотности, чтобы плавнее передать полутона. Для TXT и PNG." />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="asciiLivePreviewInput" Content="Живой предпросмотр" ToolTip="Показывать ASCII-изображение без сохранения в историю." Margin="0,10,0,5" />
                             <UniformGrid Columns="2" Margin="0,8,0,0">
                                 <Button x:Name="asciiSaveTextButton" Content="{local:Translate Text35BA06413D61}" IsEnabled="False" Margin="0,0,4,0" />
                                 <Button x:Name="asciiRenderButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate TextE3D5A345CFE0}" IsEnabled="False" Margin="4,0,0,0" />
@@ -534,7 +532,6 @@
                     <ProgressBar x:Name="busyIndicator" Width="240" Height="14" Minimum="0" Maximum="100" Value="0"
                                  Style="{StaticResource Ts.ProgressCells}" IsIndeterminate="False"
                                  AutomationProperties.Name="{local:Translate Text8F422EAEB7A5}" Visibility="Collapsed"/>
-                    <TextBlock x:Name="progressPercent" Text="0%" Width="40" Margin="8,0,0,0" TextAlignment="Right" VerticalAlignment="Center" TextWrapping="NoWrap"/>
                 </StackPanel>
                 <Button x:Name="updateButton" DockPanel.Dock="Right" Content="{local:Translate Text93B08F7B1465}" Margin="12,0,0,0" Padding="9,2" VerticalAlignment="Center" Visibility="Collapsed" />
                 <TextBlock x:Name="statusLabel" Text="{local:Translate Text3F42086426E9}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />

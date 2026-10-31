@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Крупные карточки результатов и предпросмотр ASCII",
+        "en": "Larger result cards and ASCII live preview"
+      },
+      "notes": {
+        "ru": "- Дерево результатов: карточка разделена по диагонали между изображением и иконкой 32 px. Название, размер, время и подробности доступны в подсказке при наведении; удаление результата — в меню правой кнопки мыши.\n- ASCII: добавлен переключатель живого предпросмотра. Изменения символов, ширины, цветов и других настроек видны без сохранения в историю. «Рендер изображения» сохраняет результат и выключает предпросмотр.\n- Шкала прогресса: ход работы показывают 20 ячеек без числовой подписи процентов.",
+        "en": "- Result tree: each card is split diagonally between the image and a 32 px operation icon. Hover for the name, dimensions, time and details; right-click to delete a result.\n- ASCII: a Live preview switch shows changes to characters, width, colors and other settings without saving history. Render image saves the result and turns preview off.\n- Progress bar: 20 cells show completed work without a numeric percentage label."
+      }
+    },
+    {
+      "version": "2.20.0",
+      "title": {
         "ru": "Реальный прогресс и чёткие символы ASCII",
         "en": "Real progress and sharper ASCII glyphs"
       },
