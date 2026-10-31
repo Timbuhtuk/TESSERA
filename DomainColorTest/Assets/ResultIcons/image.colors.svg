@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <style>.icon{fill:none;stroke:#e9eef2;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.accent{stroke:#64d8ff}</style>
+  <g class="icon">
+    <path d="M12 2a10 10 0 1 0 0 20h1.5a2.5 2.5 0 0 0 2.1-4 2.4 2.4 0 0 1 2-3.8h2.5A10 10 0 0 0 12 2z" />
+    <circle class="accent" cx="7" cy="9" r="1" />
+    <circle cx="12" cy="6" r="1" />
+    <circle cx="17" cy="9" r="1" />
+    <circle cx="7" cy="15" r="1" />
+  </g>
+</svg>

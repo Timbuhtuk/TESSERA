@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Дерево результатов и вкладки инструментов",
+        "en": "Result tree and tool tabs"
+      },
+      "notes": {
+        "ru": "- Дерево результатов: 17 операций показывают согласованные SVG-значки вместо названия на карточке. Размер и время остаются видимыми, полное название доступно в подсказке. Профильная обработка, карта контуров и правка тайла сохраняют текстовые подписи.\n- Вкладки инструментов: одинаковая высота и ширина, перенос вкладок на новую строку и ровное расположение ручки, названия и кнопки закрытия.\n- Подсказки: длинный текст переносится по строкам, ширина ограничена 400 пикселями.",
+        "en": "- Result tree: 17 operations show the approved SVG icons in place of operation names on their cards. Dimensions and time remain visible; hover for the full name. Profile processing, contour maps and manual tile edits retain text labels.\n- Tool tabs: consistent height and width, wrapping to another row, and aligned drag handle, name and close button.\n- Tooltips: long text wraps within a maximum width of 400 pixels."
+      }
+    },
+    {
+      "version": "2.19.0",
+      "title": {
         "ru": "Карта цветов и относительный масштаб в макросах",
         "en": "Color treemap and relative scaling in macros"
       },

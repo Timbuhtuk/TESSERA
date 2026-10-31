@@ -13,6 +13,18 @@
                     <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
                 </Grid>
             </DataTemplate>
+        <DataTemplate x:Key="GenerationCardTemplate">
+            <Grid Width="112" ToolTip="{Binding Description}" AutomationProperties.Name="{Binding Label}">
+                <StackPanel>
+                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                        <local:ResultIcon OperationId="{Binding OperationId}" Foreground="{DynamicResource Ts.Text}" Width="16" Height="16" Margin="0,0,3,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ResultTreeLabel}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </StackPanel>
+                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
+            </Grid>
+        </DataTemplate>
         <DataTemplate x:Key="HistorySourceTemplate">
             <Grid Width="112" ToolTip="{Binding Description}">
                 <StackPanel>
@@ -59,14 +71,17 @@
         </Style>
         <Style x:Key="ToolDockTab" TargetType="TabItem">
             <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}" />
-            <Setter Property="Padding" Value="7,6" />
+            <Setter Property="Width" Value="146" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
-                <Border x:Name="Frame" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,1" Padding="{TemplateBinding Padding}">
-                    <ContentPresenter ContentSource="Header" />
+                <Border x:Name="Frame" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,2" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
                 </Border>
                 <ControlTemplate.Triggers>
-                    <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource Ts.Text}" /><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Panel}" /><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}" /></Trigger>
                     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Hover}" /></Trigger>
+                    <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource Ts.Text}" /><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Panel}" /><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}" /></Trigger>
                 </ControlTemplate.Triggers>
             </ControlTemplate></Setter.Value></Setter>
         </Style>
@@ -75,9 +90,7 @@
             <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabControl">
                 <Grid KeyboardNavigation.TabNavigation="Local">
                     <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" CanContentScroll="False">
-                        <StackPanel Orientation="Horizontal" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
-                    </ScrollViewer>
+                    <WrapPanel Orientation="Horizontal" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
                     <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" ContentSource="SelectedContent" />
                 </Grid>
             </ControlTemplate></Setter.Value></Setter>

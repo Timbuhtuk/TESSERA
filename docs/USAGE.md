@@ -46,6 +46,8 @@ The editor keeps image previews in the main window. Select a source or result ca
 
 ### Editing result history
 
+Result cards show an operation icon before their dimensions and time. Hover a card for its full operation name and details. Results without an assigned icon, including profile processing, contour maps and manual tile edits, keep their text labels.
+
 Select a result in the middle of a chain and enable **Insert and recompute** at the upper right of the result tree. The next applied tool inserts its result after that card, then recomputes every later result, including forks, from the saved operation settings. The checkbox turns off after a successful application. If an operation cannot be replayed, Tessera restores the previous tree and shows a modal naming the failed result, operation and cause. The checkbox remains enabled so you can choose another action or switch it off.
 
 Drag a final result card onto the final card of a different visible branch to **merge** them. The context menu offers the same operation under **Merge into branch**. Tessera copies the operations from the dragged branch's visible root through the selected leaf onto the target tail; the source branch stays in place. If the source forks, choose the leaf of the path you want. A merge is saved only when every copied operation succeeds.

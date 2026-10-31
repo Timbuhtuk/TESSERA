@@ -35,7 +35,6 @@ public partial class MainWindow
         _workspaceTabs.SelectionChanged += (_, e) =>
         {
             if (!ReferenceEquals(e.Source, _workspaceTabs)) return;
-            if (_workspaceTabs.SelectedItem is TabItem selected) selected.BringIntoView();
             ActivateDockedTool((_workspaceTabs.SelectedItem as TabItem)?.Tag as string);
         };
         _workspaceDock.Child = layout;
@@ -77,18 +76,22 @@ public partial class MainWindow
             else content.Children.Add(new Expander { Header = group.Header, Content = group, IsExpanded = false,
                 Margin = new Thickness(0, 8, 0, 0), Style = (Style)FindResource("ToolExpander") });
         }
-        var header = new DockPanel();
-        var close = new Button { Content = "×", Width = 22, Height = 22, Padding = new Thickness(0),
+        var header = new Grid();
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(18) });
+        header.ColumnDefinitions.Add(new ColumnDefinition());
+        header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(22) });
+        var close = new Button { Content = "×", Width = 20, Height = 20, MinWidth = 0, MinHeight = 0, Padding = new Thickness(0),
             ToolTip = Localization.Text("Закрыть инструмент") };
         close.Click += (_, e) => { e.Handled = true; CloseDockedTool(key); };
-        DockPanel.SetDock(close, Dock.Right); header.Children.Add(close);
-        var grip = new TextBlock { Text = "⋮⋮", Padding = new Thickness(3, 0, 4, 0), Cursor = Cursors.SizeAll,
+        Grid.SetColumn(close, 2); header.Children.Add(close);
+        var grip = new TextBlock { Text = "⋮⋮", VerticalAlignment = VerticalAlignment.Center, Cursor = Cursors.SizeAll,
             ToolTip = Localization.Text("Перетащите инструмент из панели") };
-        DockPanel.SetDock(grip, Dock.Left); header.Children.Add(grip);
+        Grid.SetColumn(grip, 0); header.Children.Add(grip);
         string tabTitle = key switch { "size" => Localization.Text("Размер"), "finalists" => "TCR", _ => title };
         header.ToolTip = title;
-        header.Children.Add(new TextBlock { Text = tabTitle, VerticalAlignment = VerticalAlignment.Center,
-            TextTrimming = TextTrimming.CharacterEllipsis });
+        var label = new TextBlock { Text = tabTitle, VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap };
+        Grid.SetColumn(label, 1); header.Children.Add(label);
         Point dragStart = default;
         grip.PreviewMouseLeftButtonDown += (_, e) =>
         {

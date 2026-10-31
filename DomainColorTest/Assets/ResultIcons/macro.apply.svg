@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <style>.icon{fill:none;stroke:#e9eef2;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.accent{stroke:#64d8ff}</style>
+  <g class="icon">
+    <rect x="2" y="7" width="5" height="9" />
+    <rect x="10" y="7" width="5" height="9" />
+    <rect x="18" y="7" width="5" height="9" />
+    <path d="M7 11.5h3M15 11.5h3" />
+  </g>
+</svg>
