@@ -145,8 +145,11 @@ internal static class NavigationChecks
                     var right = menu.TranslatePoint(new System.Windows.Point(menu.ActualWidth, 0), window);
                     var caption = Get<StackPanel>("captionButtons").TranslatePoint(new System.Windows.Point(), window);
                     Require(right.X <= caption.X - 48, "Navigation overlaps the window controls/drag area");
+                    var filename = Get<TextBlock>("fileLabel");
+                    var filenameRight = filename.TranslatePoint(new System.Windows.Point(filename.ActualWidth, 0), window);
+                    Require(filenameRight.X <= caption.X - 32, "Filename consumes the native title-bar drag area");
                     if (width == 560) Require(Get<TextBlock>("fileLabel").ActualWidth >= 40,
-                        "Minimum-width title bar does not reserve space for the active filename");
+                        $"Minimum-width title bar does not reserve space for the active filename: {filename.ActualWidth}, menu end {right.X}, controls at {caption.X}");
                     if (compact)
                     {
                         NavigationTest.Click(window, "moreMenu"); Pump();
