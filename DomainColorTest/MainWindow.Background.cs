@@ -16,7 +16,7 @@ public partial class MainWindow
 
     private void UpdateBusyIndicator()
     {
-        SetVisible(busyIndicator, WorkspaceBusy);
+        RefreshOperationProgressVisibility();
         UpdateNavigationState();
     }
 

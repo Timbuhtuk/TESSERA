@@ -11,8 +11,19 @@ namespace PixelArtAlignment;
 /// </summary>
 public sealed class PixelGridAligner
 {
-    public GridAlignmentResult Align(Bitmap source, GridAlignmentOptions? options = null)
+    public GridAlignmentResult Align(Bitmap source, GridAlignmentOptions? options = null, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = AlignWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private GridAlignmentResult AlignWithProgress(Bitmap source, GridAlignmentOptions? options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
+        int progressRows1 = 0;
+        int progressRows2 = 0;
         ArgumentNullException.ThrowIfNull(source);
         options ??= new GridAlignmentOptions();
         if (!Enum.IsDefined(options.Mode)) throw new ArgumentOutOfRangeException(nameof(options.Mode));
@@ -30,12 +41,15 @@ public sealed class PixelGridAligner
         int[] guide = SuppressSpeckles(pixels, w, h);
         var ex = new float[w * h]; var ey = new float[w * h];
         for (int y = 0; y < h; y++)
+        {
             for (int x = 0; x < w; x++)
             {
                 int i = y * w + x;
                 if (x > 0) ex[i] = Difference(guide[i], guide[i - 1]);
                 if (y > 0) ey[i] = Difference(guide[i], guide[i - w]);
             }
+            tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)h) / 3.0);
+        }
         ex = CoherentEdges(ex, w, h, true); ey = CoherentEdges(ey, w, h, false);
         double[] xp = Project(ex, w, h, true, 0, h), yp = Project(ey, w, h, false, 0, w);
         var detected = options.CellSize is null ? Detect(xp, yp, options.MaxDetectedCellSize) : (options.CellSize.Value, 1.0);
@@ -47,15 +61,29 @@ public sealed class PixelGridAligner
             using var cleanedImage = cleaned.Image;
             LocalGridResult restored = LocalGridProcessor.Process(cleanedImage,
                 new LocalGridOptions(pitch, Adaptive: options.Adaptive, SnapToGlobalGrid: options.SnapToGlobalGrid));
-            return new GridAlignmentResult { Aligned = restored.Image, CellSize = pitch, Mode = GridAlignmentMode.Local,
+            return new GridAlignmentResult
+            {
+                Aligned = restored.Image,
+                CellSize = pitch,
+                Mode = GridAlignmentMode.Local,
                 LocalRegionCount = restored.Regions.Count(r => r.Status == "restored"),
-                SnapToGlobalGrid = options.SnapToGlobalGrid, ShiftedRegionCount = restored.ShiftedRegionCount,
+                SnapToGlobalGrid = options.SnapToGlobalGrid,
+                ShiftedRegionCount = restored.ShiftedRegionCount,
                 ConflictingCellCount = restored.ConflictingCellCount,
-                DetectionConfidence = detected.Item2, WasDetected = options.CellSize is null, ElapsedSeconds = timer.Elapsed.TotalSeconds };
+                DetectionConfidence = detected.Item2,
+                WasDetected = options.CellSize is null,
+                ElapsedSeconds = timer.Elapsed.TotalSeconds
+            };
         }
         if (IsAlreadyAligned(pixels, w, h, pitch))
-            return new GridAlignmentResult { Aligned = Write(pixels, w, h), CellSize = pitch,
-                DetectionConfidence = detected.Item2, WasDetected = options.CellSize is null, ElapsedSeconds = timer.Elapsed.TotalSeconds };
+            return new GridAlignmentResult
+            {
+                Aligned = Write(pixels, w, h),
+                CellSize = pitch,
+                DetectionConfidence = detected.Item2,
+                WasDetected = options.CellSize is null,
+                ElapsedSeconds = timer.Elapsed.TotalSeconds
+            };
         int cols = (w + pitch - 1) / pitch, rows = (h + pitch - 1) / pitch;
         double[] nominalX = Enumerable.Range(0, cols + 1).Select(i => (double)Math.Min(w, i * pitch)).ToArray();
         double[] nominalY = Enumerable.Range(0, rows + 1).Select(i => (double)Math.Min(h, i * pitch)).ToArray();
@@ -73,13 +101,17 @@ public sealed class PixelGridAligner
         double[] gy = diffuseY ? nominalY : Fit(yp, nominalY, pitch);
         var localX = new double[rows][]; var localY = new double[cols][];
         for (int row = 0; row < rows; row++)
+        {
             localX[row] = options.Adaptive && diffuseX
-                ? LocalPhases(Project(ex, w, h, true, gy[row], gy[row + 1]), row == 0 ? nominalX : localX[row - 1], phaseX, pitch) : gx;
+                            ? LocalPhases(Project(ex, w, h, true, gy[row], gy[row + 1]), row == 0 ? nominalX : localX[row - 1], phaseX, pitch) : gx;
+            tracking.Report((1 + Interlocked.Increment(ref progressRows1) / (double)rows) / 3.0);
+        }
         for (int col = 0; col < cols; col++)
             localY[col] = options.Adaptive && diffuseY
                 ? LocalPhases(Project(ey, w, h, false, gx[col], gx[col + 1]), col == 0 ? nominalY : localY[col - 1], phaseY, pitch) : gy;
         var output = new int[w * h];
         for (int row = 0; row < rows; row++)
+        {
             for (int col = 0; col < cols; col++)
             {
                 double x0 = localX[row][col], x1 = localX[row][col + 1];
@@ -88,9 +120,16 @@ public sealed class PixelGridAligner
                 for (int y = row * pitch; y < Math.Min(h, (row + 1) * pitch); y++)
                     Array.Fill(output, selected, y * w + col * pitch, Math.Min(pitch, w - col * pitch));
             }
-        return new GridAlignmentResult { Aligned = Write(output, w, h), CellSize = pitch,
-            DetectionConfidence = detected.Item2, WasDetected = options.CellSize is null,
-            ElapsedSeconds = timer.Elapsed.TotalSeconds };
+            tracking.Report((2 + Interlocked.Increment(ref progressRows2) / (double)rows) / 3.0);
+        }
+        return new GridAlignmentResult
+        {
+            Aligned = Write(output, w, h),
+            CellSize = pitch,
+            DetectionConfidence = detected.Item2,
+            WasDetected = options.CellSize is null,
+            ElapsedSeconds = timer.Elapsed.TotalSeconds
+        };
     }
 
     private static double[] Project(float[] edge, int w, int h, bool horizontal, double start, double end)

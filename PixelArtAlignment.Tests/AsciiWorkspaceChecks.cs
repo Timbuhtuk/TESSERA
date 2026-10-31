@@ -74,7 +74,7 @@ internal static class AsciiWorkspaceChecks
             Require(File.ReadAllText(text) == expectedText, "TXT export differs from the selected rectangular grid");
             NavigationTest.Click(window, "asciiRenderButton"); WaitProcessing();
             var first = Active().SelectedGeneration!;
-            Require(first.AppliedRecipe?.Steps.Single().Ascii is { Columns: 12, Dither: true, ColorMode: AsciiColorMode.Custom, KeepSourceSize: false }, "ASCII history lost custom settings");
+            Require(first.AppliedRecipe?.Steps.Single().Ascii is { Columns: 12, Dither: true, ColorMode: AsciiColorMode.Custom, KeepSourceSize: false, FontSize: ImageFilters.DefaultAsciiFontSize }, "ASCII history lost custom settings");
             Require(first.AppliedRecipe!.Steps.Single().Ascii!.ForegroundArgb == Color.Gold.ToArgb(), "ASCII history lost custom colors");
             using (var source = ImageLibrary.ReadBitmap(input)) using (var expected = new WorkflowExecutor().Execute(source, first.RecipeSnapshot!)) Equal(expected, Get<Bitmap>("_downscaledResult"));
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;

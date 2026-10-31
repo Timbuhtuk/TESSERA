@@ -27,6 +27,10 @@ public partial class IconWorkspace : UserControl, IDisposable
     public event Action<EditorMaterial>? MaterialRequested;
 
     public event EventHandler? BusyChanged;
+    public Func<string, bool, OperationProgressSession>? ProgressFactory { get; set; }
+    private OperationProgressSession BeginProgress(string label, bool preview = false)
+        => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
+
     public event Action<string>? StatusChanged;
     public sealed record FramePreview(int Size, BitmapSource Image)
     {
@@ -38,8 +42,15 @@ public partial class IconWorkspace : UserControl, IDisposable
         InitializeComponent();
         foreach (int size in new[] { 16, 24, 32, 48, 64, 96, 128, 256 })
         {
-            var check = new CheckBox { Style = (Style)FindResource("Ts.SwitchBox"), Content = $"{size} × {size}", Tag = size, IsChecked = size != 96, Margin = new Thickness(0, 0, 22, 16),
-                ToolTip = Localization.Format("Включить кадр {0} × {0} пикселей в ICO. Выключите, чтобы исключить этот размер из файла.", size) };
+            var check = new CheckBox
+            {
+                Style = (Style)FindResource("Ts.SwitchBox"),
+                Content = $"{size} × {size}",
+                Tag = size,
+                IsChecked = size != 96,
+                Margin = new Thickness(0, 0, 22, 16),
+                ToolTip = Localization.Format("Включить кадр {0} × {0} пикселей в ICO. Выключите, чтобы исключить этот размер из файла.", size)
+            };
             ToolTipService.SetShowOnDisabled(check, true);
             check.Checked += (_, _) => SchedulePreview();
             check.Unchecked += (_, _) => SchedulePreview();
@@ -81,12 +92,14 @@ public partial class IconWorkspace : UserControl, IDisposable
     {
         if (_busy || _disposed) return;
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Открытие изображения…"));
         try
         {
             using var image = await Task.Run(() => ReadImage(path));
             if (_disposed) return;
             SetImage(image, Path.GetFileName(path), path);
             StatusChanged?.Invoke(Localization.Text("Изображение открыто. Выберите размеры и сохраните ICO."));
+            operation.Complete();
         }
         catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось открыть изображение: {0}", ex.Message)); }
         finally { SetBusy(false); }
@@ -176,6 +189,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         }
         using var cancellation = new CancellationTokenSource();
         _previewCancellation = cancellation;
+        using var operation = BeginProgress(Localization.Text("Создание иконок…"), true);
         var image = (Bitmap)_image.Clone();
         IsRendering = true;
         UpdateSaveState();
@@ -185,12 +199,13 @@ public partial class IconWorkspace : UserControl, IDisposable
             {
                 using (image)
                 {
-                    using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(image, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellation.Token) : null;
+                    using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(image, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellation.Token, operation.Work.Slice(0, 2)) : null;
                     var preview = PixelPreview.ToBitmapSource(prepared ?? image);
                     var result = new List<FramePreview>();
+                    int frameIndex = 0;
                     foreach (int size in options.Sizes)
                     {
-                        using var frame = IconExporter.CreateFrame(prepared ?? image, size, options.ResizeMode, options.FitMode, cancellation.Token);
+                        using var frame = IconExporter.CreateFrame(prepared ?? image, size, options.ResizeMode, options.FitMode, cancellation.Token, operation.Work.Range(options.RemoveBackground ? .5 : 0, options.RemoveBackground ? .5 : 1).Slice(frameIndex++, options.Sizes.Count));
                         result.Add(new FramePreview(size, PixelPreview.ToBitmapSource(frame)));
                     }
                     return (Frames: result, Preview: preview);
@@ -200,6 +215,10 @@ public partial class IconWorkspace : UserControl, IDisposable
             iconFrames.ItemsSource = frames.Frames;
             iconSourceImage.Source = frames.Preview;
             iconPreviewHint.Text = options.Sizes.Count == 0 ? Localization.Text("Выберите хотя бы один размер.") : Localization.Text("Выбранные размеры будут сохранены в одном ICO.");
+            operation.Complete();
+            if (IsVisible) StatusChanged?.Invoke(options.Sizes.Count == 0
+                ? Localization.Text("Выберите хотя бы один размер.")
+                : Localization.Text("Предпросмотр иконок готов. Сохраните ICO."));
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -218,8 +237,15 @@ public partial class IconWorkspace : UserControl, IDisposable
         if (_busy || _image is null) return;
         iconCustomSize.Commit();
         if (GetOptions().Sizes.Count == 0) return;
-        var dialog = new SaveFileDialog { Title = Localization.Text("Сохранить иконку"), Filter = Localization.Text("Иконка Windows|*.ico"), DefaultExt = ".ico", AddExtension = true,
-            OverwritePrompt = true, FileName = Path.GetFileNameWithoutExtension(iconFileLabel.Text) + ".ico" };
+        var dialog = new SaveFileDialog
+        {
+            Title = Localization.Text("Сохранить иконку"),
+            Filter = Localization.Text("Иконка Windows|*.ico"),
+            DefaultExt = ".ico",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = Path.GetFileNameWithoutExtension(iconFileLabel.Text) + ".ico"
+        };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveAsync(dialog.FileName, true); }
         catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить ICO: {0}", ex.Message)); }
@@ -235,10 +261,12 @@ public partial class IconWorkspace : UserControl, IDisposable
         if (options.Sizes.Count == 0) throw new InvalidOperationException(Localization.Text("Выберите хотя бы один размер."));
         using var image = (Bitmap)_image.Clone();
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Сохранение ICO…"));
         StatusChanged?.Invoke(Localization.Text("Сохранение ICO…"));
         try
         {
-            await Task.Run(() => IconExporter.Save(image, path, options, overwrite));
+            await Task.Run(() => IconExporter.Save(image, path, options, overwrite, progress: operation.Work));
+            operation.Complete();
             StatusChanged?.Invoke(Localization.Format("Сохранено: {0}", path));
         }
         finally { SetBusy(false); }

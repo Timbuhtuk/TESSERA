@@ -36,8 +36,10 @@ public partial class MainWindow
         panel.Children.Add(channelHint);
         channelApplyButton = new Button
         {
-            Content = Localization.Text("Применить к каналу"), Style = (Style)FindResource("PrimaryButton"),
-            Margin = new Thickness(0, 8, 0, 0), IsEnabled = false
+            Content = Localization.Text("Применить к каналу"),
+            Style = (Style)FindResource("PrimaryButton"),
+            Margin = new Thickness(0, 8, 0, 0),
+            IsEnabled = false
         };
         RegisterName("channelApplyButton", channelApplyButton);
         panel.Children.Add(channelApplyButton);
@@ -82,8 +84,10 @@ public partial class MainWindow
             channelDirectionInput.SelectedIndex is < 0 or > 1) return false;
         options = new ChannelAdjustmentOptions
         {
-            Channel = (RgbaChannel)channelInput.SelectedIndex, Mode = (ChannelAdjustmentMode)channelModeInput.SelectedIndex,
-            Amount = amount, Subtract = channelDirectionInput.SelectedIndex == 1
+            Channel = (RgbaChannel)channelInput.SelectedIndex,
+            Mode = (ChannelAdjustmentMode)channelModeInput.SelectedIndex,
+            Amount = amount,
+            Subtract = channelDirectionInput.SelectedIndex == 1
         };
         return true;
     }
@@ -125,12 +129,15 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                using var output = ChannelAdjustment.Apply(input, options);
+                using var output = ChannelAdjustment.Apply(input, options, progress: CurrentProcessingProgress);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
-                    Settings = settings, Operation = Localization.Format("Канал {0}", change), OperationId = ProcessingOperations.AdjustChannel,
+                    Settings = settings,
+                    Operation = Localization.Format("Канал {0}", change),
+                    OperationId = ProcessingOperations.AdjustChannel,
                     AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.AdjustChannel, ChannelAdjustment = options }),
-                    ParentGenerationId = parentId, PreservesTransparency = true,
+                    ParentGenerationId = parentId,
+                    PreservesTransparency = true,
                     Caption = Localization.Format("КАНАЛ {0} · {1} × {2}", change, output.Width, output.Height),
                     Log = Localization.Format("Изменён канал {0}. Остальные каналы и размер сохранены.", change)
                 });

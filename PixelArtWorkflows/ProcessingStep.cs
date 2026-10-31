@@ -89,6 +89,8 @@ public sealed class ResizeFactorSettings
 
 public sealed class AsciiSettings
 {
+    // A missing value in existing saved recipes must retain the original 10 px glyphs.
+    public int FontSize { get; init; } = 10;
     public string Characters { get; init; } = ImageFilters.DefaultAsciiRamp;
     public bool KeepSourceSize { get; init; } = true;
     public bool InvertSource { get; init; }

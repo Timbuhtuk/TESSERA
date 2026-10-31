@@ -1407,5 +1407,12 @@
   "Цвет символов: ": "Character color: ",
   "Цвет фона: ": "Background color: ",
   "ASCII: {0} × {1} px; цвет: {2}; ширина: {3}; инверсия исходника: {4}; инверсия рендера: {5}.": "ASCII: {0} × {1} px; color: {2}; width: {3}; invert source: {4}; invert render: {5}.",
-  "авто": "auto"
+  "авто": "auto",
+  "Создание иконок…": "Creating icons…",
+  "Конвертация Aseprite…": "Converting Aseprite…",
+  "Сохранение анимаций…": "Saving animations…",
+  "Открытие изображения…": "Opening image…",
+  "Ход выполнения": "Progress",
+  "Предпросмотр иконок готов. Сохраните ICO.": "Icon previews are ready. Save ICO.",
+  "Результат удаления фона готов. Сохраните PNG или добавьте в историю.": "Background removal is ready. Save PNG or add it to history."
 }

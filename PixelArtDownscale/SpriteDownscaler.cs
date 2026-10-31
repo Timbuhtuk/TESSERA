@@ -8,7 +8,21 @@ namespace PixelArtDownscale;
 internal static class SpriteDownscaler
 {
     public static DownscaleResult Process(Bitmap source, DownscaleOptions options)
+        => Process(source, options, progress: null);
+
+    public static DownscaleResult Process(Bitmap source, DownscaleOptions options, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ProcessWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static DownscaleResult ProcessWithProgress(Bitmap source, DownscaleOptions options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
+        int progressRows1 = 0;
+        int progressRows2 = 0;
         if (options.TargetWidth > source.Width || options.TargetHeight > source.Height)
             throw new ArgumentException("Target size is too large for the source image.");
         if (options.AlphaThreshold is < 1 or > 100 || options.QuantizationColors < 1)
@@ -23,12 +37,13 @@ internal static class SpriteDownscaler
         var visiblePixels = pixels.Where(p => (uint)p >> 24 > 0).Select(p => p & 0xFFFFFF);
         var visible = new HashSet<int>(visiblePixels);
         var weights = options.UseColorWeights ? ColorQuantizer.CountColors(visiblePixels) : null;
-        var lookup = ColorQuantizer.BuildLookup(visible, options.QuantizationColors, options.Quantization, weights);
+        var lookup = ColorQuantizer.BuildLookup(visible, options.QuantizationColors, options.Quantization, weights, tracking.Slice(0, 4));
         double quantSeconds = watch.Elapsed.TotalSeconds;
         var edges = new float[pixels.Length];
         ParallelImageHelper.ForEachRowChunk(height, options.ThreadCount, (start, end) =>
         {
             for (int y = start; y < end; y++)
+            {
                 for (int x = 0; x < width; x++)
                 {
                     int i = y * width + x;
@@ -45,6 +60,8 @@ internal static class SpriteDownscaler
                     }
                     edges[i] = (float)edge;
                 }
+                tracking.Report((1 + Interlocked.Increment(ref progressRows0) / (double)height) / 4.0);
+            }
         });
 
         int tw = options.TargetWidth, th = options.TargetHeight;
@@ -53,6 +70,7 @@ internal static class SpriteDownscaler
         ParallelImageHelper.ForEachRowChunk(th, options.ThreadCount, (start, end) =>
         {
             for (int oy = start; oy < end; oy++)
+            {
                 for (int ox = 0; ox < tw; ox++)
                 {
                     // Fractional footprints include every edge without cropping or stretching a subregion.
@@ -85,6 +103,8 @@ internal static class SpriteDownscaler
                     };
                     output[oy * tw + ox] = (selected & unchecked((int)0xFF000000)) | color;
                 }
+                tracking.Report((2 + Interlocked.Increment(ref progressRows1) / (double)th) / 4.0);
+            }
         });
         var result = new Bitmap(tw, th, PixelFormat.Format32bppArgb);
         try
@@ -92,14 +112,19 @@ internal static class SpriteDownscaler
             var bits = result.LockBits(new Rectangle(0, 0, tw, th), ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
             try
             {
-                for (int y = 0; y < th; y++) Marshal.Copy(output, y * tw, IntPtr.Add(bits.Scan0, y * bits.Stride), tw);
+                for (int y = 0; y < th; y++)
+                {
+                    Marshal.Copy(output, y * tw, IntPtr.Add(bits.Scan0, y * bits.Stride), tw);
+                    tracking.Report((3 + Interlocked.Increment(ref progressRows2) / (double)th) / 4.0);
+                }
             }
             finally { result.UnlockBits(bits); }
             int dominant = output.Where(p => p != 0).GroupBy(p => p).OrderByDescending(g => g.Count())
                 .ThenBy(g => g.Key).Select(g => g.Key).FirstOrDefault();
             return new DownscaleResult
             {
-                CroppedSource = (Bitmap)source.Clone(), Downscaled = result,
+                CroppedSource = (Bitmap)source.Clone(),
+                Downscaled = result,
                 DominantColor = Color.FromArgb(dominant),
                 StageTimingsSeconds = new Dictionary<string, double>
                 {

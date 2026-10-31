@@ -108,7 +108,7 @@
                     </StackPanel>
                 </Button>
                 <Menu x:Name="mainMenu" Grid.Column="1" IsMainMenu="True" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                <TextBlock x:Name="fileLabel" Grid.Column="2" Margin="12,0,60,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" HorizontalAlignment="Left" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
+                <TextBlock x:Name="fileLabel" Grid.Column="2" Margin="8,0,32,0" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
                     <StackPanel x:Name="captionButtons" Grid.Column="3" Orientation="Horizontal">
                         <Button x:Name="appearanceButton" Style="{StaticResource CaptionButton}" Click="OpenAppearance" ToolTip="{local:Translate Text985B5E0F2CCF}" AutomationProperties.Name="{local:Translate Text985B5E0F2CCF}" shell:WindowChrome.IsHitTestVisibleInChrome="True">
                             <local:SettingsIcon Width="18" Height="18" IsHitTestVisible="False" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
@@ -530,7 +530,12 @@
         <local:MoodboardWorkspace x:Name="moodboardWorkspace" Grid.Row="1" Visibility="Collapsed" />
         <Border Grid.Row="2" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Padding="18,8">
             <DockPanel LastChildFill="True">
-                <ProgressBar x:Name="busyIndicator" Width="90" Height="5" DockPanel.Dock="Right" Margin="12,0,0,0" Foreground="{DynamicResource Ts.Text}" Background="{DynamicResource Ts.Pressed}" IsIndeterminate="True" Visibility="Collapsed" />
+                <StackPanel x:Name="operationProgressPanel" DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center" Visibility="Collapsed">
+                    <ProgressBar x:Name="busyIndicator" Width="240" Height="14" Minimum="0" Maximum="100" Value="0"
+                                 Style="{StaticResource Ts.ProgressCells}" IsIndeterminate="False"
+                                 AutomationProperties.Name="{local:Translate Text8F422EAEB7A5}" Visibility="Collapsed"/>
+                    <TextBlock x:Name="progressPercent" Text="0%" Width="40" Margin="8,0,0,0" TextAlignment="Right" VerticalAlignment="Center" TextWrapping="NoWrap"/>
+                </StackPanel>
                 <Button x:Name="updateButton" DockPanel.Dock="Right" Content="{local:Translate Text93B08F7B1465}" Margin="12,0,0,0" Padding="9,2" VerticalAlignment="Center" Visibility="Collapsed" />
                 <TextBlock x:Name="statusLabel" Text="{local:Translate Text3F42086426E9}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap" />
             </DockPanel>

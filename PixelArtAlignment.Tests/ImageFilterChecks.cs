@@ -11,6 +11,7 @@ internal static class ImageFilterChecks
         check("Monochrome preserves dimensions, alpha and source", Monochrome);
         check("ASCII maps darkness, light and transparency to characters", AsciiText);
         check("ASCII render creates a black and white image", AsciiRender);
+        check("ASCII uses console-sized glyphs and preserves old recipe resolution", AsciiConsoleResolution);
         check("ASCII colors, background and explicit columns", AsciiColors);
         check("ASCII uses rectangular glyph cells for text and image output", AsciiAspect);
         check("ASCII retains vertical and horizontal glyph features", AsciiGlyphShape);
@@ -107,6 +108,42 @@ internal static class ImageFilterChecks
             throw new Exception("One-pixel-per-symbol render did not increase the resolution.");
     }
 
+    private static void AsciiConsoleResolution()
+    {
+        using var previous = ImageFilters.RenderAscii("@MW", 10);
+        using var current = ImageFilters.RenderAscii("@MW");
+        if (current.Width <= previous.Width || current.Height <= previous.Height)
+            throw new Exception("ASCII glyphs did not gain pixel resolution.");
+
+        using var source = new Bitmap(48, 24);
+        using (var graphics = Graphics.FromImage(source)) graphics.Clear(Color.White);
+        const string legacy = "{\"steps\":[{\"operationId\":\"filter.ascii\",\"ascii\":{\"characters\":\"@ \"}}]}";
+        var oldRecipe = System.Text.Json.JsonSerializer.Deserialize<ProcessingRecipe>(legacy, WorkflowJson.Options)!;
+        if (oldRecipe.Steps.Single().Ascii?.FontSize != 10)
+            throw new Exception("An old ASCII recipe lost its original font size.");
+        using var oldResult = new WorkflowExecutor().Execute(source, oldRecipe);
+        using var oldExpected = ImageFilters.RenderAscii(source, characters: "@ ", fontSize: 10);
+        Equal(oldExpected, oldResult);
+
+        var newRecipe = WorkflowJson.Snapshot(new ProcessingRecipe { Steps = [new ProcessingStep
+        {
+            OperationId = ProcessingOperations.Ascii,
+            Ascii = new AsciiSettings { Characters = "@ ", FontSize = ImageFilters.DefaultAsciiFontSize }
+        }] });
+        using var newResult = new WorkflowExecutor().Execute(source, newRecipe);
+        using var newExpected = ImageFilters.RenderAscii(source, characters: "@ ");
+        Equal(newExpected, newResult);
+
+        static void Equal(Bitmap expected, Bitmap actual)
+        {
+            if (expected.Size != actual.Size) throw new Exception("ASCII recipe changed the glyph grid.");
+            for (int y = 0; y < expected.Height; y++)
+                for (int x = 0; x < expected.Width; x++)
+                    if (expected.GetPixel(x, y).ToArgb() != actual.GetPixel(x, y).ToArgb())
+                        throw new Exception("ASCII recipe changed the rendered glyphs.");
+        }
+    }
+
     private static void Validation()
     {
         using var source = new Bitmap(1, 1);
@@ -186,7 +223,7 @@ internal static class ImageFilterChecks
         var recipe = WorkflowJson.Snapshot(new ProcessingRecipe { Steps = [new ProcessingStep
         {
             OperationId = ProcessingOperations.Ascii,
-            Ascii = new AsciiSettings { Characters = "@ ", Columns = 20, Dither = true }
+            Ascii = new AsciiSettings { Characters = "@ ", Columns = 20, Dither = true, FontSize = ImageFilters.DefaultAsciiFontSize }
         }] });
         using var replayed = new WorkflowExecutor().Execute(source, recipe);
         for (int y = 0; y < source.Height; y++)
@@ -227,7 +264,7 @@ internal static class ImageFilterChecks
         var recipe = WorkflowJson.Snapshot(new ProcessingRecipe { Steps = [new ProcessingStep
         {
             OperationId = ProcessingOperations.Ascii,
-            Ascii = new AsciiSettings { Characters = "@", ColorMode = AsciiColorMode.Custom,
+            Ascii = new AsciiSettings { Characters = "@", FontSize = ImageFilters.DefaultAsciiFontSize, ColorMode = AsciiColorMode.Custom,
                 ForegroundArgb = Color.Yellow.ToArgb(), BackgroundArgb = Color.Navy.ToArgb(), Columns = 2 }
         }] });
         using var replayed = new WorkflowExecutor().Execute(source, recipe);

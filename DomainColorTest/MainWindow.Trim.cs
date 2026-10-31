@@ -22,7 +22,7 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                using var output = BitmapFactory.CropTransparentEdges(input);
+                using var output = BitmapFactory.CropTransparentEdges(input, CurrentProcessingProgress);
                 return _library.SaveGeneration(document, output, null, new GenerationEntry
                 {
                     Settings = settings,
@@ -40,6 +40,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Text("Не удалось обрезать прозрачные края.");
             TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка обрезки"), MessageBoxButton.OK, MessageBoxImage.Error);
         }

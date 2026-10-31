@@ -248,7 +248,7 @@ public partial class MainWindow
             var label = new TextBlock { Text = item.Header.ToString()!.Replace("_", ""), FontFamily = mainMenu.FontFamily, FontSize = mainMenu.FontSize };
             label.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity)); width += label.DesiredSize.Width + 20;
         }
-        bool compact = width + libraryButton.ActualWidth + captionButtons.ActualWidth + 48 > titleBar.ActualWidth;
+        bool compact = width + libraryButton.ActualWidth + captionButtons.ActualWidth + 88 > titleBar.ActualWidth;
         if (compact == _navigationCompact) return;
         CloseNavigationMenus();
         foreach (var item in new[] { toolsMenu, viewMenu })

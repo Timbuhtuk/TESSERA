@@ -4,7 +4,15 @@ namespace PixelArtAseprite;
 
 public static class AsepriteReader
 {
-    public static AsepriteDocument Read(string path, AsepriteLimits? limits = null, CancellationToken cancellationToken = default)
+    public static AsepriteDocument Read(string path, AsepriteLimits? limits = null, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReadWithProgress(path, limits, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static AsepriteDocument ReadWithProgress(string path, AsepriteLimits? limits, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         limits ??= new AsepriteLimits();
@@ -23,22 +31,41 @@ public static class AsepriteReader
             q += count;
         }
         if (stream.ReadByte() != -1) throw new InvalidDataException("Размер входного файла изменился во время чтения.");
-        return Read(data, Path.GetFileName(path), limits, cancellationToken);
+        return Read(data, Path.GetFileName(path), limits, cancellationToken, tracking);
     }
 
     public static AsepriteDocument Read(ReadOnlyMemory<byte> data, string sourceName = "sprite.aseprite",
-        AsepriteLimits? limits = null, CancellationToken cancellationToken = default)
+        AsepriteLimits? limits = null, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReadWithProgress(data, sourceName, limits, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static AsepriteDocument ReadWithProgress(ReadOnlyMemory<byte> data, string sourceName, AsepriteLimits? limits, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         limits ??= new AsepriteLimits();
         limits.Validate();
         cancellationToken.ThrowIfCancellationRequested();
         string name = Path.GetFileName(sourceName);
-        try { return Parse(data.Span, name, limits, cancellationToken); }
+        try { return Parse(data.Span, name, limits, cancellationToken, tracking); }
         catch (InvalidDataException ex) { throw new InvalidDataException($"{name}: {ex.Message}", ex); }
         catch (OverflowException ex) { throw new InvalidDataException($"{name}: переполнение размеров.", ex); }
     }
 
     private static AsepriteDocument Parse(ReadOnlySpan<byte> data, string source, AsepriteLimits limits, CancellationToken token)
+        => Parse(data, source, limits, token, progress: null);
+
+    private static AsepriteDocument Parse(ReadOnlySpan<byte> data, string source, AsepriteLimits limits, CancellationToken token, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ParseWithProgress(data, source, limits, token, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static AsepriteDocument ParseWithProgress(ReadOnlySpan<byte> data, string source, AsepriteLimits limits, CancellationToken token, ProcessingProgress tracking)
     {
         if (data.Length < 128 || data.Length > limits.MaxInputBytes) throw new InvalidDataException("Размер файла вне допустимых пределов.");
         limits.CheckMemory(data.Length * 2L);
@@ -58,9 +85,12 @@ public static class AsepriteReader
             throw new InvalidDataException("Превышен лимит пикселей полных кадров.");
         var document = new AsepriteDocument
         {
-            Width = width, Height = height, Source = source,
+            Width = width,
+            Height = height,
+            Source = source,
             SourceSha256 = Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant(),
-            Limits = limits, WorkingBytes = data.Length * 2L + count * 256L
+            Limits = limits,
+            WorkingBytes = data.Length * 2L + count * 256L
         };
         limits.CheckMemory(document.WorkingBytes);
         var frames = new List<AsepriteFrame>(count);
@@ -72,6 +102,7 @@ public static class AsepriteReader
         long celBytes = 0;
         for (int q = 0; q < count; q++)
         {
+            tracking.Report((double)q / count);
             token.ThrowIfCancellationRequested();
             uint frameBytes = reader.U32();
             if (frameBytes < 16 || frameBytes - 4 > reader.Remaining) throw new InvalidDataException($"Кадр {q + 1}: неверная длина.");

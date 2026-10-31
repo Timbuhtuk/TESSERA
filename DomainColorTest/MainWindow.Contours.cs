@@ -122,11 +122,12 @@ public partial class MainWindow
         var options = BuildContourOptions();
         using var source = (Bitmap)basis.Clone();
         _contourPreviewBusy = true;
+        using var operation = BeginOperationProgress(this, preview: true);
         ContourAnalysisResult? analysis = null;
         try
         {
             contourPreviewStatus.Text = Localization.Text("Расчёт карты…");
-            analysis = await Task.Run(() => ContourNoiseCleaner.Analyze(source, options));
+            analysis = await Task.Run(() => ContourNoiseCleaner.Analyze(source, options, operation.Work));
             if (revision != _contourPreviewRevision || _processing || !_contourToolOpen || !IsLoaded) return;
             resultPreview.Image = null;
             _contourPreviewBitmap?.Dispose();
@@ -138,9 +139,11 @@ public partial class MainWindow
             contourPreviewStatus.Text = Localization.Format("Кандидатов: {0}. Для сохранения создайте результат.", analysis.CandidateCount);
             UpdateNavigationState();
             analysis = null;
+            operation.Complete();
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             if (revision == _contourPreviewRevision) contourPreviewStatus.Text = Localization.Format("Предпросмотр недоступен: {0}", ex.Message);
         }
         finally
@@ -169,7 +172,7 @@ public partial class MainWindow
         {
             var generation = await Task.Run(() =>
             {
-                var analysis = ContourNoiseCleaner.Analyze(source, options);
+                var analysis = ContourNoiseCleaner.Analyze(source, options, CurrentProcessingProgress);
                 using (analysis.Heatmap)
                     return _library.SaveGeneration(document, analysis.Heatmap, null, new GenerationEntry
                     {
@@ -197,6 +200,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Text("Не удалось создать карту кандидатов.");
             TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка карты контуров"), MessageBoxButton.OK, MessageBoxImage.Error);
         }

@@ -36,11 +36,13 @@ public sealed class WorkflowExecutor
 {
     // The step callback runs synchronously while its bitmap is alive. Callers must copy or save it before returning.
     public Bitmap Execute(Bitmap input, ProcessingRecipe recipe, CancellationToken cancellationToken = default,
-        IProgress<WorkflowProgress>? progress = null, Action<WorkflowProgress, Bitmap>? stepCompleted = null)
+        IProgress<WorkflowProgress>? progress = null, Action<WorkflowProgress, Bitmap>? stepCompleted = null,
+        IProgress<double>? operationProgress = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(recipe);
         Validate(recipe);
+        var tracking = new ProcessingProgress(operationProgress);
 
         Bitmap? current = input.Clone(new Rectangle(0, 0, input.Width, input.Height), PixelFormat.Format32bppArgb);
         int? previousAlignmentCell = null;
@@ -54,7 +56,7 @@ public sealed class WorkflowExecutor
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    (next, nextAlignmentCell) = ExecuteStep(current, step, previousAlignmentCell, cancellationToken);
+                    (next, nextAlignmentCell) = ExecuteStep(current, step, previousAlignmentCell, cancellationToken, tracking.Slice(q, recipe.Steps.Count));
                     cancellationToken.ThrowIfCancellationRequested();
                     int? cellSize = step.OperationId switch
                     {
@@ -78,6 +80,7 @@ public sealed class WorkflowExecutor
                 current.Dispose();
                 current = next;
                 previousAlignmentCell = nextAlignmentCell;
+                tracking.Report((q + 1.0) / recipe.Steps.Count);
                 progress?.Report(new WorkflowProgress(q + 1, recipe.Steps.Count, step.OperationId));
             }
 
@@ -119,79 +122,79 @@ public sealed class WorkflowExecutor
     }
 
     private static (Bitmap Bitmap, int? PreviousAlignmentCell) ExecuteStep(Bitmap current, ProcessingStep step,
-        int? previousAlignmentCell, CancellationToken cancellationToken)
+        int? previousAlignmentCell, CancellationToken cancellationToken, IProgress<double>? operationProgress)
     {
         switch (step.OperationId)
         {
             case ProcessingOperations.Profile:
             {
                 DownscaleOptions options = LocalOptions(step.Downscale!);
-                var result = new PixelArtDownscaler().Process(current, options);
+                var result = new PixelArtDownscaler().Process(current, options, operationProgress);
                 result.CroppedSource.Dispose();
                 return (result.Downscaled, previousAlignmentCell);
             }
             case ProcessingOperations.Resize:
                 return (IndependentImageProcessor.Scale(current, step.ResizeFactor is { } factor
-                    ? factor.Resolve(current.Width, current.Height) : LocalOptions(step.Downscale!)), previousAlignmentCell);
+                    ? factor.Resolve(current.Width, current.Height) : LocalOptions(step.Downscale!), operationProgress), previousAlignmentCell);
             case ProcessingOperations.Trim:
-                return (BitmapFactory.CropTransparentEdges(current), previousAlignmentCell);
+                return (BitmapFactory.CropTransparentEdges(current, operationProgress), previousAlignmentCell);
             case ProcessingOperations.Colors:
-                return (PaletteProcessor.Apply(current, LocalOptions(step.Downscale!), step.ConnectedPalette), previousAlignmentCell);
+                return (PaletteProcessor.Apply(current, LocalOptions(step.Downscale!), step.ConnectedPalette, operationProgress), previousAlignmentCell);
             case ProcessingOperations.Cleanup:
-                return (IndependentImageProcessor.ApplyNeighborColors(current, LocalOptions(step.Downscale!)), previousAlignmentCell);
+                return (IndependentImageProcessor.ApplyNeighborColors(current, LocalOptions(step.Downscale!), operationProgress), previousAlignmentCell);
             case ProcessingOperations.Align:
             case ProcessingOperations.AlignLocal:
             case ProcessingOperations.AlignLocalSnapped:
             {
                 var mode = step.OperationId == ProcessingOperations.Align ? GridAlignmentMode.Global : GridAlignmentMode.Local;
                 bool snap = step.OperationId == ProcessingOperations.AlignLocalSnapped;
-                var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap });
+                var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap }, operationProgress);
                 return (alignment.Aligned, alignment.CellSize);
             }
             case ProcessingOperations.Reduce:
             {
                 int cellSize = step.UsePreviousAlignment ? previousAlignmentCell!.Value : step.CellSize!.Value;
-                return (PixelGridReducer.Reduce(current, cellSize), previousAlignmentCell);
+                return (PixelGridReducer.Reduce(current, cellSize, operationProgress), previousAlignmentCell);
             }
             case ProcessingOperations.Monochrome:
-                return (ImageFilters.Monochrome(current), previousAlignmentCell);
+                return (ImageFilters.Monochrome(current, operationProgress), previousAlignmentCell);
             case ProcessingOperations.Sharpen:
-                return (ImageFilters.Sharpen(current, step.Sharpen!.Strength, step.Sharpen.Threshold, cancellationToken), previousAlignmentCell);
+                return (ImageFilters.Sharpen(current, step.Sharpen!.Strength, step.Sharpen.Threshold, cancellationToken, operationProgress), previousAlignmentCell);
             case ProcessingOperations.Ascii:
             {
                 AsciiSettings settings = step.Ascii!;
                 return (ImageFilters.RenderAscii(current, settings.KeepSourceSize, settings.Characters,
                     settings.InvertSource, settings.InvertColors, settings.ColorMode,
-                    settings.ForegroundArgb, settings.BackgroundArgb, settings.Columns, settings.Dither), previousAlignmentCell);
+                    settings.ForegroundArgb, settings.BackgroundArgb, settings.Columns, settings.Dither, settings.FontSize, operationProgress), previousAlignmentCell);
             }
             case ProcessingOperations.ReplaceColor:
             {
                 ColorReplacementSettings settings = step.ColorReplacement!;
                 return (ImageColorTools.ReplaceColor(current, Color.FromArgb(settings.FromArgb),
-                    Color.FromArgb(settings.ToArgb)), previousAlignmentCell);
+                    Color.FromArgb(settings.ToArgb), operationProgress), previousAlignmentCell);
             }
             case ProcessingOperations.RemoveBackground:
             {
                 BackgroundSettings settings = step.Background!;
                 Color? color = settings.ColorArgb is null ? null : Color.FromArgb(settings.ColorArgb.Value);
-                return (BackgroundRemover.Remove(current, settings.Mode, settings.Tolerance, color, cancellationToken),
+                return (BackgroundRemover.Remove(current, settings.Mode, settings.Tolerance, color, cancellationToken, operationProgress),
                     previousAlignmentCell);
             }
             case ProcessingOperations.AdjustChannel:
-                return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken), previousAlignmentCell);
+                return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken, operationProgress), previousAlignmentCell);
             case ProcessingOperations.ContourHeatmap:
-                return (ContourNoiseCleaner.Analyze(current, step.Contours!).Heatmap, previousAlignmentCell);
+                return (ContourNoiseCleaner.Analyze(current, step.Contours!, operationProgress).Heatmap, previousAlignmentCell);
             case ProcessingOperations.ConnectedPalette:
-                return (ConnectivityPaletteReducer.Process(current, step.ConnectedPalette!).Image, previousAlignmentCell);
+                return (ConnectivityPaletteReducer.Process(current, step.ConnectedPalette!, operationProgress).Image, previousAlignmentCell);
             case ProcessingOperations.CleanContours:
             {
-                ContourCleanResult result = ContourNoiseCleaner.Process(current, step.Contours!);
+                ContourCleanResult result = ContourNoiseCleaner.Process(current, step.Contours!, operationProgress);
                 result.CandidateMap.Dispose();
                 return (result.Image, previousAlignmentCell);
             }
             case ProcessingOperations.FinalistReduce:
                 return (FinalistReducer.Reduce(current, step.FinalistMode!.Value,
-                    step.FinalistFactor ?? FinalistReducer.DefaultFactor), previousAlignmentCell);
+                    step.FinalistFactor ?? FinalistReducer.DefaultFactor, operationProgress), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -260,8 +263,9 @@ public sealed class WorkflowExecutor
                 if (string.IsNullOrEmpty(step.Ascii.Characters) || step.Ascii.Characters.Contains('\r') ||
                     step.Ascii.Characters.Contains('\n'))
                     throw new InvalidDataException("ASCII characters must be a non-empty single line.");
-                if (!Enum.IsDefined(step.Ascii.ColorMode) || step.Ascii.Columns is < 0 or > 512)
-                    throw new InvalidDataException("ASCII color mode or column count is invalid.");
+                if (!Enum.IsDefined(step.Ascii.ColorMode) || step.Ascii.Columns is < 0 or > 512 ||
+                    step.Ascii.FontSize is < 1 or > 256)
+                    throw new InvalidDataException("ASCII color mode, column count or font size is invalid.");
                 break;
             case ProcessingOperations.ReplaceColor:
                 RequireOnly(step, replacement: true);

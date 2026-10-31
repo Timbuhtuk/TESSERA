@@ -10,6 +10,7 @@ using PixelArtDownscale;
 using PixelArtWorkflows;
 using Bitmap = System.Drawing.Bitmap;
 using Color = System.Drawing.Color;
+using Point = System.Windows.Point;
 
 namespace PixelArtAlignment.Tests;
 
@@ -148,6 +149,19 @@ internal static class ToolDockPaletteChecks
             Require(Get<IDictionary>(window, "_dockedTools").Count == 3 &&
                 Get<MenuItem>(window, "openToolsMenu").Items.Count == 3,
                 "Opening another tool replaced the docked palette");
+            var tabs = Get<TabControl>(window, "_workspaceTabs");
+            tabs.UpdateLayout();
+            var items = tabs.Items.Cast<TabItem>().ToArray();
+            Require(items.All(item => Math.Abs(item.ActualWidth - 146) < 1 && Math.Abs(item.ActualHeight - 36) < 1) &&
+                Math.Abs(items[0].TranslatePoint(new Point(), tabs).Y - items[1].TranslatePoint(new Point(), tabs).Y) < 1 &&
+                items[2].TranslatePoint(new Point(), tabs).Y > items[0].TranslatePoint(new Point(), tabs).Y,
+                "Dock tabs did not form aligned rows within the panel");
+            var tip = new ToolTip { Content = new string('A', 300), Style = (Style)window.FindResource(typeof(ToolTip)) };
+            var selector = tip.ContentTemplateSelector as WrappedToolTipSelector;
+            var wrapped = selector?.SelectTemplate(tip.Content, tip)?.LoadContent() as TextBlock;
+            Require(tip.MaxWidth == 400 && wrapped?.TextWrapping == TextWrapping.Wrap && wrapped.MaxWidth == 380 &&
+                selector?.SelectTemplate(new Border(), tip) is null,
+                $"Text hints do not wrap: max={tip.MaxWidth}, selector={selector is not null}, wrapped={wrapped?.TextWrapping}, textMax={wrapped?.MaxWidth}, rich={selector?.SelectTemplate(new Border(), tip) is null}");
             Capture(window, Path.Combine(folder, "docked-tools.png"));
             NavigationTest.Click(window, "colorMenuItem"); Pump();
             Require(Window.GetWindow(palette) is Window floating && floating != window &&
@@ -162,7 +176,7 @@ internal static class ToolDockPaletteChecks
             Require(!Get<MenuItem>(window, "colorMenuItem").IsChecked && Get<IDictionary>(window, "_dockedTools").Count == 2,
                 "Closed palette remains marked open");
             NavigationTest.Click(window, "finalistMenuItem"); Pump();
-            var tabs = Get<TabControl>(window, "_workspaceTabs");
+            tabs = Get<TabControl>(window, "_workspaceTabs");
             var tcrTab = tabs.Items.OfType<TabItem>().Single(tab => Equals(tab.Tag, "finalists"));
             Require(Descendants(tcrTab.Header as DependencyObject ?? tcrTab).OfType<TextBlock>().Any(text => text.Text == "TCR"),
                 "Docked TCR tab lost its compact title");

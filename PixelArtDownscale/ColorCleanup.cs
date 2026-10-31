@@ -15,7 +15,19 @@ public sealed class ColorCleanupOptions
 public static class ColorCleanup
 {
     public static Bitmap Apply(Bitmap source, DownscaleOptions options)
+        => Apply(source, options, progress: null);
+
+    public static Bitmap Apply(Bitmap source, DownscaleOptions options, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ApplyWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ApplyWithProgress(Bitmap source, DownscaleOptions options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
         if (options.LocalColorPasses is < 1 or > DownscaleOptions.MaxLocalColorPasses)
@@ -40,6 +52,7 @@ public static class ColorCleanup
             int[] output = (int[])input.Clone();
             int changed = 0;
             for (int y = 0; y < height; y++)
+            {
                 for (int x = 0; x < width; x++)
                 {
                     int q = y * width + x;
@@ -100,6 +113,8 @@ public static class ColorCleanup
                     output[q] = (argb & unchecked((int)0xFF000000)) | selected;
                     changed++;
                 }
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)((long)height * options.LocalColorPasses)) / 1.0);
+            }
             input = output;
             if (changed == 0) break;
         }

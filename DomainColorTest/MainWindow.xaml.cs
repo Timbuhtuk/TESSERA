@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         _historyUndo = new HistoryUndoStore(libraryDirectory, _appearanceSettings.HistoryUndoDepth);
         _historyUndo.RecoverPending();
         InitializeComponent();
+        InitializeOperationProgress();
         PreviewKeyDown += HistoryUndoKeyDown;
         insertHistoryInput.Content = Localization.Text("Вставить и пересчитать");
         insertHistoryInput.ToolTip = Localization.Text("Следующая операция вставится после выбранного результата. Все последующие результаты будут пересчитаны.");
@@ -318,7 +319,7 @@ public partial class MainWindow : Window
         {
             var generation = await Task.Run(() =>
             {
-                var result = _downscaler.Process(source, options);
+                var result = _downscaler.Process(source, options, CurrentProcessingProgress);
                 try
                 {
                     return _library.SaveGeneration(document, result.Downscaled, result.CroppedSource, new GenerationEntry
@@ -340,6 +341,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Text("Обработка или сохранение истории не завершены. Предыдущий результат доступен.");
             TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка обработки"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -347,6 +349,9 @@ public partial class MainWindow : Window
     }
     private void SetProcessingState(bool processing)
     {
+        bool wasProcessing = _processing;
+        if (processing && !wasProcessing) _mainProgress = BeginOperationProgress(this);
+        if (!processing && wasProcessing) { _mainProgress?.Dispose(); _mainProgress = null; }
         _processing = processing;
         UpdateCompactButton();
         settingsPanel.IsEnabled = !processing;
@@ -419,7 +424,7 @@ public partial class MainWindow : Window
         } : null
     };
 
-    private void SaveImage(object? sender, EventArgs e)
+    private async void SaveImage(object? sender, EventArgs e)
     {
         if (_downscaledResult is null) return;
         string suffix = _resultIsAlignment ? "aligned" : _activeSource?.SelectedGeneration?.IsGridReduction == true ? "pixels" : _activeSource?.SelectedGeneration?.Operation == Localization.Text("Увеличение") ? "upscaled" : "pixelized";
@@ -428,9 +433,10 @@ public partial class MainWindow : Window
             : "PNG|*.png|JPEG|*.jpg;*.jpeg|BMP|*.bmp";
         saveDialog.FilterIndex = 1;
         if (saveDialog.ShowDialog(this) != true) return;
-        try { SaveResult(saveDialog.FileName); }
+        try { await SaveResultWithProgressAsync(saveDialog.FileName); }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка сохранения"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -450,12 +456,14 @@ public partial class MainWindow : Window
             statusLabel.Text = errors.Count == 0
                 ? Localization.Format("Сохранено результатов: {0} · {1}", saved, folderDialog.FolderName)
                 : Localization.Format("Сохранено: {0}. Ошибок: {1}.", saved, errors.Count);
+            if (errors.Count == 0) CompleteProcessingProgress();
             if (errors.Count > 0)
                 TesseraDialog.Show(this, string.Join(Environment.NewLine, errors), Localization.Text("Не все результаты сохранены"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Text("Не удалось сохранить результаты.");
             TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка сохранения"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
@@ -483,7 +491,7 @@ public partial class MainWindow : Window
             string temporary = Path.Combine(outputDirectory, $".{stem}.{Guid.NewGuid():N}.tmp");
             try
             {
-                File.Copy(original, temporary);
+                ProgressFile.Copy(original, temporary, new PixelArtDownscale.ProcessingProgress(CurrentProcessingProgress).Slice(q, generations.Length));
                 for (int copy = 1; ; copy++)
                 {
                     string suffix = copy == 1 ? "" : $"_{copy}";
@@ -502,6 +510,7 @@ public partial class MainWindow : Window
                 errors.Add($"{generation.Label}: {ex.Message}");
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
+            CurrentProcessingProgress?.Report((q + 1.0) / generations.Length);
         }
         return (saved, errors);
     }
@@ -577,8 +586,12 @@ public partial class MainWindow : Window
         if (_sourceImage is null || _activeSource is null || _processing) return;
         CommitInputs();
         var settings = CaptureSettings();
-        var options = new GridAlignmentOptions { CellSize = settings.DetectGrid ? null : settings.CellSize,
-            Mode = settings.AlignmentMode, SnapToGlobalGrid = settings.SnapToGlobalGrid };
+        var options = new GridAlignmentOptions
+        {
+            CellSize = settings.DetectGrid ? null : settings.CellSize,
+            Mode = settings.AlignmentMode,
+            SnapToGlobalGrid = settings.SnapToGlobalGrid
+        };
         string operation = settings.AlignmentMode == GridAlignmentMode.Global ? ProcessingOperations.Align
             : settings.SnapToGlobalGrid ? ProcessingOperations.AlignLocalSnapped : ProcessingOperations.AlignLocal;
         bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
@@ -592,12 +605,15 @@ public partial class MainWindow : Window
         {
             var generation = await Task.Run(() =>
             {
-                using var result = new PixelGridAligner().Align(source, options);
+                using var result = new PixelGridAligner().Align(source, options, CurrentProcessingProgress);
                 return _library.SaveGeneration(document, result.Aligned, null, new GenerationEntry
                 {
                     OperationId = operation,
                     AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = operation, CellSize = options.CellSize }),
-                    Settings = settings, IsAlignment = true, PreservesTransparency = true, CellSize = result.CellSize,
+                    Settings = settings,
+                    IsAlignment = true,
+                    PreservesTransparency = true,
+                    CellSize = result.CellSize,
                     ParentGenerationId = parentId,
                     Caption = Localization.Format(settings.AlignmentMode == GridAlignmentMode.Local
                         ? settings.SnapToGlobalGrid ? "ЛОКАЛЬНАЯ СЕТКА С ПРИВЯЗКОЙ · {0} × {1} · ячейка {2} px"
@@ -615,6 +631,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Text("Выравнивание или сохранение истории не завершены.");
             TesseraDialog.Show(this, ex.Message, Localization.Text("Выравнивание сетки"), MessageBoxButton.OK, MessageBoxImage.Information);
         }

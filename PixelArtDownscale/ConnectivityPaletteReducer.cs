@@ -42,6 +42,17 @@ public static class ConnectivityPaletteReducer
     }
 
     public static ConnectivityPaletteResult Process(Bitmap source, ConnectivityPaletteOptions options)
+        => Process(source, options, progress: null);
+
+    public static ConnectivityPaletteResult Process(Bitmap source, ConnectivityPaletteOptions options, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ProcessWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static ConnectivityPaletteResult ProcessWithProgress(Bitmap source, ConnectivityPaletteOptions options, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
@@ -139,6 +150,7 @@ public static class ConnectivityPaletteReducer
         bool[] active = Enumerable.Repeat(true, colors.Count).ToArray();
         var pending = new PriorityQueue<(int Color, int Nearest), double>();
         for (int q = 0; q < colors.Count; q++) Enqueue(q);
+        tracking.Report(.25);
         int remaining = colors.Count;
         while (remaining > options.TargetColors)
         {
@@ -148,6 +160,7 @@ public static class ConnectivityPaletteReducer
             if (nearest != entry.Nearest) { Enqueue(entry.Color, nearest); continue; }
             active[entry.Color] = false;
             remaining--;
+            tracking.Report(.25 + .5 * (colors.Count - remaining) / Math.Max(1.0, colors.Count - options.TargetColors));
         }
 
         int[] globalReplacement = new int[colors.Count];
@@ -189,6 +202,7 @@ public static class ConnectivityPaletteReducer
             componentReplacement[q] = best;
         }
 
+        tracking.Report(.75);
         int changed = 0;
         int[] output = (int[])pixels.Clone();
         for (int q = 0; q < pixels.Length; q++)

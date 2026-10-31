@@ -11,8 +11,17 @@ public static class FinalistReducer
     public const int MinFactor = 2;
     public const int MaxFactor = 64;
 
-    public static Bitmap Reduce(Bitmap source, FinalistMode mode, int factor = DefaultFactor)
+    public static Bitmap Reduce(Bitmap source, FinalistMode mode, int factor = DefaultFactor, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReduceWithProgress(source, mode, factor, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ReduceWithProgress(Bitmap source, FinalistMode mode, int factor, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
         if (factor is < MinFactor or > MaxFactor) throw new ArgumentOutOfRangeException(nameof(factor));
@@ -30,18 +39,21 @@ public static class FinalistReducer
             int[] shiftedX = Boundaries(source.Width, width, factor, factor / 2);
             int[] shiftedY = Boundaries(source.Height, height, factor, factor / 2);
             for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x++)
             {
-                var color = mode switch
+                for (int x = 0; x < width; x++)
                 {
-                    FinalistMode.T3P44 => ReduceCell(pixels, shiftedX[x], shiftedY[y], shiftedX[x + 1], shiftedY[y + 1], false),
-                    FinalistMode.P5Off => ReduceCell(pixels, regularX[x], regularY[y], regularX[x + 1], regularY[y + 1], true),
-                    _ => Blend(
-                        ReduceCell(pixels, shiftedX[x], shiftedY[y], shiftedX[x + 1], shiftedY[y + 1], false),
-                        ReduceCell(pixels, regularX[x], regularY[y], regularX[x + 1], regularY[y + 1], true))
-                };
-                output.SetPackedColor(x, y, ColorSpace.Pack(color.R, color.G, color.B));
-                output.SetAlpha(x, y, color.A);
+                    var color = mode switch
+                    {
+                        FinalistMode.T3P44 => ReduceCell(pixels, shiftedX[x], shiftedY[y], shiftedX[x + 1], shiftedY[y + 1], false),
+                        FinalistMode.P5Off => ReduceCell(pixels, regularX[x], regularY[y], regularX[x + 1], regularY[y + 1], true),
+                        _ => Blend(
+                            ReduceCell(pixels, shiftedX[x], shiftedY[y], shiftedX[x + 1], shiftedY[y + 1], false),
+                            ReduceCell(pixels, regularX[x], regularY[y], regularX[x + 1], regularY[y + 1], true))
+                    };
+                    output.SetPackedColor(x, y, ColorSpace.Pack(color.R, color.G, color.B));
+                    output.SetAlpha(x, y, color.A);
+                }
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 1.0);
             }
         }
         return result;
@@ -63,16 +75,16 @@ public static class FinalistReducer
     {
         long alpha = 0, red = 0, green = 0, blue = 0;
         for (int y = y0; y < y1; y++)
-        for (int x = x0; x < x1; x++)
-        {
-            int a = pixels.GetAlpha(x, y);
-            if (a == 0) continue;
-            int rgb = pixels.GetPackedColor(x, y);
-            alpha += a;
-            red += (long)a * ColorSpace.GetR(rgb);
-            green += (long)a * ColorSpace.GetG(rgb);
-            blue += (long)a * ColorSpace.GetB(rgb);
-        }
+            for (int x = x0; x < x1; x++)
+            {
+                int a = pixels.GetAlpha(x, y);
+                if (a == 0) continue;
+                int rgb = pixels.GetPackedColor(x, y);
+                alpha += a;
+                red += (long)a * ColorSpace.GetR(rgb);
+                green += (long)a * ColorSpace.GetG(rgb);
+                blue += (long)a * ColorSpace.GetB(rgb);
+            }
         byte outAlpha = Round(alpha, (x1 - x0) * (y1 - y0));
         if (alpha == 0 || zeroRgbWhenRoundedAlphaIsZero && outAlpha == 0)
             return (0, 0, 0, outAlpha);

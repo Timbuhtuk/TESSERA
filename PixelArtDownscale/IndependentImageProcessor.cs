@@ -6,7 +6,20 @@ namespace PixelArtDownscale;
 public static class IndependentImageProcessor
 {
     public static Bitmap Scale(Bitmap source, DownscaleOptions options)
+        => Scale(source, options, progress: null);
+
+    public static Bitmap Scale(Bitmap source, DownscaleOptions options, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ScaleWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ScaleWithProgress(Bitmap source, DownscaleOptions options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
+        int progressRows1 = 0;
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
         int width = options.TargetWidth, height = options.TargetHeight;
@@ -27,6 +40,8 @@ public static class IndependentImageProcessor
                     int sourceX = (int)((long)x * source.Width / width);
                     enlargedOutput[y * width + x] = enlargedInput[sourceY * source.Width + sourceX];
                 }
+
+                tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 2.0);
             }
             return WriteArgb(enlargedOutput, width, height);
         }
@@ -73,12 +88,26 @@ public static class IndependentImageProcessor
                 if (pixels.Count == 0 || coverage + 1e-9 < (x1 - x0) * (y1 - y0) * threshold) continue;
                 output[oy * width + ox] = BlockAnalyzer.SelectRepresentative(pixels, options);
             }
+
+            tracking.Report((1 + Interlocked.Increment(ref progressRows1) / (double)height) / 2.0);
         }
         return WriteArgb(output, width, height);
     }
 
     public static Bitmap ApplyColors(Bitmap source, DownscaleOptions options)
+        => ApplyColors(source, options, progress: null);
+
+    public static Bitmap ApplyColors(Bitmap source, DownscaleOptions options, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ApplyColorsWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap ApplyColorsWithProgress(Bitmap source, DownscaleOptions options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(options);
         bool useQuantization = options.IndependentColorMode != IndependentColorMode.Palette;
@@ -91,7 +120,7 @@ public static class IndependentImageProcessor
             int[] visible = input.Where(argb => (uint)argb >> 24 != 0).Select(argb => argb & 0xFFFFFF).ToArray();
             var unique = visible.ToHashSet();
             var weights = options.UseColorWeights ? ColorQuantizer.CountColors(visible) : null;
-            lookup = ColorQuantizer.BuildLookup(unique, options.QuantizationColors, options.Quantization, weights);
+            lookup = ColorQuantizer.BuildLookup(unique, options.QuantizationColors, options.Quantization, weights, tracking.Slice(0, 2));
         }
         var palette = Palettes.GetPalette(options.Palette);
         bool dither = usePalette && options.EnableDithering && palette.Count > 1;
@@ -102,10 +131,11 @@ public static class IndependentImageProcessor
                 for (int q = 0; q < input.Length; q++)
                     if ((uint)input[q] >> 24 != 0)
                         input[q] = (input[q] & unchecked((int)0xFF000000)) | lookup[input[q] & 0xFFFFFF];
-            return WriteArgb(PaletteDithering.Apply(input, source.Width, source.Height, palette), source.Width, source.Height);
+            return WriteArgb(PaletteDithering.Apply(input, source.Width, source.Height, palette, tracking.Slice(1, 2)), source.Width, source.Height);
         }
         int[] output = new int[input.Length];
         for (int y = 0; y < source.Height; y++)
+        {
             for (int x = 0; x < source.Width; x++)
             {
                 int q = y * source.Width + x;
@@ -121,11 +151,16 @@ public static class IndependentImageProcessor
                     };
                 output[q] = (argb & unchecked((int)0xFF000000)) | rgb;
             }
+            tracking.Report((1 + Interlocked.Increment(ref progressRows0) / (double)source.Height) / 2.0);
+        }
         return WriteArgb(output, source.Width, source.Height);
     }
 
     public static Bitmap ApplyNeighborColors(Bitmap source, DownscaleOptions options)
         => ColorCleanup.Apply(source, options);
+
+    public static Bitmap ApplyNeighborColors(Bitmap source, DownscaleOptions options, IProgress<double>? progress)
+        => ColorCleanup.Apply(source, options, progress);
 
     private static Bitmap CopyArgb(Bitmap source)
         => source.Clone(new Rectangle(0, 0, source.Width, source.Height), PixelFormat.Format32bppArgb);

@@ -1,3 +1,4 @@
+using PixelArtDownscale;
 using System.IO;
 using System.IO.Compression;
 using System.Globalization;
@@ -100,6 +101,10 @@ public partial class MoodboardWorkspace : UserControl
 
     public event EventHandler? BackRequested;
     public event EventHandler? BusyChanged;
+    public Func<string, bool, OperationProgressSession>? ProgressFactory { get; set; }
+    private OperationProgressSession BeginProgress(string label, bool preview = false)
+        => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
+
     public event Action<string>? StatusChanged;
     public bool HasBoard => editorPanel.Visibility == Visibility.Visible;
     public Action<string>? ValidateExportPath { get; set; }
@@ -320,16 +325,35 @@ public partial class MoodboardWorkspace : UserControl
         if (!HasBoard) CreateBoard();
         string[] fileNames = paths.ToArray();
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Добавление изображений…"));
         StatusChanged?.Invoke(Localization.Text("Добавление изображений…"));
-        try { AddPreparedImages(await Task.Run(() => PrepareImages(fileNames))); }
+        try
+        {
+            var prepared = await Task.Run(() => PrepareImages(fileNames, operation.Work));
+            AddPreparedImages(prepared);
+            if (prepared.Errors.Count == 0) operation.Complete();
+        }
         finally { SetBusy(false); }
     }
 
     private static (List<(string Name, string SourcePath, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) PrepareImages(IEnumerable<string> paths)
+        => PrepareImages(paths, progress: null);
+
+    private static (List<(string Name, string SourcePath, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) PrepareImages(IEnumerable<string> paths, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = PrepareImagesWithProgress(paths, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static (List<(string Name, string SourcePath, byte[] Data, BitmapSource Preview, int Width, int Height)> Images, List<string> Errors) PrepareImagesWithProgress(IEnumerable<string> paths, ProcessingProgress tracking)
     {
         var images = new List<(string, string, byte[], BitmapSource, int, int)>();
         var errors = new List<string>();
-        foreach (string path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+        string[] files = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        int completed = 0;
+        foreach (string path in files)
         {
             if (!IconWorkspace.SupportsFile(path)) continue;
             try
@@ -339,6 +363,7 @@ public partial class MoodboardWorkspace : UserControl
                 images.Add((Path.GetFileName(path), Path.GetFullPath(path), bytes, preview, sourceWidth, sourceHeight));
             }
             catch (Exception ex) { errors.Add($"{Path.GetFileName(path)}: {ex.Message}"); }
+            tracking.Report((double)++completed / files.Length);
         }
         return (images, errors);
     }
@@ -354,8 +379,11 @@ public partial class MoodboardWorkspace : UserControl
                 double fit = Math.Min(1, Math.Min(boardSurface.Width * .48 / item.Width, boardSurface.Height * .48 / item.Height));
                 var layer = new Layer
                 {
-                    Name = item.Name, Image = item.Preview, ImageData = item.Data,
-                    Width = item.Width * fit, Height = item.Height * fit,
+                    Name = item.Name,
+                    Image = item.Preview,
+                    ImageData = item.Data,
+                    Width = item.Width * fit,
+                    Height = item.Height * fit,
                     X = (boardSurface.Width - item.Width * fit) / 2 + added * 24,
                     Y = (boardSurface.Height - item.Height * fit) / 2 + added * 24
                 };
@@ -455,8 +483,18 @@ public partial class MoodboardWorkspace : UserControl
         var outline = new Border { BorderBrush = Brushes.Transparent, BorderThickness = new Thickness(2), Background = Brushes.Transparent };
         outline.Child = new Image { Source = layer.Image, Stretch = Stretch.Fill, IsHitTestVisible = false };
         grid.Children.Add(outline);
-        var knob = new Ellipse { Width = 16, Height = 16, Fill = Brushes.White, Stroke = Brushes.Black, StrokeThickness = 2,
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(0, -25, 0, 0), Cursor = Cursors.Hand };
+        var knob = new Ellipse
+        {
+            Width = 16,
+            Height = 16,
+            Fill = Brushes.White,
+            Stroke = Brushes.Black,
+            StrokeThickness = 2,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, -25, 0, 0),
+            Cursor = Cursors.Hand
+        };
         knob.MouseLeftButtonDown += (_, e) => BeginDrag(layer, grid, e, true);
         grid.Children.Add(knob);
         grid.MouseLeftButtonDown += (_, e) => BeginDrag(layer, grid, e, false);
@@ -752,8 +790,14 @@ public partial class MoodboardWorkspace : UserControl
     {
         if (IsBusy) return;
         if (WorkspaceSavePath is { } workspacePath) { await SaveToFileAsync(workspacePath); return; }
-        var dialog = new SaveFileDialog { Title = Localization.Text("Сохранить доску"), Filter = Localization.Text("Доска Tessera|*.tboard"), DefaultExt = ".tboard", AddExtension = true,
-            FileName = _projectPath is null ? Localization.Text("Доска.tboard") : Path.GetFileName(_projectPath) };
+        var dialog = new SaveFileDialog
+        {
+            Title = Localization.Text("Сохранить доску"),
+            Filter = Localization.Text("Доска Tessera|*.tboard"),
+            DefaultExt = ".tboard",
+            AddExtension = true,
+            FileName = _projectPath is null ? Localization.Text("Доска.tboard") : Path.GetFileName(_projectPath)
+        };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveToFileAsync(dialog.FileName); }
         catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить доску: {0}", ex.Message)); }
@@ -765,11 +809,13 @@ public partial class MoodboardWorkspace : UserControl
         path = ValidateOutputPath(path, project: true);
         var board = CaptureManifest(out var images);
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Сохранение доски…"));
         StatusChanged?.Invoke(Localization.Text("Сохранение доски…"));
         try
         {
-            await Task.Run(() => WriteProject(path, board, images));
+            await Task.Run(() => WriteProject(path, board, images, operation.Work));
             MarkSaved(path);
+            operation.Complete();
         }
         finally { SetBusy(false); }
     }
@@ -785,22 +831,45 @@ public partial class MoodboardWorkspace : UserControl
 
     private BoardManifest CaptureManifest(out byte[][] images)
     {
-        var board = new BoardManifest { Width = (int)boardSurface.Width, Height = (int)boardSurface.Height,
+        var board = new BoardManifest
+        {
+            Width = (int)boardSurface.Width,
+            Height = (int)boardSurface.Height,
             BackgroundColor = $"#{_backgroundColor.R:X2}{_backgroundColor.G:X2}{_backgroundColor.B:X2}",
-            SourcePaths = _sourcePaths.Order(StringComparer.OrdinalIgnoreCase).ToArray() };
+            SourcePaths = _sourcePaths.Order(StringComparer.OrdinalIgnoreCase).ToArray()
+        };
         images = new byte[_layers.Count][];
         for (int q = 0; q < _layers.Count; q++)
         {
             var item = _layers[q];
             string entryName = $"images/{q:D4}.bin";
             images[q] = item.ImageData;
-            board.Layers.Add(new ManifestLayer { Name = item.Name, ImageEntry = entryName,
-                Width = item.Width, Height = item.Height, X = item.X, Y = item.Y, Angle = item.Angle, Scale = item.Scale });
+            board.Layers.Add(new ManifestLayer
+            {
+                Name = item.Name,
+                ImageEntry = entryName,
+                Width = item.Width,
+                Height = item.Height,
+                X = item.X,
+                Y = item.Y,
+                Angle = item.Angle,
+                Scale = item.Scale
+            });
         }
         return board;
     }
 
     private static void WriteProject(string path, BoardManifest board, byte[][] images)
+        => WriteProject(path, board, images, progress: null);
+
+    private static void WriteProject(string path, BoardManifest board, byte[][] images, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        WriteProjectWithProgress(path, board, images, tracking);
+        tracking.Report(1);
+    }
+
+    private static void WriteProjectWithProgress(string path, BoardManifest board, byte[][] images, ProcessingProgress tracking)
     {
         string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
@@ -812,6 +881,7 @@ public partial class MoodboardWorkspace : UserControl
                 {
                     var entry = archive.CreateEntry(board.Layers[q].ImageEntry, CompressionLevel.NoCompression);
                     using (var image = entry.Open()) image.Write(images[q]);
+                    tracking.Report((q + 1.0) / (board.Layers.Count + 1));
                 }
                 using var manifest = archive.CreateEntry("board.json", CompressionLevel.Fastest).Open();
                 JsonSerializer.Serialize(manifest, board);
@@ -844,11 +914,13 @@ public partial class MoodboardWorkspace : UserControl
         if (IsBusy) throw new InvalidOperationException(Localization.Text("Дождитесь завершения операции."));
         path = Path.GetFullPath(path);
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Загрузка доски…"));
         StatusChanged?.Invoke(Localization.Text("Открытие доски…"));
         try
         {
-            var loaded = await Task.Run(() => ReadProject(path));
+            var loaded = await Task.Run(() => ReadProject(path, operation.Work));
             ApplyLoadedBoard(loaded.Width, loaded.Height, loaded.Background, loaded.Layers, loaded.SourcePaths, path);
+            operation.Complete();
         }
         finally { SetBusy(false); }
     }
@@ -861,6 +933,17 @@ public partial class MoodboardWorkspace : UserControl
     }
 
     private static (int Width, int Height, Color Background, List<Layer> Layers, string[] SourcePaths) ReadProject(string path)
+        => ReadProject(path, progress: null);
+
+    private static (int Width, int Height, Color Background, List<Layer> Layers, string[] SourcePaths) ReadProject(string path, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = ReadProjectWithProgress(path, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static (int Width, int Height, Color Background, List<Layer> Layers, string[] SourcePaths) ReadProjectWithProgress(string path, ProcessingProgress tracking)
     {
         using var file = File.OpenRead(path);
         bool zipped = file.ReadByte() == 'P' && file.ReadByte() == 'K';
@@ -888,8 +971,19 @@ public partial class MoodboardWorkspace : UserControl
                 if (entry.Length is <= 0 or > 536870912) throw new InvalidDataException(Localization.Text("Недопустимый размер изображения слоя."));
                 byte[] imageData = new byte[(int)entry.Length];
                 using (var image = entry.Open()) image.ReadExactly(imageData);
-                layers.Add(new Layer { Name = item.Name, ImageData = imageData, Image = DecodePreview(imageData, PreviewPixelLimit),
-                    Width = item.Width, Height = item.Height, X = item.X, Y = item.Y, Angle = item.Angle, Scale = item.Scale });
+                layers.Add(new Layer
+                {
+                    Name = item.Name,
+                    ImageData = imageData,
+                    Image = DecodePreview(imageData, PreviewPixelLimit),
+                    Width = item.Width,
+                    Height = item.Height,
+                    X = item.X,
+                    Y = item.Y,
+                    Angle = item.Angle,
+                    Scale = item.Scale
+                });
+                tracking.Report((double)layers.Count / items.Count);
             }
         }
         else
@@ -902,8 +996,19 @@ public partial class MoodboardWorkspace : UserControl
             {
                 ValidateLayer(item.Width, item.Height, item.X, item.Y, item.Angle, item.Scale);
                 if (item.Png is null || item.Png.Length == 0) throw new InvalidDataException(Localization.Text("Пустое изображение слоя."));
-                layers.Add(new Layer { Name = item.Name, ImageData = item.Png, Image = DecodePreview(item.Png, PreviewPixelLimit),
-                    Width = item.Width, Height = item.Height, X = item.X, Y = item.Y, Angle = item.Angle, Scale = item.Scale });
+                layers.Add(new Layer
+                {
+                    Name = item.Name,
+                    ImageData = item.Png,
+                    Image = DecodePreview(item.Png, PreviewPixelLimit),
+                    Width = item.Width,
+                    Height = item.Height,
+                    X = item.X,
+                    Y = item.Y,
+                    Angle = item.Angle,
+                    Scale = item.Scale
+                });
+                tracking.Report((double)layers.Count / items.Count);
             }
         }
         return (width, height, background, layers, sourcePaths);
@@ -959,12 +1064,14 @@ public partial class MoodboardWorkspace : UserControl
         var layers = CaptureRenderLayers();
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Экспорт PNG…"));
         StatusChanged?.Invoke(Localization.Text("Экспорт PNG…"));
         try
         {
             Color background = _backgroundColor;
-            await Task.Run(() => MoodboardPngExporter.Export(path, width, height, background, layers));
+            await Task.Run(() => MoodboardPngExporter.Export(path, width, height, background, layers, operation.Work));
             StatusChanged?.Invoke(Localization.Format("PNG сохранён: {0}", path));
+            operation.Complete();
         }
         finally { SetBusy(false); }
     }

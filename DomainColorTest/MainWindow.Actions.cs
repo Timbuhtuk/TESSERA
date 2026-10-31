@@ -149,8 +149,11 @@ public partial class MainWindow
                 {
                     OperationId = ProcessingOperations.Reduce,
                     AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = ProcessingOperations.Reduce, CellSize = cellSize, UsePreviousAlignment = parent?.IsAlignment == true && parent.Settings.DetectGrid }),
-                    Settings = settings, IsGridReduction = true, PreservesTransparency = true,
-                    ParentGenerationId = parent?.Id, CellSize = cellSize,
+                    Settings = settings,
+                    IsGridReduction = true,
+                    PreservesTransparency = true,
+                    ParentGenerationId = parent?.Id,
+                    CellSize = cellSize,
                     Caption = Localization.Format("СЕТКА В 1 px · {0} × {1} · из ячейки {2} px", compact.Width, compact.Height, cellSize),
                     Log = Localization.Format("{0} × {1} → {2} × {3}. Одна ячейка — один пиксель. Неполные крайние ячейки сохранены.", source.Width, source.Height, compact.Width, compact.Height)
                 });
@@ -160,6 +163,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Format("Не удалось сжать сетку: {0}", ex.Message);
         }
         finally { SetProcessingState(false); }

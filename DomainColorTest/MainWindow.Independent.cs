@@ -65,9 +65,9 @@ public partial class MainWindow
             {
                 using var result = operation switch
                 {
-                    IndependentOperation.Size => IndependentImageProcessor.Scale(source, options),
-                    IndependentOperation.NeighborColors => IndependentImageProcessor.ApplyNeighborColors(source, options),
-                    _ => PaletteProcessor.Apply(source, options, settings.ConnectedPalette)
+                    IndependentOperation.Size => IndependentImageProcessor.Scale(source, options, CurrentProcessingProgress),
+                    IndependentOperation.NeighborColors => IndependentImageProcessor.ApplyNeighborColors(source, options, CurrentProcessingProgress),
+                    _ => PaletteProcessor.Apply(source, options, settings.ConnectedPalette, CurrentProcessingProgress)
                 };
                 string colorOperation = options.IndependentColorMode switch
                 {
@@ -83,10 +83,13 @@ public partial class MainWindow
                 {
                     Settings = settings,
                     OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
-                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep { OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
+                    AppliedRecipe = HistoryRecipes.Single(new ProcessingStep
+                    {
+                        OperationId = changeSize ? ProcessingOperations.Resize : neighborColors ? ProcessingOperations.Cleanup : ProcessingOperations.Colors,
                         Downscale = scaleFactor is null ? options : null,
                         ResizeFactor = scaleFactor is { } value ? ResizeFactorSettings.From(options, value) : null,
-                        ConnectedPalette = !changeSize && !neighborColors ? settings.ConnectedPalette : null }),
+                        ConnectedPalette = !changeSize && !neighborColors ? settings.ConnectedPalette : null
+                    }),
                     Operation = changeSize ? enlarged ? Localization.Text("Увеличение") : Localization.Text("Размер") :
                         neighborColors ? Localization.Text("Сглаживание") : colorOperation,
                     ParentGenerationId = parentId,
@@ -106,6 +109,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             statusLabel.Text = Localization.Text("Обработка или сохранение истории не завершены. Предыдущий результат доступен.");
             TesseraDialog.Show(this, ex.Message, Localization.Text("Ошибка обработки"), MessageBoxButton.OK, MessageBoxImage.Error);
         }

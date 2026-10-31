@@ -43,7 +43,19 @@ public static class ContourNoiseCleaner
     private static readonly double[] BoundaryOffsets = [-1.5, -1, -0.5, 0.5, 1, 1.5];
 
     public static ContourCleanResult Process(Bitmap source, ContourCleanOptions options)
+        => Process(source, options, progress: null);
+
+    public static ContourCleanResult Process(Bitmap source, ContourCleanOptions options, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = ProcessWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static ContourCleanResult ProcessWithProgress(Bitmap source, ContourCleanOptions options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         Validate(source, options);
         int width = source.Width, height = source.Height;
         int[] original = Read(source);
@@ -52,9 +64,10 @@ public static class ContourNoiseCleaner
         var proposals = new List<Proposal>();
         int radius = options.WindowSize / 2;
         var samples = new List<Sample>(options.WindowSize * options.WindowSize - 1);
-        var candidates = FindCandidates(original, width, height, options, labs);
+        var candidates = FindCandidates(original, width, height, options, labs, tracking.Slice(0, 2));
 
         for (int y = 0; y < height; y++)
+        {
             for (int x = 0; x < width; x++)
             {
                 int index = y * width + x;
@@ -128,6 +141,8 @@ public static class ContourNoiseCleaner
                     (options.Strictness == ContourCleanStrictness.Strong ? 8 : 12)) continue;
                 proposals.Add(new Proposal(index, predicted, coherence * (1 - bestError)));
             }
+            tracking.Report((1 + Interlocked.Increment(ref progressRows0) / (double)height) / 2.0);
+        }
 
         using var candidateImage = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (var candidateBuffer = BitmapBuffer.FromWritableBitmap(candidateImage))
@@ -169,16 +184,29 @@ public static class ContourNoiseCleaner
     }
 
     public static ContourAnalysisResult Analyze(Bitmap source, ContourCleanOptions options)
+        => Analyze(source, options, progress: null);
+
+    public static ContourAnalysisResult Analyze(Bitmap source, ContourCleanOptions options, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = AnalyzeWithProgress(source, options, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static ContourAnalysisResult AnalyzeWithProgress(Bitmap source, ContourCleanOptions options, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         Validate(source, options);
         int width = source.Width, height = source.Height;
         int[] original = Read(source);
         var labs = new Dictionary<int, Lab>();
-        var candidates = FindCandidates(original, width, height, options, labs);
+        var candidates = FindCandidates(original, width, height, options, labs, tracking.Slice(0, 2));
         var heatmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (var buffer = BitmapBuffer.FromWritableBitmap(heatmap))
         {
             for (int y = 0; y < height; y++)
+            {
                 for (int x = 0; x < width; x++)
                 {
                     int index = y * width + x;
@@ -196,17 +224,33 @@ public static class ContourNoiseCleaner
                     buffer.SetPackedColor(x, y, (255 << 16) | (other << 8) | other);
                     buffer.SetAlpha(x, y, (byte)alpha);
                 }
+                tracking.Report((1 + Interlocked.Increment(ref progressRows0) / (double)height) / 2.0);
+            }
         }
         return new ContourAnalysisResult(heatmap, candidates.Count);
     }
 
     private static HashSet<int> FindCandidates(int[] image, int width, int height,
         ContourCleanOptions options, Dictionary<int, Lab> labs)
+        => FindCandidates(image, width, height, options, labs, progress: null);
+
+    private static HashSet<int> FindCandidates(int[] image, int width, int height,
+        ContourCleanOptions options, Dictionary<int, Lab> labs, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = FindCandidatesWithProgress(image, width, height, options, labs, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static HashSet<int> FindCandidatesWithProgress(int[] image, int width, int height, ContourCleanOptions options, Dictionary<int, Lab> labs, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         var candidates = new HashSet<int>();
         int radius = options.WindowSize / 2;
         double colorLimit = options.SimilarColorDistance * options.SimilarColorDistance;
         for (int y = 0; y < height; y++)
+        {
             for (int x = 0; x < width; x++)
             {
                 int index = y * width + x;
@@ -242,6 +286,8 @@ public static class ContourNoiseCleaner
                     (pixelLength * commonLength);
                 if (opposition >= options.MinimumOpposition) candidates.Add(index);
             }
+            tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 1.0);
+        }
         return candidates;
     }
 

@@ -102,13 +102,16 @@ public partial class MainWindow
     public async Task ImportWorkspaceFilesAsync(IReadOnlyList<string> paths)
     {
         if (_workspaceCatalog is null || WorkspaceBusy) return;
+        using var operation = BeginOperationProgress(this, Localization.Text("Добавление изображений…"));
+        string[] progressFiles = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        int progressDone = 0;
         _workspaceImporting = true;
         _workspaceBrowser!.IsEnabled = false;
         UpdateBusyIndicator();
         try
         {
             var failures = new List<string>(); var imported = new List<WorkspaceAsset>();
-            foreach (string path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach (string path in progressFiles)
             {
                 WorkspaceAsset? pendingDocument = null;
                 try
@@ -121,7 +124,7 @@ public partial class MainWindow
                         if (asset.Kind == WorkspaceAssetKind.Animation)
                         {
                             string previewFolder = Path.Combine(Path.GetDirectoryName(_workspaceCatalog.ContentPath(asset))!, "preview-build");
-                            var converted = await Task.Run(() => PixelArtAseprite.AsepriteConverter.Convert(_workspaceCatalog.ContentPath(asset), previewFolder, new PixelArtAseprite.AsepriteExportOptions()));
+                            var converted = await Task.Run(() => PixelArtAseprite.AsepriteConverter.Convert(_workspaceCatalog.ContentPath(asset), previewFolder, new PixelArtAseprite.AsepriteExportOptions(), progress: operation.Work.Slice(progressDone, progressFiles.Length)));
                             File.Copy(converted.ImagePath, Path.Combine(Path.GetDirectoryName(_workspaceCatalog.ContentPath(asset))!, "preview.png"), true);
                             asset.Width = converted.Width; asset.Height = converted.Height;
                         }
@@ -139,9 +142,11 @@ public partial class MainWindow
                     imported.Add(asset);
                 }
                 catch (Exception ex) { if (pendingDocument is not null) _workspaceCatalog.ForgetAsset(pendingDocument.Id); failures.Add(Path.GetFileName(path) + ": " + ex.Message); }
+                operation.Work.Report((double)++progressDone / progressFiles.Length);
             }
             RefreshWorkspaceSources();
             _workspaceCatalog.Save(); _workspaceBrowser!.Refresh(imported.LastOrDefault()?.Id);
+            if (failures.Count == 0) operation.Complete();
             statusLabel.Text = Localization.Format("Добавлено: {0}", imported.Count) + (failures.Count > 0 ? Localization.Text(" · Ошибки: ") + string.Join("; ", failures) : Localization.Text(" · Выберите материал для работы"));
         }
         finally { _workspaceImporting = false; _workspaceBrowser.IsEnabled = true; UpdateBusyIndicator(); }
@@ -221,7 +226,8 @@ public partial class MainWindow
             string path = _workspaceCatalog.ContentPath(board); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             ShowMoodboardWorkspace(); moodboardWorkspace.CreateWorkspaceBoard(1024, 768);
             moodboardWorkspace.WorkspaceSavePath = path;
-            await moodboardWorkspace.SaveToFileAsync(path);
+            try { await moodboardWorkspace.SaveToFileAsync(path); }
+            catch { moodboardWorkspace.WorkspaceSavePath = null; throw; }
             _workspaceCatalog.State.Assets.Add(board); AddNewWorkspaceAsset(board); _workspaceActive = board;
             UpdateDocumentPreview(board); return;
         }
@@ -273,9 +279,17 @@ public partial class MainWindow
     private void SaveWorkspaceImageResult(Bitmap result, string operation, SourceEntry target, Guid? parentId, EditorSettings settings, ProcessingStep? step = null, bool manual = false)
     {
         if (!_sources.Contains(target)) throw new InvalidOperationException(Localization.Text("Исходный ассет больше не доступен."));
-        var entry = _library.SaveGeneration(target, result, null, new GenerationEntry { Operation = operation, Caption = operation, ParentGenerationId = parentId, PreservesTransparency = true, Settings = settings,
-            OperationId = manual ? "manual.erase" : step?.OperationId, AppliedRecipe = step is null || manual ? null : HistoryRecipes.Single(step),
-            RecipeUnavailableReason = manual ? Localization.Text("Цепочка содержит ручной ластик. Этот шаг нельзя воспроизвести макросом.") : step is null ? Localization.Text("Параметры операции не сохранены.") : null });
+        var entry = _library.SaveGeneration(target, result, null, new GenerationEntry
+        {
+            Operation = operation,
+            Caption = operation,
+            ParentGenerationId = parentId,
+            PreservesTransparency = true,
+            Settings = settings,
+            OperationId = manual ? "manual.erase" : step?.OperationId,
+            AppliedRecipe = step is null || manual ? null : HistoryRecipes.Single(step),
+            RecipeUnavailableReason = manual ? Localization.Text("Цепочка содержит ручной ластик. Этот шаг нельзя воспроизвести макросом.") : step is null ? Localization.Text("Параметры операции не сохранены.") : null
+        });
         if (!CommitGeneration(target, entry)) return;
         if (target == _activeSource) ProcessingBasis = 1;
         SynchronizeWorkspace();

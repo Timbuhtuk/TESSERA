@@ -503,7 +503,7 @@ try
             Steps = [new ProcessingStep { OperationId = ProcessingOperations.Ascii, Ascii = ascii }]
         });
         using var expectedAscii = ImageFilters.RenderAscii(source, ascii.KeepSourceSize, ascii.Characters,
-            ascii.InvertSource, ascii.InvertColors);
+            ascii.InvertSource, ascii.InvertColors, fontSize: ascii.FontSize);
         EqualPixels(expectedAscii, actualAscii);
     });
 

@@ -33,6 +33,10 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     public event Action<EditorMaterial>? MaterialRequested;
 
     public event EventHandler? BusyChanged;
+    public Func<string, bool, OperationProgressSession>? ProgressFactory { get; set; }
+    private OperationProgressSession BeginProgress(string label, bool preview = false)
+        => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
+
     public event Action<string>? StatusChanged;
 
     public BackgroundWorkspace()
@@ -65,12 +69,14 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     {
         if (_busy || _disposed) return;
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Открытие изображения…"));
         try
         {
             using var image = await Task.Run(() => IconWorkspace.ReadImage(path));
             if (_disposed) return;
             SetImage(image, Path.GetFileName(path), path);
             StatusChanged?.Invoke(Localization.Text("Изображение открыто. Настройте удаление фона и сохраните PNG."));
+            operation.Complete();
         }
         catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось открыть изображение: {0}", ex.Message)); }
         finally { SetBusy(false); }
@@ -133,17 +139,20 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         var options = GetOptions();
         using var cancellation = new CancellationTokenSource();
         _previewCancellation = cancellation;
+        using var operation = BeginProgress(Localization.Text("Удаление фона…"), true);
         using var source = (Bitmap)_source.Clone();
         IsRendering = true;
         UpdateSaveState();
         try
         {
-            var result = await Task.Run(() => BackgroundRemover.Remove(source, options.Mode, options.Tolerance, options.Color, cancellation.Token));
+            var result = await Task.Run(() => BackgroundRemover.Remove(source, options.Mode, options.Tolerance, options.Color, cancellation.Token, operation.Work));
             if (_disposed || revision != _revision) { result.Dispose(); return; }
             _processedResult?.Dispose();
             _processedResult = result;
             _renderedRecipe = new BackgroundSettings { Mode = options.Mode, Tolerance = options.Tolerance, ColorArgb = options.Color?.ToArgb() };
             RecomposeManualResult();
+            operation.Complete();
+            if (IsVisible) StatusChanged?.Invoke(Localization.Text("Результат удаления фона готов. Сохраните PNG или добавьте в историю."));
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -160,8 +169,15 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     private async Task SaveDialogAsync()
     {
         if (_busy || _result is null) return;
-        var dialog = new SaveFileDialog { Title = Localization.Text("Сохранить без фона"), Filter = Localization.Text("PNG с прозрачностью|*.png"), DefaultExt = ".png",
-            AddExtension = true, OverwritePrompt = true, FileName = Path.GetFileNameWithoutExtension(backgroundFileLabel.Text) + "_transparent.png" };
+        var dialog = new SaveFileDialog
+        {
+            Title = Localization.Text("Сохранить без фона"),
+            Filter = Localization.Text("PNG с прозрачностью|*.png"),
+            DefaultExt = ".png",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = Path.GetFileNameWithoutExtension(backgroundFileLabel.Text) + "_transparent.png"
+        };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveAsync(dialog.FileName, true); }
         catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить PNG: {0}", ex.Message)); }
@@ -179,6 +195,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         if (!overwrite && File.Exists(output)) throw new IOException(Localization.Text("Файл уже существует."));
         using var image = (Bitmap)_result.Clone();
         SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Сохранение PNG…"));
         StatusChanged?.Invoke(Localization.Text("Сохранение PNG…"));
         try
         {
@@ -192,6 +209,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
                 }
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
             });
+            operation.Complete();
             StatusChanged?.Invoke(Localization.Format("Сохранено: {0}", output));
         }
         finally { SetBusy(false); }
@@ -216,6 +234,10 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     {
         bool compact = ActualWidth < 900;
         bool stackPreviews = ActualWidth < 700;
+        bool compactHeader = ActualWidth < 700;
+
+        DockPanel.SetDock(backgroundHeaderActions, compactHeader ? Dock.Bottom : Dock.Right);
+        backgroundHeaderActions.Margin = compactHeader ? new Thickness(0, 8, 0, 0) : new Thickness();
 
         backgroundContent.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 260, compact ? GridUnitType.Star : GridUnitType.Pixel);
         backgroundContent.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);

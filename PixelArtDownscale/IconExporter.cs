@@ -25,10 +25,17 @@ public static class IconExporter
 
     /// <summary>Сохраняет ICO через временный файл. Замена существующего файла требует overwrite.</summary>
     public static void Save(Bitmap source, string outputPath, IconExportOptions? options = null,
-        bool overwrite = false, CancellationToken cancellationToken = default)
+        bool overwrite = false, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        SaveWithProgress(source, outputPath, options, overwrite, cancellationToken, tracking);
+        tracking.Report(1);
+    }
+
+    private static void SaveWithProgress(Bitmap source, string outputPath, IconExportOptions? options, bool overwrite, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         string output = ValidateOutputPath(outputPath, overwrite);
-        byte[] bytes = Encode(source, options, cancellationToken);
+        byte[] bytes = Encode(source, options, cancellationToken, tracking.Range(0, .9));
         cancellationToken.ThrowIfCancellationRequested();
         string directory = Path.GetDirectoryName(output)!;
         Directory.CreateDirectory(directory);
@@ -47,7 +54,15 @@ public static class IconExporter
     }
 
     /// <summary>Возвращает полный ICO: каждый размер содержит независимое PNG-изображение с 32-битным RGBA.</summary>
-    public static byte[] Encode(Bitmap source, IconExportOptions? options = null, CancellationToken cancellationToken = default)
+    public static byte[] Encode(Bitmap source, IconExportOptions? options = null, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
+    {
+        var tracking = new ProcessingProgress(progress);
+        var result = EncodeWithProgress(source, options, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static byte[] EncodeWithProgress(Bitmap source, IconExportOptions? options, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
         ArgumentNullException.ThrowIfNull(source);
         options ??= new IconExportOptions();
@@ -61,15 +76,16 @@ public static class IconExporter
             throw new ArgumentException("Размеры ICO не должны повторяться.", nameof(options));
         Array.Sort(sizes);
 
-        using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(source, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellationToken) : null;
+        using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(source, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellationToken, tracking.Slice(0, sizes.Length + 1)) : null;
         var frames = new List<byte[]>(sizes.Length);
         foreach (int size in sizes)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            using var frame = CreateFrame(prepared ?? source, size, options.ResizeMode, options.FitMode, cancellationToken);
+            using var frame = CreateFrame(prepared ?? source, size, options.ResizeMode, options.FitMode, cancellationToken, tracking.Slice(frames.Count + 1, sizes.Length + 1));
             using var png = new MemoryStream();
             frame.Save(png, ImageFormat.Png);
             frames.Add(png.ToArray());
+            tracking.Report((frames.Count + 1.0) / (sizes.Length + 1));
         }
 
         using var result = new MemoryStream();
@@ -98,8 +114,17 @@ public static class IconExporter
 
     /// <summary>Создаёт отдельный кадр для предпросмотра. Вызывающий код освобождает возвращённый Bitmap.</summary>
     public static Bitmap CreateFrame(Bitmap source, int size, IconResizeMode resizeMode = IconResizeMode.Smooth,
-        IconFitMode fitMode = IconFitMode.Contain, CancellationToken cancellationToken = default)
+        IconFitMode fitMode = IconFitMode.Contain, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
     {
+        var tracking = new ProcessingProgress(progress);
+        var result = CreateFrameWithProgress(source, size, resizeMode, fitMode, cancellationToken, tracking);
+        tracking.Report(1);
+        return result;
+    }
+
+    private static Bitmap CreateFrameWithProgress(Bitmap source, int size, IconResizeMode resizeMode, IconFitMode fitMode, CancellationToken cancellationToken, ProcessingProgress tracking)
+    {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         ValidateSize(size);
         ValidateModes(resizeMode, fitMode);
@@ -137,6 +162,8 @@ public static class IconExporter
                         int sx = Math.Min(source.Width - 1, (int)(sample.X + (x + 0.5) * sample.Width / target.Width));
                         frame.SetPixel(target.X + x, target.Y + y, source.GetPixel(sx, sy));
                     }
+
+                    tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)target.Height) / 1.0);
                 }
             }
             else

@@ -41,10 +41,12 @@ public partial class MainWindow
             else source.SelectedGeneration = generation;
             transaction.Commit();
             if (insertHistoryInput.IsChecked == true) insertHistoryInput.IsChecked = false;
+            if (_macroCancellation is null) CompleteProcessingProgress();
             return true;
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             if (transaction is not null)
             {
                 try { RestoreHistorySource(transaction.Rollback()); }
@@ -190,6 +192,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
+            _mainProgress?.Dispose();
             try { RestoreHistorySource(transaction.Rollback()); }
             catch (Exception rollback) { ex = new AggregateException(ex, rollback); }
             ShowHistoryFailure(Localization.Text("Удаление результатов"), ex);
