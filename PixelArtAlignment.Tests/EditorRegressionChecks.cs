@@ -263,10 +263,17 @@ internal static class EditorRegressionChecks
             File.Copy(input, second);
             Invoke("LoadImage", second); Invoke("LoadImage", input);
             Click("scaleOnlyButton"); Wait();
-            Console.WriteLine("  Export regression: checking protected image paths");
+            Console.WriteLine("  Export regression: checking external overwrite and protected library paths");
             var sources = Get<ListBox>("sourceStrip").Items.Cast<SourceEntry>().ToArray();
             var library = Get<ImageLibrary>("_library");
-            var protectedFiles = sources.Select(item => item.OriginalPath).Concat(sources.Select(library.SourcePath)).Concat(
+            foreach (string path in sources.Select(item => item.OriginalPath))
+            {
+                Invoke("SaveResult", path.ToUpperInvariant());
+                using (var saved = new Bitmap(path)) EqualPixels(Get<Bitmap>("_downscaledResult"), saved, "External original overwrite");
+                Invoke("SaveResult", Path.GetRelativePath(Environment.CurrentDirectory, path));
+                using (var saved = new Bitmap(path)) EqualPixels(Get<Bitmap>("_downscaledResult"), saved, "Relative original overwrite");
+            }
+            var protectedFiles = sources.Select(library.SourcePath).Concat(
                 sources.SelectMany(item => item.Generations.Select(generation => library.ResultPath(item, generation)))).ToArray();
             foreach (string path in protectedFiles)
             {

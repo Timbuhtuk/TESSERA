@@ -278,13 +278,21 @@ public partial class MainWindow
     {
         e.Handled = true;
         if (_processing || sender is not FrameworkElement element) return;
+        if (element.DataContext is GenerationEntry generation) { RemoveGenerationByUser(generation); return; }
         _dragCandidate = null;
         try
         {
             if (element.DataContext is SourceEntry source) RemoveSource(source);
-            else if (element.DataContext is GenerationEntry generation)
-                RemoveGenerationWithUndo(generation, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
         }
+        catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось удалить запись или открыть соседнюю: {0}", ex.Message); }
+        finally { SetProcessingState(_processing); }
+    }
+
+    private void RemoveGenerationByUser(GenerationEntry generation)
+    {
+        if (_processing) return;
+        _dragCandidate = null;
+        try { RemoveGenerationWithUndo(generation, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)); }
         catch (Exception ex) { statusLabel.Text = Localization.Format("Не удалось удалить запись или открыть соседнюю: {0}", ex.Message); }
         finally { SetProcessingState(_processing); }
     }

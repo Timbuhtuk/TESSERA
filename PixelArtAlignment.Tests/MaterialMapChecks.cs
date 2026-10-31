@@ -175,9 +175,23 @@ internal static class MaterialMapChecks
                 using var image = new Bitmap(output);
                 Require(image.Width == 32 && image.Height == 24 && image.GetPixel(0, 0).A == 0 && image.GetPixel(1, 0).A == 90, "PNG dimensions/alpha changed");
             }
-            bool protectedSource = false;
-            try { maps.ExportMap(MaterialMapKind.AO, path); } catch (InvalidOperationException) { protectedSource = true; }
-            Require(protectedSource && File.ReadAllBytes(path).SequenceEqual(source), "Export can overwrite the original");
+            Require(File.ReadAllBytes(path).SequenceEqual(source), "Material editing changed the external source before export");
+            maps.ExportMap(MaterialMapKind.AO, path);
+            using (var actual = new Bitmap(path))
+            using (var expected = new Bitmap(Path.Combine(folder, "AO.png")))
+            {
+                Require(actual.Size == expected.Size, "External map overwrite dimensions differ");
+                for (int y = 0; y < actual.Height; y++)
+                for (int x = 0; x < actual.Width; x++)
+                    Require(actual.GetPixel(x, y) == expected.GetPixel(x, y), "External map overwrite pixel differs");
+            }
+            var exportLibrary = (ImageLibrary)typeof(MainWindow).GetField("_library", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(main)!;
+            var exportSource = (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(main)!;
+            string internalPath = exportLibrary.SourcePath(exportSource);
+            byte[] internalSource = File.ReadAllBytes(internalPath);
+            bool protectedInternal = false;
+            try { maps.ExportMap(MaterialMapKind.AO, internalPath); } catch (InvalidOperationException) { protectedInternal = true; }
+            Require(protectedInternal && File.ReadAllBytes(internalPath).SequenceEqual(internalSource), "Map export changed the internal library source");
             string project = Path.Combine(folder, "edited.tmaps"); maps.SaveProject(project);
             Require(!maps.Document.HasChanges && MaterialMapFile.Load(project).AoMask.SequenceEqual(ao), "UI save lost edits");
             // Save immediately after a slider edit, before its debounce tick.

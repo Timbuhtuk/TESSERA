@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Удаление карточек и перезапись изображений",
+        "en": "Card deletion and image overwrite"
+      },
+      "notes": {
+        "ru": "- Дерево результатов: диагональ карточек развёрнута, крестик удаления снова виден справа сверху. Клавиша Delete удаляет выбранный результат; Shift также удаляет следующие карточки его ветки.\n- Экспорт изображений и карт материалов: результат можно сохранить поверх существующего внешнего изображения, включая импортированный исходник, после подтверждения замены. Внутренние файлы библиотеки остаются защищены.",
+        "en": "- Result tree: cards use the opposite diagonal and show a delete cross in the upper-right corner. Delete removes the selected result; Shift also removes later cards in its branch.\n- Image and material-map export: after confirming replacement, save a result over an existing external image, including its imported source. Internal library files remain protected."
+      }
+    },
+    {
+      "version": "2.21.0",
+      "title": {
         "ru": "Крупные карточки результатов и предпросмотр ASCII",
         "en": "Larger result cards and ASCII live preview"
       },

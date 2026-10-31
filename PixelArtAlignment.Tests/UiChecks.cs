@@ -243,9 +243,9 @@ internal static class UiChecks
             string alignedPath = Path.Combine(directory, "aligned.png");
             Invoke("SaveResult", alignedPath);
             using (var saved = new Bitmap(alignedPath)) EqualPixels(saved, Get<Bitmap>("_downscaledResult"), "Alignment PNG roundtrip");
-            Reject("SaveResult", inputPath);
+            Invoke("SaveResult", inputPath);
+            using (var overwritten = new Bitmap(inputPath)) EqualPixels(overwritten, Get<Bitmap>("_downscaledResult"), "Original-path PNG overwrite");
             Reject("SaveResult", Path.Combine(directory, "alpha.jpg"));
-            using (var original = new Bitmap(inputPath)) EqualPixels(original, source, "Original was overwritten");
             Click("profileMenuItem"); Pump();
             Click("processButton");
             Wait();

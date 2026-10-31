@@ -297,11 +297,14 @@ public partial class MainWindow
     private void ExportWorkspaceImage()
     {
         if (_sourceImage is null) return;
-        var dialog = new SaveFileDialog { Title = Localization.Text("Экспортировать изображение"), Filter = Localization.Text("PNG с прозрачностью|*.png"), DefaultExt = ".png", FileName = Path.GetFileNameWithoutExtension(_workspaceActive?.Name ?? "image") + ".png" };
+        var dialog = new SaveFileDialog { Title = Localization.Text("Экспортировать изображение"), Filter = Localization.Text("PNG с прозрачностью|*.png"), DefaultExt = ".png", OverwritePrompt = true, FileName = Path.GetFileNameWithoutExtension(_workspaceActive?.Name ?? "image") + ".png" };
         if (dialog.ShowDialog(this) != true) return;
         string path = Path.GetFullPath(dialog.FileName);
         EnsureExportPathAllowed(path);
-        WorkspaceBasis().Save(path, System.Drawing.Imaging.ImageFormat.Png); statusLabel.Text = Localization.Text("Экспортировано: ") + path;
+        string temporary = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        try { WorkspaceBasis().Save(temporary, System.Drawing.Imaging.ImageFormat.Png); File.Move(temporary, path, overwrite: true); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+        statusLabel.Text = Localization.Text("Экспортировано: ") + path;
     }
 
     private async Task OpenWorkspaceTilesAsync(WorkspaceAsset asset)

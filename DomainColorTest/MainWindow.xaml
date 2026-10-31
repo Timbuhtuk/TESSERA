@@ -17,9 +17,10 @@
             <Grid Width="112" Height="58" ClipToBounds="True" ToolTip="{Binding ResultTreeDescription}" AutomationProperties.Name="{Binding Label}">
                 <Border Background="{DynamicResource Ts.Thumbnail}" />
                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="NearestNeighbor" />
-                <Polygon Points="0,58 112,0 112,58" Fill="{DynamicResource Ts.Raised}" />
-                <Line X1="0" Y1="58" X2="112" Y2="0" Stroke="{DynamicResource Ts.Border}" StrokeThickness="1" />
-                <local:ResultIcon OperationId="{Binding OperationId}" Foreground="{DynamicResource Ts.Text}" Width="32" Height="32" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,6,5" IsHitTestVisible="False" />
+                <Polygon Points="0,0 0,58 112,58" Fill="{DynamicResource Ts.Raised}" />
+                <Line X1="0" Y1="0" X2="112" Y2="58" Stroke="{DynamicResource Ts.Border}" StrokeThickness="1" />
+                <local:ResultIcon OperationId="{Binding OperationId}" Foreground="{DynamicResource Ts.Text}" Width="32" Height="32" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,0,0,5" IsHitTestVisible="False" />
+                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
             </Grid>
         </DataTemplate>
         <DataTemplate x:Key="HistorySourceTemplate">

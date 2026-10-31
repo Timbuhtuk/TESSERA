@@ -1,6 +1,8 @@
 using System.Reflection;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -58,28 +60,62 @@ internal static class AsciiPreviewChecks
             toggle.IsChecked = false; Pump();
             Require(badge.Visibility == Visibility.Collapsed && preview.Image is null, "ASCII preview remained after switching it off");
             ((Button)window.FindName("asciiRenderButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Until(() => ((SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .GetValue(window)!).Generations.Count == 1);
-            var saved = ((SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!
-                .GetValue(window)!).Generations.Single();
+            Until(() => ActiveSource().Generations.Count == 1 && !Processing());
+            var saved = ActiveSource().Generations.Single();
             Require(saved.AppliedRecipe?.Steps.Single().Ascii?.FontSize == ImageFilters.DefaultAsciiFontSize &&
                 toggle.IsChecked == false, "Saved ASCII history lost the 16 px glyph size or kept live preview enabled");
 
-            var thumbnail = new BitmapImage(new Uri(path)); thumbnail.Freeze();
             var card = (Grid)((DataTemplate)window.FindResource("GenerationCardTemplate")).LoadContent();
             card.Resources.MergedDictionaries.Add(window.Resources);
-            card.DataContext = new GenerationEntry { OperationId = "filter.ascii", Operation = "ASCII", Width = 48, Height = 32, Thumbnail = thumbnail };
+            card.DataContext = saved;
             card.Measure(new System.Windows.Size(112, 58)); card.Arrange(new Rect(0, 0, 112, 58)); card.UpdateLayout();
+            var remove = card.Children.OfType<Button>().Single();
             Require(card.Children.OfType<ResultIcon>().Single().Width == 32 &&
-                card.Children.OfType<TextBlock>().Count() == 0 && card.Children.OfType<Button>().Count() == 0,
-                "Result card still contains small icon, text or remove button");
+                card.Children.OfType<TextBlock>().Count() == 0 &&
+                AutomationProperties.GetName(remove) == saved.RemoveDescription &&
+                remove.HorizontalAlignment == HorizontalAlignment.Right && remove.VerticalAlignment == VerticalAlignment.Top,
+                "Result card lost its large icon, text-free layout or upper-right remove button");
             Require(card.ToolTip is string hint && hint.Contains("48 × 32 px"), "Result card hint lost its resolution");
             var render = new RenderTargetBitmap(112, 58, 96, 96, PixelFormats.Pbgra32);
             render.Render(card);
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(render));
             using var file = File.Create(Path.Combine(folder, "result-card.png")); encoder.Save(file);
+
+            var save = (Task)typeof(MainWindow).GetMethod("SaveResultWithProgressAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(window, [path])!;
+            Until(() => save.IsCompleted); save.GetAwaiter().GetResult();
+            using (var exported = new Bitmap(path)) Equal(changed, exported);
+            using (var librarySource = ImageLibrary.ReadBitmap(new ImageLibrary(Path.Combine(folder, "library")).SourcePath(ActiveSource())))
+                Equal(source, librarySource);
+            source.Save(path);
+            typeof(MainWindow).GetMethod("SaveResult", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [path]);
+            using (var exported = new Bitmap(path)) Equal(changed, exported);
+            string internalPath = new ImageLibrary(Path.Combine(folder, "library")).SourcePath(ActiveSource());
+            try
+            {
+                typeof(MainWindow).GetMethod("SaveResult", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [internalPath]);
+                throw new Exception("Internal Tessera source was unexpectedly writable through export");
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException is InvalidOperationException) { }
+
+            remove.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            Require(ActiveSource().Generations.Count == 0, "The result card cross did not remove its generation");
+            ((Button)window.FindName("asciiRenderButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Until(() => ActiveSource().Generations.Count == 1 && !Processing());
+            var second = ActiveSource().Generations.Single();
+            var strip = (ListBox)window.FindName("generationStrip");
+            strip.SelectedItem = second; Pump();
+            var key = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window)!, Environment.TickCount, Key.Delete)
+            { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            strip.RaiseEvent(key); Pump();
+            Require(key.Handled && ActiveSource().Generations.Count == 0, "Delete did not perform the cross's removal action");
         }
         finally { window.Close(); Pump(); }
+
+        SourceEntry ActiveSource() => (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(window)!;
+        bool Processing() => (bool)typeof(MainWindow).GetField("_processing", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(window)!;
     }
 
     private static void Equal(Bitmap expected, Bitmap actual)
