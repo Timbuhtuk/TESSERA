@@ -27,7 +27,13 @@ internal static class WorkspaceExportChecks
             Invoke(window, "LoadImage", first); Invoke(window, "LoadImage", second);
             var background = (BackgroundWorkspace)window.FindName("backgroundWorkspace");
             background.SetImage(image, "third.png", third); Await(background.RefreshPreviewAsync());
-            foreach (string path in originals.Keys) Reject(() => Await(background.SaveAsync(path.ToUpperInvariant(), true)));
+            foreach (string path in new[] { first, second })
+            {
+                Await(background.SaveAsync(path.ToUpperInvariant(), true));
+                using (var saved = new Bitmap(path)) Require(saved.GetPixel(0, 0).A == 0, "External overwrite lost background transparency");
+                File.WriteAllBytes(path, originals[path]);
+            }
+            Reject(() => Await(background.SaveAsync(third, true)));
             string project = Path.Combine(folder, "existing.tboard"); File.WriteAllText(project, "keep project");
             Reject(() => Await(background.SaveAsync(project, true)));
             Require(File.ReadAllText(project) == "keep project", "Background export changed a project file");
@@ -36,12 +42,14 @@ internal static class WorkspaceExportChecks
             string output = Path.Combine(folder, "background.PNG");
             Await(background.SaveAsync(output)); Await(background.SaveAsync(output, true));
             using (var saved = new Bitmap(output)) Require(saved.GetPixel(0, 0).A == 0, "Safe background export lost transparency");
-            // Protection also applies in the reverse direction, from a standalone workspace to the editor.
+            // The editor may explicitly replace an external workspace source; its internal copy remains independent.
             ((IntegerInput)window.FindName("widthInput")).Value = 4;
             ((IntegerInput)window.FindName("heightInput")).Value = 4;
             ((Button)window.FindName("scaleOnlyButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             WaitUntil(() => !Get<bool>(window, "_processing"));
-            Reject(() => Invoke(window, "SaveResult", third));
+            Invoke(window, "SaveResult", third);
+            VerifyEditorOverwrite(third);
+            File.WriteAllBytes(third, originals[third]);
 
             var icons = (IconWorkspace)window.FindName("iconWorkspace");
             icons.SetImage(image, "third.png", third);
@@ -51,7 +59,9 @@ internal static class WorkspaceExportChecks
 
             var board = (MoodboardWorkspace)window.FindName("moodboardWorkspace");
             ((Button)board.FindName("createButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
-            Reject(() => board.ExportToPng(second));
+            board.ExportToPng(second);
+            using (var saved = new Bitmap(second)) Require(saved.Width == board.WorkspaceWidth && saved.Height == board.WorkspaceHeight, "External board overwrite dimensions differ");
+            File.WriteAllBytes(second, originals[second]);
             Reject(() => board.SaveToFile(Path.Combine(library.DirectoryPath, "board.tboard")));
             board.SaveToFile(Path.Combine(folder, "board.tboard"));
 
@@ -71,7 +81,9 @@ internal static class WorkspaceExportChecks
             Invoke(tiles, "RemoveAssetClicked", new Button(), new RoutedEventArgs(Button.ClickEvent));
             Require(tiles.Assets.Count == 1 && tiles.ActiveAsset?.SourcePath == second, "Tile removal fixture failed");
             Reject(() => tiles.ExportActivePng(first));
-            Reject(() => tiles.ExportActivePng(third));
+            tiles.ExportActivePng(third);
+            using (var saved = new Bitmap(third)) Require(saved.Size == image.Size, "External tile overwrite dimensions differ");
+            File.WriteAllBytes(third, originals[third]);
             Reject(() => tiles.ExportActivePng(Path.Combine(library.DirectoryPath, "tile.png")));
             Reject(() => tiles.ExportActivePng(project));
             Reject(() => tiles.SaveCollectionToFile(Path.Combine(folder, "wrong.png")));
@@ -101,9 +113,20 @@ internal static class WorkspaceExportChecks
             Require(!Directory.EnumerateFiles(folder, "*.tmp", SearchOption.AllDirectories).Any(), "Rejected export left temporary files");
             Await(tiles.LoadFileAsync(fourth));
             tiles.DiscardAndClose(); tiles = null;
-            Reject(() => Invoke(window, "SaveResult", fourth));
-            Require(File.ReadAllBytes(fourth).SequenceEqual(originals[fourth]), "Editor changed an original from a closed tile inspector");
-            Console.WriteLine("  Workspace exports: shared source/library protection, correct formats, removed tiles, project reopen/legacy, repeat exports and unchanged bytes passed.");
+            Invoke(window, "SaveResult", fourth);
+            VerifyEditorOverwrite(fourth);
+            File.WriteAllBytes(fourth, originals[fourth]);
+            Console.WriteLine("  Workspace exports: explicit external overwrite, internal-library/workspace-source protection, correct formats, removed tiles, project reopen/legacy and repeat exports passed.");
+
+            void VerifyEditorOverwrite(string path)
+            {
+                using var saved = new Bitmap(path);
+                var expected = Get<Bitmap>(window, "_downscaledResult");
+                Require(saved.Size == expected.Size, "Editor overwrite dimensions differ");
+                for (int y = 0; y < saved.Height; y++)
+                for (int x = 0; x < saved.Width; x++)
+                    Require(saved.GetPixel(x, y) == expected.GetPixel(x, y), "Editor overwrite pixel differs");
+            }
         }
         finally { reopened?.DiscardAndClose(); tiles?.DiscardAndClose(); window.Close(); Pump(); }
     }

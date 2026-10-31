@@ -550,12 +550,6 @@ public partial class MainWindow : Window
         if (string.Equals(output, library, StringComparison.OrdinalIgnoreCase) ||
             output.StartsWith(library + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException(Localization.Text("Выберите файл вне внутренней библиотеки Tessera."));
-        var sources = _sources.Select(source => source.OriginalPath).Concat(iconWorkspace.SourcePaths)
-            .Concat(backgroundWorkspace.SourcePaths).Concat(moodboardWorkspace.SourcePaths)
-            .Concat(_tileInspector?.SourcePaths ?? []).Concat(_closedTileSourcePaths);
-        if (sources.Any(source => !string.IsNullOrWhiteSpace(source) &&
-            string.Equals(output, Path.GetFullPath(source), StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidOperationException(Localization.Text("Выберите другое имя: исходные изображения нужно сохранить."));
     }
 
     private GridAlignmentMode SelectedGridAlignmentMode => localGridModeInput.IsChecked == true ? GridAlignmentMode.Local : GridAlignmentMode.Global;

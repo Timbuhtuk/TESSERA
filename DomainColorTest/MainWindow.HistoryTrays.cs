@@ -86,6 +86,8 @@ public partial class MainWindow
             Key key = e.Key == Key.System ? e.SystemKey : e.Key;
             if (key == Key.Apps || key == Key.F10 && Keyboard.Modifiers == ModifierKeys.Shift)
             { OpenHistoryContextMenu(selected, generationStrip); e.Handled = true; }
+            else if (key == Key.Delete)
+            { RemoveGenerationByUser(selected); e.Handled = true; }
         };
         generationStrip.DragLeave += (_, _) => generationStrip.InsertionY = null;
         Closing += (_, e) => { if (!e.Cancel) { RememberTrayScroll(); SaveTrayState(); } };
@@ -229,11 +231,7 @@ public partial class MainWindow
             }
         merge.IsEnabled = merge.Items.Count > 0;
         var remove = new MenuItem { Header = generation.RemoveDescription, IsEnabled = !_processing };
-        remove.Click += (_, _) =>
-        {
-            if (_processing) return;
-            RemoveGenerationWithUndo(generation, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift));
-        };
+        remove.Click += (_, _) => RemoveGenerationByUser(generation);
         menu.Items.Add(detach); menu.Items.Add(merge); menu.Items.Add(macro);
         menu.Items.Add(new Separator()); menu.Items.Add(remove);
         menu.PlacementTarget = target; menu.IsOpen = true;
