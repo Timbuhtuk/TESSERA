@@ -1414,5 +1414,14 @@
   "Открытие изображения…": "Opening image…",
   "Ход выполнения": "Progress",
   "Предпросмотр иконок готов. Сохраните ICO.": "Icon previews are ready. Save ICO.",
-  "Результат удаления фона готов. Сохраните PNG или добавьте в историю.": "Background removal is ready. Save PNG or add it to history."
+  "Результат удаления фона готов. Сохраните PNG или добавьте в историю.": "Background removal is ready. Save PNG or add it to history.",
+  "Результат скопирован в буфер обмена как PNG.": "Result copied to the clipboard as PNG.",
+  "Не удалось скопировать результат: {0}": "Could not copy the result: {0}",
+  "Не удалось вставить изображение: {0}": "Could not paste the image: {0}",
+  "В буфере обмена нет изображения.": "The clipboard does not contain an image.",
+  "Буфер обмена": "Clipboard",
+  "Вставлено из буфера обмена": "Pasted from the clipboard",
+  "PNG из буфера обмена · {0} × {1} px": "Clipboard PNG · {0} × {1} px",
+  "Изображение вставлено из буфера обмена; исходная операция неизвестна.": "The image was pasted from the clipboard; its original operation is unknown.",
+  "Изображение вставлено отдельной веткой истории.": "Image pasted as an independent history branch."
 }

@@ -89,6 +89,15 @@ public partial class MainWindow
             else if (key == Key.Delete)
             { RemoveGenerationByUser(selected); e.Handled = true; }
         };
+        generationStrip.InputBindings.Add(new KeyBinding(ApplicationCommands.Copy, Key.C, ModifierKeys.Control));
+        generationStrip.InputBindings.Add(new KeyBinding(ApplicationCommands.Paste, Key.V, ModifierKeys.Control));
+        generationStrip.CommandBindings.Add(new CommandBinding(ApplicationCommands.Copy,
+            (_, _) => CopySelectedResultToClipboard(),
+            (_, e) => { e.CanExecute = !_processing && _activeSource is { } source &&
+                generationStrip.SelectedItem is GenerationEntry generation && source.Generations.Contains(generation); e.Handled = true; }));
+        generationStrip.CommandBindings.Add(new CommandBinding(ApplicationCommands.Paste,
+            (_, _) => PasteClipboardAsBranch(),
+            (_, e) => { e.CanExecute = !_processing && _activeSource is not null && ClipboardHasImage(); e.Handled = true; }));
         generationStrip.DragLeave += (_, _) => generationStrip.InsertionY = null;
         Closing += (_, e) => { if (!e.Cancel) { RememberTrayScroll(); SaveTrayState(); } };
         Loaded += (_, _) =>
