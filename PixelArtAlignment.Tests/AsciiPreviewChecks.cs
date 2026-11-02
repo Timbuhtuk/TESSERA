@@ -6,7 +6,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Tessera.WpfStyles.Themes;
 using DomainColorTest;
+using Localization = DomainColorTest.Localization;
 using PixelArtDownscale;
 using Bitmap = System.Drawing.Bitmap;
 using Color = System.Drawing.Color;
@@ -75,11 +77,25 @@ internal static class AsciiPreviewChecks
                 AutomationProperties.GetName(remove) == saved.RemoveDescription &&
                 remove.HorizontalAlignment == HorizontalAlignment.Right && remove.VerticalAlignment == VerticalAlignment.Top,
                 "Result card lost its large icon, text-free layout or upper-right remove button");
-            Require(card.ToolTip is string hint && hint.Contains("48 × 32 px"), "Result card hint lost its resolution");
+            Require(card.ToolTip is ToolTip { ContentTemplate: not null } &&
+                saved.ResultTreeDescription.Contains("Размер: 48 × 32 px") &&
+                saved.ResultTreeDescription.Contains("Создан:"), "Result card lost its standardized hint");
             var render = new RenderTargetBitmap(112, 58, 96, 96, PixelFormats.Pbgra32);
             render.Render(card);
             var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(render));
             using var file = File.Create(Path.Combine(folder, "result-card.png")); encoder.Save(file);
+            var tooltip = (ToolTip)card.ToolTip;
+            var hintContent = (FrameworkElement)tooltip.ContentTemplate!.LoadContent();
+            hintContent.Resources.MergedDictionaries.Add(window.Resources);
+            hintContent.DataContext = saved;
+            hintContent.Measure(new System.Windows.Size(360, 300));
+            hintContent.Arrange(new Rect(0, 0, hintContent.DesiredSize.Width, hintContent.DesiredSize.Height));
+            hintContent.UpdateLayout();
+            var hintRender = new RenderTargetBitmap((int)Math.Ceiling(hintContent.ActualWidth), (int)Math.Ceiling(hintContent.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+            hintRender.Render(hintContent);
+            var hintEncoder = new PngBitmapEncoder(); hintEncoder.Frames.Add(BitmapFrame.Create(hintRender));
+            using var hintFile = File.Create(Path.Combine(folder, "result-hint.png")); hintEncoder.Save(hintFile);
+            VerifyHintPopups(window, saved, folder);
 
             var save = (Task)typeof(MainWindow).GetMethod("SaveResultWithProgressAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(window, [path])!;
@@ -116,6 +132,64 @@ internal static class AsciiPreviewChecks
             .GetValue(window)!;
         bool Processing() => (bool)typeof(MainWindow).GetField("_processing", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(window)!;
+    }
+
+    private static void VerifyHintPopups(MainWindow window, GenerationEntry saved, string folder)
+    {
+        var card = Visuals(window).OfType<Grid>().First(g => ReferenceEquals(g.DataContext, saved) && g.ToolTip is ToolTip { ContentTemplate: not null });
+        var tooltip = (ToolTip)card.ToolTip;
+        try
+        {
+            tooltip.PlacementTarget = card;
+            tooltip.IsOpen = true; Pump();
+            Require(ReferenceEquals(tooltip.Content, saved) && tooltip.IsVisible && Visuals(tooltip).OfType<TextBlock>().Any(t => t.Text == saved.ToolTipSize),
+                "Live result tooltip did not open with its result context");
+            tooltip.IsOpen = false; Pump();
+            foreach (var theme in new[] { TesseraTheme.Dark, TesseraTheme.Light, TesseraTheme.Contrast })
+            foreach (string language in new[] { "ru", "en" })
+            {
+                AppearanceResources.Apply(theme); Localization.Initialize(language);
+                var entry = new GenerationEntry { Operation = "ASCII", Width = 48, Height = 32,
+                    Log = "ASCII: 48 × 32 px; " + string.Join(" ", Enumerable.Repeat("Long result details / Длинное описание результата.", 90)) };
+                card.DataContext = entry;
+                tooltip.IsOpen = true; Pump(); tooltip.UpdateLayout();
+                Require(ReferenceEquals(tooltip.Content, entry), "Tooltip result context did not update");
+                var scroll = Visuals(tooltip).OfType<ScrollViewer>().Single(s => s.Width == 350);
+                var rows = Visuals(scroll).OfType<TextBlock>().Where(t => t.Parent is StackPanel).ToArray();
+                Require(rows.Length == 5 && rows[0].Text == "ASCII" && rows[1].Text.StartsWith(language == "en" ? "Size:" : "Размер:") &&
+                    rows[2].Text.StartsWith(language == "en" ? "Created:" : "Создан:") && rows[3].Visibility == Visibility.Collapsed &&
+                    !rows[4].Text.Contains("48 × 32"), "Tooltip order, language, empty branch or duplicate dimensions differ");
+                Require(scroll.ActualWidth == 350 && scroll.ActualHeight <= 300 && scroll.ScrollableHeight > 0 && rows[4].TextWrapping == TextWrapping.Wrap,
+                    "Long tooltip details do not wrap and scroll within the bounds");
+                var primary = ((SolidColorBrush)window.FindResource("Ts.Text")).Color;
+                var secondary = ((SolidColorBrush)window.FindResource("Ts.TextSecondary")).Color;
+                Require(new[] { 0, 3, 4 }.All(q => ((SolidColorBrush)rows[q].Foreground).Color == primary) &&
+                    new[] { 1, 2 }.All(q => ((SolidColorBrush)rows[q].Foreground).Color == secondary), "Tooltip lost theme text colors");
+                entry.PresentationHint = Localization.Text("Отдельная ветка."); Pump();
+                Require(rows[3].Visibility == Visibility.Visible && rows[3].Text == entry.PresentationHint, "Branch hint binding did not update");
+                scroll.ScrollToBottom(); Pump(); Require(scroll.VerticalOffset > 0, "Tooltip details cannot scroll");
+                var render = new RenderTargetBitmap((int)Math.Ceiling(tooltip.ActualWidth), (int)Math.Ceiling(tooltip.ActualHeight), 96, 96, PixelFormats.Pbgra32);
+                render.Render(tooltip);
+                var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(render));
+                using var file = File.Create(Path.Combine(folder, $"result-hint-{theme}-{language}.png")); encoder.Save(file);
+                tooltip.IsOpen = false; Pump();
+            }
+            Console.WriteLine("Result hints: live popup, context, RU/EN, three themes, wrapping, scrolling and branch updates passed without physical input.");
+        }
+        finally
+        {
+            tooltip.IsOpen = false; card.DataContext = saved;
+            Localization.Initialize("ru"); AppearanceResources.Apply(TesseraTheme.Dark); Pump();
+        }
+    }
+
+    private static IEnumerable<DependencyObject> Visuals(DependencyObject root)
+    {
+        for (int q = 0; q < VisualTreeHelper.GetChildrenCount(root); q++)
+        {
+            var child = VisualTreeHelper.GetChild(root, q); yield return child;
+            foreach (var nested in Visuals(child)) yield return nested;
+        }
     }
 
     private static void Equal(Bitmap expected, Bitmap actual)

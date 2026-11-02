@@ -1423,5 +1423,13 @@
   "Вставлено из буфера обмена": "Pasted from the clipboard",
   "PNG из буфера обмена · {0} × {1} px": "Clipboard PNG · {0} × {1} px",
   "Изображение вставлено из буфера обмена; исходная операция неизвестна.": "The image was pasted from the clipboard; its original operation is unknown.",
-  "Изображение вставлено отдельной веткой истории.": "Image pasted as an independent history branch."
+  "Изображение вставлено отдельной веткой истории.": "Image pasted as an independent history branch.",
+  "Размер: {0} × {1} px": "Size: {0} × {1} px",
+  "Создан: {0:dd.MM.yyyy HH:mm:ss}": "Created: {0:dd.MM.yyyy HH:mm:ss}",
+  "Глобальная сетка": "Global grid",
+  "Локальная сетка": "Local grid",
+  "Обработка изображения": "Image processing",
+  "Отдельная ветка.": "Separate branch.",
+  "Отдельная ветка. Прежний результат: {0}": "Separate branch. Previous result: {0}",
+  "Отдельная ветка. Прежний результат недоступен.": "Separate branch. Previous result is unavailable."
 }

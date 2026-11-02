@@ -50,8 +50,23 @@ internal static class ResultIconChecks
             if (!pixels.Where((_, q) => q % 4 == 3).Any(alpha => alpha > 0))
                 throw new Exception($"Generic result icon rendered empty: {id}");
         }
-        var resize = new GenerationEntry { OperationId = "image.resize", Operation = "Размер", Width = 8, Height = 6 };
-        if (!resize.ResultTreeDescription.Contains("Размер") || !resize.ResultTreeDescription.Contains("8 × 6 px"))
-            throw new Exception("Result card hint lost the operation or resolution");
+        var resize = new GenerationEntry { OperationId = "image.resize", Operation = "Размер", Width = 8, Height = 6,
+            Caption = "РАЗМЕР · 8 × 6", Log = "Размер изменён." };
+        string[] lines = resize.ResultTreeDescription.Split('\n');
+        if (lines.Length != 4 || lines[0] != "Размер" || lines[1] != "Размер: 8 × 6 px" ||
+            !lines[2].StartsWith("Создан:") || lines[3] != "Размер изменён." || resize.ResultTreeDescription.Contains("РАЗМЕР ·"))
+            throw new Exception("Result hint does not follow the shared operation, size, time and details format");
+        var alignment = new GenerationEntry { IsAlignment = true, CellSize = 4, Width = 12, Height = 10 };
+        if (!alignment.ResultTreeDescription.StartsWith("Глобальная сетка\nРазмер: 12 × 10 px\nСоздан:"))
+            throw new Exception("Alignment hint does not follow the shared format");
+        var ascii = new GenerationEntry { Operation = "ASCII", Width = 8, Height = 6,
+            Log = "ASCII: 8 × 6 px; цвет: монохром." };
+        if (ascii.ToolTipDetails != "цвет: монохром." || ascii.ResultTreeDescription.Split("8 × 6").Length != 2)
+            throw new Exception("Result hint repeats dimensions from its details");
+        var missingParent = new GenerationEntry { ParentGenerationId = Guid.NewGuid() };
+        HistoryBranchLayout.Build([missingParent], new BranchPresentation { Detached = [missingParent.Id] });
+        if (missingParent.ResultTreeDescription.Contains(missingParent.ParentGenerationId!.Value.ToString(), StringComparison.OrdinalIgnoreCase) ||
+            !missingParent.ResultTreeDescription.Contains("Прежний результат недоступен"))
+            throw new Exception("Detached branch hint exposed an internal parent id");
     }
 }
