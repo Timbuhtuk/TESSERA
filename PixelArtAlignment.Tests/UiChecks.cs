@@ -441,27 +441,18 @@ internal static class UiChecks
             var replaceFrame = (Border)replaceTool.FindName("dialogFrame");
             Require(ReferenceEquals(replaceFrame.Style, replaceTool.FindResource("Ts.DialogBorder")),
                 "Color replacement did not use the StoryBook dialog frame");
-            var selectedColor = (PaletteColorEntry)((ListBox)replaceTool.FindName("paletteList")).SelectedItem;
             string selectedHex = PaletteColorEntry.FormatHex(colorEntry.Color!.Value);
-            Require(selectedColor.Hex == selectedHex &&
+            Require(((ColorTreemap)replaceTool.FindName("replacementPalette")).Areas.Count > 0 &&
                 ((TextBox)replaceTool.FindName("newHexInput")).Text == selectedHex &&
-                ((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly,
-                "Replacement palette did not preselect the clicked color");
-            double initialHue = (double)typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(replaceTool)!;
-            Require(Math.Abs(initialHue - oldColor.GetHue()) < 0.1 &&
-                replaceTool.FindName("colorField") is FrameworkElement &&
-                replaceTool.FindName("hueStrip") is FrameworkElement,
-                "Color picker did not start at the selected image color");
-            typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(replaceTool, 240.0);
-            typeof(ColorReplaceWindow).GetField("_saturation", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(replaceTool, 1.0);
-            typeof(ColorReplaceWindow).GetField("_value", BindingFlags.Instance | BindingFlags.NonPublic)!.SetValue(replaceTool, 1.0);
-            typeof(ColorReplaceWindow).GetMethod("UpdateFromPicker", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(replaceTool, null);
-            Require(((TextBox)replaceTool.FindName("newHexInput")).Text == "#0000FF",
-                "Color picker did not update the replacement HEX value");
+                ((TextBox)replaceTool.FindName("oldHexInput")).Text == selectedHex &&
+                !((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly &&
+                ((FrameworkElement)replaceTool.FindName("singleColorPicker")).Visibility == Visibility.Collapsed,
+                "Compact replacement did not initialize its two editable colors and treemap");
+            ((Button)replaceTool.FindName("newSwatchButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            ((ColorTreemap)replaceTool.FindName("replacementPalette")).SelectColor(colorEntry.Color!.Value);
+            Require(((TextBox)replaceTool.FindName("newHexInput")).Text == selectedHex,
+                "Color 2 palette did not update replacement HEX");
             ((TextBox)replaceTool.FindName("newHexInput")).Text = "#01FE03";
-            double enteredHue = (double)typeof(ColorReplaceWindow).GetField("_hue", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(replaceTool)!;
-            Require(Math.Abs(enteredHue - Color.FromArgb(1, 254, 3).GetHue()) < 0.1,
-                "Entering HEX did not update the color picker");
             Require(((Button)replaceTool.FindName("replaceButton")).IsEnabled,
                 "Valid color replacement remained disabled");
             CaptureTool(infoTool, "info-tool.png");
@@ -508,7 +499,8 @@ internal static class UiChecks
             Click("infoManualReplaceButton"); Pump();
             replaceTool = infoTool!.OwnedWindows.OfType<ColorReplaceWindow>().Single(tool => tool.IsVisible);
             Require(!((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly &&
-                ((FrameworkElement)replaceTool.FindName("paletteSection")).Visibility == Visibility.Collapsed,
+                ((FrameworkElement)replaceTool.FindName("paletteSection")).Visibility == Visibility.Visible &&
+                ((ColorTreemap)replaceTool.FindName("replacementPalette")).Areas.Count == 1025,
                 "Large-palette replacement did not open in manual HEX mode");
             ((TextBox)replaceTool.FindName("oldHexInput")).Text = "#000000";
             ((TextBox)replaceTool.FindName("newHexInput")).Text = "#FFFFFF";

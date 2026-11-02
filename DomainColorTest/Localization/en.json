@@ -1431,5 +1431,15 @@
   "Обработка изображения": "Image processing",
   "Отдельная ветка.": "Separate branch.",
   "Отдельная ветка. Прежний результат: {0}": "Separate branch. Previous result: {0}",
-  "Отдельная ветка. Прежний результат недоступен.": "Separate branch. Previous result is unavailable."
+  "Отдельная ветка. Прежний результат недоступен.": "Separate branch. Previous result is unavailable.",
+  "Цвет 1": "Color 1",
+  "Цвет 2": "Color 2",
+  "Палитра цвета 1": "Color 1 palette",
+  "Палитра цвета 2": "Color 2 palette",
+  "Выбрать цвет с исходника, результата или палитры внутри Tessera.": "Pick a color from the source, result or palette within Tessera.",
+  "Палитра · {0:N0} цветов": "Palette · {0:N0} colors",
+  "Отмена (Esc)": "Cancel (Esc)",
+  "Развернуть карту цветов": "Expand color map",
+  "Свернуть карту цветов": "Collapse color map",
+  "Совпадений: 0": "Matches: 0"
 }

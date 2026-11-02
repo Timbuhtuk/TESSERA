@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:DomainColorTest"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="{local:Translate Text60AAB69B2C54}" Icon="Assets/app.ico"
-        Width="460" Height="740" MinWidth="390" MinHeight="540"
+        Width="580" Height="535" MinWidth="420" MinHeight="450"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False" Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
         FontFamily="{DynamicResource UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
@@ -12,60 +12,43 @@
         <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="0"
                             GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </shell:WindowChrome.WindowChrome>
-    <Window.Resources>
-        <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <local:AppearanceResources/>
-            </ResourceDictionary.MergedDictionaries>
-            <Style x:Key="ColorChoiceItem" TargetType="ListBoxItem">
-                <Setter Property="Padding" Value="2"/>
-                <Setter Property="Margin" Value="0,0,5,5"/>
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="ListBoxItem">
-                            <Border x:Name="SelectionBorder" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1"
-                                    Padding="{TemplateBinding Padding}" Background="{DynamicResource Ts.Panel}">
-                                <ContentPresenter/>
-                            </Border>
-                            <ControlTemplate.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="{DynamicResource Ts.Focus}"/>
-                                    <Setter TargetName="SelectionBorder" Property="Background" Value="{DynamicResource Ts.Border}"/>
-                                </Trigger>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="{DynamicResource Ts.Text}"/>
-                                </Trigger>
-                            </ControlTemplate.Triggers>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
-        </ResourceDictionary>
-    </Window.Resources>
-    <Grid>
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <Grid Height="38" Background="{DynamicResource Ts.Raised}">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <Window.Resources><ResourceDictionary><ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries></ResourceDictionary></Window.Resources>
+    <Grid Background="{DynamicResource Ts.Canvas}">
+        <Grid.RowDefinitions><RowDefinition Height="38"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid Background="{DynamicResource Ts.Raised}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBlock x:Name="dialogTitle" Text="{local:Translate TextFF8DA5F2551E}" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
-            <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
-                    Style="{StaticResource CloseCaptionButton}" ToolTip="{local:Translate TextA7A4033657E8}"
-                    shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
+            <TextBlock x:Name="basisBadge" Grid.Column="1" Foreground="{DynamicResource Ts.TextSecondary}" VerticalAlignment="Center" Margin="8,0"/>
+            <Button Grid.Column="2" Content="×" Width="42" Height="38" FontSize="19" Style="{StaticResource CloseCaptionButton}" ToolTip="{local:Translate TextA7A4033657E8}" shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
         </Grid>
-        <Grid Grid.Row="1" Background="{DynamicResource Ts.Canvas}">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                          Background="Transparent">
-                <Border x:Name="dialogFrame" Style="{StaticResource Ts.DialogBorder}"
-                        Margin="14" HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <StackPanel>
-                        <TextBlock x:Name="oldColorLabel" Text="{local:Translate Text79E7630E008B}" FontWeight="SemiBold" Margin="0,0,0,7"/>
-                        <DockPanel x:Name="oldColorPanel">
-                            <Border x:Name="oldPreview" Width="30" Height="30" BorderBrush="{DynamicResource Ts.BorderStrong}"
-                                    BorderThickness="1" Margin="0,0,8,0"/>
-                            <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate TextF2B1EEC11E15}"/>
-                        </DockPanel>
-                        <Button x:Name="sourcePickerButton" Margin="0,8,0,0" Click="PickSourceColor"
-                                HorizontalContentAlignment="Left" />
-                        <TextBlock x:Name="newColorLabel" Text="{local:Translate TextF2E966D64488}" FontWeight="SemiBold" Margin="0,18,0,10"/>
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <Border x:Name="dialogFrame" Style="{StaticResource Ts.DialogBorder}" Width="Auto" MinWidth="0" MaxWidth="Infinity" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch" Margin="16" VerticalAlignment="Top">
+                <StackPanel>
+                    <Border x:Name="oldColorSection" Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Padding="12" Margin="0,0,0,10">
+                        <StackPanel>
+                            <TextBlock x:Name="oldColorLabel" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <DockPanel x:Name="oldColorPanel">
+                                <Button x:Name="oldSwatchButton" Width="38" Height="38" Padding="2" Margin="0,0,8,0" Click="OpenOldPalette">
+                                    <Border x:Name="oldPreview" Width="28" Height="28" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1"/>
+                                </Button>
+                                <Button x:Name="sourcePickerButton" DockPanel.Dock="Right" Width="110" MinHeight="38" Height="38" Padding="8,4" FontSize="12" Margin="8,0,0,0" Click="PickSourceColor"/>
+                                <TextBox x:Name="oldHexInput" Padding="10,4" MinHeight="38" Height="38" MaxLength="7" VerticalContentAlignment="Center" AutomationProperties.Name="{local:Translate TextF2B1EEC11E15}"/>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Padding="12">
+                        <StackPanel>
+                            <TextBlock x:Name="newColorLabel" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <DockPanel>
+                                <Button x:Name="newSwatchButton" Width="38" Height="38" Padding="2" Margin="0,0,8,0" Click="OpenNewPalette">
+                                    <Border x:Name="newPreview" Width="28" Height="28" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1"/>
+                                </Button>
+                                <Button x:Name="targetPickerButton" DockPanel.Dock="Right" Width="110" MinHeight="38" Height="38" Padding="8,4" FontSize="12" Margin="8,0,0,0" Click="PickTargetColor"/>
+                                <TextBox x:Name="newHexInput" Padding="10,4" MinHeight="38" Height="38" MaxLength="7" VerticalContentAlignment="Center" AutomationProperties.Name="{local:Translate Text65EA219C02F5}"/>
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+                    <StackPanel x:Name="singleColorPicker" Visibility="Collapsed" Margin="0,14,0,0">
                         <Grid x:Name="colorField" Width="320" Height="290" HorizontalAlignment="Center"
                               ClipToBounds="True" Cursor="Cross"
                               MouseLeftButtonDown="ColorFieldMouseDown" MouseMove="ColorFieldMouseMove"
@@ -124,39 +107,24 @@
                                 </Border>
                             </Canvas>
                         </Grid>
-                        <DockPanel Margin="0,15,0,0">
-                            <Border x:Name="newPreview" Width="30" Height="30" BorderBrush="{DynamicResource Ts.BorderStrong}"
-                                    BorderThickness="1" Margin="0,0,8,0"/>
-                            <TextBox x:Name="newHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate Text65EA219C02F5}"/>
-                        </DockPanel>
-                        <StackPanel x:Name="paletteSection" Margin="0,18,0,0">
-                            <TextBlock Text="{local:Translate Text0D9C06814133}" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                            <ListBox x:Name="paletteList" Height="205" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}"
-                                     BorderThickness="1" Padding="8" ItemContainerStyle="{StaticResource ColorChoiceItem}"
-                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                     AutomationProperties.Name="{local:Translate Text3A4090D6D468}">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Width="24" Height="24" Background="{Binding Brush}"
-                                                ToolTip="{Binding Hex}"/>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </StackPanel>
-                        <TextBlock x:Name="validationText" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap"
-                                   Margin="0,12,0,0"/>
-                        <DockPanel Margin="0,14,0,0">
-                            <Button Content="{local:Translate Text8FBE9B75CBDF}" Width="95" DockPanel.Dock="Right" Margin="8,0,0,0"
-                                    IsCancel="True" Click="CloseWindow"/>
-                            <Button x:Name="replaceButton" Content="{local:Translate Text91282980BE62}" IsEnabled="False"
-                                    IsDefault="True" Style="{StaticResource PrimaryButton}" Click="ApplyColor"/>
-                        </DockPanel>
                     </StackPanel>
-                </Border>
-            </ScrollViewer>
-        </Grid>
+                    <Border x:Name="paletteSection" Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Padding="10" Margin="0,12,0,0">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,7">
+                                <Button x:Name="expandPaletteButton" DockPanel.Dock="Right" Content="↗" Width="32" Height="26" Padding="0" Click="ExpandPalette"/>
+                                <TextBlock x:Name="paletteTitle" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </DockPanel>
+                            <local:ColorTreemap x:Name="replacementPalette" Height="128"/>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="validationText" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Button Grid.Column="1" Content="{local:Translate Text8FBE9B75CBDF}" Width="95" Margin="0,0,8,0" IsCancel="True" Click="CloseWindow"/>
+                        <Button Grid.Column="2" x:Name="replaceButton" Width="150" Content="{local:Translate Text91282980BE62}" IsEnabled="False" IsDefault="True" Style="{StaticResource PrimaryButton}" Click="ApplyColor"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
     </Grid>
 </Window>

@@ -21,6 +21,8 @@ public partial class MainWindow
     private long _infoRefreshVersion;
     private Button _infoEyedropperButton = null!;
     private bool _pickingInfoColor;
+    private bool _pickingInfoTargetColor;
+    private IReadOnlyDictionary<int, long> _infoColorCounts = new Dictionary<int, long>();
     private int? _highlightInfoColor;
     private int _infoColorCount;
 
@@ -35,7 +37,14 @@ public partial class MainWindow
     {
         infoToolGroup.Header = Localization.Text("Инфо");
         System.Windows.Automation.AutomationProperties.SetName(infoColorTreemap, Localization.Text("Карта цветов изображения"));
-        infoColorTreemap.ColorSelected += color => OpenColorReplace(color, false);
+        infoColorTreemap.ColorSelected += color =>
+        {
+            if (_pickingInfoTargetColor && _replaceWindow is { } dialog)
+            {
+                StopInfoColorPicking(); dialog.SetTargetColor(color); dialog.Activate();
+            }
+            else OpenColorReplace(color, false);
+        };
         infoManualReplaceButton.Click += (_, _) => OpenColorReplace(DrawingColor.Black, true);
         _infoEyedropperButton = new Button
         {
@@ -84,6 +93,7 @@ public partial class MainWindow
         _infoSourceShown = _infoResultShown = _infoBasisShown = null;
         _infoPalette.Clear();
         _infoColorCount = 0;
+        _infoColorCounts = new Dictionary<int, long>();
         infoColorTreemap.SetAreas([]);
         _infoEyedropperButton.IsEnabled = false;
     }
@@ -113,9 +123,12 @@ public partial class MainWindow
         infoPaletteStatus.Text = basis is null ? Localization.Text("Откройте изображение") : Localization.Text("Подсчёт видимых цветов…");
         _infoPalette.Clear();
         _infoColorCount = 0;
+        _infoColorCounts = new Dictionary<int, long>();
         infoColorTreemap.SetAreas([]);
         infoSourceDetails.Text = infoResultDetails.Text = "";
-        infoManualReplaceButton.Visibility = Visibility.Collapsed;
+        infoManualReplaceButton.Visibility = Visibility.Visible;
+        infoManualReplaceButton.Content = Localization.Text("Замена цвета");
+        infoManualReplaceButton.IsEnabled = false;
         _infoEyedropperButton.IsEnabled = false;
         if (basis is null) return;
 
@@ -130,7 +143,7 @@ public partial class MainWindow
                 var sourceInfo = sourceCopy is null ? null : ReadInfoSummary(sourceCopy);
                 var resultInfo = resultCopy is null ? null : ReadInfoSummary(resultCopy);
                 var selected = ReferenceEquals(basis, result) ? resultInfo! : sourceInfo!;
-                return (sourceInfo, resultInfo, count: selected.Colors, palette: selected.Palette);
+                return (sourceInfo, resultInfo, count: selected.Colors, palette: selected.Palette, counts: selected.Counts);
             });
             if (version != _infoRefreshVersion || !IsInfoToolOpen) return;
 
@@ -147,8 +160,8 @@ public partial class MainWindow
             infoPaletteStatus.Text = summary.count > ImageColorTools.MaxPaletteColors
                 ? Localization.Format("Цветов: {0:N0}. Показаны {1:N0} самых частых; остальные объединены.", summary.count, ImageColorTools.MaxPaletteColors)
                 : summary.count == 0 ? Localization.Text("Видимых цветов нет") : Localization.Format("Цветов: {0:N0}. Нажмите на цвет, чтобы заменить его.", summary.count);
-            infoManualReplaceButton.Visibility = summary.count > ImageColorTools.MaxPaletteColors
-                ? Visibility.Visible : Visibility.Collapsed;
+            infoManualReplaceButton.IsEnabled = summary.count > 0;
+            _infoColorCounts = summary.counts;
             _infoColorCount = summary.count;
             infoColorTreemap.SetAreas(summary.palette);
             foreach (var area in summary.palette)
@@ -166,7 +179,7 @@ public partial class MainWindow
     }
 
     private sealed record InfoSummary(int Width, int Height, int Bits, string Layout, float DpiX, float DpiY,
-        int Colors, long Transparent, long Partial, long Opaque, bool Grayscale, IReadOnlyList<ColorArea> Palette);
+        int Colors, long Transparent, long Partial, long Opaque, bool Grayscale, IReadOnlyList<ColorArea> Palette, IReadOnlyDictionary<int, long> Counts);
 
     private static InfoSummary ReadInfoSummary(Bitmap image)
     {
@@ -202,7 +215,7 @@ public partial class MainWindow
         long grouped = opaque + partial - palette.Sum(area => area.Pixels);
         if (grouped > 0) palette.Add(new ColorArea(null, grouped));
         return new(image.Width, image.Height, System.Drawing.Image.GetPixelFormatSize(image.PixelFormat), image.PixelFormat.ToString(),
-            image.HorizontalResolution, image.VerticalResolution, colors.Count, transparent, partial, opaque, grayscale, palette);
+            image.HorizontalResolution, image.VerticalResolution, colors.Count, transparent, partial, opaque, grayscale, palette, colors);
     }
 
     private static string FormatInfoDetails(InfoSummary info, long? fileSize)
@@ -243,12 +256,15 @@ public partial class MainWindow
         if (_infoBasisShown is null || !IsInfoToolOpen) return;
         _replaceWindow?.Close();
         Bitmap basis = _infoBasisShown;
-        PaletteColorEntry[] palette = allowOldColorEdit && _infoColorCount > ImageColorTools.MaxPaletteColors
-            ? [] : _infoPalette.ToArray();
+        PaletteColorEntry[] palette = _infoPalette.ToArray();
         var dialog = new ColorReplaceWindow(oldColor, palette, allowOldColorEdit)
         {
             Owner = _toolWindows.TryGetValue("info", out var owner) ? owner : this
         };
+        dialog.SetPalette(infoColorTreemap.Areas, _infoColorCount);
+        dialog.SetBasis(ReferenceEquals(basis, _downscaledResult));
+        dialog.CountMatches = color => _infoColorCounts.GetValueOrDefault(color.ToArgb() & 0xFFFFFF);
+        dialog.RefreshValidation();
         _replaceWindow = dialog;
         dialog.Closed += (_, _) =>
         {
@@ -262,6 +278,9 @@ public partial class MainWindow
             UpdateInfoColorSelection();
         };
         dialog.PickSourceRequested += BeginInfoColorPicking;
+        dialog.PickTargetRequested += BeginInfoTargetPicking;
+        dialog.PickCanceled += StopInfoColorPicking;
+        dialog.PaletteRequested += StopInfoColorPicking;
         dialog.PreviewKeyDown += (_, e) =>
         {
             if (e.Key != Key.Escape || !_pickingInfoColor) return;
@@ -277,11 +296,16 @@ public partial class MainWindow
         dialog.Show();
     }
 
-    private void BeginInfoColorPicking()
+    private void BeginInfoColorPicking() => BeginInfoPicking(false);
+    private void BeginInfoTargetPicking() => BeginInfoPicking(true);
+
+    private void BeginInfoPicking(bool target)
     {
         if (_processing || _infoBasisShown is null || !IsInfoToolOpen) return;
-        if (_pickingInfoColor) { StopInfoColorPicking(); return; }
+        if (_pickingInfoColor && _pickingInfoTargetColor == target) { StopInfoColorPicking(); return; }
         _pickingInfoColor = true;
+        _pickingInfoTargetColor = target;
+        _replaceWindow?.SetPicking(!target, target);
         _infoEyedropperButton.Content = Localization.Text("Отменить пипетку (Esc)");
         UpdateInfoColorSelection();
     }
@@ -289,6 +313,8 @@ public partial class MainWindow
     private void StopInfoColorPicking()
     {
         _pickingInfoColor = false;
+        _pickingInfoTargetColor = false;
+        _replaceWindow?.SetPicking(false, false);
         _infoEyedropperButton.Content = Localization.Text("Пипетка: выбрать цвет на изображении");
         UpdateInfoColorSelection();
     }
@@ -304,7 +330,9 @@ public partial class MainWindow
         foreach (PixelPreview preview in ColorSelectionPreviews)
         {
             bool basis = _infoBasisShown is not null && ReferenceEquals(preview.Image, _infoBasisShown);
-            preview.IsColorPicking = basis && _pickingInfoColor;
+            bool target = _pickingInfoTargetColor && preview.Image is not null &&
+                (ReferenceEquals(preview.Image, _sourceImage) || ReferenceEquals(preview.Image, _downscaledResult));
+            preview.IsColorPicking = _pickingInfoColor && (basis || target);
             preview.HighlightRgb = basis ? _highlightInfoColor : null;
         }
     }
@@ -312,11 +340,14 @@ public partial class MainWindow
     private void InfoColorPicked(object? sender, PixelColorPickedEventArgs e)
     {
         if (!_pickingInfoColor || _processing || sender is not PixelPreview preview ||
-            !ReferenceEquals(preview.Image, _infoBasisShown)) return;
+            !ColorSelectionPreviews.Contains(preview) ||
+            (!ReferenceEquals(preview.Image, _infoBasisShown) && (!_pickingInfoTargetColor || preview.Image is null ||
+                !ReferenceEquals(preview.Image, _sourceImage) && !ReferenceEquals(preview.Image, _downscaledResult)))) return;
+        bool target = _pickingInfoTargetColor;
         StopInfoColorPicking();
         if (_replaceWindow is { } dialog)
         {
-            dialog.SetSourceColor(e.Color);
+            if (target) dialog.SetTargetColor(e.Color); else dialog.SetSourceColor(e.Color);
             dialog.Activate();
         }
         else OpenColorReplace(e.Color, true);
@@ -328,7 +359,7 @@ public partial class MainWindow
 
         bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         Bitmap? basis = useResult ? _downscaledResult : _sourceImage;
-        if (basis is null) return;
+        if (basis is null || !_infoColorCounts.ContainsKey(oldColor.ToArgb() & 0xFFFFFF)) return;
         var document = _activeSource;
         Guid? parentId = useResult ? document.SelectedGeneration?.Id : null;
         var settings = CaptureSettings();

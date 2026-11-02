@@ -54,6 +54,31 @@ internal static class InfoPickerChecks
             Call(window, "InfoColorPicked", source, new PixelColorPickedEventArgs(Color.Blue, 12, 3)); Pump();
             ToolImprovementsChecks.Require(Get<TextBox>(dialog, "oldHexInput").Text == "#0000FF" && source.HighlightRgb == 0x0000FF &&
                 !source.IsColorPicking, "Picked RGB did not update replacement dialog and selected pixel highlight");
+            int historyBefore = ((SourceEntry)Field(window, "_activeSource")!).Generations.Count;
+            Get<Button>(dialog, "targetPickerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            ToolImprovementsChecks.Require(source.IsColorPicking, "Color 2 eyedropper cannot pick from source");
+            Call(window, "InfoColorPicked", source, new PixelColorPickedEventArgs(Color.Red, 0, 0)); Pump();
+            ToolImprovementsChecks.Require(Get<TextBox>(dialog, "newHexInput").Text == "#FF0000" && Get<TextBox>(dialog, "oldHexInput").Text == "#0000FF",
+                "Color 2 eyedropper overwrote Color 1");
+            Get<Button>(dialog, "oldSwatchButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Get<ColorTreemap>(dialog, "replacementPalette").SelectColor(Color.Red);
+            Get<Button>(dialog, "newSwatchButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Get<ColorTreemap>(dialog, "replacementPalette").SelectColor(Color.Blue);
+            ToolImprovementsChecks.Require(Get<TextBox>(dialog, "oldHexInput").Text == "#FF0000" && Get<TextBox>(dialog, "newHexInput").Text == "#0000FF",
+                "Color squares did not target their own palette field");
+            Get<TextBox>(dialog, "oldHexInput").Text = "#123456";
+            ToolImprovementsChecks.Require(!Get<Button>(dialog, "replaceButton").IsEnabled && Get<TextBlock>(dialog, "validationText").Text.Contains("0"), "Missing color permits an empty replacement");
+            Get<TextBox>(dialog, "oldHexInput").Text = "#FF0000";
+            Get<TextBox>(dialog, "newHexInput").Text = "#XYZ000";
+            ToolImprovementsChecks.Require(!Get<Button>(dialog, "replaceButton").IsEnabled, "Invalid replacement HEX was accepted");
+            Get<TextBox>(dialog, "newHexInput").Text = "#FF0000";
+            ToolImprovementsChecks.Require(!Get<Button>(dialog, "replaceButton").IsEnabled, "Equal colors permit an empty replacement");
+            Get<TextBox>(dialog, "newHexInput").Text = "#0000FF";
+            ToolImprovementsChecks.Require(Get<Button>(dialog, "replaceButton").IsEnabled && ((SourceEntry)Field(window, "_activeSource")!).Generations.Count == historyBefore,
+                "Color selection applied without the explicit replace button");
+            Get<Button>(dialog, "expandPaletteButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            ToolImprovementsChecks.Require(Get<ColorTreemap>(dialog, "replacementPalette").ActualHeight == 320, "Color map does not expand");
+            Get<Button>(dialog, "expandPaletteButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Capture(window, Path.Combine(run, "source-highlight.png"));
             Capture(dialog, Path.Combine(run, "replacement-dialog.png"));
             dialog.Close(); Pump();
@@ -73,6 +98,28 @@ internal static class InfoPickerChecks
             Call(window, "InfoColorPicked", result, new PixelColorPickedEventArgs(Color.Red, 1, 1)); Pump();
             ToolImprovementsChecks.Require(result.HighlightRgb == 0xFF0000 && comparison.HighlightRgb == 0xFF0000 && source.HighlightRgb is null,
                 "Result selection did not isolate highlight across matching previews");
+            dialog = (ColorReplaceWindow)Field(window, "_replaceWindow")!;
+            Get<Button>(dialog, "targetPickerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            ToolImprovementsChecks.Require(source.IsColorPicking && result.IsColorPicking && comparison.IsColorPicking,
+                "Color 2 eyedropper does not include both source and result within Tessera");
+            using (var unrelatedImage = new Bitmap(1, 1))
+            {
+                var unrelated = new PixelPreview { Image = unrelatedImage };
+                Call(window, "InfoColorPicked", unrelated, new PixelColorPickedEventArgs(Color.Green, 0, 0));
+                ToolImprovementsChecks.Require(Get<TextBox>(dialog, "newHexInput").Text != "#008000", "Color picker accepted an unrelated preview");
+            }
+            Call(window, "InfoColorPicked", source, new PixelColorPickedEventArgs(Color.Blue, 12, 3)); Pump();
+            ToolImprovementsChecks.Require(Get<TextBox>(dialog, "oldHexInput").Text == "#FF0000" && Get<TextBox>(dialog, "newHexInput").Text == "#0000FF",
+                "Result-basis Color 2 cannot sample the original source independently");
+            Get<Button>(dialog, "targetPickerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            treemap.SelectColor(Color.Red); Pump();
+            ToolImprovementsChecks.Require(ReferenceEquals(Field(window, "_replaceWindow"), dialog) && Get<TextBox>(dialog, "newHexInput").Text == "#FF0000",
+                "Color 2 palette sampling replaced the dialog or changed Color 1");
+            Get<Button>(dialog, "targetPickerButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            dialog.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(dialog)!, 0, System.Windows.Input.Key.Escape)
+                { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent }); Pump();
+            ToolImprovementsChecks.Require(!source.IsColorPicking && !result.IsColorPicking && !comparison.IsColorPicking && dialog.IsVisible,
+                "Esc did not cancel Color 2 sampling without closing the dialog");
             window.ProcessingBasis = 0; Call(window, "RefreshInfo"); Pump(); AwaitInfo();
             ToolImprovementsChecks.Require(Field(window, "_replaceWindow") is null && source.HighlightRgb is null &&
                 result.HighlightRgb is null && !source.IsColorPicking && !result.IsColorPicking, "Switching basis retained dialog or stale highlight/pipette");
