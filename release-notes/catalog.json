@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Единые подсказки результатов",
+        "en": "Consistent result hints"
+      },
+      "notes": {
+        "ru": "- Дерево результатов: подсказки всех операций показывают название, размер, дату создания и детали в одном порядке, без повторяющихся заголовков и размеров.\n- Сведения об отдельных ветках больше не показывают внутренние идентификаторы недоступных результатов. Длинный текст переносится и прокручивается; цвета соответствуют выбранной теме.",
+        "en": "- Result tree: hints for every operation show its name, dimensions, creation date and details in the same order, without repeating headings or dimensions.\n- Separate-branch information no longer exposes internal identifiers for unavailable results. Long text wraps and scrolls, with colors matching the selected theme."
+      }
+    },
+    {
+      "version": "2.23.0",
+      "title": {
         "ru": "Буфер обмена в дереве результатов",
         "en": "Result-tree clipboard"
       },

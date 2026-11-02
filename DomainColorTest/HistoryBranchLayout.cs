@@ -30,7 +30,11 @@ internal sealed class HistoryBranchLayout
             Guid? parent = item.ParentGenerationId;
             if (presentation.Detached.Contains(item.Id))
             {
-                item.PresentationHint = parent is { } old ? Localization.Format("Отдельная ветка. Прежний родитель: {0}", index.TryGetValue(old, out var previous) ? previous.Label : old.ToString()) : "";
+                item.PresentationHint = parent is { } old
+                    ? index.TryGetValue(old, out var previous)
+                        ? Localization.Format("Отдельная ветка. Прежний результат: {0}", previous.ToolTipOperation)
+                        : Localization.Text("Отдельная ветка. Прежний результат недоступен.")
+                    : Localization.Text("Отдельная ветка.");
                 parent = null;
             }
             else if (parent is { } missing && !index.ContainsKey(missing))

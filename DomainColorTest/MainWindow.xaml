@@ -13,8 +13,24 @@
                     <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
                 </Grid>
             </DataTemplate>
+        <DataTemplate x:Key="ResultTreeToolTipTemplate">
+            <ScrollViewer Width="350" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Width="330">
+                    <TextBlock Text="{Binding ToolTipOperation}" Foreground="{DynamicResource Ts.Text}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ToolTipSize}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,7,0,0" />
+                    <TextBlock Text="{Binding ToolTipCreated}" Foreground="{DynamicResource Ts.TextSecondary}" />
+                    <TextBlock Text="{Binding PresentationHint}" Foreground="{DynamicResource Ts.Text}" TextWrapping="Wrap" Margin="0,7,0,0">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding PresentationHint}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding ToolTipDetails}" Foreground="{DynamicResource Ts.Text}" TextWrapping="Wrap" Margin="0,7,0,0">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ToolTipDetails}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </ScrollViewer>
+        </DataTemplate>
         <DataTemplate x:Key="GenerationCardTemplate">
-            <Grid Width="112" Height="58" ClipToBounds="True" ToolTip="{Binding ResultTreeDescription}" AutomationProperties.Name="{Binding Label}">
+            <Grid Width="112" Height="58" ClipToBounds="True" AutomationProperties.Name="{Binding Label}">
+                <Grid.ToolTip><ToolTip Content="{Binding}" ContentTemplate="{StaticResource ResultTreeToolTipTemplate}" /></Grid.ToolTip>
                 <Border Background="{DynamicResource Ts.Thumbnail}" />
                 <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="NearestNeighbor" />
                 <Polygon Points="0,0 0,58 112,58" Fill="{DynamicResource Ts.Raised}" />
