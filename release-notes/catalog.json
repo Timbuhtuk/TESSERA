@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Буфер обмена в дереве результатов",
+        "en": "Result-tree clipboard"
+      },
+      "notes": {
+        "ru": "- Дерево результатов: Ctrl+C копирует полное изображение выбранного результата в буфер обмена как PNG с прозрачностью.\n- Ctrl+V вставляет изображение из буфера отдельной веткой текущего исходника и выбирает его. Вставка сохраняется в истории; Ctrl+Z отменяет её.",
+        "en": "- Result tree: Ctrl+C copies the full image of the selected result to the clipboard as PNG with transparency.\n- Ctrl+V inserts a clipboard image as an independent branch of the current source and selects it. The insertion is saved in history and can be undone with Ctrl+Z."
+      }
+    },
+    {
+      "version": "2.22.0",
+      "title": {
         "ru": "Удаление карточек и перезапись изображений",
         "en": "Card deletion and image overwrite"
       },
