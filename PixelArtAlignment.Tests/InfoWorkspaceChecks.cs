@@ -15,7 +15,7 @@ internal static class InfoWorkspaceChecks
     public static void Run()
     {
         Exception? failure = null;
-        var thread = new Thread(() => { try { Verify(); } catch (Exception ex) { failure = ex; } }) { IsBackground = true };
+        var thread = new Thread(() => { try { Verify(); VerifyCompactDialogs(); } catch (Exception ex) { failure = ex; } }) { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA); thread.Start();
         if (!thread.Join(TimeSpan.FromSeconds(35))) throw new Exception("Image information verification timed out");
         if (failure is not null) { Console.Error.WriteLine(failure); throw new Exception("Image information verification failed", failure); }
@@ -149,7 +149,8 @@ internal static class InfoWorkspaceChecks
             Capture(treemap, Path.Combine(folder, "treemap-1056-colors.png"));
             Get<Button>(window, "infoManualReplaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             var manual = Window.GetWindow(Get<GroupBox>(window, "infoToolGroup"))!.OwnedWindows.OfType<ColorReplaceWindow>().Single();
-            Require(Get<TextBox>(manual, "oldHexInput").IsReadOnly == false && Get<FrameworkElement>(manual, "paletteSection").Visibility == Visibility.Collapsed,
+            Require(Get<TextBox>(manual, "oldHexInput").IsReadOnly == false && Get<FrameworkElement>(manual, "paletteSection").Visibility == Visibility.Visible &&
+                Get<ColorTreemap>(manual, "replacementPalette").Areas.Count == 1025,
                 "Large color map did not keep the manual HEX replacement mode");
             manual.Close(); Pump();
         }
@@ -167,6 +168,63 @@ internal static class InfoWorkspaceChecks
         }
         finally { floating.Close(); Pump(); }
         Console.WriteLine("  Image information: docked source/result, replacement from Info, history/alpha, basis/image changes, panel closure, details, narrow layout, EN and floating compatibility passed.");
+    }
+
+    private static void VerifyCompactDialogs()
+    {
+        string folder = Path.GetFullPath(Path.Combine("artifacts", "wpf", "verification", "compact-color-replace-" + Guid.NewGuid().ToString("N")));
+        Directory.CreateDirectory(folder);
+        try
+        {
+            foreach (var theme in new[] { Tessera.WpfStyles.Themes.TesseraTheme.Dark, Tessera.WpfStyles.Themes.TesseraTheme.Light, Tessera.WpfStyles.Themes.TesseraTheme.Contrast })
+            foreach (string language in new[] { "ru", "en" })
+            {
+                DomainColorTest.Localization.Initialize(language); AppearanceResources.Apply(theme);
+                var dialog = new ColorReplaceWindow(Color.Red, [new(Color.Red), new(Color.Blue)], true)
+                    { Opacity = 0, ShowInTaskbar = false, ShowActivated = false };
+                dialog.SetPalette([new(Color.Red, 3), new(Color.Blue, 1)]);
+                dialog.CountMatches = c => c.R == 255 && c.G == 0 && c.B == 0 ? 3 : c.ToArgb() == Color.Blue.ToArgb() ? 1 : 0;
+                dialog.SetBasis(false); dialog.RefreshValidation();
+                int requested = 0; dialog.ReplaceRequested += (_, _) => requested++;
+                try
+                {
+                    dialog.Show(); Pump();
+                    Require(dialog.ActualHeight <= 535 && Get<FrameworkElement>(dialog, "singleColorPicker").Visibility == Visibility.Collapsed &&
+                        Get<TextBlock>(dialog, "oldColorLabel").Text == (language == "en" ? "Color 1" : "Цвет 1") &&
+                        Get<TextBlock>(dialog, "newColorLabel").Text == (language == "en" ? "Color 2" : "Цвет 2"), "Compact color replacement labels or geometry differ");
+                    var map = Get<ColorTreemap>(dialog, "replacementPalette");
+                    Rect red = map.BoundsFor(Color.Red)!.Value;
+                    Require(Math.Abs(red.Width * red.Height / (map.ActualWidth * map.ActualHeight) - .75) < .001, "Replacement map lost pixel-frequency areas");
+                    Capture((FrameworkElement)dialog.Content, Path.Combine(folder, $"{theme}-{language}-layout.png"));
+                    foreach (string name in new[] { "oldHexInput", "newHexInput", "sourcePickerButton", "targetPickerButton", "replaceButton", "replacementPalette" })
+                    {
+                        var control = Get<FrameworkElement>(dialog, name); Point p = control.TranslatePoint(new Point(), dialog);
+                        Require(control.IsVisible && control.ActualWidth > 0 && p.X >= 0 && p.Y >= 38 &&
+                            p.X + control.ActualWidth <= dialog.ActualWidth && p.Y + control.ActualHeight <= dialog.ActualHeight,
+                            "Compact replacement control is clipped: " + name + $" at {p}, size {control.ActualWidth} × {control.ActualHeight}, window {dialog.ActualWidth} × {dialog.ActualHeight}");
+                    }
+                    foreach (string name in new[] { "oldHexInput", "newHexInput" })
+                    {
+                        var input = Get<TextBox>(dialog, name); input.ApplyTemplate();
+                        var host = (FrameworkElement)input.Template.FindName("PART_ContentHost", input)!;
+                        Require(host.ActualHeight >= 20, "Compact HEX text is vertically clipped");
+                    }
+                    Get<Button>(dialog, "oldSwatchButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); map.SelectColor(Color.Blue);
+                    Get<Button>(dialog, "newSwatchButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); map.SelectColor(Color.Red);
+                    Require(Get<TextBox>(dialog, "oldHexInput").Text == "#0000FF" && Get<TextBox>(dialog, "newHexInput").Text == "#FF0000" && requested == 0,
+                        "Palette field routing applied a replacement or mixed the two colors");
+                    Pump(); Capture((FrameworkElement)dialog.Content, Path.Combine(folder, $"{theme}-{language}.png"));
+                    dialog.Width = 420; Pump();
+                    Require(Get<TextBox>(dialog, "oldHexInput").ActualWidth >= 90 && Get<TextBox>(dialog, "newHexInput").ActualWidth >= 90,
+                        "Minimum-width HEX inputs are too narrow");
+                    Get<Button>(dialog, "replaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                    Require(requested == 1, "Explicit replace did not publish exactly one action");
+                }
+                finally { dialog.Close(); Pump(); }
+            }
+            Console.WriteLine("Compact color replacement: two palettes, RU/EN, three themes, proportional map, minimum layout and explicit apply passed without physical input.");
+        }
+        finally { DomainColorTest.Localization.Initialize("ru"); AppearanceResources.Apply(Tessera.WpfStyles.Themes.TesseraTheme.Dark); }
     }
 
     private static void Capture(FrameworkElement element, string path)

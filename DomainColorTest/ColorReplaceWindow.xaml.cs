@@ -27,8 +27,11 @@ public sealed class PaletteColorEntry
 
 public partial class ColorReplaceWindow : Window
 {
-    private readonly IReadOnlyList<PaletteColorEntry> _colors;
-    private bool _settingPalette;
+    private IReadOnlyList<ColorArea> _areas = [];
+    private bool _paletteTargetsSource;
+    private bool _paletteExpanded;
+    private bool _pickingSource;
+    private bool _pickingTarget;
     private bool _settingPickerText;
     private bool _draggingField;
     private bool _draggingHue;
@@ -39,6 +42,10 @@ public partial class ColorReplaceWindow : Window
 
     public event Action<DrawingColor, DrawingColor>? ReplaceRequested;
     public event Action? PickSourceRequested;
+    public event Action? PickTargetRequested;
+    public event Action? PaletteRequested;
+    public event Action? PickCanceled;
+    public Func<DrawingColor, long>? CountMatches { get; set; }
     public event Action<DrawingColor?>? SourceColorChanged;
     public DrawingColor? SelectedColor { get; private set; }
 
@@ -48,7 +55,9 @@ public partial class ColorReplaceWindow : Window
         sourcePickerButton.Visibility = Visibility.Collapsed;
         Title = Localization.Text("Цвет фона · TESSERA");
         dialogTitle.Text = Localization.Text("Цвет фона");
-        oldColorLabel.Visibility = oldColorPanel.Visibility = Visibility.Collapsed;
+        oldColorSection.Visibility = oldColorPanel.Visibility = Visibility.Collapsed;
+        targetPickerButton.Visibility = Visibility.Collapsed;
+        singleColorPicker.Visibility = Visibility.Visible;
         newColorLabel.Text = Localization.Text("Выберите цвет");
         newColorLabel.Margin = new Thickness(0, 0, 0, 10);
         replaceButton.Content = Localization.Text("Выбрать цвет");
@@ -65,37 +74,73 @@ public partial class ColorReplaceWindow : Window
     public ColorReplaceWindow(DrawingColor oldColor, IReadOnlyList<PaletteColorEntry> colors, bool allowOldColorEdit)
     {
         InitializeComponent();
-        sourcePickerButton.Content = Localization.Text("Пипетка: выбрать заменяемый цвет");
+        oldColorLabel.Text = Localization.Text("Цвет 1");
+        newColorLabel.Text = Localization.Text("Цвет 2");
+        sourcePickerButton.Content = targetPickerButton.Content = Localization.Text("Пипетка");
+        System.Windows.Automation.AutomationProperties.SetName(oldSwatchButton, Localization.Text("Палитра цвета 1"));
+        System.Windows.Automation.AutomationProperties.SetName(newSwatchButton, Localization.Text("Палитра цвета 2"));
+        expandPaletteButton.ToolTip = Localization.Text("Развернуть карту цветов");
+        targetPickerButton.ToolTip = Localization.Text("Выбрать цвет с исходника, результата или палитры внутри Tessera.");
         sourcePickerButton.ToolTip = Localization.Text("Нажмите, затем выберите пиксель на изображении основы в редакторе. Esc отменяет пипетку.");
-        _colors = colors;
-        oldHexInput.IsReadOnly = !allowOldColorEdit;
+        oldHexInput.IsReadOnly = false;
         oldHexInput.Text = PaletteColorEntry.FormatHex(oldColor);
         newHexInput.Text = oldHexInput.Text;
-        paletteList.ItemsSource = colors;
-        paletteSection.Visibility = colors.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
-        paletteList.Height = Math.Min(205, Math.Max(64, (int)Math.Ceiling(colors.Count / 10.0) * 35 + 26));
-        Height = Math.Min(SystemParameters.WorkArea.Height - 50,
-            colors.Count == 0 ? 650 : Math.Min(820, 680 + paletteList.Height));
-        paletteList.SelectedItem = colors.FirstOrDefault(color => color.Color.ToArgb() == oldColor.ToArgb());
-
+        SetPalette(colors.Select(c => new ColorArea(c.Color, 1)).ToArray());
+        replacementPalette.ColorSelected += color =>
+        {
+            if (_paletteTargetsSource) SetSourceColor(color); else SetTargetColor(color);
+        };
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape || (!_pickingSource && !_pickingTarget)) return;
+            SetPicking(false, false); PickCanceled?.Invoke(); e.Handled = true;
+        };
         oldHexInput.TextChanged += (_, _) => UpdateColorState(false);
         newHexInput.TextChanged += (_, _) =>
         {
             if (!_settingPickerText) UpdateColorState(true);
         };
-        paletteList.SelectionChanged += PaletteSelectionChanged;
         Loaded += (_, _) =>
         {
-            if (paletteList.SelectedItem is not null) paletteList.ScrollIntoView(paletteList.SelectedItem);
             RenderPicker();
         };
         UpdateColorState(true);
     }
 
-    private void PaletteSelectionChanged(object sender, SelectionChangedEventArgs e)
+    public void SetPalette(IReadOnlyList<ColorArea> areas, int? totalColors = null)
     {
-        if (_settingPalette || paletteList.SelectedItem is not PaletteColorEntry selected) return;
-        newHexInput.Text = selected.Hex;
+        _areas = areas;
+        replacementPalette.SetAreas(areas);
+        paletteSection.Visibility = areas.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        paletteTitle.Text = Localization.Format("Палитра · {0:N0} цветов", totalColors ?? areas.Count(a => a.Color is not null));
+    }
+
+    public void SetBasis(bool result) => basisBadge.Text = Localization.Text(result ? "Результат" : "Исходник");
+    public void SetPicking(bool source, bool target)
+    {
+        _pickingSource = source; _pickingTarget = target;
+        if (source || target) _paletteTargetsSource = source;
+        sourcePickerButton.Content = Localization.Text(source ? "Отмена (Esc)" : "Пипетка");
+        targetPickerButton.Content = Localization.Text(target ? "Отмена (Esc)" : "Пипетка");
+    }
+    public void SetTargetColor(DrawingColor color) => newHexInput.Text = PaletteColorEntry.FormatHex(color);
+    private void OpenOldPalette(object sender, RoutedEventArgs e) => OpenPalette(true);
+    private void OpenNewPalette(object sender, RoutedEventArgs e) => OpenPalette(false);
+    private void OpenPalette(bool source)
+    {
+        _paletteTargetsSource = source;
+        oldColorSection.BorderBrush = TryFindResource(source ? "Ts.Focus" : "Ts.BorderStrong") as Brush;
+        paletteSection.Visibility = _areas.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        PaletteRequested?.Invoke();
+        replacementPalette.Focus();
+    }
+    private void ExpandPalette(object sender, RoutedEventArgs e)
+    {
+        _paletteExpanded = !_paletteExpanded;
+        replacementPalette.Height = _paletteExpanded ? 320 : 128;
+        Height = Math.Min(SystemParameters.WorkArea.Height - 50, _paletteExpanded ? 727 : 535);
+        expandPaletteButton.Content = _paletteExpanded ? "↙" : "↗";
+        expandPaletteButton.ToolTip = Localization.Text(_paletteExpanded ? "Свернуть карту цветов" : "Развернуть карту цветов");
     }
 
     private static bool TryReadColor(string text, out DrawingColor color)
@@ -120,21 +165,17 @@ public partial class ColorReplaceWindow : Window
             ? new SolidColorBrush(MediaColor.FromRgb(newColor.R, newColor.G, newColor.B))
             : System.Windows.Media.Brushes.Transparent;
         if (newValid && syncPicker) SetPickerFromColor(newColor);
-        RenderPicker();
+        if (_choosingColor) RenderPicker();
+        long matches = oldValid ? CountMatches?.Invoke(oldColor) ?? 1 : 0;
         bool different = _choosingColor ? newValid : oldValid && newValid && oldColor.ToArgb() != newColor.ToArgb();
-        replaceButton.IsEnabled = different;
+        replaceButton.IsEnabled = different && (_choosingColor || matches > 0);
         validationText.Text = (!oldValid && !_choosingColor) || !newValid ? Localization.Text("Введите цвет в формате #RRGGBB.")
-            : !different ? Localization.Text("Выберите новый цвет или введите HEX.") : "";
+            : !_choosingColor && matches == 0 ? Localization.Text("Совпадений: 0") : "";
+        validationText.Visibility = validationText.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
 
-        if (_settingPalette) return;
-        _settingPalette = true;
-        try
-        {
-            paletteList.SelectedItem = newValid
-                ? _colors.FirstOrDefault(color => color.Color.ToArgb() == newColor.ToArgb()) : null;
-        }
-        finally { _settingPalette = false; }
     }
+
+    public void RefreshValidation() => UpdateColorState(false);
 
     private void SetPickerFromColor(DrawingColor color)
     {
@@ -266,7 +307,7 @@ public partial class ColorReplaceWindow : Window
             Close();
             return;
         }
-        if (!TryReadColor(oldHexInput.Text, out DrawingColor oldColor) ||
+        if (!replaceButton.IsEnabled || !TryReadColor(oldHexInput.Text, out DrawingColor oldColor) ||
             !TryReadColor(newHexInput.Text, out DrawingColor newColor) ||
             oldColor.ToArgb() == newColor.ToArgb()) return;
         Close();
@@ -278,4 +319,5 @@ public partial class ColorReplaceWindow : Window
     public void SetSourceColor(DrawingColor color) => oldHexInput.Text = PaletteColorEntry.FormatHex(color);
 
     private void PickSourceColor(object sender, RoutedEventArgs e) => PickSourceRequested?.Invoke();
+    private void PickTargetColor(object sender, RoutedEventArgs e) => PickTargetRequested?.Invoke();
 }

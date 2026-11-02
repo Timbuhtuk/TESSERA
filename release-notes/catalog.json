@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Быстрая замена двух цветов",
+        "en": "Quick two-color replacement"
+      },
+      "notes": {
+        "ru": "- Замена цвета: компактное окно с двумя редактируемыми HEX-цветами и отдельной пипеткой для каждого. Цвет 1 выбирается из основы обработки, Цвет 2 — из исходника, результата или палитры Tessera.\n- Нажатие на цветной квадрат выбирает, какое поле изменяет палитра. Общая карта цветов показывает доли видимых пикселей и раскрывается для мелких оттенков.\n- Цвет меняется только по кнопке «Заменить цвет». Некорректные, одинаковые или отсутствующие в основе цвета не создают пустой результат; прозрачность, история и отмена сохраняются.",
+        "en": "- Color replacement: a compact dialog with two editable HEX colors and a separate eyedropper for each. Color 1 comes from the processing basis; Color 2 can come from the source, result or Tessera palette.\n- Clicking a color square selects which field the palette updates. The shared color map shows visible-pixel proportions and expands for small shades.\n- Colors change only after clicking Replace color. Invalid, identical or absent source colors cannot create an empty result; transparency, history and undo are preserved."
+      }
+    },
+    {
+      "version": "2.23.1",
+      "title": {
         "ru": "Единые подсказки результатов",
         "en": "Consistent result hints"
       },
