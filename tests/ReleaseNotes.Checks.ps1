@@ -63,7 +63,7 @@ foreach ($mode in @('curated', 'unchanged', 'history-only', 'unknown-history', '
     Require (@($catalog.releases | Where-Object version -eq '9000.0.99').Count -eq 1) 'Skipped upgrade history was lost'
     Require (@($catalog.releases | Where-Object version -eq '9000.0.98').Count -eq 1) 'Curated history was lost'
     Require (@($catalog.releases | Where-Object version -eq '9001.0.0').Count -eq 0) 'Draft notes were bundled'
-    $expectedBody = "# What's new in Tessera v$version`n`n$($current.title.en)`n`n$($current.notes.en)"
+    $expectedBody = "# What's new in Tessera v$version`n`n$($current.title.en)`n`n$($current.notes.en)`n`n---`n`n# Что нового в Tessera v$version`n`n$($current.title.ru)`n`n$($current.notes.ru)"
     Require ($body.Replace("`r", '').Trim() -ceq $expectedBody) 'GitHub notes contain extra implementation or download details'
     Require ($current.notes.en -eq (($global:notesFixtureSource | ConvertFrom-Json).releases | Where-Object version -eq 'next').notes.en) 'User-facing notes were replaced by generated text'
     Write-Output "PASS Release note preparation: $mode, curated archive, version and exact user-facing GitHub text"

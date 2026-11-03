@@ -31,7 +31,7 @@ try {
         & (Join-Path $projectRoot 'tests/ReleaseVersion.Checks.ps1')
         & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
         Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants
+        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants --unreal-sync
         Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
     }
     Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
@@ -165,6 +165,15 @@ release history offline in Settings > Patch notes.
     [IO.File]::WriteAllText((Join-Path $output 'README.txt'), $guide, [Text.UTF8Encoding]::new($true))
     $archive = Join-Path $artifactsRoot 'Tessera-win-x64.zip'
     Compress-Archive -LiteralPath (Join-Path $output 'Tessera.exe'),(Join-Path $output 'README.txt'),(Join-Path $output 'Assets/Fonts/Cascadia-Code-OFL.txt'),(Join-Path $output 'Assets/Fonts/Science-Gothic-OFL.txt') -DestinationPath $archive -Force
+    $unrealFiles = @('TesseraSync.uplugin', 'Content/Python/init_unreal.py', 'Content/Python/tessera_sync.py')
+    $desktopZip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Update)
+    try {
+        foreach ($file in $unrealFiles) {
+            $entry = "Unreal/TesseraSync/$file"
+            $null = [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($desktopZip, (Join-Path $projectRoot $entry), $entry)
+        }
+    }
+    finally { $desktopZip.Dispose() }
     $cliArchive = Join-Path $artifactsRoot 'Tessera-cli-win-x64.zip'
     Compress-Archive -LiteralPath (Join-Path $cliOutput 'tessera.exe') -DestinationPath $cliArchive -Force
     & $python (Join-Path $projectRoot 'plugins/package_tessera.py') --output-directory $pluginOutput

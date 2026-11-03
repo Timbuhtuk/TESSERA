@@ -1441,5 +1441,22 @@
   "Отмена (Esc)": "Cancel (Esc)",
   "Развернуть карту цветов": "Expand color map",
   "Свернуть карту цветов": "Collapse color map",
-  "Совпадений: 0": "Matches: 0"
+  "Совпадений: 0": "Matches: 0",
+  "Выбрать проект…": "Choose project…",
+  "Установить плагин в проект…": "Install plugin into project…",
+  "Отправить выбранную текстуру": "Send selected texture",
+  "Отправить карты материала": "Send material maps",
+  "Получить текстуры из Unreal": "Receive textures from Unreal",
+  "Выберите проект Unreal Engine": "Choose an Unreal Engine project",
+  "Проект Unreal подключён: ": "Unreal project connected: ",
+  "Плагин TesseraSync скопирован. В Unreal включите его и перезапустите редактор. Плагины Python Editor Script и Editor Scripting Utilities должны быть включены.": "TesseraSync was copied. Enable it in Unreal and restart the editor. Enable Python Editor Script and Editor Scripting Utilities as well.",
+  "Откройте текстуру в редакторе Tessera.": "Open a texture in the Tessera editor.",
+  "Текстура ожидает импорта в Unreal: ": "Texture queued for Unreal import: ",
+  "Откройте исходник с картами материала.": "Open an image with material maps.",
+  "Сначала сохраните карты материала.": "Save the material maps first.",
+  "Сначала откройте карты материала для выбранного изображения.": "Open material maps for the selected image first.",
+  "Карты Height, Normal и AO ожидают импорта в Unreal.": "Height, Normal and AO maps are queued for Unreal import.",
+  "Дождитесь завершения текущей операции.": "Wait for the current operation to finish.",
+  "Получено текстур из Unreal: {0}.": "Textures received from Unreal: {0}.",
+  "Сначала выберите проект Unreal Engine в меню Файл → Unreal Engine 5.": "Choose an Unreal Engine project from File → Unreal Engine 5 first."
 }

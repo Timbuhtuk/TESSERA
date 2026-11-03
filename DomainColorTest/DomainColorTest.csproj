@@ -31,6 +31,9 @@
     <Resource Include="Assets\ResultIcons\*.svg" />
     <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
     <EmbeddedResource Include="$(ReleaseNotesFile)" LogicalName="Tessera.ReleaseNotes.json" />
+    <EmbeddedResource Include="..\Unreal\TesseraSync\TesseraSync.uplugin" LogicalName="Tessera.Unreal.TesseraSync.uplugin" />
+    <EmbeddedResource Include="..\Unreal\TesseraSync\Content\Python\init_unreal.py" LogicalName="Tessera.Unreal.Content/Python/init_unreal.py" />
+    <EmbeddedResource Include="..\Unreal\TesseraSync\Content\Python\tessera_sync.py" LogicalName="Tessera.Unreal.Content/Python/tessera_sync.py" />
     <Resource Include="Assets\app-icon.png" />
     <Resource Include="Assets\landscape.png" />
     <Resource Include="Assets\palette-preview-photo.png" />

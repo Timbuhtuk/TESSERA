@@ -24,6 +24,8 @@ Open **Tools → Color → RGBA channels…**. Choose R, G, B or A, select **Add
 
 Only the selected channel changes; image dimensions and the other three channels stay intact. Adding a fixed amount to A also affects fully transparent pixels and can reveal their stored RGB. A percentage of zero remains zero. Use the processing basis selector to adjust the source or a selected result. Applying creates a history result with saved settings, supports macro replay, and exports as PNG.
 
+For bidirectional PNG texture and material-map exchange with the Unreal Editor, see [Unreal Engine 5 texture sync](UNREAL_SYNC.md).
+
 ### Height, Normal and ambient occlusion maps
 
 Open an image asset, select its source card or a saved result card, then use **Tools → Materials and tiles → Height / Normal / AO maps…**. The tool accepts the entire image at its original dimensions, including sprites and atlases, and automatically generates initial maps locally. Height and Normal occupy the top row of a 2×2 grid; AO and the lighting preview occupy the bottom row. All four panes share zoom, fit scale and horizontal/vertical scrolling. Ctrl+mouse wheel works over any pane, including the lighting preview.

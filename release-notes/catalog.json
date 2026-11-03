@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Обмен текстурами с Unreal Engine 5",
+        "en": "Texture exchange with Unreal Engine 5"
+      },
+      "notes": {
+        "ru": "- Unreal Engine 5: Tessera отправляет выбранный исходник или результат в PNG и карты Height, Normal и AO. Unreal импортирует их как Texture2D в /Game/TesseraSync.\n\n## Установка плагина\n1. Распакуйте Tessera-win-x64.zip и запустите Tessera.exe. Откройте Файл → Unreal Engine 5 → Выбрать проект… и выберите файл .uproject.\n2. В том же меню выберите «Установить плагин в проект…». Tessera скопирует Tessera Sync в папку Plugins/TesseraSync выбранного проекта.\n3. В редакторе Unreal откройте Edit → Plugins. Включите Tessera Sync, Python Editor Script Plugin и Editor Scripting Utilities, затем перезапустите редактор.\n\n## Обмен в обе стороны\n4. В Tessera откройте изображение, выберите исходник или результат как основу и нажмите «Отправить выбранную текстуру». Для Height, Normal и AO откройте карты изображения или используйте сохранённые карты рабочего пространства и нажмите «Отправить карты материала».\n5. В Unreal выберите один или несколько Texture2D в Content Browser и выполните Tools → Send selected textures to Tessera.\n6. В Tessera выберите «Получить текстуры из Unreal». Полученные PNG добавятся как новые исходники. Редактируемые .tmaps и графы материалов автоматически не объединяются.\n\n- Обменные файлы хранятся в Saved/TesseraSync внутри проекта Unreal. Если текстура в Unreal изменилась после импорта, замена пропускается. Отправьте её обратно в Tessera и явно отправьте выбранную версию, когда будете готовы заменить текстуру.",
+        "en": "- Unreal Engine 5: Tessera sends the selected source or result as a PNG and can send Height, Normal and AO maps. Unreal imports them as Texture2D assets under /Game/TesseraSync.\n\n## Install the plugin\n1. Extract Tessera-win-x64.zip and run Tessera.exe. Open File → Unreal Engine 5 → Choose project… and select the .uproject file.\n2. In the same menu, choose Install plugin into project…. Tessera copies Tessera Sync into Plugins/TesseraSync in the selected project.\n3. In the Unreal Editor, open Edit → Plugins. Enable Tessera Sync, Python Editor Script Plugin and Editor Scripting Utilities, then restart the editor.\n\n## Exchange textures in both directions\n4. In Tessera, open an image, select the source or a result as the processing basis, and choose Send selected texture. For Height, Normal and AO, open the image's maps or use saved workspace maps and choose Send material maps.\n5. In Unreal, select one or more Texture2D assets in the Content Browser and choose Tools → Send selected textures to Tessera.\n6. In Tessera, choose Receive textures from Unreal. The received PNGs appear as new sources. Editable .tmaps documents and Unreal material graphs are not merged automatically.\n\n- Transfer files live in Saved/TesseraSync inside the Unreal project. If a texture has changed in Unreal since import, Tessera Sync skips the replacement. Send the edited texture back to Tessera and explicitly send the chosen version when you are ready to replace it."
+      }
+    },
+    {
+      "version": "2.24.0",
+      "title": {
         "ru": "Быстрая замена двух цветов",
         "en": "Quick two-color replacement"
       },
