@@ -93,7 +93,7 @@ public partial class MainWindow
         _restoringHistory = true;
         try { sourceStrip.ItemsSource = _traySources; }
         finally { _restoringHistory = false; }
-        _workspaceReady = true; SynchronizeWorkspace(); ShowHome();
+        _workspaceReady = true; SynchronizeWorkspace(); StartUnrealProjects(); ShowHome();
     }
 
     private bool WorkspaceBusy => _processing || _workspaceImporting || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy;
@@ -138,7 +138,7 @@ public partial class MainWindow
                         _workspaceCatalog.SyncImages(_sources); asset = _workspaceCatalog.State.Assets.Single(a => a.Id == source.Id);
                         UpdateImageMetadata(asset, source);
                     }
-                    if (_workspaceCatalog.State.ProjectId is { } project) _workspaceCatalog.Link(asset.Id, project, _workspaceCatalog.State.FolderId);
+                    if (_workspaceCatalog.State.ProjectId is { } project && !_workspaceCatalog.IsUnrealProject(project)) _workspaceCatalog.Link(asset.Id, project, _workspaceCatalog.State.FolderId);
                     imported.Add(asset);
                 }
                 catch (Exception ex) { if (pendingDocument is not null) _workspaceCatalog.ForgetAsset(pendingDocument.Id); failures.Add(Path.GetFileName(path) + ": " + ex.Message); }
@@ -164,6 +164,8 @@ public partial class MainWindow
         if (asset.Kind == WorkspaceAssetKind.Board && moodboardWorkspace.HasBoard && moodboardWorkspace.WorkspaceSavePath != _workspaceCatalog.ContentPath(asset) && !moodboardWorkspace.CanLeave()) return;
         try
         {
+            _unrealOpening = asset.Id;
+            if (!await EnsureUnrealImageAsync(asset)) return;
             PersistWorkspaceState(); _workspaceActive = asset; asset.OpenedAt = DateTimeOffset.Now;
             if (asset.Kind == WorkspaceAssetKind.Image)
             {
@@ -200,6 +202,8 @@ public partial class MainWindow
         if (_workspaceCatalog is null || WorkspaceBusy) return;
         if (action == "copy" && asset is not null && _workspaceCatalog.State.ProjectId is { } project)
         {
+            if (_workspaceCatalog.IsUnrealProject(project)) return;
+            if (!await EnsureUnrealImageAsync(asset)) return;
             PersistWorkspaceState();
             var copy = _workspaceCatalog.CopyForProject(asset.Id, project, _library);
             foreach (var source in _library.Load().Where(s => !_sources.Any(existing => existing.Id == s.Id)))
@@ -213,7 +217,11 @@ public partial class MainWindow
         }
         if (action == "delete" && asset is not null)
         {
-            if (asset.Kind == WorkspaceAssetKind.Image) RemoveSource(_sources.Single(s => s.Id == asset.Id));
+            if (asset.Unreal is { Missing: false }) return;
+            if (asset.Unreal is { } binding && UnrealProject(binding.ProjectId) is { } unreal &&
+                Mailbox(unreal).Jobs().Any(j => j.Request.AssetId == asset.Id && j.Request.Operation != "read"))
+                throw new InvalidOperationException(Localization.Text("У этой текстуры есть незавершённое сохранение в Unreal."));
+            if (asset.Kind == WorkspaceAssetKind.Image && _sources.FirstOrDefault(s => s.Id == asset.Id) is { } source) RemoveSource(source);
             _workspaceCatalog.ForgetAsset(asset.Id);
             // Orphaned document payloads are retained in the prototype for recovery.
             ShowHome(); _workspaceBrowser!.Refresh(); return;
@@ -240,7 +248,7 @@ public partial class MainWindow
         }
         if (asset is null || asset.Kind != WorkspaceAssetKind.Image) return;
         if (_activeSource?.Id != asset.Id) await OpenWorkspaceAssetAsync(asset);
-        if (_activeSource is null || _sourceImage is null) return;
+        if (_activeSource?.Id != asset.Id || _sourceImage is null) return;
         if (action == "background")
         {
             var targetSource = _activeSource;
@@ -269,7 +277,7 @@ public partial class MainWindow
 
     private void AddNewWorkspaceAsset(WorkspaceAsset asset)
     {
-        if (_workspaceCatalog!.State.ProjectId is { } project) _workspaceCatalog.Link(asset.Id, project, _workspaceCatalog.State.FolderId);
+        if (_workspaceCatalog!.State.ProjectId is { } project && !_workspaceCatalog.IsUnrealProject(project)) _workspaceCatalog.Link(asset.Id, project, _workspaceCatalog.State.FolderId);
         RefreshWorkspaceSources();
         _workspaceCatalog.Save(); _workspaceBrowser!.Refresh(asset.Id);
     }
@@ -331,8 +339,20 @@ public partial class MainWindow
             _workspaceCatalog.SyncImages(_sources);
             foreach (var source in _sources)
             {
-                if (_observedSources.Add(source.Id)) source.Generations.CollectionChanged += (_, _) => SynchronizeWorkspace();
                 var asset = _workspaceCatalog.State.Assets.Single(a => a.Id == source.Id);
+                if (_observedSources.Add(source.Id))
+                    source.Generations.CollectionChanged += (_, args) =>
+                    {
+                        if (args.NewItems is not null && asset.Unreal is { } binding)
+                            foreach (GenerationEntry result in args.NewItems)
+                            {
+                                string revision = result.ParentGenerationId is { } parent
+                                    ? binding.ResultRevisions.GetValueOrDefault(parent, binding.LoadedRevision)
+                                    : binding.LoadedRevision;
+                                binding.ResultRevisions.TryAdd(result.Id, revision);
+                            }
+                        SynchronizeWorkspace();
+                    };
                 if (asset.Transparent is null || asset.SelectedResult != source.SelectedGeneration?.Id) UpdateImageMetadata(asset, source);
             }
             RefreshWorkspaceSources();

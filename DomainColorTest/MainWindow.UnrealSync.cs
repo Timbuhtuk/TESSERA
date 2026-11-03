@@ -9,21 +9,24 @@ public partial class MainWindow
 {
     private UnrealSyncBridge _unrealSync = null!;
 
-    private Task SelectUnrealProjectAsync()
+    private async Task SelectUnrealProjectAsync()
     {
         var dialog = new OpenFileDialog { Title = Localization.Text("Выберите проект Unreal Engine"), Filter = "Unreal Engine project|*.uproject" };
-        if (dialog.ShowDialog(this) != true) return Task.CompletedTask;
+        if (dialog.ShowDialog(this) != true) return;
         _unrealSync.SelectProject(dialog.FileName);
-        statusLabel.Text = Localization.Text("Проект Unreal подключён: ") + _unrealSync.ProjectPath;
-        return Task.CompletedTask;
+        if (_workspaceCatalog is not null) await ConnectUnrealProjectAsync(dialog.FileName);
+        else statusLabel.Text = Localization.Text("Проект Unreal подключён: ") + _unrealSync.ProjectPath;
     }
 
     private Task InstallUnrealPluginAsync()
     {
+        if (_workspaceCatalog?.State.ProjectId is { } projectId && UnrealProject(projectId)?.UnrealProjectPath is { } projectPath)
+        {
+            InstallProjectPlugin(projectPath);
+            return Task.CompletedTask;
+        }
         EnsureUnrealProject();
-        _unrealSync.InstallPlugin();
-        TesseraDialog.Show(this, Localization.Text("Плагин TesseraSync скопирован. В Unreal включите его и перезапустите редактор. Плагины Python Editor Script и Editor Scripting Utilities должны быть включены."),
-            "Tessera", MessageBoxButton.OK, MessageBoxImage.Information);
+        InstallProjectPlugin(_unrealSync.ProjectPath!);
         return Task.CompletedTask;
     }
 

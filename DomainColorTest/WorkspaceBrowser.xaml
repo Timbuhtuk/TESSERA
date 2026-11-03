@@ -5,6 +5,8 @@
  <UserControl.Resources>
   <ResourceDictionary>
   <ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries>
+  <ItemsPanelTemplate x:Key="LocalItemsPanel"><WrapPanel/></ItemsPanelTemplate>
+  <ItemsPanelTemplate x:Key="UnrealItemsPanel"><VirtualizingStackPanel/></ItemsPanelTemplate>
   <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource Ts.CompactButton}">
    <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Margin" Value="0,2"/>
   </Style>
@@ -67,6 +69,8 @@
      <Button Content="{local:Translate Text7F8044F85387}" Style="{StaticResource NavButton}" Click="UnassignedClicked"/>
      <Button Content="{local:Translate TextF4EDEAE56B65}" Style="{StaticResource NavButton}" Click="RecentClicked"/>
      <DockPanel Margin="0,24,0,8"><Button Content="+" DockPanel.Dock="Right" Click="NewProjectClicked" ToolTip="{local:Translate Text49ED84AC6492}" AutomationProperties.Name="{local:Translate Text49ED84AC6492}"/><TextBlock Text="{local:Translate TextBB9EC32D295C}" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11"/></DockPanel>
+     <Button x:Name="connectUnrealButton" Style="{StaticResource NavButton}" Click="ConnectUnrealClicked"/>
+     <TextBlock x:Name="unrealStatus" Margin="0,5,0,0" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Visibility="Collapsed"/>
     </StackPanel>
     <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="{local:Translate TextA71D10D12ADC}"/>
    </DockPanel>
@@ -88,8 +92,7 @@
     <Button Content="{local:Translate Text407F871778D3}" Click="ResetFilters" Margin="6,0,0,0" Padding="6,4"/>
    </WrapPanel>
    <Grid Grid.Row="3">
-    <ListBox x:Name="assetList" SelectionMode="Extended" SelectionChanged="AssetSelected" MouseDoubleClick="OpenDoubleClick" KeyDown="AssetKeyDown" PreviewMouseLeftButtonDown="AssetMouseDown" PreviewMouseMove="AssetMouseMove" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ItemContainerStyle="{StaticResource AssetItem}" AutomationProperties.Name="{local:Translate Text36484D8C388F}">
-     <ListBox.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+    <ListBox x:Name="assetList" SelectionMode="Extended" SelectionChanged="AssetSelected" MouseDoubleClick="OpenDoubleClick" KeyDown="AssetKeyDown" PreviewMouseLeftButtonDown="AssetMouseDown" PreviewMouseMove="AssetMouseMove" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel" ItemContainerStyle="{StaticResource AssetItem}" AutomationProperties.Name="{local:Translate Text36484D8C388F}">
      <ListBox.ItemTemplate><DataTemplate><Grid Width="180" ToolTip="{Binding Name}">
       <Grid.RowDefinitions><RowDefinition Height="128"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <Border Background="{DynamicResource Ts.Thumbnail}"><Grid><TextBlock Text="{Binding KindLabel}" Foreground="{DynamicResource Ts.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock><Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="10" RenderOptions.BitmapScalingMode="NearestNeighbor"/></Grid></Border>
