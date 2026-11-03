@@ -67,6 +67,12 @@ public partial class MainWindow
         saveMenuItem = AddNavigation(exportMenu, "saveMenuItem", "PNG…", ExportNavigationAsync);
         saveAllMenuItem = AddNavigation(exportMenu, "saveAllMenuItem", "Все результаты PNG…", () => { SaveAllImages(this, new()); return Task.CompletedTask; });
         AddNavigation(exportMenu, "exportIcoMenuItem", "ICO…", () => NavigationImageActionAsync("ico"));
+        var unrealMenu = NavigationItem("unrealMenu", "Unreal Engine 5"); fileMenu.Items.Add(unrealMenu);
+        AddNavigation(unrealMenu, "unrealProjectMenuItem", "Выбрать проект…", SelectUnrealProjectAsync);
+        AddNavigation(unrealMenu, "unrealInstallMenuItem", "Установить плагин в проект…", InstallUnrealPluginAsync);
+        AddNavigation(unrealMenu, "unrealSendMenuItem", "Отправить выбранную текстуру", SendTextureToUnrealAsync);
+        AddNavigation(unrealMenu, "unrealMapsMenuItem", "Отправить карты материала", SendMapsToUnrealAsync);
+        AddNavigation(unrealMenu, "unrealReceiveMenuItem", "Получить текстуры из Unreal", ReceiveFromUnrealAsync);
         fileMenu.Items.Add(new Separator());
         returnMenuItem = AddNavigation(fileMenu, "returnMenuItem", "Вернуться в библиотеку", () => { GoToLibrary(this, new()); return Task.CompletedTask; });
         checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", "Проверить обновления");

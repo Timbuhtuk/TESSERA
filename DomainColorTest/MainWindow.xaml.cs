@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         saveDialog.Title = Localization.Text("Сохранить результат");
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
+        _unrealSync = new UnrealSyncBridge(Path.Combine(libraryDirectory, "unreal-sync.json"));
         _historyUndo = new HistoryUndoStore(libraryDirectory, _appearanceSettings.HistoryUndoDepth);
         _historyUndo.RecoverPending();
         InitializeComponent();

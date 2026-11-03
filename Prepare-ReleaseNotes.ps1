@@ -81,6 +81,14 @@ $($current.title.en)
 
 $($current.notes.en)
 
+---
+
+# Что нового в Tessera v$Version
+
+$($current.title.ru)
+
+$($current.notes.ru)
+
 "@
 [IO.File]::WriteAllText((Join-Path $output 'ReleaseNotes.md'), $body)
 Write-Output "Prepared release notes for v$Version ($($entries.Count) versions)."
