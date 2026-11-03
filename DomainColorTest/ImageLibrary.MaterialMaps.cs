@@ -7,8 +7,11 @@ namespace DomainColorTest;
 
 public sealed partial class ImageLibrary
 {
-    // Only generated map assets have a mutable base. Imported originals and result histories are untouched.
     public SourceEntry StoreMaterialMap(SourceEntry source, BitmapSource image)
+        => StoreMutableImage(source, image);
+
+    // Generated maps and linked textures have a mutable cached base.
+    internal SourceEntry StoreMutableImage(SourceEntry source, BitmapSource image)
     {
         string path = SourcePath(source), temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         Directory.CreateDirectory(SourceDirectory(source));

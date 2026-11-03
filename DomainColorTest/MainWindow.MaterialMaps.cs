@@ -40,6 +40,8 @@ public partial class MainWindow
             var storedSession = session;
             var links = MaterialMapPlacement(session);
             window.EnableWorkspace(document => StoreMaterialMaps(storedSession, document, links));
+            if (_workspaceCatalog.State.Assets.Any(a => a.Id == storedSession.SourceId && a.Unreal is not null))
+                window.SaveToUnreal = () => SaveUnrealMaps(storedSession);
         }
         _materialMapWindows.Add(key, window);
         window.Closed += (_, _) => _materialMapWindows.Remove(key);
@@ -104,7 +106,7 @@ public partial class MainWindow
         {
             Guid id = session.MapId(kind);
             if (!catalog.State.Assets.Any(a => a.Id == id)) continue;
-            foreach (var link in placement.Where(l => catalog.State.Projects.Any(p => p.Id == l.ProjectId)))
+            foreach (var link in placement.Where(l => catalog.State.Projects.Any(p => p.Id == l.ProjectId && !p.IsUnreal)))
             {
                 if (catalog.State.Links.Any(l => l.AssetId == id && l.ProjectId == link.ProjectId)) continue;
                 Guid? folder = catalog.State.Folders.Any(f => f.Id == link.FolderId && f.ProjectId == link.ProjectId) ? link.FolderId : null;

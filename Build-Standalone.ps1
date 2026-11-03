@@ -165,7 +165,7 @@ release history offline in Settings > Patch notes.
     [IO.File]::WriteAllText((Join-Path $output 'README.txt'), $guide, [Text.UTF8Encoding]::new($true))
     $archive = Join-Path $artifactsRoot 'Tessera-win-x64.zip'
     Compress-Archive -LiteralPath (Join-Path $output 'Tessera.exe'),(Join-Path $output 'README.txt'),(Join-Path $output 'Assets/Fonts/Cascadia-Code-OFL.txt'),(Join-Path $output 'Assets/Fonts/Science-Gothic-OFL.txt') -DestinationPath $archive -Force
-    $unrealFiles = @('TesseraSync.uplugin', 'Content/Python/init_unreal.py', 'Content/Python/tessera_sync.py')
+    $unrealFiles = @('TesseraSync.uplugin', 'Content/Python/init_unreal.py', 'Content/Python/tessera_sync.py', 'Content/Python/tessera_project.py')
     $desktopZip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Update)
     try {
         foreach ($file in $unrealFiles) {

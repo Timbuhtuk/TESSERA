@@ -227,6 +227,11 @@ def _tick(delta_seconds):
         return
     _last_poll = now
     sync_from_tessera()
+    try:
+        import tessera_project
+        tessera_project.tick()
+    except Exception as error:
+        unreal.log_warning("Tessera project: " + str(error))
 
 
 def start():

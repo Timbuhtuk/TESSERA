@@ -68,7 +68,7 @@ public partial class MainWindow
         saveAllMenuItem = AddNavigation(exportMenu, "saveAllMenuItem", "Все результаты PNG…", () => { SaveAllImages(this, new()); return Task.CompletedTask; });
         AddNavigation(exportMenu, "exportIcoMenuItem", "ICO…", () => NavigationImageActionAsync("ico"));
         var unrealMenu = NavigationItem("unrealMenu", "Unreal Engine 5"); fileMenu.Items.Add(unrealMenu);
-        AddNavigation(unrealMenu, "unrealProjectMenuItem", "Выбрать проект…", SelectUnrealProjectAsync);
+        AddNavigation(unrealMenu, "unrealProjectMenuItem", "Подключить проект Unreal…", SelectUnrealProjectAsync);
         AddNavigation(unrealMenu, "unrealInstallMenuItem", "Установить плагин в проект…", InstallUnrealPluginAsync);
         AddNavigation(unrealMenu, "unrealSendMenuItem", "Отправить выбранную текстуру", SendTextureToUnrealAsync);
         AddNavigation(unrealMenu, "unrealMapsMenuItem", "Отправить карты материала", SendMapsToUnrealAsync);
@@ -299,7 +299,13 @@ public partial class MainWindow
         foreach (var window in _materialMapWindows.Values.ToArray()) await window.SaveWorkspaceAsync();
         if (moodboardWorkspace.Visibility == Visibility.Visible) await moodboardWorkspace.SaveWorkspaceAsync();
         if (_workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.SaveWorkspaceDocument();
-        PersistWorkspaceState(); statusLabel.Text = Localization.Text("Проект сохранён.");
+        PersistWorkspaceState();
+        if (ImageEditorVisible && _workspaceActive is { Unreal: not null } linked)
+        {
+            var result = ProcessingBasis == 1 ? _activeSource!.SelectedGeneration : null;
+            SaveUnrealTexture(linked, WorkspaceBasisPath(), result?.Id);
+        }
+        else statusLabel.Text = Localization.Text("Проект сохранён.");
     }
     private async Task ExportNavigationAsync()
     {

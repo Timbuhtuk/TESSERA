@@ -369,7 +369,17 @@ public partial class MaterialMapsWindow : Window
         if (e.Key != Key.S && Keyboard.FocusedElement is TextBoxBase) return;
         if (e.Key == Key.Z) History(false);
         else if (e.Key == Key.Y) History(true);
-        else if (e.Key == Key.S) Safely(() => { Focus(); if (_saveWorkspace is not null) SaveWorkspace(); else if (ProjectPath is null) SaveProjectDialog(); else SaveProject(ProjectPath); });
+        else if (e.Key == Key.S) Safely(() =>
+        {
+            Focus();
+            if (_saveWorkspace is not null)
+            {
+                SaveWorkspace();
+                SaveToUnreal?.Invoke();
+            }
+            else if (ProjectPath is null) SaveProjectDialog();
+            else SaveProject(ProjectPath);
+        });
         else return;
         e.Handled = true;
     }

@@ -1,5 +1,11 @@
 using System.Text.Json;
+using System.Reflection;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 using DomainColorTest;
+using Tessera.WpfStyles.Themes;
 
 namespace PixelArtAlignment.Tests;
 
@@ -8,6 +14,7 @@ public static class UnrealSyncChecks
     public static void Run(Action<string, Action> check)
     {
         check("Unreal bridge transfers PNG, rejects incomplete downloads and tracks revisions", RoundTrip);
+        check("Unreal library mirrors paths, keeps history and resumes a save after restart", ProjectLibrary);
     }
 
     private static void RoundTrip()
@@ -20,8 +27,12 @@ public static class UnrealSyncChecks
             File.WriteAllText(project, "{}");
             var bridge = new UnrealSyncBridge(Path.Combine(root, "library", "unreal-sync.json"));
             bridge.SelectProject(project);
+            bridge.InstallPlugin();
+            var python = Path.Combine(root, "Plugins", "TesseraSync", "Content", "Python");
+            if (!File.Exists(Path.Combine(python, "tessera_project.py")) || !File.Exists(Path.Combine(python, "init_unreal.py")))
+                throw new Exception("Standalone installer omitted the project sync plugin");
             using var image = new Bitmap(2, 2);
-            image.SetPixel(0, 0, Color.FromArgb(128, 220, 30, 50));
+            image.SetPixel(0, 0, System.Drawing.Color.FromArgb(128, 220, 30, 50));
             string source = Path.Combine(root, "source.png");
             image.Save(source, System.Drawing.Imaging.ImageFormat.Png);
             string unrealPath = bridge.SendPng(source, Guid.Parse("11111111-2222-3333-4444-555555555555"), "Stone.png");
@@ -46,12 +57,138 @@ public static class UnrealSyncChecks
             File.Copy(source, receivedPng, true);
             bridge.MarkReceived(sent);
             if (bridge.PendingFromUnreal().Count != 0) throw new Exception("Received revision was duplicated");
-            image.SetPixel(1, 1, Color.Blue);
+            image.SetPixel(1, 1, System.Drawing.Color.Blue);
             image.Save(receivedPng, System.Drawing.Imaging.ImageFormat.Png);
             sent.Sha256 = UnrealSyncBridge.Hash(receivedPng);
             File.WriteAllText(Path.Combine(incoming, name + ".json"), JsonSerializer.Serialize(sent));
             if (new UnrealSyncBridge(Path.Combine(root, "library", "unreal-sync.json")).PendingFromUnreal().Count != 1)
                 throw new Exception("Updated Unreal texture was not detected after restart");
+        }
+        finally { Directory.Delete(root, true); }
+    }
+
+    private static void ProjectLibrary()
+    {
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try { VerifyProjectLibrary(); }
+            catch (Exception error) { failure = error; }
+        }) { IsBackground = true };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        if (!thread.Join(TimeSpan.FromSeconds(45))) throw new Exception("Unreal library check timed out");
+        if (failure is not null) throw new Exception("Unreal library check failed", failure);
+    }
+
+    private static void VerifyProjectLibrary()
+    {
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
+        string root = Path.GetFullPath(Path.Combine("artifacts", "unreal-library-" + Guid.NewGuid().ToString("N")));
+        string libraryRoot = Path.Combine(root, "Library");
+        string project = Path.Combine(root, "Game.uproject");
+        string bridge = Path.Combine(root, "Saved", "TesseraSync", "v2");
+        Directory.CreateDirectory(bridge);
+        File.WriteAllText(project, "{}");
+        const string target = "/Game/A/Nested/Stone.Stone", other = "/Game/B/Stone.Stone", moved = "/Game/A/Rock.Rock";
+        string[] paths = [target, other, .. Enumerable.Range(0, 800).Select(i => $"/Game/B/T_{i}.T_{i}")];
+        void Catalog(string[] textures, Dictionary<string, string>? redirects = null, string revision = "rev1")
+        {
+            string path = Path.Combine(bridge, "catalog.json");
+            File.WriteAllText(path, JsonSerializer.Serialize(new
+            {
+                version = 2, folders = new[] { "/Game", "/Game/A/Empty", "/Game/__ExternalActors__/Ignored" },
+                textures = textures.Select(p => new { path = p, revision }),
+                redirects = redirects ?? []
+            }));
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
+        }
+        void Poll(MainWindow window) => typeof(MainWindow).GetMethod("PollUnrealProjects", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+        Task Save(MainWindow window) => (Task)typeof(MainWindow).GetMethod("SaveNavigationDocumentAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null)!;
+        void Pump()
+        {
+            var frame = new DispatcherFrame();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.SystemIdle, new Action(() => frame.Continue = false));
+            Dispatcher.PushFrame(frame);
+        }
+        void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+        try
+        {
+            Catalog(paths);
+            new WorkspaceCatalog(libraryRoot).CreateProject("Local");
+            new UnrealSyncBridge(Path.Combine(libraryRoot, "unreal-sync.json")).SelectProject(project);
+            Guid assetId;
+            string requestFolder;
+            var window = new MainWindow(libraryRoot);
+            try
+            {
+                window.EnableWorkspacePrototype(); window.Show(); Poll(window);
+                var workspace = window.Workspace!;
+                var unreal = workspace.State.Projects.Single(p => p.IsUnreal);
+                window.Browser!.Navigate("project", unreal.Id);
+                window.Browser.RebuildTree();
+                Pump(); window.UpdateLayout();
+                var tree = (TreeView)window.Browser.FindName("projectTree");
+                var rootNode = tree.Items.OfType<TreeViewItem>().Single(n => n.Tag == unreal);
+                var icon = (System.Windows.Shapes.Path)((StackPanel)rootNode.Header).Children[0];
+                foreach (var theme in new[] { TesseraTheme.Dark, TesseraTheme.Light })
+                {
+                    AppearanceResources.Apply(theme);
+                    window.Browser.LayoutTransform = new ScaleTransform(1.25, 1.25);
+                    Pump(); window.UpdateLayout();
+                    Require(icon is { Width: 18, Height: 18, Data: not null, Fill: not null } && icon.Margin.Right == 6, "Unreal icon is missing or malformed");
+                    Require(tree.Items.OfType<TreeViewItem>().Single(n => n.Tag is WorkspaceProject { IsUnreal: false }).Header is string &&
+                        ((TreeViewItem)rootNode.Items[0]).Header is string, "The Unreal mark leaked onto a local project or folder");
+                }
+                var list = (ListBox)window.Browser.FindName("assetList");
+                Require(list.Items.Count == paths.Length && list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null, "Large Unreal view was not virtualized");
+                Require(workspace.State.Folders.Any(f => f.Name == "Empty") && workspace.State.Folders.All(f => f.Name != "__ExternalActors__"), "Incorrect Content tree");
+                Require(workspace.State.Assets.Count(a => a.Name == "Stone") == 2, "Identical names were merged");
+                var asset = workspace.State.Assets.Single(a => a.Unreal?.Path == target);
+                assetId = asset.Id;
+                string read = Path.Combine(bridge, "requests", Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(read);
+                string export = Path.Combine(read, "unreal.png");
+                using (var png = new Bitmap(8, 8)) png.Save(export, System.Drawing.Imaging.ImageFormat.Png);
+                File.WriteAllText(Path.Combine(read, "request.json"), JsonSerializer.Serialize(new { version = 2, operation = "read", assetId, path = target, revision = "rev1" }));
+                File.WriteAllText(Path.Combine(read, "response.json"), JsonSerializer.Serialize(new { status = "read", revision = "rev1", sha256 = UnrealSyncBridge.Hash(export) }));
+                File.WriteAllText(Path.Combine(bridge, "editor.json"), "{}");
+                Task opening = window.OpenWorkspaceAssetAsync(asset);
+                Poll(window);
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+                while (!opening.IsCompleted && DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(10); }
+                Require(opening.IsCompletedSuccessfully && asset.Unreal!.LoadedRevision == "rev1", "Unreal texture was not opened from the mailbox");
+                var active = (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+                using (var pixels = new Bitmap(4, 4))
+                    active.Generations.Add(new ImageLibrary(libraryRoot).SaveGeneration(active, pixels, null, new GenerationEntry { Operation = "Test result" }));
+                Require(asset.Unreal!.ResultRevisions.GetValueOrDefault(active.Generations[0].Id) == "rev1", "A local result lost its original Unreal revision");
+                File.Delete(Path.Combine(bridge, "editor.json"));
+                Save(window).GetAwaiter().GetResult();
+                requestFolder = Directory.EnumerateDirectories(Path.Combine(bridge, "requests"))
+                    .Single(p => File.Exists(Path.Combine(p, "local.png")));
+                Require(!File.Exists(Path.Combine(requestFolder, "response.json")), "Offline save was incorrectly acknowledged");
+            }
+            finally { window.Close(); Pump(); }
+
+            window = new MainWindow(libraryRoot);
+            try
+            {
+                window.EnableWorkspacePrototype(); window.Show(); Poll(window);
+                var state = window.Workspace!.State;
+                Require(state.Projects.Count(p => p.IsUnreal) == 1 && File.Exists(Path.Combine(requestFolder, "local.png")), "Restart lost the queued save or duplicated the project");
+                var asset = state.Assets.Single(a => a.Id == assetId);
+                string export = Path.Combine(requestFolder, "unreal.png");
+                File.Copy(Path.Combine(requestFolder, "local.png"), export);
+                File.WriteAllText(Path.Combine(requestFolder, "response.json"), JsonSerializer.Serialize(new { status = "saved", revision = "rev2", sha256 = UnrealSyncBridge.Hash(export) }));
+                Poll(window);
+                Require(asset.Unreal!.LoadedRevision == "rev2" && !Directory.Exists(requestFolder), "Restart did not consume the confirmed save");
+                Catalog([moved, other], new() { [target] = moved }, "rev2"); Poll(window);
+                Require(asset.Unreal.Path == moved && !asset.Unreal.Missing, "Rename redirect lost the linked library identity");
+                Catalog([other], revision: "rev3"); Poll(window);
+                var retained = new ImageLibrary(libraryRoot).Load().Single(s => s.Id == assetId);
+                Require(asset.Unreal.NeedsDestination && retained.Generations.Count == 1, "Deleting an Unreal asset erased local history or left the link writable");
+            }
+            finally { window.Close(); Pump(); }
         }
         finally { Directory.Delete(root, true); }
     }

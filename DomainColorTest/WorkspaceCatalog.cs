@@ -1,4 +1,5 @@
 using System.IO;
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows.Media.Imaging;
@@ -7,9 +8,10 @@ namespace DomainColorTest;
 
 public enum WorkspaceAssetKind { Image, Animation, Board, Tiles }
 
-public sealed class WorkspaceAsset
+public sealed class WorkspaceAsset : INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public UnrealTextureLink? Unreal { get; set; }
     public WorkspaceAssetKind Kind { get; set; }
     public string Name { get; set; } = "";
     public string ContentFile { get; set; } = "";
@@ -27,9 +29,27 @@ public sealed class WorkspaceAsset
     public int SheetLayout { get; set; }
     public int SheetColumns { get; set; } = 8;
     public int SheetPadding { get; set; }
-    [JsonIgnore] public BitmapSource? Thumbnail { get; set; }
+    private BitmapSource? _thumbnail;
+    [JsonIgnore] public BitmapSource? Thumbnail
+    {
+        get => _thumbnail;
+        set
+        {
+            if (ReferenceEquals(_thumbnail, value)) return;
+            _thumbnail = value;
+            PropertyChanged?.Invoke(this, new(nameof(Thumbnail)));
+        }
+    }
+    public event PropertyChangedEventHandler? PropertyChanged;
     [JsonIgnore] public string KindLabel => Kind switch { WorkspaceAssetKind.Animation => Localization.Text("Анимация"), WorkspaceAssetKind.Board => Localization.Text("Доска"), WorkspaceAssetKind.Tiles => Localization.Text("Коллекция тайлов"), _ => Localization.Text("Изображение") };
-    [JsonIgnore] public string Summary => Width > 0 ? $"{KindLabel} · {Width} × {Height}" : KindLabel;
+    [JsonIgnore] public string Summary
+    {
+        get
+        {
+            string summary = Width > 0 ? $"{KindLabel} · {Width} × {Height}" : KindLabel;
+            return Unreal?.NeedsDestination == true ? summary + " · " + Localization.Text("Связь с Unreal потеряна") : summary;
+        }
+    }
     [JsonIgnore] public string TagLabel => string.Join(" · ", Tags);
     [JsonIgnore] public string LocationLabel { get; set; } = "";
 }
@@ -38,6 +58,9 @@ public sealed class WorkspaceProject
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
+    public WorkspaceProjectKind Kind { get; set; }
+    public string? UnrealProjectPath { get; set; }
+    [JsonIgnore] public bool IsUnreal => Kind == WorkspaceProjectKind.Unreal && !string.IsNullOrWhiteSpace(UnrealProjectPath);
 }
 
 public sealed class WorkspaceFolder
@@ -45,6 +68,7 @@ public sealed class WorkspaceFolder
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ProjectId { get; set; }
     public Guid? ParentId { get; set; }
+    public string? UnrealPath { get; set; }
     public string Name { get; set; } = "";
 }
 
@@ -214,6 +238,7 @@ public sealed partial class WorkspaceCatalog
         var link = State.Links.Single(l => l.AssetId == assetId && l.ProjectId == projectId);
         var original = State.Assets.Single(a => a.Id == assetId);
         var copy = JsonSerializer.Deserialize<WorkspaceAsset>(JsonSerializer.Serialize(original))!;
+        copy.Unreal = null;
         copy.Id = Guid.NewGuid(); copy.Name = original.Name + Localization.Text(" — копия"); copy.OpenedAt = default; copy.ModifiedAt = DateTimeOffset.Now;
         if (original.Kind == WorkspaceAssetKind.Image)
         {
@@ -236,37 +261,42 @@ public sealed partial class WorkspaceCatalog
     public HashSet<Guid> Descendants(Guid folderId)
     {
         var found = new HashSet<Guid>(); var queue = new Queue<Guid>(); queue.Enqueue(folderId);
+        var children = State.Folders.ToLookup(f => f.ParentId);
         while (queue.Count > 0)
         {
             Guid parent = queue.Dequeue();
-            foreach (var folder in State.Folders.Where(f => f.ParentId == parent).ToArray())
+            foreach (var folder in children[parent])
                 if (found.Add(folder.Id)) queue.Enqueue(folder.Id);
         }
         return found;
     }
 
     public string Location(WorkspaceLink link)
+        => Location(link, id => State.Folders.FirstOrDefault(f => f.Id == id), id => State.Projects.First(p => p.Id == id).Name);
+
+    private static string Location(WorkspaceLink link, Func<Guid, WorkspaceFolder?> findFolder, Func<Guid, string> projectName)
     {
         var parts = new List<string>(); var visited = new HashSet<Guid>(); Guid? id = link.FolderId;
         while (id is { } value && visited.Add(value))
         {
-            var folder = State.Folders.FirstOrDefault(f => f.Id == value); if (folder is null) break;
+            var folder = findFolder(value); if (folder is null) break;
             parts.Add(folder.Name); id = folder.ParentId;
         }
-        parts.Add(State.Projects.First(p => p.Id == link.ProjectId).Name); parts.Reverse(); return string.Join(" / ", parts);
+        parts.Add(projectName(link.ProjectId)); parts.Reverse(); return string.Join(" / ", parts);
     }
 
     public IReadOnlyList<WorkspaceAsset> Query(string view, Guid? project, Guid? folder, int scope, string search, int kind, string width, string height, int transparency)
     {
         IEnumerable<WorkspaceAsset> assets = State.Assets;
+        var locations = State.Links.ToLookup(l => l.AssetId);
         if (scope < 2)
         {
-            if (view == "unassigned") assets = assets.Where(a => !State.Links.Any(l => l.AssetId == a.Id));
+            if (view == "unassigned") assets = assets.Where(a => !locations.Contains(a.Id));
             else if (project is { } projectId)
             {
                 var folders = folder is { } folderId ? Descendants(folderId) : [];
                 if (folder is { } selected) folders.Add(selected);
-                assets = assets.Where(a => State.Links.Any(l => l.AssetId == a.Id && l.ProjectId == projectId &&
+                assets = assets.Where(a => locations[a.Id].Any(l => l.ProjectId == projectId &&
                     (scope == 1 || folder is null || l.FolderId is { } id && folders.Contains(id))));
             }
         }
@@ -277,9 +307,13 @@ public sealed partial class WorkspaceCatalog
         if (int.TryParse(width, out int w)) assets = assets.Where(a => a.Width == w);
         if (int.TryParse(height, out int h)) assets = assets.Where(a => a.Height == h);
         if (transparency > 0) assets = assets.Where(a => a.Transparent == (transparency == 1));
-        foreach (var asset in State.Assets)
-            asset.LocationLabel = string.Join(" · ", State.Links.Where(l => l.AssetId == asset.Id && (project is null || scope == 2 || l.ProjectId == project)).Select(Location));
-        return (view == "recent" ? assets.OrderByDescending(a => a.OpenedAt) : assets.OrderByDescending(a => a.ModifiedAt)).ToList();
+        var result = (view == "recent" ? assets.OrderByDescending(a => a.OpenedAt) : assets.OrderByDescending(a => a.ModifiedAt)).ToList();
+        var folderIndex = State.Folders.ToDictionary(f => f.Id);
+        var projectIndex = State.Projects.ToDictionary(p => p.Id, p => p.Name);
+        foreach (var asset in result)
+            asset.LocationLabel = string.Join(" · ", locations[asset.Id].Where(l => project is null || scope == 2 || l.ProjectId == project)
+                .Select(l => Location(l, id => folderIndex.GetValueOrDefault(id), id => projectIndex[id])));
+        return result;
     }
 
     private void RequireProject(Guid id) { if (!State.Projects.Any(p => p.Id == id)) throw new ArgumentException(Localization.Text("Проект не найден.")); }

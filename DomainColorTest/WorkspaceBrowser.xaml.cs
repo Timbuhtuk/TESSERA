@@ -2,6 +2,9 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Data;
+using System.Xml.Linq;
 
 namespace DomainColorTest;
 
@@ -18,11 +21,13 @@ public partial class WorkspaceBrowser : UserControl
     public event Action<WorkspaceAsset>? OpenRequested;
     public event Action<string, WorkspaceAsset?>? ActionRequested;
     public event Action<string>? StatusChanged;
+    public event Action? ConnectUnrealRequested;
     public IReadOnlyList<WorkspaceAsset> Selection => assetList.SelectedItems.Cast<WorkspaceAsset>().ToArray();
 
     public WorkspaceBrowser()
     {
         InitializeComponent();
+        connectUnrealButton.Content = new TextBlock { Text = Localization.Text("Подключить проект Unreal…"), TextWrapping = TextWrapping.Wrap };
         SizeChanged += (_, _) =>
         {
             bool compact = ActualWidth < 1050;
@@ -79,6 +84,10 @@ public partial class WorkspaceBrowser : UserControl
         if (state.ProjectId is { } id && !_catalog.State.Projects.Any(p => p.Id == id)) { state.View = "all"; state.ProjectId = state.FolderId = null; }
         var selected = Selection.Select(a => a.Id).ToHashSet();
         var assets = _catalog.Query(state.View, state.ProjectId, state.FolderId, scopeInput.SelectedIndex, searchInput.Text, kindInput.SelectedIndex, filterWidth.Text, filterHeight.Text, alphaInput.SelectedIndex);
+        bool unreal = _catalog.IsUnrealProject(state.ProjectId) || assets.Any(a => a.Unreal is not null);
+        var panel = (ItemsPanelTemplate)Resources[unreal ? "UnrealItemsPanel" : "LocalItemsPanel"];
+        if (assetList.ItemsPanel != panel) assetList.ItemsPanel = panel;
+        ScrollViewer.SetCanContentScroll(assetList, unreal);
         assetList.ItemsSource = assets;
         foreach (var asset in assets.Where(a => select == a.Id || select is null && selected.Contains(a.Id))) assetList.SelectedItems.Add(asset);
         if (assetList.SelectedItem is null && state.SelectedAsset is { } last) assetList.SelectedItem = assets.FirstOrDefault(a => a.Id == last);
@@ -95,7 +104,8 @@ public partial class WorkspaceBrowser : UserControl
         foreach (var project in _catalog.State.Projects)
         {
             var node = MakeNode(project.Name, project, project.Id == _catalog.State.ProjectId && _catalog.State.FolderId is null);
-            AddFolders(node, project.Id, null, []); projectTree.Items.Add(node);
+            var folders = _catalog.State.Folders.Where(f => f.ProjectId == project.Id).ToLookup(f => f.ParentId);
+            AddFolders(node, folders, null, []); projectTree.Items.Add(node);
         }
         _building = false;
     }
@@ -104,6 +114,23 @@ public partial class WorkspaceBrowser : UserControl
         var node = new TreeViewItem { Header = name, Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 5, 2, 5) };
         Guid project = tag is WorkspaceProject p ? p.Id : ((WorkspaceFolder)tag).ProjectId;
         Guid? folder = (tag as WorkspaceFolder)?.Id;
+        if (_catalog!.IsUnrealProject(project))
+        {
+            if (tag is WorkspaceProject)
+            {
+                var header = new StackPanel { Orientation = Orientation.Horizontal };
+                var icon = new System.Windows.Shapes.Path
+                {
+                    Data = UnrealLogo.Value, Width = 18, Height = 18, Stretch = Stretch.Uniform,
+                    Margin = new Thickness(0, 0, 6, 0), ToolTip = Localization.Text("Проект Unreal Engine")
+                };
+                icon.SetBinding(System.Windows.Shapes.Path.FillProperty, new Binding(nameof(Foreground)) { Source = node });
+                header.Children.Add(icon);
+                header.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
+                node.Header = header;
+            }
+            return node;
+        }
         var menu = new ContextMenu();
         var create = new MenuItem { Header = Localization.Text("Создать папку…") };
         create.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => CreateFolder(project, folder))));
@@ -122,13 +149,52 @@ public partial class WorkspaceBrowser : UserControl
         };
         return node;
     }
-    private void AddFolders(TreeViewItem parent, Guid project, Guid? parentId, HashSet<Guid> visited)
+    private void AddFolders(TreeViewItem parent, ILookup<Guid?, WorkspaceFolder> folders, Guid? parentId, HashSet<Guid> visited)
     {
-        foreach (var folder in _catalog!.State.Folders.Where(f => f.ProjectId == project && f.ParentId == parentId))
+        foreach (var folder in folders[parentId].OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase))
         {
             if (!visited.Add(folder.Id)) continue;
-            var item = MakeNode(folder.Name, folder, folder.Id == _catalog.State.FolderId);
-            parent.Items.Add(item); AddFolders(item, project, folder.Id, visited);
+            var item = MakeNode(folder.Name, folder, folder.Id == _catalog!.State.FolderId);
+            parent.Items.Add(item); AddFolders(item, folders, folder.Id, visited);
+        }
+    }
+
+    private static readonly Lazy<Geometry> UnrealLogo = new(() =>
+    {
+        var resource = Application.GetResourceStream(new Uri("pack://application:,,,/DomainColorTest;component/Assets/unreal-mark.svg"))!;
+        using var stream = resource.Stream;
+        var svg = XDocument.Load(stream);
+        var geometry = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        foreach (var path in svg.Descendants().Where(e => e.Name.LocalName == "path"))
+            geometry.Children.Add(Geometry.Parse("F0 " + path.Attribute("d")!.Value));
+        geometry.Freeze();
+        return geometry;
+    });
+
+    private void ConnectUnrealClicked(object sender, RoutedEventArgs e) => ConnectUnrealRequested?.Invoke();
+
+    internal void ShowUnrealStatus(string? status)
+    {
+        unrealStatus.Text = status ?? "";
+        unrealStatus.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    internal IEnumerable<WorkspaceAsset> VisibleUnrealAssets()
+    {
+        if (!IsVisible) yield break;
+        var queue = new Queue<DependencyObject>();
+        queue.Enqueue(assetList);
+        while (queue.TryDequeue(out var element))
+        {
+            if (element is ListBoxItem item)
+            {
+                if (item.Content is WorkspaceAsset { Unreal: not null } asset && item.IsVisible &&
+                    item.TransformToAncestor(assetList).TransformBounds(new Rect(item.RenderSize))
+                        .IntersectsWith(new Rect(assetList.RenderSize))) yield return asset;
+                continue;
+            }
+            for (int q = 0; q < VisualTreeHelper.GetChildrenCount(element); q++)
+                queue.Enqueue(VisualTreeHelper.GetChild(element, q));
         }
     }
 
@@ -211,7 +277,7 @@ public partial class WorkspaceBrowser : UserControl
         var state = _catalog!.State;
         if (currentProject && state.ProjectId is null) { Tell(Localization.Text("Сначала выберите проект.")); return; }
         var choices = new List<(string Name, Guid Project, Guid? Folder)>();
-        foreach (var project in state.Projects.Where(p => !currentProject || p.Id == state.ProjectId))
+        foreach (var project in state.Projects.Where(p => !p.IsUnreal && (!currentProject || p.Id == state.ProjectId)))
         {
             choices.Add((project.Name, project.Id, null));
             foreach (var folder in state.Folders.Where(f => f.ProjectId == project.Id)) choices.Add((_catalog.Location(new WorkspaceLink { ProjectId = project.Id, FolderId = folder.Id }), project.Id, folder.Id));
@@ -224,6 +290,7 @@ public partial class WorkspaceBrowser : UserControl
     private void UnlinkClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
         if (_catalog!.State.ProjectId is not { } project) { Tell(Localization.Text("Сначала выберите проект.")); return; }
+        if (_catalog.IsUnrealProject(project)) return;
         foreach (var asset in Selection) _catalog.Unlink(asset.Id, project); Refresh();
     });
     private void CopyClicked(object sender, RoutedEventArgs e) => Safe(() =>
@@ -270,7 +337,7 @@ public partial class WorkspaceBrowser : UserControl
     private void TreeMouseMove(object sender, MouseEventArgs e)
     {
         var position = e.GetPosition(this);
-        if (_treeDrag is not WorkspaceFolder folder || e.LeftButton != MouseButtonState.Pressed || Math.Abs(position.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        if (_treeDrag is not WorkspaceFolder { UnrealPath: null } folder || e.LeftButton != MouseButtonState.Pressed || Math.Abs(position.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
         _treeDrag = null; DragDrop.DoDragDrop(projectTree, new DataObject(FolderDragFormat, folder.Id), DragDropEffects.Move);
     }
     private void TreeDragOver(object sender, DragEventArgs e) { e.Effects = e.Data.GetDataPresent(AssetDragFormat) || e.Data.GetDataPresent(FolderDragFormat) ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; }
@@ -279,6 +346,7 @@ public partial class WorkspaceBrowser : UserControl
         var target = FindTreeItem(e.OriginalSource as DependencyObject)?.Tag;
         Guid? project = target is WorkspaceProject p ? p.Id : (target as WorkspaceFolder)?.ProjectId;
         Guid? folder = (target as WorkspaceFolder)?.Id; if (project is null) return;
+        if (_catalog!.IsUnrealProject(project)) { e.Handled = true; return; }
         if (e.Data.GetData(AssetDragFormat) is Guid[] assets) foreach (Guid asset in assets) _catalog!.Link(asset, project.Value, folder);
         if (e.Data.GetData(FolderDragFormat) is Guid moved)
         {
@@ -302,7 +370,7 @@ public partial class WorkspaceBrowser : UserControl
         var panel = new StackPanel(); panel.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }); panel.Children.Add(text);
         return InlineDialog(title, panel, text, Localization.Text("Готово")) ? text.Text : null;
     }
-    private int Choose(string title, string[] choices)
+    internal int Choose(string title, string[] choices)
     {
         var panel = new StackPanel(); var combo = new ComboBox { ItemsSource = choices, SelectedIndex = 0, Margin = new Thickness(0, 0, 0, 16), MinWidth = 300 }; panel.Children.Add(combo);
         return InlineDialog(title, panel, combo, Localization.Text("Добавить сюда")) ? combo.SelectedIndex : -1;

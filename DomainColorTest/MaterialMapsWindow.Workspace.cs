@@ -7,6 +7,7 @@ namespace DomainColorTest;
 public partial class MaterialMapsWindow
 {
     private Action<MaterialMapDocument>? _saveWorkspace;
+    internal Action? SaveToUnreal { get; set; }
     private bool _workspacePending;
     private readonly DispatcherTimer _workspaceSaveTimer = new() { Interval = TimeSpan.FromMilliseconds(800) };
 

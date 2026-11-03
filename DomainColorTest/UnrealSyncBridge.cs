@@ -52,7 +52,7 @@ public sealed class UnrealSyncBridge
     {
         string project = Path.GetDirectoryName(ProjectPath ?? throw new InvalidOperationException("Сначала выберите проект Unreal."))!;
         string target = Path.Combine(project, "Plugins", "TesseraSync");
-        foreach (string relative in new[] { "TesseraSync.uplugin", "Content/Python/init_unreal.py", "Content/Python/tessera_sync.py" })
+        foreach (string relative in new[] { "Content/Python/tessera_project.py", "Content/Python/tessera_sync.py", "Content/Python/init_unreal.py", "TesseraSync.uplugin" })
         {
             using var source = typeof(UnrealSyncBridge).Assembly.GetManifestResourceStream("Tessera.Unreal." + relative)
                 ?? throw new InvalidOperationException("Не найден файл плагина TesseraSync: " + relative);
