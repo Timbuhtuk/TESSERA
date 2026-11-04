@@ -73,8 +73,12 @@ internal static class ReleaseNotesChecks
                 Capture(settings, Path.Combine(root, theme + "-settings-minimum.png"));
             }
             tabs.SelectedItem = Get<TabItem>(settings, "generalTab"); Pump();
-            Require(Get<ComboBox>(settings, "languageInput").IsVisible && Get<StackPanel>(settings, "updatesHost").Children.Count == 1,
-                "General settings lost language or updates");
+            var updates = Get<Panel>(settings, "updatesHost");
+            var installedVersion = Get<TextBlock>(settings, "installedVersionLabel");
+            Require(Get<ComboBox>(settings, "languageInput").IsVisible && updates.Children.Count == 2 &&
+                updates.Children.OfType<Button>().Single().IsVisible && installedVersion.IsVisible &&
+                installedVersion.Text == Localization.Format("Текущая версия: {0}", $"v{GitHubUpdater.CurrentVersion.ToString(3)}"),
+                "General settings lost language, update checking or the installed version");
         }
         finally { restarted.Close(); Pump(); }
 
