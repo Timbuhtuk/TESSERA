@@ -140,7 +140,7 @@ def _import(package, payload, existing, kind):
         if not isinstance(texture, unreal.Texture2D) or (existing and texture != existing):
             raise ValueError("Unreal did not update the existing Texture2D in place")
         if not existing:
-            texture.set_editor_property("srgb", False)
+            texture.set_editor_property("srgb", kind == "color")
             if kind == "normal":
                 texture.set_editor_property("compression_settings", unreal.TextureCompressionSettings.TC_NORMALMAP)
         import_data = texture.get_editor_property("asset_import_data")
@@ -149,7 +149,7 @@ def _import(package, payload, existing, kind):
                 for index, source in enumerate(old_files):
                     import_data.scripted_add_filename(source, index, "")
             elif not existing:
-                # A new map can be reimported without relying on a temporary staging folder.
+                # A new texture can be reimported without relying on a temporary staging folder.
                 source_dir = os.path.join(ROOT, "sources", *package.split("/")[2:-1])
                 os.makedirs(source_dir, exist_ok=True)
                 source = os.path.join(source_dir, name + ".png")
@@ -161,6 +161,8 @@ def _import(package, payload, existing, kind):
 
 
 def _process(directory, request):
+    if unreal.AssetRegistryHelpers.get_asset_registry().is_loading_assets():
+        return None
     path = request["path"]
     package = _package(path)
     operation = request["operation"]
@@ -171,8 +173,8 @@ def _process(directory, request):
     if operation == "create":
         if exists or _revision(package):
             return {"status": "occupied"}
-        if request.get("kind") not in ("height", "normal", "ao"):
-            raise ValueError("Only new material maps can be created here")
+        if request.get("kind") not in ("color", "height", "normal", "ao"):
+            raise ValueError("Unsupported texture kind")
     elif not isinstance(texture, unreal.Texture2D) or texture.get_path_name() != path:
         return {"status": "missing"}
     else:
@@ -214,6 +216,8 @@ def process_requests(limit=1):
             result = {"status": "error", "message": str(error)}
             unreal.log_warning("Tessera project: " + str(error))
         if result is not None:
+            if result.get("status") == "saved" and request["operation"] == "create":
+                publish_catalog()
             legacy._write_json(response, result)
             completed += 1
         if completed >= limit:

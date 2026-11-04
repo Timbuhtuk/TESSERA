@@ -78,7 +78,7 @@ public static class UnrealSyncChecks
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         if (!thread.Join(TimeSpan.FromSeconds(45))) throw new Exception("Unreal library check timed out");
-        if (failure is not null) throw new Exception("Unreal library check failed", failure);
+        if (failure is not null) throw new Exception("Unreal library check failed: " + failure, failure);
     }
 
     private static void VerifyProjectLibrary()
@@ -118,6 +118,9 @@ public static class UnrealSyncChecks
             new WorkspaceCatalog(libraryRoot).CreateProject("Local");
             new UnrealSyncBridge(Path.Combine(libraryRoot, "unreal-sync.json")).SelectProject(project);
             Guid assetId;
+            Guid createdId;
+            Guid createdResultId;
+            string createdRequestFolder;
             string requestFolder;
             var window = new MainWindow(libraryRoot);
             try
@@ -174,7 +177,7 @@ public static class UnrealSyncChecks
                 list.SelectedItem = asset;
                 Require(((StackPanel)window.Browser.FindName("assetTagsPanel")).Visibility == Visibility.Collapsed &&
                     ((StackPanel)window.Browser.FindName("assetManagementPanel")).Visibility == Visibility.Collapsed &&
-                    list.ContextMenu.Items.OfType<MenuItem>().Where(i => i.Visibility == Visibility.Visible).All(i => Equals(i.Tag, "open")),
+                    list.ContextMenu.Items.OfType<MenuItem>().Where(i => i.Visibility == Visibility.Visible).All(i => i.Tag is "open" or "create-unreal"),
                     "Unreal selection exposes asset management actions");
                 var local = new WorkspaceAsset { Name = "Local image" };
                 workspace.State.Assets.Add(local);
@@ -203,9 +206,66 @@ public static class UnrealSyncChecks
                     active.Generations.Add(new ImageLibrary(libraryRoot).SaveGeneration(active, pixels, null, new GenerationEntry { Operation = "Test result" }));
                 Require(asset.Unreal!.ResultRevisions.GetValueOrDefault(active.Generations[0].Id) == "rev1", "A local result lost its original Unreal revision");
                 File.Delete(Path.Combine(bridge, "editor.json"));
+                Get<ListBox>(window, "generationStrip").SelectedItem = active.Generations[0];
+                Require(window.ProcessingBasis == 1, "The new texture check did not select the processed result");
+                bool duplicateRejected = false, invalidFolderRejected = false, destinationAccepted = false;
+                var dialogTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+                dialogTimer.Tick += (_, _) =>
+                {
+                    var dialog = window.OwnedWindows.Cast<Window>().FirstOrDefault(w => w.GetType().Name == "UnrealTextureDialog");
+                    if (dialog is null) return;
+                    dialogTimer.Stop();
+                    T Input<T>(string name) => (T)dialog.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dialog)!;
+                    var folder = Input<ComboBox>("FolderInput");
+                    var name = Input<TextBox>("NameInput");
+                    var confirm = Input<Button>("Confirm");
+                    folder.Text = "/Game/A/Nested";
+                    name.Text = "Stone";
+                    duplicateRejected = !confirm.IsEnabled;
+                    name.Text = "T_FromTessera";
+                    folder.Text = "/Outside";
+                    Pump();
+                    invalidFolderRejected = !confirm.IsEnabled;
+                    folder.Text = "/Game/Imported";
+                    name.Text = "T_FromTessera";
+                    Pump();
+                    destinationAccepted = confirm.IsEnabled;
+                    if (confirm.IsEnabled) confirm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    else dialog.Close();
+                };
+                dialogTimer.Start();
+                try
+                {
+                    var creation = (Task)typeof(MainWindow).GetMethod("CreateUnrealTextureAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null)!;
+                    while (!creation.IsCompleted) Pump();
+                    creation.GetAwaiter().GetResult();
+                }
+                finally { dialogTimer.Stop(); }
+                Require(duplicateRejected && invalidFolderRejected && destinationAccepted,
+                    $"The texture dialog validation failed: occupied={duplicateRejected}, outside /Game={invalidFolderRejected}, new destination={destinationAccepted}");
+                var created = workspace.State.Assets.Single(a => a.Unreal?.Path == "/Game/Imported/T_FromTessera.T_FromTessera");
+                createdId = created.Id;
+                Require(created.Unreal!.CreatePending && createdId != assetId && workspace.State.Links.Any(l => l.AssetId == createdId && l.ProjectId == unreal.Id),
+                    "An offline new texture lost its link or replaced the source asset");
+                createdRequestFolder = Directory.EnumerateDirectories(Path.Combine(bridge, "requests")).Single(p =>
+                {
+                    using var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(p, "request.json")));
+                    return request.RootElement.GetProperty("assetId").GetGuid() == createdId;
+                });
+                using (var payload = new Bitmap(Path.Combine(createdRequestFolder, "local.png")))
+                    Require(payload.Width == 4 && payload.Height == 4, "Creation sent the original instead of the selected result");
+                var pendingSource = (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+                using (var pixels = new Bitmap(2, 2))
+                {
+                    var result = new ImageLibrary(libraryRoot).SaveGeneration(pendingSource, pixels, null, new GenerationEntry { Operation = "Offline edit" });
+                    pendingSource.Generations.Add(result);
+                    createdResultId = result.Id;
+                }
+                window.OpenWorkspaceAssetAsync(asset).GetAwaiter().GetResult();
+                window.ProcessingBasis = 0;
                 Save(window).GetAwaiter().GetResult();
                 requestFolder = Directory.EnumerateDirectories(Path.Combine(bridge, "requests"))
-                    .Single(p => File.Exists(Path.Combine(p, "local.png")));
+                    .Single(p => p != createdRequestFolder && File.Exists(Path.Combine(p, "local.png")));
                 Require(!File.Exists(Path.Combine(requestFolder, "response.json")), "Offline save was incorrectly acknowledged");
                 var stale = workspace.CreateFolder(unreal.Id, null, "Stale empty folder");
                 workspace.State.FolderId = stale.Id;
@@ -222,6 +282,34 @@ public static class UnrealSyncChecks
                 Poll(window);
                 var state = window.Workspace!.State;
                 Require(state.Projects.Count(p => p.IsUnreal) == 1 && File.Exists(Path.Combine(requestFolder, "local.png")), "Restart lost the queued save or duplicated the project");
+                var created = state.Assets.Single(a => a.Id == createdId);
+                Require(created.Unreal!.CreatePending && state.Folders.Any(f => f.UnrealPath == "/Game/Imported"),
+                    "Restart pruned an offline new texture or its folder");
+                File.Copy(Path.Combine(createdRequestFolder, "local.png"), Path.Combine(createdRequestFolder, "unreal.png"));
+                File.WriteAllText(Path.Combine(createdRequestFolder, "response.json"), JsonSerializer.Serialize(new
+                {
+                    status = "saved", revision = "created1",
+                    sha256 = UnrealSyncBridge.Hash(Path.Combine(createdRequestFolder, "unreal.png"))
+                }));
+                Catalog([.. paths, created.Unreal.Path]); Poll(window);
+                Require(!created.Unreal.CreatePending && !created.Unreal.Missing && created.Unreal.LoadedRevision == "created1" &&
+                    state.Assets.Count(a => a.Unreal?.Path == created.Unreal.Path) == 1 &&
+                    created.Unreal.ResultRevisions.GetValueOrDefault(createdResultId) == "created1",
+                    "Confirmation created a duplicate or failed to bind the new texture");
+                window.OpenWorkspaceAssetAsync(created).GetAwaiter().GetResult();
+                var createdSource = (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+                Get<ListBox>(window, "generationStrip").SelectedItem = createdSource.Generations.Single(g => g.Id == createdResultId);
+                Save(window).GetAwaiter().GetResult();
+                string subsequent = Directory.EnumerateDirectories(Path.Combine(bridge, "requests")).Single(p =>
+                {
+                    using var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(p, "request.json")));
+                    return request.RootElement.GetProperty("assetId").GetGuid() == createdId &&
+                        request.RootElement.GetProperty("operation").GetString() == "save";
+                });
+                using (var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(subsequent, "request.json"))))
+                    Require(request.RootElement.GetProperty("operation").GetString() == "save" &&
+                        request.RootElement.GetProperty("revision").GetString() == "created1",
+                        "Ctrl+S recreated a confirmed texture instead of updating it");
                 var asset = state.Assets.Single(a => a.Id == assetId);
                 string export = Path.Combine(requestFolder, "unreal.png");
                 File.Copy(Path.Combine(requestFolder, "local.png"), export);
@@ -240,4 +328,6 @@ public static class UnrealSyncChecks
         }
         finally { Directory.Delete(root, true); }
     }
+
+    private static T Get<T>(FrameworkElement element, string name) => (T)element.FindName(name);
 }

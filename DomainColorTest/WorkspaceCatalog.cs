@@ -47,6 +47,7 @@ public sealed class WorkspaceAsset : INotifyPropertyChanged
         get
         {
             string summary = Width > 0 ? $"{KindLabel} · {Width} × {Height}" : KindLabel;
+            if (Unreal?.CreatePending == true) return summary + " · " + Localization.Text("Ожидает создания в Unreal");
             return Unreal?.NeedsDestination == true ? summary + " · " + Localization.Text("Связь с Unreal потеряна") : summary;
         }
     }

@@ -72,7 +72,7 @@ public partial class MainWindow
 
     private void PollUnrealProjects()
     {
-        if (!_workspaceReady || WorkspaceBusy || _workspaceCatalog is null || _unrealResolving.Count > 0) return;
+        if (!_workspaceReady || WorkspaceBusy || _workspaceCatalog is null || _unrealResolving.Count > 0 || _unrealCreating) return;
         var projects = _workspaceCatalog.State.Projects.Where(p => p.IsUnreal).ToArray();
         if (projects.Length == 0) return;
         bool changed = false;
@@ -162,7 +162,12 @@ public partial class MainWindow
         }
         if (saved)
         {
+            if (binding.CreatePending && job.Request.Operation == "create")
+                foreach (Guid id in binding.ResultRevisions.Where(pair => pair.Value.Length == 0).Select(pair => pair.Key).ToArray())
+                    binding.ResultRevisions[id] = revision;
+            binding.CreatePending = false;
             binding.LoadedRevision = revision;
+            binding.Revision = revision;
             if (job.Request.ResultId is { } resultId) binding.ResultRevisions[resultId] = revision;
             binding.Missing = false;
             _workspaceCatalog!.Save();
@@ -246,7 +251,13 @@ public partial class MainWindow
             }
             string revision = resultId is { } id ? link.ResultRevisions.GetValueOrDefault(id, link.LoadedRevision) : link.LoadedRevision;
             var conflict = existing.FirstOrDefault(j => j.Response?.Status == "conflict");
-            if (conflict is not null && WorkspaceCatalog.UnrealPathComparer.Equals(conflict.Request.Path, link.Path))
+            if (link.CreatePending)
+            {
+                if (existing.Any(j => j.Response?.Status == "occupied") && !ChooseNewUnrealDestination(asset, project)) return;
+                if (ValidateNewUnrealTexture(project, link.Path, asset.Id) is { } error) throw new InvalidOperationException(error);
+                revision = "";
+            }
+            else if (conflict is not null && WorkspaceCatalog.UnrealPathComparer.Equals(conflict.Request.Path, link.Path))
             {
                 if (!conflict.HasExport) throw new IOException(Localization.Text("Ответ Unreal не прошёл проверку."));
                 int choice = _workspaceBrowser!.Choose(Localization.Text("Текстура изменилась в Unreal."), [
@@ -272,8 +283,8 @@ public partial class MainWindow
                 if (TesseraDialog.Show(this, UnrealJobError(existing[0]) + "\n" + Localization.Text("Повторить сохранение?"),
                     "Unreal Engine", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
             }
-            string operation = link.Missing ? "create" : "save";
-            mailbox.Queue(asset.Id, operation, link.Path, revision, link.MapKind, png, resultId);
+            string operation = link.CreatePending || link.Missing ? "create" : "save";
+            mailbox.Queue(asset.Id, operation, link.Path, revision, operation == "create" ? link.MapKind ?? "color" : link.MapKind, png, resultId);
             foreach (var job in existing) job.Remove();
             statusLabel.Text = Localization.Text("Запись ожидает Unreal.");
         }

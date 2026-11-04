@@ -200,6 +200,12 @@ public partial class MainWindow
     private async Task WorkspaceActionAsync(string action, WorkspaceAsset? asset)
     {
         if (_workspaceCatalog is null || WorkspaceBusy) return;
+        if (action == "create-unreal" && asset?.Kind == WorkspaceAssetKind.Image)
+        {
+            if (_activeSource?.Id != asset.Id) await OpenWorkspaceAssetAsync(asset);
+            if (_activeSource?.Id == asset.Id) await CreateUnrealTextureAsync();
+            return;
+        }
         if (action == "copy" && asset is not null && _workspaceCatalog.State.ProjectId is { } project)
         {
             if (_workspaceCatalog.IsUnrealProject(project)) return;
