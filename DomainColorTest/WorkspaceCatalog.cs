@@ -97,6 +97,7 @@ public sealed class WorkspaceState
     public string Width { get; set; } = "";
     public string Height { get; set; } = "";
     public int Transparency { get; set; }
+    public int AssetView { get; set; }
 }
 
 /// <summary>Projects contain references; document payloads and image histories belong to the library.</summary>

@@ -15,6 +15,7 @@ internal static class IndependentCommand
           -o, --output PATH      PNG; по умолчанию <имя>_resized.png.
           --width N             Ширина результата: положительное целое число (48).
           --height N            Высота результата: положительное целое число (48).
+          --factor N            Масштаб обеих сторон вместо --width/--height; положительное число.
           --sprite              Весь кадр без обрезки; порог альфы действует при уменьшении.
           --alpha-threshold N   Порог покрытия: 1–100% (50), только --sprite при уменьшении.
           --crop-horizontal V   center, left, right (center).
@@ -46,6 +47,14 @@ internal static class IndependentCommand
           --quantization-colors N   1–4096 (64).
           --color-weights           Учитывать частоту исходных цветов.
           --dithering               Дизеринг для DB16, DB32, NES и GameBoy.
+          --connected               Учитывать связность цветов, как в редакторе.
+          --connected-colors N       Итоговое число цветов: 1–4096 (значение --quantization-colors).
+          --connectivity-weight N   Связность: 0–100% (75).
+          --tile-size N             Размер локальной области: 0 или 4–256 (16); 0 отключает области.
+          --local-weight N          Локальный вес: 0–100% (55).
+          --detail-weight N         Различие цветов: 0–100% (66).
+          --context-weight N        Соседи при замене: 0–100% (30).
+          --distance-space V        oklab или cielab (oklab).
           --overwrite               Разрешить замену результата.
           --json                    Отчёт JSON.
           -h, --help                Эта справка.
@@ -59,13 +68,15 @@ internal static class IndependentCommand
     {
         "--input", "--output", "--width", "--height", "--sprite", "--alpha-threshold",
         "--crop-horizontal", "--crop-vertical", "--block-mode", "--brightness", "--contrast",
-        "--saturation", "--edge", "--overwrite", "--json"
+        "--saturation", "--edge", "--factor", "--overwrite", "--json"
     };
 
     private static readonly HashSet<string> ColorOptions = new(StringComparer.Ordinal)
     {
         "--input", "--output", "--color-mode", "--palette", "--palette-step", "--quantization",
-        "--quantization-colors", "--color-weights", "--dithering", "--overwrite", "--json"
+        "--quantization-colors", "--color-weights", "--dithering", "--connected", "--connected-colors",
+        "--connectivity-weight", "--tile-size", "--local-weight", "--detail-weight", "--context-weight",
+        "--distance-space", "--overwrite", "--json"
     };
 
     public static int Run(string[] args, bool scale, TextWriter output, TextWriter error)
@@ -80,7 +91,7 @@ internal static class IndependentCommand
         {
             ValidateOptions(args, scale);
             CliArguments parsed;
-            try { parsed = CliArguments.Parse(args, independentColors: !scale); }
+            try { parsed = CliArguments.Parse(args, independentColors: !scale, independentResize: scale); }
             catch (ArgumentException ex) { throw new CliUsageException(ex.Message); }
 
             bool explicitOutput = args.Any(a => a is "-o" or "--output" || a.StartsWith("--output=", StringComparison.Ordinal) ||
@@ -99,9 +110,22 @@ internal static class IndependentCommand
             using var source = CliApplication.LoadImage(parsed.Input);
 
             var timer = Stopwatch.StartNew();
+            DownscaleOptions effectiveOptions;
+            try
+            {
+                effectiveOptions = parsed.ResizeFactor is { } factor
+                    ? new PixelArtWorkflows.ResizeFactorSettings
+                    {
+                        Factor = factor, SpriteMode = parsed.Options.SpriteMode,
+                        AlphaThreshold = parsed.Options.AlphaThreshold,
+                        CropHorizontal = parsed.Options.CropHorizontal, CropVertical = parsed.Options.CropVertical,
+                        BlockMode = parsed.Options.BlockMode, ManualCriteria = parsed.Options.ManualCriteria
+                    }.Resolve(source.Width, source.Height) : parsed.Options;
+            }
+            catch (InvalidDataException ex) { throw new CliUsageException(ex.Message); }
             using var result = scale
-                ? IndependentImageProcessor.Scale(source, parsed.Options)
-                : IndependentImageProcessor.ApplyColors(source, parsed.Options);
+                ? IndependentImageProcessor.Scale(source, effectiveOptions)
+                : PaletteProcessor.Apply(source, effectiveOptions, parsed.ConnectedPalette);
             CliApplication.SaveImage(result, target, parsed.Overwrite);
             timer.Stop();
 
@@ -113,7 +137,9 @@ internal static class IndependentCommand
                     output = target,
                     sourceSize = new { width = source.Width, height = source.Height },
                     outputSize = new { width = result.Width, height = result.Height },
-                    options = parsed.Options,
+                    options = effectiveOptions,
+                    parsed.ResizeFactor,
+                    parsed.ConnectedPalette,
                     elapsedSeconds = timer.Elapsed.TotalSeconds
                 }, new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
             else

@@ -1451,6 +1451,169 @@ try
         var parsed = CliArguments.Parse(["--width=12", "--", "--source.png"]);
         Require(Path.GetFileName(parsed.Input) == "--source.png" && parsed.Options.TargetWidth == 12, "End-of-options parsing");
     });
+    Check("Editor processing tools have direct CLI commands", () =>
+    {
+        string trim = Path.Combine(directory, "editor-trim.png");
+        string sharpen = Path.Combine(directory, "editor-sharpen.png");
+        string channel = Path.Combine(directory, "editor-channel.png");
+        string tcr = Path.Combine(directory, "editor-tcr.png");
+        using var source = new Bitmap(input);
+
+        Require(Run(["trim", input, "-o", trim]).Code == 0, "Trim command failed");
+        using (var expected = BitmapFactory.CropTransparentEdges(source))
+        using (var actual = new Bitmap(trim)) EqualPixels(expected, actual);
+
+        Require(Run(["sharpen", input, "-o", sharpen, "--strength", "75", "--threshold", "3"]).Code == 0,
+            "Sharpen command failed");
+        using (var expected = ImageFilters.Sharpen(source, 75, 3))
+        using (var actual = new Bitmap(sharpen)) EqualPixels(expected, actual);
+
+        Require(Run(["adjust-channel", input, "-o", channel, "--channel", "A", "--amount", "20",
+            "--mode", "percent", "--subtract"]).Code == 0, "Channel command failed");
+        using (var expected = ChannelAdjustment.Apply(source, new ChannelAdjustmentOptions
+        { Channel = RgbaChannel.A, Mode = ChannelAdjustmentMode.Percent, Amount = 20, Subtract = true }))
+        using (var actual = new Bitmap(channel)) EqualPixels(expected, actual);
+
+        Require(Run(["tcr", input, "-o", tcr, "--mode", "mixed", "--factor", "4"]).Code == 0,
+            "TCR command failed");
+        using (var expected = FinalistReducer.Reduce(source, FinalistMode.HalfAndHalf, 4))
+        using (var actual = new Bitmap(tcr)) EqualPixels(expected, actual);
+
+        Require(Run(["adjust-channel", input, "--channel", "X", "--amount", "1"]).Code == 2,
+            "Invalid channel accepted");
+        Require(Run(["tcr", input, "--factor", "1"]).Code == 2, "Invalid TCR factor accepted");
+        Require(Run(["sharpen", input, "--threshold", "65"]).Code == 2, "Invalid sharpen threshold accepted");
+    });
+
+    Check("Editor palette, scale, contour and material settings are available from CLI", () =>
+    {
+        string scaled = Path.Combine(directory, "factor.png");
+        string connected = Path.Combine(directory, "connected.png");
+        string map = Path.Combine(directory, "contour-map.png");
+        string gridPreview = Path.Combine(directory, "grid-preview.png");
+        string mapsDir = Path.Combine(directory, "maps");
+        string mapDocument = Path.Combine(directory, "maps.tmaps");
+        Require(Run(["resize", input, "-o", scaled, "--factor", "0.5"]).Code == 0,
+            "Scale factor command failed");
+        using (var actual = new Bitmap(scaled))
+            Require(actual.Width == 34 && actual.Height == 31, "Scale factor rounding changed");
+        Require(Run(["colors", input, "-o", connected, "--color-mode", "quantization", "--connected",
+            "--connected-colors", "8", "--connectivity-weight", "75", "--tile-size", "16"]).Code == 0,
+            "Connected palette command failed");
+        using (var actual = new Bitmap(connected)) Require(actual.Size == new Size(67, 61), "Palette size changed");
+        Require(Run(["contour-map", input, "-o", map, "--window-size", "3"]).Code == 0,
+            "Contour map command failed");
+        using (var actual = new Bitmap(map)) Require(actual.Size == new Size(67, 61), "Contour map size changed");
+        Require(Run(["grid-preview", input, "-o", gridPreview, "--step-x", "8", "--step-y", "8",
+            "--offset-x", "2", "--offset-y", "3"]).Code == 0, "Grid preview failed");
+        using (var actual = new Bitmap(gridPreview)) Require(actual.Size == new Size(67, 61), "Grid preview size changed");
+        Require(Run(["material-maps", input, "--output-dir", mapsDir, "--document-output", mapDocument,
+            "--normal-convention", "opengl"]).Code == 0,
+            "Material maps command failed");
+        foreach (string kind in new[] { "height", "normal", "ao" })
+        {
+            using var actual = new Bitmap(Path.Combine(mapsDir, $"исходное изображение_{kind}.png"));
+            Require(actual.Size == new Size(67, 61), $"{kind} map size changed");
+        }
+        string painted = Path.Combine(directory, "painted.tmaps");
+        Require(Run(["material-document", "paint", mapDocument, "-o", painted, "--map", "height",
+            "--x", "10", "--y", "10", "--value", "1"]).Code == 0, "Material paint failed");
+        string changed = Path.Combine(directory, "changed.tmaps");
+        Require(Run(["material-document", "settings", painted, "-o", changed,
+            "--normal-strength", "6"]).Code == 0, "Material settings failed");
+        Require(MaterialMapFile.Load(changed).NormalStrength == 6, "Material setting was not saved");
+        string exportedMaps = Path.Combine(directory, "exported-maps");
+        Require(Run(["material-document", "export", changed, "--output-dir", exportedMaps]).Code == 0,
+            "Material document export failed");
+        Require(Directory.GetFiles(exportedMaps, "*.png").Length == 3, "Material export count changed");
+        Require(Run(["resize", input, "--factor", "0.5", "--width", "20"]).Code == 2,
+            "Scale factor accepted conflicting dimensions");
+        Require(Run(["colors", input, "--tile-size", "16"]).Code == 2,
+            "Connected palette setting accepted without switch");
+    });
+
+    Check("Tile inspection, suggestions, slicing and edge smoothing are available from CLI", () =>
+    {
+        string atlas = Path.Combine(directory, "tile-atlas.png");
+        using (var fixture = new Bitmap(32, 32, PixelFormat.Format32bppArgb))
+        {
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    fixture.SetPixel(x, y, Color.FromArgb(255, x < 16 ? 20 : 180, y < 16 ? 30 : 200, 80));
+            fixture.Save(atlas, ImageFormat.Png);
+        }
+        var inspect = Run(["inspect-tiles", atlas, "--json"]);
+        Require(inspect.Code == 0, inspect.Error);
+        using (var report = JsonDocument.Parse(inspect.Output))
+            Require(report.RootElement.GetProperty("horizontalDifferences").GetArrayLength() == 32,
+                "Tile seam length changed");
+        Require(Run(["suggest-tiles", atlas, "--json"]).Code == 0, "Tile suggestion failed");
+        string target = Path.Combine(directory, "sliced");
+        Require(Run(["slice-tiles", atlas, "--tile-width", "16", "--tile-height", "16",
+            "--output-dir", target]).Code == 0, "Tile slicing failed");
+        Require(Directory.GetFiles(target, "*.png").Length == 4, "Wrong tile count");
+        using (var tile = new Bitmap(Path.Combine(target, "tile-atlas_c2_r2.png")))
+            Require(tile.Size == new Size(16, 16) && tile.GetPixel(0, 0).R == 180, "Wrong tile region");
+        string smooth = Path.Combine(directory, "tile-smoothed.png");
+        Require(Run(["tile-smooth", atlas, "-o", smooth, "--edges-only", "--band", "2"]).Code == 0,
+            "Tile edge smoothing failed");
+        using (var original = new Bitmap(atlas))
+        using (var result = new Bitmap(smooth))
+            Require(original.GetPixel(10, 10) == result.GetPixel(10, 10), "Tile interior changed");
+        Require(Run(["slice-tiles", atlas, "--tile-width", "16"]).Code == 2,
+            "Incomplete tile dimensions accepted");
+    });
+
+    Check("Macro CLI can save, rename and delete a recipe", () =>
+    {
+        string library = Path.Combine(directory, "managed-macros");
+        string recipePath = Path.Combine(directory, "recipe.json");
+        File.WriteAllText(recipePath, JsonSerializer.Serialize(new ProcessingRecipe
+        { Steps = [new ProcessingStep { OperationId = ProcessingOperations.Trim }] }, WorkflowJson.Options));
+        Guid id = Guid.NewGuid();
+        Require(Run(["macro", "save", "--library", library, "--recipe", recipePath,
+            "--name", "Trim", "--id", id.ToString("D")]).Code == 0, "Macro save failed");
+        Require(new MacroStore(library).List().Single().Name == "Trim", "Macro was not saved");
+        Require(Run(["macro", "rename", "--library", library, "--id", id.ToString("D"),
+            "--name", "Trim New"]).Code == 0, "Macro rename failed");
+        Require(new MacroStore(library).List().Single().Name == "Trim New", "Macro was not renamed");
+        Require(Run(["macro", "delete", "--library", library, "--id", id.ToString("D")]).Code == 0,
+            "Macro delete failed");
+        Require(new MacroStore(library).List().Count == 0, "Macro was not removed");
+    });
+
+    Check("Board CLI creates a compatible document and exports with the desktop renderer", () =>
+    {
+        string board = Path.Combine(directory, "board.tboard");
+        string edited = Path.Combine(directory, "board-with-image.tboard");
+        string asset = Path.Combine(directory, "board-image.png");
+        string image = Path.Combine(directory, "board-export.png");
+        using (var fixture = new Bitmap(4, 4, PixelFormat.Format32bppArgb))
+        {
+            using var graphics = Graphics.FromImage(fixture);
+            graphics.Clear(Color.Red);
+            fixture.Save(asset, ImageFormat.Png);
+        }
+        Require(Run(["board", "create", "-o", board, "--width", "128", "--height", "128"]).Code == 0,
+            "Board create failed");
+        Require(Run(["board", "add", board, "--image", asset, "-o", edited, "--x", "2", "--y", "3",
+            "--name", "Red tile"]).Code == 0, "Board add failed");
+        var info = Run(["board", "info", edited, "--json"]);
+        Require(info.Code == 0 && info.Output.Contains("Red tile"), "Board info failed");
+        var export = Run(["board", "export", edited, "-o", image]);
+        Require(export.Code == 0, export.Error);
+        using var result = new Bitmap(image);
+        Require(result.Size == new Size(128, 128), "Board export dimensions changed");
+        Require(result.GetPixel(3, 4).R > 200 && result.GetPixel(20, 20).ToArgb() == Color.White.ToArgb(),
+            "Board export placement or background changed");
+        string moved = Path.Combine(directory, "board-moved.tboard");
+        Require(Run(["board", "transform", edited, "--index", "1", "-o", moved,
+            "--x", "10", "--angle", "20"]).Code == 0, "Board transform failed");
+        string empty = Path.Combine(directory, "board-empty.tboard");
+        Require(Run(["board", "remove", moved, "--index", "1", "-o", empty]).Code == 0,
+            "Board remove failed");
+        Require(Run(["board", "info", empty]).Output.Contains("слоёв: 0"), "Board layer was not removed");
+    });
 }
 finally
 {

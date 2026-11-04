@@ -7,7 +7,7 @@ using PixelArtDownscale;
 
 namespace Pixelizator.Cli;
 
-internal static class ImageToolsCommand
+internal static partial class ImageToolsCommand
 {
     internal const string MonochromeHelp = """
         Tessera monochrome — перевести видимые пиксели в оттенки серого.
@@ -32,6 +32,7 @@ internal static class ImageToolsCommand
           --color-tolerance N    Сходство цветов: 0–40 (12).
           --strength N           Сила очистки: 0–100 (65).
           --detail-protection N  Защита мелких деталей: 0–100 (80).
+          --no-detail-protection Отключить защиту мелких деталей.
           --edge-protection N    Защита краёв: 0–100 (80).
           --overwrite            Разрешить замену результата.
           --json                 Отчёт JSON.
@@ -82,13 +83,14 @@ internal static class ImageToolsCommand
         """;
 
     internal const string PaletteHelp = """
-        Tessera palette-info — показать число и список видимых RGB-цветов.
+        Tessera palette-info — свойства изображения и список видимых RGB-цветов.
         Использование: tessera palette-info input.png [--json]
 
           -i, --input PATH       Исходное изображение.
           --json                 Отчёт JSON с массивом colors.
           -h, --help             Эта справка.
 
+        Размер, формат, DPI, прозрачность и оттенки серого показываются всегда.
         Список выводится максимум для 1024 цветов; общее число считается всегда.
         """;
 
@@ -105,6 +107,13 @@ internal static class ImageToolsCommand
           --characters TEXT      Собственная шкала яркости в одну строку.
           --invert-source        Инвертировать яркость при выборе символов.
           --invert-render        Чёрный текст на белом фоне вместо белого на чёрном.
+          --columns N            Ширина ASCII: 0 — авто, 1–512; только fit.
+          --natural-size         Размер PNG по символьной сетке; только fit.
+          --color-mode V         monochrome, source, custom (monochrome); только PNG.
+          --foreground #RRGGBB   Цвет символов для custom (white).
+          --background #RRGGBB   Цвет фона для source/custom (black).
+          --dither               Упорядоченный дизеринг символов.
+          --font-size N          Размер шрифта PNG: 1–256 (16).
           --overwrite            Разрешить замену результатов.
           --json                 Отчёт JSON.
           -h, --help             Эта справка.
@@ -144,8 +153,11 @@ internal static class ImageToolsCommand
         try
         {
             var parsed = Parse(args,
-                ["--input", "--output", "--passes", "--color-tolerance", "--strength", "--detail-protection", "--edge-protection"], CommonFlags);
+                ["--input", "--output", "--passes", "--color-tolerance", "--strength", "--detail-protection", "--edge-protection"],
+                ["--no-detail-protection", "--overwrite", "--json"]);
             string target = GetImageOutput(parsed, "_smoothed.png");
+            if (parsed.Flag("--no-detail-protection") && parsed.Value("--detail-protection") is not null)
+                throw new CliUsageException("--no-detail-protection не сочетается с --detail-protection.");
             var defaults = new ColorCleanupOptions();
             var options = new DownscaleOptions
             {
@@ -154,7 +166,8 @@ internal static class ImageToolsCommand
                 {
                     ColorTolerance = parsed.Number("--color-tolerance", defaults.ColorTolerance, 0, 40),
                     Strength = parsed.Number("--strength", defaults.Strength * 100, 0, 100) / 100,
-                    DetailProtection = parsed.Number("--detail-protection", defaults.DetailProtection * 100, 0, 100) / 100,
+                    DetailProtection = parsed.Flag("--no-detail-protection") ? 0 :
+                        parsed.Number("--detail-protection", defaults.DetailProtection * 100, 0, 100) / 100,
                     EdgeProtection = parsed.Number("--edge-protection", defaults.EdgeProtection * 100, 0, 100) / 100
                 }
             };
@@ -283,15 +296,44 @@ internal static class ImageToolsCommand
             IReadOnlyList<Color> palette = count <= ImageColorTools.MaxPaletteColors
                 ? ImageColorTools.GetPalette(source) : [];
             string[] colors = palette.Select(Hex).ToArray();
+            long transparent = 0, translucent = 0, opaque = 0;
+            bool grayscale = true;
+            var frequencies = new Dictionary<int, long>();
+            for (int y = 0; y < source.Height; y++)
+                for (int x = 0; x < source.Width; x++)
+                {
+                    Color pixel = source.GetPixel(x, y);
+                    if (pixel.A == 0) transparent++;
+                    else
+                    {
+                        if (pixel.A == 255) opaque++; else translucent++;
+                        if (pixel.R != pixel.G || pixel.G != pixel.B) grayscale = false;
+                        int rgb = pixel.ToArgb() & 0xFFFFFF;
+                        frequencies[rgb] = frequencies.GetValueOrDefault(rgb) + 1;
+                    }
+                }
+            var colorFrequencies = frequencies.OrderByDescending(pair => pair.Value).Take(ImageColorTools.MaxPaletteColors)
+                .Select(pair => new { hex = $"#{pair.Key:X6}", pixels = pair.Value }).ToArray();
+            var alpha = new { transparent, translucent, opaque };
+            var format = new { pixelFormat = source.PixelFormat.ToString(),
+                bitsPerPixel = System.Drawing.Image.GetPixelFormatSize(source.PixelFormat),
+                dpiX = source.HorizontalResolution, dpiY = source.VerticalResolution,
+                fileBytes = new FileInfo(parsed.Input).Length };
             if (parsed.Flag("--json"))
                 output.WriteLine(Json(new
                 {
                     process = "palette-info", input = parsed.Input,
-                    size = new { width = source.Width, height = source.Height }, count,
-                    colorsListed = colors.Length, colors
+                    size = new { width = source.Width, height = source.Height },
+                    pixelCount = (long)source.Width * source.Height,
+                    aspectRatio = source.Width / (double)source.Height,
+                    count, grayscale, alpha, format, colorsListed = colors.Length, colors,
+                    colorFrequencies, groupedColors = Math.Max(0, frequencies.Count - colorFrequencies.Length)
                 }));
             else
             {
+                output.WriteLine($"Размер: {source.Width} × {source.Height}; пикселей: {(long)source.Width * source.Height:N0}; формат: {format.pixelFormat}, {format.bitsPerPixel} бит");
+                output.WriteLine($"DPI: {format.dpiX:F1} × {format.dpiY:F1}; файл: {format.fileBytes:N0} байт; оттенки серого: {(grayscale ? "да" : "нет")}");
+                output.WriteLine($"Альфа: прозрачных {transparent:N0}, полупрозрачных {translucent:N0}, непрозрачных {opaque:N0}");
                 output.WriteLine($"Видимых цветов: {count:N0}");
                 if (colors.Length > 0) output.WriteLine(string.Join(Environment.NewLine, colors));
                 else if (count > ImageColorTools.MaxPaletteColors)
@@ -309,22 +351,43 @@ internal static class ImageToolsCommand
         try
         {
             var parsed = Parse(args,
-                ["--input", "--output", "--text-output", "--image-output", "--mode", "--preset", "--characters"],
-                ["--invert-source", "--invert-render", "--overwrite", "--json"]);
+                ["--input", "--output", "--text-output", "--image-output", "--mode", "--preset", "--characters",
+                    "--columns", "--color-mode", "--foreground", "--background", "--font-size"],
+                ["--invert-source", "--invert-render", "--natural-size", "--dither", "--overwrite", "--json"]);
             string mode = parsed.Choice("--mode", "fit", "fit", "per-pixel");
             string characters = GetAsciiCharacters(parsed);
             var (textTarget, imageTarget) = GetAsciiOutputs(parsed);
             ValidateOutputs(parsed.Input, parsed.Flag("--overwrite"), textTarget, imageTarget);
+            int columns = parsed.Integer("--columns", 0, 0, 512);
+            if (mode == "per-pixel" && (columns != 0 || parsed.Flag("--natural-size")))
+                throw new CliUsageException("--columns и --natural-size доступны только с --mode fit.");
+            string color = parsed.Choice("--color-mode", "monochrome", "monochrome", "source", "custom");
+            if (color != "custom" && parsed.Value("--foreground") is not null)
+                throw new CliUsageException("--foreground требует --color-mode custom.");
+            if (color == "monochrome" && parsed.Value("--background") is not null)
+                throw new CliUsageException("--background требует --color-mode source или custom.");
+            int foreground = parsed.Value("--foreground") is null ? Color.White.ToArgb() : parsed.Color("--foreground").ToArgb();
+            int background = parsed.Value("--background") is null ? Color.Black.ToArgb() : parsed.Color("--background").ToArgb();
+            int fontSize = parsed.Integer("--font-size", ImageFilters.DefaultAsciiFontSize, 1, 256);
             using var source = Load(parsed.Input);
+            if (imageTarget is not null && mode == "per-pixel" && source.Width > 512)
+                throw new CliUsageException("PNG в режиме per-pixel поддерживает ширину до 512 пикселей.");
             var timer = Stopwatch.StartNew();
             string text = mode == "fit"
-                ? ImageFilters.ToAscii(source, characters, parsed.Flag("--invert-source"))
-                : ImageFilters.ToAsciiPerPixel(source, characters, parsed.Flag("--invert-source"));
+                ? columns == 0 ? ImageFilters.ToAscii(source, characters, parsed.Flag("--invert-source"), parsed.Flag("--dither"))
+                    : ImageFilters.ToAsciiAtColumns(source, columns, characters, parsed.Flag("--invert-source"), parsed.Flag("--dither"))
+                : ImageFilters.ToAsciiPerPixel(source, characters, parsed.Flag("--invert-source"), parsed.Flag("--dither"));
             if (textTarget is not null) SaveText(textTarget, text, parsed.Flag("--overwrite"));
             if (imageTarget is not null)
             {
-                using var image = ImageFilters.RenderAscii(source, mode == "fit", characters,
-                    parsed.Flag("--invert-source"), parsed.Flag("--invert-render"));
+                using var image = ImageFilters.RenderAscii(source, mode == "fit" && !parsed.Flag("--natural-size"), characters,
+                    parsed.Flag("--invert-source"), parsed.Flag("--invert-render"), color switch
+                    {
+                        "source" => AsciiColorMode.Source,
+                        "custom" => AsciiColorMode.Custom,
+                        _ => AsciiColorMode.Monochrome
+                    }, foreground, background, mode == "per-pixel" ? source.Width : columns,
+                    parsed.Flag("--dither"), fontSize: fontSize);
                 CliApplication.SaveImage(image, imageTarget, parsed.Flag("--overwrite"));
             }
             timer.Stop();
@@ -332,8 +395,10 @@ internal static class ImageToolsCommand
                 output.WriteLine(Json(new
                 {
                     process = "ascii", input = parsed.Input, textOutput = textTarget, imageOutput = imageTarget,
-                    mode, characters, invertSource = parsed.Flag("--invert-source"),
-                    invertRender = parsed.Flag("--invert-render"), elapsedSeconds = timer.Elapsed.TotalSeconds
+                    mode, characters, columns, colorMode = color, foreground, background, fontSize,
+                    naturalSize = parsed.Flag("--natural-size"), dither = parsed.Flag("--dither"),
+                    invertSource = parsed.Flag("--invert-source"), invertRender = parsed.Flag("--invert-render"),
+                    elapsedSeconds = timer.Elapsed.TotalSeconds
                 }));
             else
             {

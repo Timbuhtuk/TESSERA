@@ -11,10 +11,16 @@ internal static class MacroCommand
         Использование:
           tessera macro list --library PATH [--json]
           tessera macro apply INPUT --macro FILE -o OUTPUT [--overwrite] [--json]
+          tessera macro save --library PATH --recipe FILE --name NAME [--id GUID] [--json]
+          tessera macro rename --library PATH --id GUID --name NAME [--json]
+          tessera macro delete --library PATH --id GUID [--json]
 
         Команды:
           list       Прочитать корректные *.json из <library>/macros.
           apply      Выполнить все шаги в памяти и сохранить только итоговое изображение.
+          save       Сохранить рецепт обработки как макрос библиотеки.
+          rename     Переименовать макрос библиотеки.
+          delete     Удалить макрос библиотеки.
 
         Коды возврата: 0 — успех; 1 — ошибка файла, макроса или обработки; 2 — ошибка параметров.
         """;
@@ -49,6 +55,9 @@ internal static class MacroCommand
         {
             "list" => List(args[1..], output, error),
             "apply" => Apply(args[1..], output, error),
+            "save" => Save(args[1..], output, error),
+            "rename" => Rename(args[1..], output, error),
+            "delete" => Delete(args[1..], output, error),
             _ => Usage($"Неизвестная команда macro: {args[0]}.", error)
         };
     }
@@ -141,6 +150,90 @@ internal static class MacroCommand
         catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }
         catch (Exception ex) { error.WriteLine(BaseMessage(ex)); return 1; }
     }
+
+    private static int Save(string[] args, TextWriter output, TextWriter error)
+    {
+        if (args.Length == 0 || args is ["--help"] or ["-h"])
+        {
+            output.WriteLine("Использование: tessera macro save --library PATH --recipe FILE --name NAME [--id GUID] [--json]");
+            return 0;
+        }
+        try
+        {
+            var parsed = Parse(args, ["--library", "--recipe", "--name", "--id"], ["--json"]);
+            string recipePath = Path.GetFullPath(Required(parsed, "--recipe"));
+            string library = Path.GetFullPath(Required(parsed, "--library"));
+            string name = Required(parsed, "--name");
+            Guid id = parsed.TryGetValue("--id", out string? value) ? ParseId(value) : Guid.NewGuid();
+            var recipe = JsonSerializer.Deserialize<ProcessingRecipe>(File.ReadAllText(recipePath), WorkflowJson.Options)
+                ?? throw new InvalidDataException("Пустой рецепт.");
+            if (recipe.Version != 1 || recipe.Steps is null || recipe.Steps.Count == 0)
+                throw new CliUsageException("Рецепт должен иметь версию 1 и хотя бы один шаг.");
+            var store = new MacroStore(library);
+            MacroDefinition saved = store.Save(new MacroDefinition { Id = id, Name = name, Steps = recipe.Steps });
+            if (parsed.ContainsKey("--json")) output.WriteLine(JsonSerializer.Serialize(new
+            {
+                process = "macro-save", library, path = store.PathFor(saved.Id), saved.Id, saved.Name,
+                stepCount = saved.Steps.Count
+            }, WorkflowJson.Options));
+            else output.WriteLine($"Макрос сохранён: {saved.Name} ({saved.Id:D})");
+            return 0;
+        }
+        catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }
+        catch (Exception ex) { error.WriteLine(BaseMessage(ex)); return 1; }
+    }
+
+    private static int Rename(string[] args, TextWriter output, TextWriter error)
+    {
+        if (args.Length == 0 || args is ["--help"] or ["-h"])
+        {
+            output.WriteLine("Использование: tessera macro rename --library PATH --id GUID --name NAME [--json]");
+            return 0;
+        }
+        try
+        {
+            var parsed = Parse(args, ["--library", "--id", "--name"], ["--json"]);
+            string library = Path.GetFullPath(Required(parsed, "--library"));
+            Guid id = ParseId(Required(parsed, "--id"));
+            var store = new MacroStore(library);
+            MacroDefinition existing = store.List().FirstOrDefault(macro => macro.Id == id)
+                ?? throw new IOException($"Макрос не найден: {id:D}.");
+            MacroDefinition saved = store.Save(new MacroDefinition { Id = id, Name = Required(parsed, "--name"), Steps = existing.Steps });
+            if (parsed.ContainsKey("--json")) output.WriteLine(JsonSerializer.Serialize(new
+            { process = "macro-rename", library, saved.Id, saved.Name }, WorkflowJson.Options));
+            else output.WriteLine($"Макрос переименован: {saved.Name} ({saved.Id:D})");
+            return 0;
+        }
+        catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }
+        catch (Exception ex) { error.WriteLine(BaseMessage(ex)); return 1; }
+    }
+
+    private static int Delete(string[] args, TextWriter output, TextWriter error)
+    {
+        if (args.Length == 0 || args is ["--help"] or ["-h"])
+        {
+            output.WriteLine("Использование: tessera macro delete --library PATH --id GUID [--json]");
+            return 0;
+        }
+        try
+        {
+            var parsed = Parse(args, ["--library", "--id"], ["--json"]);
+            string library = Path.GetFullPath(Required(parsed, "--library"));
+            Guid id = ParseId(Required(parsed, "--id"));
+            var store = new MacroStore(library);
+            if (!store.List().Any(macro => macro.Id == id)) throw new IOException($"Макрос не найден: {id:D}.");
+            store.Delete(id);
+            if (parsed.ContainsKey("--json")) output.WriteLine(JsonSerializer.Serialize(new
+            { process = "macro-delete", library, id }, WorkflowJson.Options));
+            else output.WriteLine($"Макрос удалён: {id:D}");
+            return 0;
+        }
+        catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }
+        catch (Exception ex) { error.WriteLine(BaseMessage(ex)); return 1; }
+    }
+
+    private static Guid ParseId(string value) => Guid.TryParse(value, out Guid id) && id != Guid.Empty
+        ? id : throw new CliUsageException("--id должен содержать непустой GUID.");
 
     private static Dictionary<string, string> Parse(string[] args, IReadOnlyCollection<string> valueOptions,
         IReadOnlyCollection<string> flagOptions)

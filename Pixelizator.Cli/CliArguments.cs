@@ -13,22 +13,26 @@ internal sealed record CliArguments(
     int PreviewScale,
     bool Overwrite,
     bool Json,
-    DownscaleOptions Options)
+    DownscaleOptions Options,
+    double? ResizeFactor = null,
+    ConnectivityPaletteOptions? ConnectedPalette = null)
 {
     private static readonly HashSet<string> ValueOptions = new(StringComparer.Ordinal)
     {
         "--input", "--output", "--width", "--height", "--crop-horizontal", "--crop-vertical",
         "--palette", "--palette-step", "--quantization", "--threads", "--block-mode",
         "--brightness", "--contrast", "--saturation", "--edge", "--cropped-output",
-        "--preview-output", "--preview-scale", "--alpha-threshold", "--quantization-colors", "--color-mode"
+        "--preview-output", "--preview-scale", "--alpha-threshold", "--quantization-colors", "--color-mode",
+        "--factor", "--connected-colors", "--connectivity-weight", "--tile-size", "--local-weight",
+        "--detail-weight", "--context-weight", "--distance-space"
     };
 
     private static readonly HashSet<string> FlagOptions = new(StringComparer.Ordinal)
     {
-        "--dithering", "--overwrite", "--json", "--sprite", "--color-weights"
+        "--dithering", "--overwrite", "--json", "--sprite", "--color-weights", "--connected"
     };
 
-    public static CliArguments Parse(string[] args, bool independentColors = false)
+    public static CliArguments Parse(string[] args, bool independentColors = false, bool independentResize = false)
     {
         var values = new Dictionary<string, string>(StringComparer.Ordinal);
         bool positionalOnly = false;
@@ -88,6 +92,14 @@ internal sealed record CliArguments(
 
         if (values.ContainsKey("--color-mode") && !independentColors)
             throw new CliUsageException("--color-mode доступен только для команды colors.");
+        if (values.ContainsKey("--factor") && (!independentResize || values.ContainsKey("--width") || values.ContainsKey("--height")))
+            throw new CliUsageException("--factor доступен только для resize и не сочетается с --width/--height.");
+        bool connected = values.ContainsKey("--connected");
+        if (new[] { "--connected-colors", "--connectivity-weight", "--tile-size", "--local-weight",
+            "--detail-weight", "--context-weight", "--distance-space" }.Any(values.ContainsKey) && !connected)
+            throw new CliUsageException("Настройки связности требуют --connected.");
+        if (connected && !independentColors)
+            throw new CliUsageException("--connected доступен только для команды colors.");
         if (independentColors && colorMode == IndependentColorMode.Quantization &&
             new[] { "--palette", "--palette-step", "--dithering" }.Any(values.ContainsKey))
             throw new CliUsageException("Режим quantization не принимает настройки палитры и дизеринга.");
@@ -146,11 +158,26 @@ internal sealed record CliArguments(
         string defaultOutput = Path.Combine(Path.GetDirectoryName(inputPath)!,
             Path.GetFileNameWithoutExtension(inputPath) + "_downscaled.png");
 
+        double? factor = values.ContainsKey("--factor") ? Number("--factor", 1, double.Epsilon, double.MaxValue) : null;
+        ConnectivityPaletteOptions? connectivity = connected ? new ConnectivityPaletteOptions
+        {
+            TargetColors = Integer("--connected-colors", options.QuantizationColors, 1, 4096),
+            ConnectivityWeight = Number("--connectivity-weight", 75, 0, 100) / 100,
+            TileSize = Integer("--tile-size", 16, 0, 256),
+            LocalWeight = Number("--local-weight", 55, 0, 100) / 100,
+            DetailWeight = Number("--detail-weight", 66, 0, 100) / 100,
+            ContextWeight = Number("--context-weight", 30, 0, 100) / 100,
+            DistanceSpace = Choice("--distance-space", PaletteDistanceSpace.Oklab,
+                ("oklab", PaletteDistanceSpace.Oklab), ("cielab", PaletteDistanceSpace.CieLab))
+        } : null;
+        if (connectivity is { TileSize: > 0 and < 4 })
+            throw new CliUsageException("--tile-size должен быть 0 или 4–256.");
+
         return new CliArguments(inputPath,
             Path.GetFullPath(values.GetValueOrDefault("--output", defaultOutput)),
             OptionalPath("--cropped-output"), OptionalPath("--preview-output"),
             Integer("--preview-scale", 8, 1, 100), values.ContainsKey("--overwrite"),
-            values.ContainsKey("--json"), options);
+            values.ContainsKey("--json"), options, factor, connectivity);
 
         void Add(string name, string value)
         {
@@ -167,6 +194,15 @@ internal sealed record CliArguments(
             if (!int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int result)
                 || result < min || result > max)
                 throw new CliUsageException($"{name}: требуется целое число от {min} до {max}.");
+            return result;
+        }
+
+        double Number(string name, double fallback, double min, double max)
+        {
+            if (!values.TryGetValue(name, out string? value)) return fallback;
+            if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result) ||
+                !double.IsFinite(result) || result < min || result > max)
+                throw new CliUsageException($"{name}: требуется число от {min} до {max}.");
             return result;
         }
 

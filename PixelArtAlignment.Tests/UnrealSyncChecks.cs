@@ -142,6 +142,30 @@ public static class UnrealSyncChecks
                 }
                 var list = (ListBox)window.Browser.FindName("assetList");
                 Require(list.Items.Count == paths.Length && list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null, "Large Unreal view was not virtualized");
+                var viewInput = (ComboBox)window.Browser.FindName("assetViewInput");
+                var retained = (WorkspaceAsset)list.Items[0];
+                list.SelectedItem = retained;
+                foreach (int mode in new[] { 1, 2, 0 })
+                {
+                    viewInput.SelectedIndex = mode; Pump(); window.UpdateLayout();
+                    Require(list.Items.Count == paths.Length && ReferenceEquals(list.SelectedItem, retained) &&
+                        list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null &&
+                        new WorkspaceCatalog(libraryRoot).State.AssetView == mode,
+                        "Changing asset view lost selection, persistence or virtualization");
+                    var first = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(0)!;
+                    var second = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(1)!;
+                    var a = first.TranslatePoint(new System.Windows.Point(), list);
+                    var b = second.TranslatePoint(new System.Windows.Point(), list);
+                    Require(mode == 1 ? Math.Abs(a.X - b.X) < 2 && b.Y > a.Y : b.X > a.X && Math.Abs(a.Y - b.Y) < 2,
+                        "Asset view did not arrange cards as a list or grid");
+                }
+                list.ScrollIntoView(list.Items[paths.Length - 1]); Pump(); window.UpdateLayout();
+                Require(list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is not null &&
+                    list.ItemContainerGenerator.ContainerFromIndex(0) is null,
+                    "Scrolling the virtualized asset view did not realize the last item");
+                list.ScrollIntoView(retained); Pump(); window.UpdateLayout();
+                Require(list.ItemContainerGenerator.ContainerFromIndex(0) is not null,
+                    "Scrolling the virtualized asset view did not return to the first item");
                 Require(workspace.State.Folders.All(f => f.Name is not ("Empty" or "Levels" or "Maps" or "__ExternalActors__")) &&
                     workspace.State.Folders.Any(f => f.UnrealPath == "/Game/A/Nested"), "The tree must contain texture folders and their ancestors only");
                 Require(workspace.State.Assets.Count(a => a.Name == "Stone") == 2, "Identical names were merged");
