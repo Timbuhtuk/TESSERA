@@ -133,6 +133,8 @@ public static class UnrealSyncChecks
                 Pump(); window.UpdateLayout();
                 var tree = (TreeView)window.Browser.FindName("projectTree");
                 var rootNode = tree.Items.OfType<TreeViewItem>().Single(n => n.Tag == unreal);
+                Require(((Border)rootNode.Template.FindName("HeaderFrame", rootNode)).ActualHeight <= 21,
+                    "Project tree rows are too tall");
                 var icon = ((Grid)rootNode.Header).Children.OfType<System.Windows.Shapes.Path>().Single();
                 foreach (var theme in new[] { TesseraTheme.Dark, TesseraTheme.Light })
                 {

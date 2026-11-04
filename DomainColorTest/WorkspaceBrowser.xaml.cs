@@ -127,7 +127,7 @@ public partial class WorkspaceBrowser : UserControl
         var node = new TreeViewItem
         {
             Header = new TextBlock { Text = name, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis },
-            Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 5, 2, 5)
+            Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 0, 2, 0)
         };
         AutomationProperties.SetName(node, name);
         Guid project = tag is WorkspaceProject p ? p.Id : ((WorkspaceFolder)tag).ProjectId;
