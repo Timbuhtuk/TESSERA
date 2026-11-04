@@ -108,7 +108,9 @@
                 <TextBlock x:Name="historyUndoDescription" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,16" />
                 <Separator Margin="0,0,0,16" />
                 <TextBlock x:Name="updatesHeading" FontWeight="SemiBold" Margin="0,0,0,10" />
-                <StackPanel x:Name="updatesHost" />
+                <WrapPanel x:Name="updatesHost">
+                    <TextBlock x:Name="installedVersionLabel" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,8" />
+                </WrapPanel>
             </StackPanel>
             </ScrollViewer>
             </TabItem>

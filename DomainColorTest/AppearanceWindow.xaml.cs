@@ -39,6 +39,7 @@ public partial class AppearanceWindow : Window
         languageSavedHint.Visibility = language == Localization.Language ? Visibility.Collapsed : Visibility.Visible;
         SelectTheme(theme);
         updatesHeading.Text = Localization.Text("Обновления");
+        installedVersionLabel.Text = Localization.Format("Текущая версия: {0}", $"v{GitHubUpdater.CurrentVersion.ToString(3)}");
         generalTab.Header = Localization.Text("Основные");
         patchNotesTab.Header = Localization.Text("Патчноуты");
         releaseNotesView.Bind(ReleaseNotesCatalog.Bundled);
@@ -48,10 +49,10 @@ public partial class AppearanceWindow : Window
     {
         if (button.Parent is Panel parent) parent.Children.Remove(button);
         button.Visibility = Visibility.Visible;
-        button.Margin = new Thickness(0, 0, 0, 8);
+        button.Margin = new Thickness(0, 0, 12, 8);
         button.Padding = new Thickness(12, 7, 12, 7);
         button.HorizontalAlignment = HorizontalAlignment.Left;
-        updatesHost.Children.Add(button);
+        updatesHost.Children.Insert(0, button);
         RegisterName("updateButton", button);
         Closed += (_, _) => { updatesHost.Children.Remove(button); UnregisterName("updateButton"); };
     }

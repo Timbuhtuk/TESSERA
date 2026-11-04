@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -15,7 +16,24 @@ public static class GitHubUpdater
     private static readonly HttpClient Client = CreateClient();
 
     public static Version CurrentVersion => typeof(App).Assembly.GetName().Version ?? new Version(0, 0, 0);
-    public static bool CanInstall => string.Equals(Path.GetFileName(Environment.ProcessPath), "Tessera.exe", StringComparison.OrdinalIgnoreCase);
+    public static bool CanInstall
+    {
+        [UnconditionalSuppressMessage("SingleFile", "IL3000", Justification = "An empty app assembly Location intentionally distinguishes the published bundle from development launches.")]
+        get
+        {
+            string? path = Environment.ProcessPath;
+            return path is not null && CanInstallFrom(path, typeof(App).Assembly.Location,
+                FileVersionInfo.GetVersionInfo(path).ProductName);
+        }
+    }
+
+    // The application assembly has no Location when embedded in the released single-file executable.
+    internal static bool CanInstallFrom(string? path, string assemblyLocation, string? productName) =>
+        string.IsNullOrEmpty(assemblyLocation) && IsTesseraExecutable(path, productName);
+
+    private static bool IsTesseraExecutable(string? path, string? productName) =>
+        !string.IsNullOrWhiteSpace(path) && string.Equals(Path.GetExtension(path), ".exe", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(productName, "Tessera", StringComparison.OrdinalIgnoreCase);
 
     public static async Task<TesseraRelease?> CheckAsync(HttpClient? client = null, Version? currentVersion = null)
     {
@@ -96,7 +114,7 @@ public static class GitHubUpdater
 
     public static void StartInstall(string downloadedPath, string digest)
     {
-        if (!CanInstall) throw new InvalidOperationException(Localization.Text("Автоустановка доступна только для Tessera.exe из релиза."));
+        if (!CanInstall) throw new InvalidOperationException(Localization.Text("Автоустановка доступна только для однофайловой сборки Tessera."));
         string target = Environment.ProcessPath!;
         string directory = Path.GetDirectoryName(target)!;
         string probe = Path.Combine(directory, $".Tessera-write-check-{Guid.NewGuid():N}");
@@ -114,11 +132,11 @@ public static class GitHubUpdater
         string source = Environment.ProcessPath ?? throw new IOException(Localization.Text("Не найден файл обновления."));
         if (!IsSha256(digest) || !MatchesSha256(source, digest))
             throw new InvalidDataException(Localization.Text("Контрольная сумма обновления не совпала."));
-        if (!string.Equals(Path.GetFileName(target), "Tessera.exe", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException(Localization.Text("Некорректный путь приложения."));
         target = Path.GetFullPath(target);
         if (!File.Exists(target) || Path.GetFullPath(source).Equals(target, StringComparison.OrdinalIgnoreCase))
-            throw new FileNotFoundException(Localization.Text("Не найден установленный Tessera.exe."), target);
+            throw new FileNotFoundException(Localization.Text("Не найден установленный файл Tessera."), target);
+        if (!IsTesseraExecutable(target, FileVersionInfo.GetVersionInfo(target).ProductName))
+            throw new InvalidDataException(Localization.Text("Некорректный путь приложения."));
 
         try
         {
