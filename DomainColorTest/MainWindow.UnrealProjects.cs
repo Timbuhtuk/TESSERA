@@ -29,6 +29,8 @@ public partial class MainWindow
         };
         if (_unrealSync.ProjectPath is { } previous && File.Exists(previous))
             _workspaceCatalog!.ConnectUnreal(previous);
+        foreach (var project in _workspaceCatalog!.State.Projects.Where(p => p.IsUnreal))
+            _workspaceCatalog.PruneUnrealFolders(project);
         _workspaceBrowser.RebuildTree();
     }
 
@@ -37,46 +39,16 @@ public partial class MainWindow
 
     private static UnrealProjectMailbox Mailbox(WorkspaceProject project) => new(project.UnrealProjectPath!);
 
-    private async Task ConnectUnrealProjectAsync(string path)
+    private void ConnectUnrealProject(string path)
     {
         var project = _workspaceCatalog!.ConnectUnreal(path);
         ShowWorkspaceBrowser();
         _workspaceBrowser!.Navigate("project", project.Id);
         _workspaceBrowser.RebuildTree();
         PollUnrealProjects();
-        if (!_workspaceCatalog.State.Folders.Any(f => f.ProjectId == project.Id))
-        {
-            string[] folders = await Task.Run(() => ReadUnrealFolders(path));
-            if (!_workspaceCatalog.State.Folders.Any(f => f.ProjectId == project.Id))
-            {
-                _workspaceCatalog.MirrorUnreal(project, new UnrealProjectMailbox.Catalog(2, folders, [], []));
-                _workspaceBrowser.RebuildTree();
-            }
-        }
-        if (InstalledUnrealPluginVersion(path) >= 2) return;
+        if (InstalledUnrealPluginVersion(path) >= UnrealSyncBridge.PluginVersion) return;
         if (TesseraDialog.Show(this, Localization.Text("Установить или обновить плагин Tessera Sync для этого проекта?"), "Unreal Engine", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             InstallProjectPlugin(path);
-    }
-
-    private static string[] ReadUnrealFolders(string projectPath)
-    {
-        var folders = new List<string> { "/Game" };
-        string content = Path.Combine(Path.GetDirectoryName(projectPath)!, "Content");
-        if (!Directory.Exists(content)) return folders.ToArray();
-        var options = new EnumerationOptions { IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint };
-        var pending = new Queue<(string Directory, string Path)>();
-        pending.Enqueue((content, "/Game"));
-        while (pending.TryDequeue(out var entry))
-        {
-            foreach (string directory in Directory.EnumerateDirectories(entry.Directory, "*", options))
-            {
-                string path = entry.Path + "/" + Path.GetFileName(directory);
-                if (!WorkspaceCatalog.VisibleUnrealFolder(path)) continue;
-                folders.Add(path);
-                pending.Enqueue((directory, path));
-            }
-        }
-        return folders.ToArray();
     }
 
     private static int InstalledUnrealPluginVersion(string projectPath)

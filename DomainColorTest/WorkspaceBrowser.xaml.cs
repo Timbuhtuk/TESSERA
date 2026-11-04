@@ -45,7 +45,7 @@ public partial class WorkspaceBrowser : UserControl
         var context = new ContextMenu();
         foreach (var pair in new[] { (Localization.Text("Открыть"), "open"), (Localization.Text("Добавить в проект…"), "link"), (Localization.Text("Переместить в папку…"), "move"), (Localization.Text("Изменить теги…"), "tags"), (Localization.Text("Независимая копия"), "copy"), (Localization.Text("Убрать из проекта"), "unlink"), (Localization.Text("Удалить из библиотеки…"), "delete") })
         {
-            var item = new MenuItem { Header = pair.Item1 };
+            var item = new MenuItem { Header = pair.Item1, Tag = pair.Item2 };
             item.Click += (_, _) => RunMenuAction(pair.Item2);
             context.Items.Add(item);
         }
@@ -247,9 +247,14 @@ public partial class WorkspaceBrowser : UserControl
     }
 
     private void AssetSelected(object sender, SelectionChangedEventArgs e) { if (_ready) UpdateDetails(); }
+    private bool CanManageSelection => _catalog?.IsUnrealProject(_catalog.State.ProjectId) != true && Selection.All(a => a.Unreal is null);
     private void UpdateDetails()
     {
         var selection = Selection; var asset = selection.FirstOrDefault();
+        var managementVisibility = CanManageSelection ? Visibility.Visible : Visibility.Collapsed;
+        assetTagsPanel.Visibility = assetManagementPanel.Visibility = managementVisibility;
+        foreach (var item in assetList.ContextMenu.Items.OfType<MenuItem>())
+            item.Visibility = Equals(item.Tag, "open") ? Visibility.Visible : managementVisibility;
         openAssetButton.IsEnabled = asset is not null;
         detailName.Text = selection.Count > 1 ? Localization.Format("Выбрано: {0}", selection.Count) : asset?.Name ?? Localization.Text("Выберите ассет");
         detailSummary.Text = asset?.Summary ?? ""; detailPreview.Source = asset?.Thumbnail;
@@ -264,6 +269,7 @@ public partial class WorkspaceBrowser : UserControl
     private void TagsClicked(object sender, RoutedEventArgs e) => Safe(() => SetTags(tagsInput.Text));
     private void SetTags(string text)
     {
+        if (!CanManageSelection) return;
         var tags = text.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         foreach (var asset in Selection) asset.Tags = [.. tags];
         _catalog!.Save(); Refresh();
@@ -272,6 +278,7 @@ public partial class WorkspaceBrowser : UserControl
     private void MoveClicked(object sender, RoutedEventArgs e) => Safe(() => ChooseDestination(true));
     private void ChooseDestination(bool currentProject)
     {
+        if (!CanManageSelection) return;
         if (Selection.Count == 0) return;
         var state = _catalog!.State;
         if (currentProject && state.ProjectId is null) { Tell(Localization.Text("Сначала выберите проект.")); return; }
@@ -288,23 +295,27 @@ public partial class WorkspaceBrowser : UserControl
     }
     private void UnlinkClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
+        if (!CanManageSelection) return;
         if (_catalog!.State.ProjectId is not { } project) { Tell(Localization.Text("Сначала выберите проект.")); return; }
         if (_catalog.IsUnrealProject(project)) return;
         foreach (var asset in Selection) _catalog.Unlink(asset.Id, project); Refresh();
     });
     private void CopyClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
+        if (!CanManageSelection) return;
         if (_catalog!.State.ProjectId is null) { Tell(Localization.Text("Выберите проект, для которого нужна независимая копия.")); return; }
         foreach (var asset in Selection.ToArray()) ActionRequested?.Invoke("copy", asset); Refresh();
     });
     private void DeleteClicked(object sender, RoutedEventArgs e) => Safe(() =>
     {
+        if (!CanManageSelection) return;
         var assets = Selection.ToArray(); if (assets.Length == 0) return;
         if (TesseraDialog.Show(Window.GetWindow(this), Localization.Format("Удалить из библиотеки: {0}? Они исчезнут из всех проектов. Внешние исходные файлы сохранятся.\n\n", assets.Length) + string.Join("\n", assets.Select(a => a.Name + " · " + a.LocationLabel)), Localization.Text("Удалить ассеты"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         foreach (var asset in assets) ActionRequested?.Invoke("delete", asset); Refresh();
     });
     private void RunMenuAction(string action)
     {
+        if (action != "open" && !CanManageSelection) return;
         switch (action)
         {
             case "open": OpenClicked(this, new()); break; case "link": AddToProjectClicked(this, new()); break;

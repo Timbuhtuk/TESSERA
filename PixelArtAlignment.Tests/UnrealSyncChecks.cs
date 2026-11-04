@@ -97,7 +97,7 @@ public static class UnrealSyncChecks
             string path = Path.Combine(bridge, "catalog.json");
             File.WriteAllText(path, JsonSerializer.Serialize(new
             {
-                version = 2, folders = new[] { "/Game", "/Game/A/Empty", "/Game/__ExternalActors__/Ignored" },
+                version = 2, folders = new[] { "/Game", "/Game/A/Empty", "/Game/Levels/Maps", "/Game/__ExternalActors__/Ignored" },
                 textures = textures.Select(p => new { path = p, revision }),
                 redirects = redirects ?? []
             }));
@@ -142,10 +142,26 @@ public static class UnrealSyncChecks
                 }
                 var list = (ListBox)window.Browser.FindName("assetList");
                 Require(list.Items.Count == paths.Length && list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null, "Large Unreal view was not virtualized");
-                Require(workspace.State.Folders.Any(f => f.Name == "Empty") && workspace.State.Folders.All(f => f.Name != "__ExternalActors__"), "Incorrect Content tree");
+                Require(workspace.State.Folders.All(f => f.Name is not ("Empty" or "Levels" or "Maps" or "__ExternalActors__")) &&
+                    workspace.State.Folders.Any(f => f.UnrealPath == "/Game/A/Nested"), "The tree must contain texture folders and their ancestors only");
                 Require(workspace.State.Assets.Count(a => a.Name == "Stone") == 2, "Identical names were merged");
                 var asset = workspace.State.Assets.Single(a => a.Unreal?.Path == target);
                 assetId = asset.Id;
+                list.SelectedItem = asset;
+                Require(((StackPanel)window.Browser.FindName("assetTagsPanel")).Visibility == Visibility.Collapsed &&
+                    ((StackPanel)window.Browser.FindName("assetManagementPanel")).Visibility == Visibility.Collapsed &&
+                    list.ContextMenu.Items.OfType<MenuItem>().Where(i => i.Visibility == Visibility.Visible).All(i => Equals(i.Tag, "open")),
+                    "Unreal selection exposes asset management actions");
+                var local = new WorkspaceAsset { Name = "Local image" };
+                workspace.State.Assets.Add(local);
+                window.Browser.Navigate("all"); list.SelectedItem = asset;
+                Require(((StackPanel)window.Browser.FindName("assetManagementPanel")).Visibility == Visibility.Collapsed,
+                    "Linked textures expose management actions in All assets");
+                list.SelectedItem = local;
+                Require(((StackPanel)window.Browser.FindName("assetTagsPanel")).Visibility == Visibility.Visible &&
+                    ((StackPanel)window.Browser.FindName("assetManagementPanel")).Visibility == Visibility.Visible,
+                    "Local assets lost their management actions");
+                window.Browser.Navigate("project", unreal.Id); list.SelectedItem = asset;
                 string read = Path.Combine(bridge, "requests", Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(read);
                 string export = Path.Combine(read, "unreal.png");
@@ -167,13 +183,19 @@ public static class UnrealSyncChecks
                 requestFolder = Directory.EnumerateDirectories(Path.Combine(bridge, "requests"))
                     .Single(p => File.Exists(Path.Combine(p, "local.png")));
                 Require(!File.Exists(Path.Combine(requestFolder, "response.json")), "Offline save was incorrectly acknowledged");
+                var stale = workspace.CreateFolder(unreal.Id, null, "Stale empty folder");
+                workspace.State.FolderId = stale.Id;
+                workspace.Save();
             }
             finally { window.Close(); Pump(); }
 
             window = new MainWindow(libraryRoot);
             try
             {
-                window.EnableWorkspacePrototype(); window.Show(); Poll(window);
+                window.EnableWorkspacePrototype(); window.Show();
+                Require(window.Workspace!.State.Folders.All(f => f.Name != "Stale empty folder") &&
+                    window.Workspace.State.FolderId is null, "Restart retained an empty folder from an older cached tree");
+                Poll(window);
                 var state = window.Workspace!.State;
                 Require(state.Projects.Count(p => p.IsUnreal) == 1 && File.Exists(Path.Combine(requestFolder, "local.png")), "Restart lost the queued save or duplicated the project");
                 var asset = state.Assets.Single(a => a.Id == assetId);
@@ -184,9 +206,11 @@ public static class UnrealSyncChecks
                 Require(asset.Unreal!.LoadedRevision == "rev2" && !Directory.Exists(requestFolder), "Restart did not consume the confirmed save");
                 Catalog([moved, other], new() { [target] = moved }, "rev2"); Poll(window);
                 Require(asset.Unreal.Path == moved && !asset.Unreal.Missing, "Rename redirect lost the linked library identity");
+                Require(state.Folders.All(f => f.UnrealPath != "/Game/A/Nested"), "Moving the final texture retained its old folder");
                 Catalog([other], revision: "rev3"); Poll(window);
                 var retained = new ImageLibrary(libraryRoot).Load().Single(s => s.Id == assetId);
                 Require(asset.Unreal.NeedsDestination && retained.Generations.Count == 1, "Deleting an Unreal asset erased local history or left the link writable");
+                Require(state.Folders.All(f => f.UnrealPath != "/Game/A"), "Removing the final texture retained an empty parent branch");
             }
             finally { window.Close(); Pump(); }
         }

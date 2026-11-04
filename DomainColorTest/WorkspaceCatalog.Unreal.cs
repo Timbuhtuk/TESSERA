@@ -41,8 +41,6 @@ public sealed partial class WorkspaceCatalog
             return folder;
         }
 
-        Folder("/Game");
-        foreach (string path in catalog.Folders.Where(VisibleUnrealFolder)) Folder(path);
         var entries = catalog.Textures.Where(t => ValidObjectPath(t.Path))
             .GroupBy(t => t.Path, UnrealPathComparer).ToDictionary(g => g.Key, g => g.First(), UnrealPathComparer);
         var links = new List<WorkspaceLink>();
@@ -89,6 +87,23 @@ public sealed partial class WorkspaceCatalog
         State.Folders.RemoveAll(f => f.ProjectId == project.Id);
         State.Folders.AddRange(folders.Values);
         if (State.ProjectId == project.Id && State.FolderId is { } selected && !folders.Values.Any(f => f.Id == selected))
+            State.FolderId = null;
+        Save();
+    }
+
+    internal void PruneUnrealFolders(WorkspaceProject project)
+    {
+        var folders = State.Folders.Where(f => f.ProjectId == project.Id).ToDictionary(f => f.Id);
+        var textures = State.Assets.Where(a => a.Unreal?.ProjectId == project.Id && !a.Unreal.Missing).Select(a => a.Id).ToHashSet();
+        var used = new HashSet<Guid>();
+        foreach (var link in State.Links.Where(l => l.ProjectId == project.Id && textures.Contains(l.AssetId)))
+        {
+            Guid? parent = link.FolderId;
+            while (parent is { } id && folders.TryGetValue(id, out var folder) && used.Add(id))
+                parent = folder.ParentId;
+        }
+        if (State.Folders.RemoveAll(f => f.ProjectId == project.Id && !used.Contains(f.Id)) == 0) return;
+        if (State.ProjectId == project.Id && State.FolderId is { } selected && !used.Contains(selected))
             State.FolderId = null;
         Save();
     }

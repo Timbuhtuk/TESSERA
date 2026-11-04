@@ -111,16 +111,20 @@
     <TextBlock x:Name="detailName" Text="{local:Translate Text85DE61BC1CCC}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
     <TextBlock x:Name="detailSummary" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,7,0,14"/>
     <Button x:Name="openAssetButton" Content="{local:Translate Text7969171D49E8}" Click="OpenClicked" IsEnabled="False"/>
+    <StackPanel x:Name="assetTagsPanel">
     <TextBlock Text="{local:Translate TextC8FA45FB52C9}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,20,0,6"/>
     <TextBox x:Name="tagsInput" TextWrapping="Wrap" MinHeight="50" AutomationProperties.Name="{local:Translate Text598B799BA7A9}"/>
     <Button Content="{local:Translate Text443D403DF52E}" Click="TagsClicked" Margin="0,7,0,0"/>
+    </StackPanel>
     <TextBlock x:Name="usageLabel" Text="" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,20,0,12"/>
+    <StackPanel x:Name="assetManagementPanel">
     <Button Content="{local:Translate Text0CC4E220DE75}" Click="AddToProjectClicked" Margin="0,3"/>
     <Button Content="{local:Translate Text1212BAEB7103}" Click="MoveClicked" Margin="0,3"/>
     <Button Content="{local:Translate TextBA5A59519E29}" Click="UnlinkClicked" Margin="0,3"/>
     <Button Content="{local:Translate Text70566E0E10B0}" Click="CopyClicked" Margin="0,3" ToolTip="{local:Translate Text8E5DAAB68277}"/>
     <Separator Margin="0,15"/>
     <Button Content="{local:Translate Text19DA9CC76C17}" Click="DeleteClicked" Margin="0,3"/>
+    </StackPanel>
    </StackPanel></ScrollViewer>
   </Border>
  </Grid>
