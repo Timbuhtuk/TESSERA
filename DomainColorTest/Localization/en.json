@@ -1495,5 +1495,14 @@
   "Выберите существующую текстуру из каталога Unreal.": "Choose an existing texture from the Unreal catalog.",
   "У этой текстуры есть незавершённое сохранение в Unreal.": "This texture has an unfinished Unreal save.",
   "Не найден файл плагина TesseraSync.": "A TesseraSync plugin file is missing.",
-  "Для этой текстуры уже есть запись в очереди. Повторите Ctrl+S после её обработки.": "This texture already has a queued save. Press Ctrl+S again after Unreal processes it."
+  "Для этой текстуры уже есть запись в очереди. Повторите Ctrl+S после её обработки.": "This texture already has a queued save. Press Ctrl+S again after Unreal processes it.",
+  "Создать текстуру в Unreal…": "Create texture in Unreal…",
+  "Создать текстуру в Unreal": "Create texture in Unreal",
+  "Создать текстуру": "Create texture",
+  "Папка Unreal (/Game/…)": "Unreal folder (/Game/…)",
+  "Имя текстуры": "Texture name",
+  "Сначала подключите проект Unreal в библиотеке.": "Connect an Unreal project in the library first.",
+  "Текстура ожидает создания в Unreal: {0}": "Texture queued for creation in Unreal: {0}",
+  "Укажите папку /Game/… и имя текстуры без пробелов и расширения.": "Enter a /Game/… folder and a texture name without spaces or an extension.",
+  "Ожидает создания в Unreal": "Waiting for creation in Unreal"
 }

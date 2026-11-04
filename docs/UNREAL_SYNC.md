@@ -15,6 +15,10 @@ If the project stays disconnected, check that the editor opened the same `.uproj
 
 ## Edit textures and maps
 
+To create a new Unreal texture from an image or a selected Tessera result, use **File → Unreal Engine 5 → Create texture in Unreal…**. You can also choose this action from an image's context menu in the library. Select the connected project, folder, and texture name. The dialog accepts a new folder path under `/Game`. A separate linked image is added to the project and queued for creation. New color textures use sRGB.
+
+Creation works with Unreal closed. The pending texture stays in Tessera's tree across restarts. After Unreal confirms creation, subsequent **Ctrl+S** saves update that texture. An occupied name stops creation. Press **Ctrl+S** on the pending texture to choose a different name if a collision was discovered by Unreal.
+
 Open a texture from the tree, process it, select the result as the editing basis, and press **Ctrl+S**. Tessera shows **Saved in Unreal** when the plugin confirms the write. Saving updates the existing texture object and retains its material references and import settings. Intermediate results remain in Tessera's history.
 
 Open Unreal yourself to load textures for the first time. With the editor closed, you can browse the tree, edit previously opened textures, and queue saves. Tessera keeps the queue across restarts. If Unreal has unsaved changes in the same asset, save those changes in Unreal so Tessera can check the current revision. On a conflict, press **Ctrl+S** again and choose the Unreal version or explicitly replace it with the selected Tessera result.

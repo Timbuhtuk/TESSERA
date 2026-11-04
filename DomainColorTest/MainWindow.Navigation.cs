@@ -70,6 +70,7 @@ public partial class MainWindow
         var unrealMenu = NavigationItem("unrealMenu", "Unreal Engine 5"); fileMenu.Items.Add(unrealMenu);
         AddNavigation(unrealMenu, "unrealProjectMenuItem", "Подключить проект Unreal…", SelectUnrealProjectAsync);
         AddNavigation(unrealMenu, "unrealInstallMenuItem", "Установить плагин в проект…", InstallUnrealPluginAsync);
+        AddNavigation(unrealMenu, "unrealCreateTextureMenuItem", "Создать текстуру в Unreal…", CreateUnrealTextureAsync);
         AddNavigation(unrealMenu, "unrealSendMenuItem", "Отправить выбранную текстуру", SendTextureToUnrealAsync);
         AddNavigation(unrealMenu, "unrealMapsMenuItem", "Отправить карты материала", SendMapsToUnrealAsync);
         AddNavigation(unrealMenu, "unrealReceiveMenuItem", "Получить текстуры из Unreal", ReceiveFromUnrealAsync);
@@ -219,6 +220,7 @@ public partial class MainWindow
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
         toolsMenu.IsEnabled = image && !busy;
+        ((MenuItem)FindName("unrealCreateTextureMenuItem")).IsEnabled = _workspaceReady && image && !busy;
         foreach (var item in _imageCommands) item.IsEnabled = image && !busy;
         viewMenu.IsEnabled = image;
         saveDocumentMenuItem.IsEnabled = !busy && (_workspaceReady || board || animation || tiles);

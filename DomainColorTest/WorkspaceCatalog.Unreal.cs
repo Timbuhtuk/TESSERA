@@ -60,14 +60,23 @@ public sealed partial class WorkspaceCatalog
             claimed.Add(entry.Path);
         }
 
-        foreach (var asset in linked)
+        foreach (var asset in linked.Where(a => a.Unreal!.CreatePending))
+        {
+            var binding = asset.Unreal!;
+            if (!ValidObjectPath(binding.Path)) continue;
+            asset.Name = binding.Path[(binding.Path.LastIndexOf('.') + 1)..];
+            var folder = Folder(binding.Path[..binding.Path.LastIndexOf('/')]);
+            links.Add(new WorkspaceLink { AssetId = asset.Id, ProjectId = project.Id, FolderId = folder.Id });
+            claimed.Add(binding.Path);
+        }
+        foreach (var asset in linked.Where(a => !a.Unreal!.CreatePending))
         {
             var binding = asset.Unreal!;
             if (!binding.NeedsDestination && entries.TryGetValue(binding.Path, out var entry) && !claimed.Contains(entry.Path))
                 Place(asset, entry);
             else binding.Missing = true;
         }
-        foreach (var asset in linked.Where(a => a.Unreal!.Missing))
+        foreach (var asset in linked.Where(a => a.Unreal!.Missing && !a.Unreal.CreatePending))
         {
             var binding = asset.Unreal!;
             if (catalog.Redirects.TryGetValue(binding.Path, out string? target) &&
@@ -94,7 +103,7 @@ public sealed partial class WorkspaceCatalog
     internal void PruneUnrealFolders(WorkspaceProject project)
     {
         var folders = State.Folders.Where(f => f.ProjectId == project.Id).ToDictionary(f => f.Id);
-        var textures = State.Assets.Where(a => a.Unreal?.ProjectId == project.Id && !a.Unreal.Missing).Select(a => a.Id).ToHashSet();
+        var textures = State.Assets.Where(a => a.Unreal?.ProjectId == project.Id && (!a.Unreal.Missing || a.Unreal.CreatePending)).Select(a => a.Id).ToHashSet();
         var used = new HashSet<Guid>();
         foreach (var link in State.Links.Where(l => l.ProjectId == project.Id && textures.Contains(l.AssetId)))
         {

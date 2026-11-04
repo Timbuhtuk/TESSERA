@@ -55,6 +55,9 @@ public partial class WorkspaceBrowser : UserControl
             context.Items.Add(item);
         }
         assetList.ContextMenu = context;
+        var createUnreal = new MenuItem { Header = Localization.Text("Создать текстуру в Unreal…"), Tag = "create-unreal" };
+        createUnreal.Click += (_, _) => RunMenuAction("create-unreal");
+        context.Items.Insert(1, createUnreal);
         assetList.PreviewMouseLeftButtonUp += (_, _) =>
         {
             if (_deferredClick is not { } asset) return;
@@ -280,7 +283,13 @@ public partial class WorkspaceBrowser : UserControl
         var managementVisibility = CanManageSelection ? Visibility.Visible : Visibility.Collapsed;
         assetTagsPanel.Visibility = assetManagementPanel.Visibility = managementVisibility;
         foreach (var item in assetList.ContextMenu.Items.OfType<MenuItem>())
-            item.Visibility = Equals(item.Tag, "open") ? Visibility.Visible : managementVisibility;
+            item.Visibility = item.Tag switch
+            {
+                "open" => Visibility.Visible,
+                "create-unreal" => selection.Count == 1 && asset?.Kind == WorkspaceAssetKind.Image &&
+                    _catalog!.State.Projects.Any(p => p.IsUnreal) ? Visibility.Visible : Visibility.Collapsed,
+                _ => managementVisibility
+            };
         openAssetButton.IsEnabled = asset is not null;
         detailName.Text = selection.Count > 1 ? Localization.Format("Выбрано: {0}", selection.Count) : asset?.Name ?? Localization.Text("Выберите ассет");
         detailSummary.Text = asset?.Summary ?? ""; detailPreview.Source = asset?.Thumbnail;
@@ -342,9 +351,13 @@ public partial class WorkspaceBrowser : UserControl
     });
     private void RunMenuAction(string action)
     {
-        if (action != "open" && !CanManageSelection) return;
+        if (action is not ("open" or "create-unreal") && !CanManageSelection) return;
         switch (action)
         {
+            case "create-unreal":
+                if (Selection is [var asset] && asset.Kind == WorkspaceAssetKind.Image)
+                    ActionRequested?.Invoke(action, asset);
+                break;
             case "open": OpenClicked(this, new()); break; case "link": AddToProjectClicked(this, new()); break;
             case "move": MoveClicked(this, new()); break; case "copy": CopyClicked(this, new()); break;
             case "unlink": UnlinkClicked(this, new()); break; case "delete": DeleteClicked(this, new()); break;

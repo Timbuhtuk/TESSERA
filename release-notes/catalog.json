@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Создание текстур в Unreal",
+        "en": "Create Unreal textures"
+      },
+      "notes": {
+        "ru": "- Unreal Engine 5: команда «Создать текстуру в Unreal…» отправляет исходник или выбранный результат в подключённый проект. Можно выбрать папку /Game и имя нового Texture2D.\n- Новая связанная текстура сразу появляется в библиотеке Tessera. При закрытом Unreal она остаётся в очереди, включая после перезапуска Tessera. После подтверждения Ctrl+S обновляет тот же ассет.\n- Занятые имена защищены от перезаписи. Если имя оказалось занято в Unreal, при следующем сохранении можно выбрать другое назначение. Обычные цветные текстуры создаются с sRGB.\n- Для этой возможности обновите Tessera Sync до 0.3.0 и перезапустите редактор Unreal.",
+        "en": "- Unreal Engine 5: Create texture in Unreal… sends the source image or selected result to a connected project. Choose a /Game folder and a name for the new Texture2D.\n- The linked texture appears immediately in the Tessera library. With Unreal closed, creation stays queued and survives a Tessera restart. Once confirmed, Ctrl+S updates the same asset.\n- Existing names are protected from overwrite. If a name is occupied in Unreal, the next save lets you choose another destination. Ordinary color textures are created with sRGB enabled.\n- Update Tessera Sync to 0.3.0 and restart the Unreal editor to use this feature."
+      }
+    },
+    {
+      "version": "2.28.0",
+      "title": {
         "ru": "Режимы библиотеки и инструменты CLI",
         "en": "Library views and CLI tools"
       },

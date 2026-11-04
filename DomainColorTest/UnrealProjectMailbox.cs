@@ -14,6 +14,7 @@ public sealed class UnrealTextureLink
     public string? MapKind { get; set; }
     public bool Missing { get; set; }
     public bool NeedsDestination { get; set; }
+    public bool CreatePending { get; set; }
     public Dictionary<Guid, string> ResultRevisions { get; set; } = [];
 }
 

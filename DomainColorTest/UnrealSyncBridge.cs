@@ -7,7 +7,7 @@ namespace DomainColorTest;
 
 public sealed class UnrealSyncBridge
 {
-    public const int PluginVersion = 3;
+    public const int PluginVersion = 4;
     private sealed class Settings
     {
         public string? ProjectPath { get; set; }
