@@ -60,7 +60,7 @@
   </ResourceDictionary>
  </UserControl.Resources>
  <Grid x:Name="browserGrid">
-  <Grid.ColumnDefinitions><ColumnDefinition x:Name="navColumn" Width="210"/><ColumnDefinition Width="*"/><ColumnDefinition x:Name="detailColumn" Width="270"/></Grid.ColumnDefinitions>
+  <Grid.ColumnDefinitions><ColumnDefinition x:Name="navColumn" Width="210" MinWidth="150" MaxWidth="420"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*" MinWidth="300"/><ColumnDefinition x:Name="detailColumn" Width="270"/></Grid.ColumnDefinitions>
   <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Background="{DynamicResource Ts.Raised}">
    <DockPanel Margin="14,18">
     <StackPanel DockPanel.Dock="Top">
@@ -75,7 +75,8 @@
     <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="{local:Translate TextA71D10D12ADC}"/>
    </DockPanel>
   </Border>
-  <Grid Grid.Column="1" Margin="20,18,8,8">
+  <GridSplitter Grid.Column="1" Width="6" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" Cursor="SizeWE" AutomationProperties.Name="{local:Translate TextFC732C885676}" />
+  <Grid Grid.Column="2" Margin="20,18,8,8">
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
    <TextBlock x:Name="viewTitle" Text="{local:Translate TextFC14887CED6F}" FontSize="23" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
    <Grid Grid.Row="1" Margin="0,18,4,8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="180"/></Grid.ColumnDefinitions>
@@ -103,7 +104,7 @@
    </Grid>
    <TextBlock x:Name="countLabel" Grid.Row="4" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,8" FontSize="11"/>
   </Grid>
-  <Border x:Name="detailsBorder" Grid.Column="2" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">
+  <Border x:Name="detailsBorder" Grid.Column="3" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="18">
     <TextBlock Text="{local:Translate Text1A5F1627B232}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}"/>
     <Image x:Name="detailPreview" Height="130" Margin="0,16" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>

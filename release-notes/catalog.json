@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Настраиваемая ширина библиотеки",
+        "en": "Resizable library sidebar"
+      },
+      "notes": {
+        "ru": "- Библиотека: перетаскивайте разделитель справа от левой панели, чтобы менять её ширину. Выбранная ширина сохраняется при изменении размера окна.\n- Проекты Unreal Engine: рядом с названием отображается SVG-логотип Unreal, читаемый в светлой и тёмной темах.",
+        "en": "- Library: drag the divider at the right edge of the sidebar to adjust its width. The selected width is retained when resizing the window.\n- Unreal Engine projects: an Unreal SVG logo appears beside the project name and remains readable in light and dark themes."
+      }
+    },
+    {
+      "version": "2.26.0",
+      "title": {
         "ru": "Проекты Unreal Engine в библиотеке",
         "en": "Unreal Engine projects in the library"
       },
