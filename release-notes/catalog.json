@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Версия приложения и обновление переименованных файлов",
+        "en": "Installed version and renamed executable updates"
+      },
+      "notes": {
+        "ru": "- Настройки: рядом с кнопкой проверки обновлений показана текущая установленная версия Tessera.\n- Обновлятор: выпущенная однофайловая Tessera обновляется и после переименования, например в «Tessera (1).exe». Обновление заменяет именно запущенный файл и сохраняет его имя. Версия из среды разработки продолжает открывать страницу релиза вместо самообновления. Для старой переименованной версии первый переход потребует ручной установки или возврата имени Tessera.exe.",
+        "en": "- Settings: the current installed Tessera version is shown beside the update-check button.\n- Updater: a released single-file Tessera can update after being renamed, for example to Tessera (1).exe. The update replaces the running executable and preserves its name. Development builds continue to open the release page instead of updating themselves. For an older renamed version, install this update manually once or restore the Tessera.exe filename first."
+      }
+    },
+    {
+      "version": "2.29.0",
+      "title": {
         "ru": "Создание текстур в Unreal",
         "en": "Create Unreal textures"
       },

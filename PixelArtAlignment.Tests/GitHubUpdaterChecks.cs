@@ -10,6 +10,14 @@ public static class GitHubUpdaterChecks
 {
     public static void Run(Action<string, Action> check)
     {
+        check("Renamed single-file Tessera can update while development builds cannot", () =>
+        {
+            Require(GitHubUpdater.CanInstallFrom(@"C:\Apps\Tessera (1).exe", "", "Tessera"), "Renamed release was rejected");
+            Require(GitHubUpdater.CanInstallFrom(@"C:\Apps\custom-name.exe", "", "Tessera"), "Custom release name was rejected");
+            Require(!GitHubUpdater.CanInstallFrom(@"C:\Apps\DomainColorTest.exe", @"C:\Apps\DomainColorTest.dll", "Tessera"), "Development build was accepted");
+            Require(!GitHubUpdater.CanInstallFrom(@"C:\Apps\Other.exe", "", "Other"), "Unrelated executable was accepted");
+            Require(!GitHubUpdater.CanInstallFrom(@"C:\Apps\Tessera.dll", "", "Tessera"), "DLL launch was accepted");
+        });
         check("GitHub updater crosses major versions and skips installed or newer builds", () =>
         {
             foreach (var (current, tag, expected) in new[] {
