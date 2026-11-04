@@ -21,7 +21,10 @@
      <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
      <Border x:Name="HeaderFrame" Grid.ColumnSpan="2" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}" MinHeight="28">
-      <ContentPresenter x:Name="PART_Header" ContentSource="Header" Margin="20,0,0,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+      <Grid>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+       <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header" Margin="6,0,0,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+      </Grid>
      </Border>
      <ToggleButton x:Name="Expander" Width="20" Focusable="False" IsTabStop="False" ClickMode="Press" Foreground="{TemplateBinding Foreground}"
                    IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" AutomationProperties.Name="{local:Translate TextC7F4E3E28851}">
@@ -60,10 +63,10 @@
   </ResourceDictionary>
  </UserControl.Resources>
  <Grid x:Name="browserGrid">
-  <Grid.ColumnDefinitions><ColumnDefinition x:Name="navColumn" Width="210" MinWidth="150" MaxWidth="420"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*" MinWidth="300"/><ColumnDefinition x:Name="detailColumn" Width="270"/></Grid.ColumnDefinitions>
+  <Grid.ColumnDefinitions><ColumnDefinition x:Name="navColumn" Width="210" MinWidth="200" MaxWidth="420"/><ColumnDefinition Width="6"/><ColumnDefinition Width="*" MinWidth="300"/><ColumnDefinition x:Name="detailColumn" Width="270"/></Grid.ColumnDefinitions>
   <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Background="{DynamicResource Ts.Raised}">
-   <DockPanel Margin="14,18">
-    <StackPanel DockPanel.Dock="Top">
+   <DockPanel Margin="14,18,0,0">
+    <StackPanel DockPanel.Dock="Top" Margin="0,0,14,0">
      <TextBlock Text="{local:Translate Text0D7F700390DB}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,12"/>
      <Button Content="{local:Translate TextFC14887CED6F}" Style="{StaticResource NavButton}" Click="AllClicked"/>
      <Button Content="{local:Translate Text7F8044F85387}" Style="{StaticResource NavButton}" Click="UnassignedClicked"/>
@@ -72,7 +75,36 @@
      <Button x:Name="connectUnrealButton" Style="{StaticResource NavButton}" Click="ConnectUnrealClicked"/>
      <TextBlock x:Name="unrealStatus" Margin="0,5,0,0" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Visibility="Collapsed"/>
     </StackPanel>
-    <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="{local:Translate TextA71D10D12ADC}"/>
+    <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="{local:Translate TextA71D10D12ADC}">
+     <TreeView.Resources>
+      <Style TargetType="{x:Type ScrollBar}">
+       <Setter Property="Background" Value="{DynamicResource Ts.Raised}"/>
+       <Setter Property="Width" Value="8"/>
+       <Setter Property="MinWidth" Value="8"/>
+       <Setter Property="MinHeight" Value="0"/>
+       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="{x:Type ScrollBar}">
+        <Grid x:Name="Rail" Background="{TemplateBinding Background}" Width="{TemplateBinding Width}">
+         <Track x:Name="PART_Track" IsDirectionReversed="True" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" ViewportSize="{TemplateBinding ViewportSize}" Value="{TemplateBinding Value}">
+          <Track.DecreaseRepeatButton><RepeatButton x:Name="Decrease" Command="ScrollBar.PageUpCommand" Style="{StaticResource Ts.ScrollPageButton}"/></Track.DecreaseRepeatButton>
+          <Track.Thumb><Thumb Style="{StaticResource Ts.ScrollThumb}"/></Track.Thumb>
+          <Track.IncreaseRepeatButton><RepeatButton x:Name="Increase" Command="ScrollBar.PageDownCommand" Style="{StaticResource Ts.ScrollPageButton}"/></Track.IncreaseRepeatButton>
+         </Track>
+        </Grid>
+        <ControlTemplate.Triggers>
+         <Trigger Property="Orientation" Value="Horizontal">
+          <Setter Property="Width" Value="Auto"/><Setter Property="Height" Value="8"/>
+          <Setter Property="MinWidth" Value="0"/><Setter Property="MinHeight" Value="8"/>
+          <Setter TargetName="Rail" Property="Width" Value="Auto"/><Setter TargetName="Rail" Property="Height" Value="8"/>
+          <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
+          <Setter TargetName="Decrease" Property="Command" Value="ScrollBar.PageLeftCommand"/>
+          <Setter TargetName="Increase" Property="Command" Value="ScrollBar.PageRightCommand"/>
+         </Trigger>
+         <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Rail" Property="Opacity" Value="0.4"/></Trigger>
+        </ControlTemplate.Triggers>
+       </ControlTemplate></Setter.Value></Setter>
+      </Style>
+     </TreeView.Resources>
+    </TreeView>
    </DockPanel>
   </Border>
   <GridSplitter Grid.Column="1" Width="6" ResizeDirection="Columns" ResizeBehavior="PreviousAndNext" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" Cursor="SizeWE" AutomationProperties.Name="{local:Translate TextFC732C885676}" />

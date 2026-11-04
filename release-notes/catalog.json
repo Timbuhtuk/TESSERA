@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Исправления дерева библиотеки",
+        "en": "Library tree corrections"
+      },
+      "notes": {
+        "ru": "- Библиотека: длинные названия проектов и папок сокращаются многоточием, а полное имя остаётся в подсказке. Дерево больше не создаёт горизонтальную прокрутку.\n- Полоса прокрутки дерева стала тоньше и располагается у края панели без широких пустых отступов. Стрелка сворачивания отделена от названия папки и остаётся читаемой при выделении.\n- Минимальная ширина левой панели увеличена до 200 пикселей. Названия Unreal-проектов корректно передаются средствам доступности.",
+        "en": "- Library: long project and folder names use ellipsis, with the full name retained in the tooltip. The tree no longer creates horizontal scrolling.\n- The tree scrollbar is slimmer and sits at the panel edge without wide empty margins. Folder disclosure arrows are separated from folder names and remain readable when selected.\n- The sidebar minimum width is now 200 pixels. Unreal project names are correctly exposed to accessibility tools."
+      }
+    },
+    {
+      "version": "2.27.1",
+      "title": {
         "ru": "Исправления библиотеки Unreal Engine",
         "en": "Unreal Engine library corrections"
       },

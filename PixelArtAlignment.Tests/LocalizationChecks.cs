@@ -55,7 +55,12 @@ internal static class LocalizationChecks
             var browser = window.Browser!;
             Require(Get<TextBlock>(browser, "viewTitle").Text == "All assets", "Library title is not in English");
             var node = Get<TreeView>(browser, "projectTree").Items.Cast<TreeViewItem>().Single();
-            Require(Equals(node.Header, project.Name) && Equals(((TreeViewItem)node.Items[0]).Header, folder.Name), "Localization changed user project/folder names");
+            var folderNode = (TreeViewItem)node.Items[0];
+            Require(node.Header is TextBlock projectTitle && projectTitle.Text == project.Name &&
+                folderNode.Header is TextBlock folderTitle && folderTitle.Text == folder.Name &&
+                Equals(node.ToolTip, project.Name) && Equals(folderNode.ToolTip, folder.Name) &&
+                AutomationProperties.GetName(node) == project.Name && AutomationProperties.GetName(folderNode) == folder.Name,
+                "Localization changed user project/folder names");
             Require(((MenuItem)node.ContextMenu.Items[0]).Header.Equals("Create folder…"), "Project context menu is not translated");
             Require(new WorkspaceAsset().KindLabel == "Image", "Dynamic material type is not translated");
             Require(Localization.StoredText("РЕЗУЛЬТАТ · 48 × 32 · предыдущие настройки") == "RESULT · 48 × 32 · previous settings", "Existing generated history captions are not translated");

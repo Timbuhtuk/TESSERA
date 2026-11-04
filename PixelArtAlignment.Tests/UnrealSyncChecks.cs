@@ -130,15 +130,15 @@ public static class UnrealSyncChecks
                 Pump(); window.UpdateLayout();
                 var tree = (TreeView)window.Browser.FindName("projectTree");
                 var rootNode = tree.Items.OfType<TreeViewItem>().Single(n => n.Tag == unreal);
-                var icon = (System.Windows.Shapes.Path)((StackPanel)rootNode.Header).Children[0];
+                var icon = ((Grid)rootNode.Header).Children.OfType<System.Windows.Shapes.Path>().Single();
                 foreach (var theme in new[] { TesseraTheme.Dark, TesseraTheme.Light })
                 {
                     AppearanceResources.Apply(theme);
                     window.Browser.LayoutTransform = new ScaleTransform(1.25, 1.25);
                     Pump(); window.UpdateLayout();
                     Require(icon is { Width: 18, Height: 18, Data: not null, Fill: not null } && icon.Margin.Right == 6, "Unreal icon is missing or malformed");
-                    Require(tree.Items.OfType<TreeViewItem>().Single(n => n.Tag is WorkspaceProject { IsUnreal: false }).Header is string &&
-                        ((TreeViewItem)rootNode.Items[0]).Header is string, "The Unreal mark leaked onto a local project or folder");
+                    Require(tree.Items.OfType<TreeViewItem>().Single(n => n.Tag is WorkspaceProject { IsUnreal: false }).Header is TextBlock &&
+                        ((TreeViewItem)rootNode.Items[0]).Header is TextBlock, "The Unreal mark leaked onto a local project or folder");
                 }
                 var list = (ListBox)window.Browser.FindName("assetList");
                 Require(list.Items.Count == paths.Length && list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null, "Large Unreal view was not virtualized");
