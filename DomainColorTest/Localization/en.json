@@ -1,4 +1,9 @@
 {
+  "Вид": "View",
+  "Плитка": "Tiles",
+  "Список": "List",
+  "Мелкая плитка": "Small tiles",
+  "Режим отображения ассетов": "Asset view mode",
   "Ширина панели библиотеки": "Library sidebar width",
   "Очистка контуров": "Contour cleanup",
   "Учитывает концентрацию цвета в локальных областях заданного размера. Отключите для оценки по всему изображению.": "Uses color concentration in local regions of the selected size. Disable to evaluate the whole image.",

@@ -1,6 +1,6 @@
 # Tessera CLI reference
 
-The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). It downscales images, applies size and color operations independently, smooths local colors, creates monochrome and ASCII output, inspects and replaces colors, aligns pixel grids, removes solid backgrounds, exports ICO files and converts Aseprite animations to PNG sprite sheets with JSON metadata. Raster commands accept PNG, JPEG, BMP, GIF and TIFF; the animation command accepts .ase and .aseprite.
+The standalone Windows x64 CLI is `artifacts/cli/tessera.exe` after publication, or inside `Tessera-cli-win-x64.zip` in [GitHub Releases](https://github.com/Timbuhtuk/TESSERA/releases/latest). It exposes the editor's image processing, color, contour, material-map, tile and macro operations, as well as ICO and Aseprite exports. Raster commands accept PNG, JPEG, BMP, GIF and TIFF; the animation command accepts .ase and .aseprite. This reference describes the source CLI; an already published executable keeps the commands from its release until rebuilt.
 
 Run these examples from the repository root after building; replace the sample input paths with your own:
 
@@ -95,11 +95,13 @@ Both commands take one image file, including a result saved by an earlier CLI or
 
 `tessera colors` additionally accepts `--color-mode combined|quantization|palette`. `combined` preserves the earlier CLI pipeline; `quantization` and `palette` run only the corresponding editor stage. Palette-only mode rejects quantization settings, and quantization-only mode rejects palette and dithering settings.
 
-`tessera smooth-colors` (alias `smooth`) runs the editor's local 3×3 color cleanup without changing dimensions or alpha. `--passes` accepts 1–100. `--color-tolerance` accepts 0–40 (default 12); `--strength`, `--detail-protection` and `--edge-protection` accept 0–100 (defaults 65, 80 and 80). These match the current editor controls and accept decimal values with a dot. Zero tolerance or strength leaves the image unchanged.
+`tessera smooth-colors` (alias `smooth`) runs the editor's local 3×3 color cleanup without changing dimensions or alpha. `--passes` accepts 1–100. `--color-tolerance` accepts 0–40 (default 12); `--strength`, `--detail-protection` and `--edge-protection` accept 0–100 (defaults 65, 80 and 80). `--no-detail-protection` matches the editor switch. These match the current editor controls and accept decimal values with a dot. Zero tolerance or strength leaves the image unchanged.
 
-`tessera monochrome` (alias `mono`) converts visible pixels to grayscale while preserving size and alpha. `tessera replace-color` replaces one exact visible RGB color with another using `--from #RRGGBB` and `--to #RRGGBB`; source alpha is retained. `tessera palette-info` counts visible RGB colors and lists them when the image contains at most 1024 colors.
+`tessera monochrome` (alias `mono`) converts visible pixels to grayscale while preserving size and alpha. `tessera replace-color` replaces one exact visible RGB color with another using `--from #RRGGBB` and `--to #RRGGBB`; source alpha is retained. `tessera palette-info` reports dimensions, working format, DPI, file size, alpha categories, grayscale status and visible RGB colors. JSON includes the 1024 most frequent color counts; the simple color list appears when the image has at most 1024 colors.
 
 `tessera ascii` saves text, a rendered PNG, or both. Its glyphs use a 16 px font, comparable to the default Windows Terminal character scale at 96 DPI. `--mode fit` chooses a character grid for the source dimensions and keeps those dimensions in rendered PNG; `--mode per-pixel` creates one character per source pixel. Choose `--preset standard|detailed|minimal|blocks` or supply `--characters`. `--invert-source` reverses brightness mapping and `--invert-render` draws black text on white.
+
+The ASCII command also accepts `--columns 1..512` (0 chooses automatically), `--natural-size` for a glyph-sized PNG, `--color-mode monochrome|source|custom`, `--foreground #RRGGBB` for custom glyphs, `--background #RRGGBB` for source/custom backgrounds, `--dither` and `--font-size 1..256` for PNG rendering. The column and natural-size options apply to `fit` mode. Text output follows the column and dithering settings.
 
 ```powershell
 .\artifacts\cli\tessera.exe colors input.png -o quantized.png --color-mode quantization --quantization-colors 32
@@ -110,7 +112,76 @@ Both commands take one image file, including a result saved by an earlier CLI or
 .\artifacts\cli\tessera.exe ascii input.png --text-output image.txt --image-output image-ascii.png --preset detailed
 ```
 
-All image-producing commands save PNG, reject source overwrite, require `--overwrite` for existing results and support `--json`. ASCII text uses UTF-8 without a byte-order mark.
+## Other editor processing commands
+
+The direct commands below use the same processing implementations as the desktop editor. Each accepts `--overwrite` and `--json`, refuses to replace the source and saves PNG by default beside the input.
+
+| Desktop action | CLI command | Main options |
+| --- | --- | --- |
+| Trim transparent edges | `trim` | `-o output.png`; an all-transparent input yields 1 × 1 |
+| Sharpen | `sharpen` | `--strength 0..200` (100), `--threshold 0..64` (4) |
+| RGBA channels | `adjust-channel` | `--channel R|G|B|A`, `--amount N`, `--mode value|percent`, `--subtract` |
+| TCR reduction | `tcr` | `--mode t3-p44|p5-off|mixed`, `--factor 2..64` (8) |
+| Contours result map | `contour-map` | The candidate thresholds from `clean-contours`, `--no-detail-guard` |
+
+`resize --factor N` scales both dimensions using the editor's factor rounding; it cannot be combined with `--width` or `--height`. `colors --connected` enables connected-area palette selection. Its options are `--connected-colors` (1–4096), `--connectivity-weight`, `--local-weight`, `--detail-weight` and `--context-weight` (each 0–100%), `--tile-size` (0 or 4–256; 0 disables local areas) and `--distance-space oklab|cielab`. Their defaults match the current desktop controls.
+
+`grid-preview` writes a separate diagnostic PNG with the preview grid. It accepts `--step-x`, `--step-y` (1–2048), offsets smaller than their steps and `--color #RRGGBB`. The desktop lens remains a view overlay; the command leaves the input unchanged.
+
+```powershell
+tessera trim input.png -o trimmed.png
+tessera sharpen trimmed.png -o sharp.png --strength 90 --threshold 4
+tessera adjust-channel sharp.png -o alpha.png --channel A --amount 20 --mode percent --subtract
+tessera tcr input.png -o tcr.png --mode mixed --factor 8
+tessera contour-map input.png -o contours-map.png --window-size 7
+tessera grid-preview input.png -o grid-preview.png --step-x 16 --step-y 16
+tessera resize input.png -o half.png --factor 0.5
+tessera colors input.png -o connected.png --color-mode quantization --connected --connected-colors 32
+```
+
+## Material maps and tile tools
+
+`material-maps` generates the desktop tool's initial Height, Normal and AO maps from an image. It writes `<name>_height.png`, `<name>_normal.png` and `<name>_ao.png` beside the input or in `--output-dir`. Use `--normal-strength 0..32` (4), `--ao-strength 0..16` (2), `--ao-radius 1..64` (8), and `--normal-convention directx|opengl` (DirectX). `--document-output FILE.tmaps` also saves an editable document compatible with the desktop map workspace.
+
+`material-document paint` applies a Height, Normal or AO brush stroke to `.tmaps`. Supply `--map`, the start `--x` and `--y`, optional end `--to-x` and `--to-y`, `--size`, `--value` for Height/AO, normal vector components for Normal, `--strength`, `--softness` and `--erase`. `material-document settings` changes map generation and normal convention; `reset` clears a manual Normal or AO layer; `export` writes the three flattened PNGs; `info` reports settings. Write operations take `-o NEW.tmaps`, or the original path with `--overwrite`.
+
+`inspect-tiles` compares the right edge of A with the left edge of B, and the bottom edge of A with the top edge of B. Omit `--second` to compare A with itself. Tiles must have identical dimensions. `--threshold` defaults to 5 in OKLab × 100 units. JSON includes per-pixel differences. `suggest-tiles` returns plausible atlas layouts, including scores and reasons. Both use the desktop algorithms.
+
+`slice-tiles` extracts an atlas using either `--tile-width` and `--tile-height`, or `--columns` and `--rows`. Optional `--margin-x`, `--margin-y`, `--spacing-x` and `--spacing-y` describe the atlas grid. Results go to `--output-dir` or `<name>_tiles` beside the input. `tile-smooth` uses the tile editor's local color cleanup with `--passes 1..100`; `--edges-only --band N` preserves the interior, as in the desktop tile tool.
+
+```powershell
+tessera material-maps input.png --output-dir maps --document-output maps.tmaps --normal-convention opengl
+tessera material-document paint maps.tmaps -o painted.tmaps --map height --x 10 --y 10 --value 1 --size 3
+tessera material-document export painted.tmaps --output-dir exported-maps
+tessera inspect-tiles tile-a.png --second tile-b.png --threshold 5 --json
+tessera suggest-tiles atlas.png --json
+tessera slice-tiles atlas.png --tile-width 16 --tile-height 16 --output-dir tiles
+tessera tile-smooth tile-a.png -o tile-a-smooth.png --passes 2 --edges-only --band 2
+```
+
+## Macros
+
+`macro list --library PATH` lists saved macros. `macro apply INPUT --macro FILE -o OUTPUT` runs a saved macro through the same workflow executor as the desktop editor. A recipe JSON with `version: 1` and a nonempty `steps` array can be saved into the library using `macro save --library PATH --recipe FILE --name NAME`. `macro rename` and `macro delete` take `--library` and `--id GUID`. `--json` works with all five operations; `macro apply` also accepts `--overwrite`. `macro save` accepts an optional `--id` for a stable identifier.
+
+```powershell
+tessera macro list --library WorkspaceData/Library --json
+tessera macro save --library WorkspaceData/Library --recipe recipe.json --name "My steps"
+tessera macro apply input.png --macro WorkspaceData/Library/macros/MACRO_ID.json -o result.png
+```
+
+## Boards
+
+`board` manages editable `.tboard` files. `create` sets canvas size (128–16384 pixels per side) and optional background. `add` inserts a raster layer with a name, position, angle and scale (0.1–3). `transform`, `remove` and `reorder` edit existing layers using one-based indices. `background` changes the canvas color. `info` lists the layers. `export` writes a PNG using the same banded renderer as the desktop workspace. Write commands require `-o`; use the source board as `-o` together with `--overwrite` to update it in place. The CLI reads both current zipped boards and legacy JSON boards; writes use the current format.
+
+```powershell
+tessera board create -o board.tboard --width 1024 --height 768 --background "#FFFFFF"
+tessera board add board.tboard --image input.png -o board-with-image.tboard --x 50 --y 40 --scale 1.5
+tessera board transform board-with-image.tboard --index 1 -o board-rotated.tboard --angle 20
+tessera board export board-rotated.tboard -o board.png
+```
+
+The direct PNG-processing commands above reject source overwrite and require `--overwrite` for existing results. ASCII text uses UTF-8 without a byte-order mark.
+
 ## Grid alignment
 
 `tessera align` preserves the canvas and chooses colors and alpha from the source. Output must be PNG and defaults to `<name>_aligned.png`.

@@ -4,6 +4,7 @@
     <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>tessera</AssemblyName>
@@ -12,6 +13,8 @@
     <RootNamespace>Pixelizator.Cli</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="System.IO" />
+    <Compile Include="..\DomainColorTest\MoodboardPngExporter.cs" Link="MoodboardPngExporter.cs" />
     <ProjectReference Include="..\PixelArtDownscale\PixelArtDownscale.csproj" />
     <ProjectReference Include="..\PixelArtAlignment\PixelArtAlignment.csproj" />
     <ProjectReference Include="..\PixelArtAseprite\PixelArtAseprite.csproj" />

@@ -29,6 +29,10 @@ public partial class WorkspaceBrowser : UserControl
     {
         InitializeComponent();
         connectUnrealButton.Content = new TextBlock { Text = Localization.Text("Подключить проект Unreal…"), TextWrapping = TextWrapping.Wrap };
+        assetViewLabel.Text = Localization.Text("Вид");
+        assetViewInput.ItemsSource = new[] { Localization.Text("Плитка"), Localization.Text("Список"), Localization.Text("Мелкая плитка") };
+        assetViewInput.ToolTip = Localization.Text("Режим отображения ассетов");
+        AutomationProperties.SetName(assetViewInput, Localization.Text("Режим отображения ассетов"));
         SizeChanged += (_, _) =>
         {
             bool compact = ActualWidth < 1050;
@@ -66,6 +70,8 @@ public partial class WorkspaceBrowser : UserControl
         var state = catalog.State;
         searchInput.Text = state.Search; scopeInput.SelectedIndex = state.Scope;
         kindInput.SelectedIndex = state.Kind; filterWidth.Text = state.Width; filterHeight.Text = state.Height; alphaInput.SelectedIndex = state.Transparency;
+        state.AssetView = Math.Clamp(state.AssetView, 0, 2);
+        assetViewInput.SelectedIndex = state.AssetView;
         _ready = true; RebuildTree(); Refresh();
     }
 
@@ -84,10 +90,14 @@ public partial class WorkspaceBrowser : UserControl
         if (state.ProjectId is { } id && !_catalog.State.Projects.Any(p => p.Id == id)) { state.View = "all"; state.ProjectId = state.FolderId = null; }
         var selected = Selection.Select(a => a.Id).ToHashSet();
         var assets = _catalog.Query(state.View, state.ProjectId, state.FolderId, scopeInput.SelectedIndex, searchInput.Text, kindInput.SelectedIndex, filterWidth.Text, filterHeight.Text, alphaInput.SelectedIndex);
-        bool unreal = _catalog.IsUnrealProject(state.ProjectId) || assets.Any(a => a.Unreal is not null);
-        var panel = (ItemsPanelTemplate)Resources[unreal ? "UnrealItemsPanel" : "LocalItemsPanel"];
+        int view = Math.Clamp(state.AssetView, 0, 2);
+        string[] panels = ["TileItemsPanel", "ListItemsPanel", "SmallTileItemsPanel"];
+        string[] templates = ["AssetTileTemplate", "AssetListTemplate", "AssetSmallTileTemplate"];
+        string[] styles = ["TileAssetItem", "ListAssetItem", "SmallTileAssetItem"];
+        var panel = (ItemsPanelTemplate)Resources[panels[view]];
         if (assetList.ItemsPanel != panel) assetList.ItemsPanel = panel;
-        ScrollViewer.SetCanContentScroll(assetList, unreal);
+        assetList.ItemTemplate = (DataTemplate)Resources[templates[view]];
+        assetList.ItemContainerStyle = (Style)Resources[styles[view]];
         assetList.ItemsSource = assets;
         foreach (var asset in assets.Where(a => select == a.Id || select is null && selected.Contains(a.Id))) assetList.SelectedItems.Add(asset);
         if (assetList.SelectedItem is null && state.SelectedAsset is { } last) assetList.SelectedItem = assets.FirstOrDefault(a => a.Id == last);
@@ -215,6 +225,12 @@ public partial class WorkspaceBrowser : UserControl
         _catalog.Save();
     }
     private void FiltersChanged(object sender, RoutedEventArgs e) { if (_ready) Safe(() => Refresh()); }
+    private void AssetViewChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!_ready || _catalog is null || assetViewInput.SelectedIndex < 0) return;
+        _catalog.State.AssetView = assetViewInput.SelectedIndex;
+        Safe(() => Refresh());
+    }
     private void ResetFilters(object sender, RoutedEventArgs e)
     {
         _ready = false; searchInput.Clear(); filterWidth.Clear(); filterHeight.Clear(); kindInput.SelectedIndex = alphaInput.SelectedIndex = scopeInput.SelectedIndex = 0; _ready = true; Refresh();
@@ -269,7 +285,8 @@ public partial class WorkspaceBrowser : UserControl
         detailName.Text = selection.Count > 1 ? Localization.Format("Выбрано: {0}", selection.Count) : asset?.Name ?? Localization.Text("Выберите ассет");
         detailSummary.Text = asset?.Summary ?? ""; detailPreview.Source = asset?.Thumbnail;
         tagsInput.Text = asset is null ? "" : string.Join(", ", asset.Tags.Where(t => selection.All(a => a.Tags.Contains(t))));
-        usageLabel.Text = asset is null ? "" : Localization.Text("Используется:\n") + (string.IsNullOrEmpty(asset.LocationLabel) ? Localization.Text("Без проекта") : asset.LocationLabel.Replace(" · ", "\n"));
+        usageLabel.Text = asset is null ? "" : Localization.Text("Используется:\n") + (string.IsNullOrEmpty(asset.LocationLabel) ? Localization.Text("Без проекта") :
+            string.Join("\n", asset.LocationLabel.Split(" · ").Select(location => location + " / " + asset.Name)));
         if (asset is not null && _catalog is not null) _catalog.State.SelectedAsset = asset.Id;
         if (_ready && _catalog is not null) countLabel.Text = Localization.Format("Материалов: {0} · Выбрано: {1} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия", assetList.Items.Count, selection.Count);
     }

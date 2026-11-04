@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Режимы библиотеки и инструменты CLI",
+        "en": "Library views and CLI tools"
+      },
+      "notes": {
+        "ru": "- Библиотека: режимы «Плитка», «Список» и «Мелкая плитка» переключаются в правом нижнем углу. Выбранный режим сохраняется, выделенный материал остаётся выбранным. Карточки больше не дублируют путь; полный путь с именем ассета доступен справа.\n- CLI: добавлены обрезка прозрачных краёв, резкость, изменение RGBA-каналов, уменьшение TCR, карта контуров и диагностическая сетка.\n- Тайлы в CLI: анализ швов, предложение сетки атласа, нарезка и сглаживание с возможностью сохранить внутреннюю область.\n- Карты материалов в CLI: создание Height, Normal и AO, сохранение .tmaps, мазки по картам, изменение параметров, сброс ручных слоёв и экспорт PNG.\n- Доски в CLI: создание .tboard, добавление изображений, перемещение, поворот, масштабирование, порядок слоёв, фон и экспорт PNG.\n- Макросы в CLI: сохранение рецептов, переименование и удаление; независимое уменьшение поддерживает связанную палитру.\n- CLI ASCII: ширина символьной сетки, цвет исходника или свой цвет, фон, размер шрифта и дизеринг. «Свойства изображения» сообщают формат, DPI, прозрачность и частоты цветов; изменение размера принимает коэффициент масштаба.",
+        "en": "- Library: switch between Tiles, List and Small tiles in the bottom-right corner. The chosen view is remembered and the selected material stays selected. Cards no longer repeat paths; the full path including the asset name is available in the details panel.\n- CLI: added transparent-edge trimming, sharpening, RGBA channel adjustment, TCR reduction, contour maps and a diagnostic grid overlay.\n- CLI tiles: analyze seams, suggest atlas grids, slice tiles and smooth colors while optionally preserving the interior.\n- CLI material maps: generate Height, Normal and AO, save .tmaps, paint maps, change settings, reset manual layers and export PNG.\n- CLI boards: create .tboard files, add images, move, rotate and scale layers, change layer order and background, and export PNG.\n- CLI macros: save recipes, rename and delete macros; independent reduction supports a connected palette.\n- CLI ASCII: character-grid width, source or custom colors, background, font size and dithering. Image properties report format, DPI, transparency and color frequencies; resize accepts a scale factor."
+      }
+    },
+    {
+      "version": "2.27.2",
+      "title": {
         "ru": "Исправления дерева библиотеки",
         "en": "Library tree corrections"
       },

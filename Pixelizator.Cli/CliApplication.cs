@@ -9,7 +9,7 @@ namespace Pixelizator.Cli;
 internal static class CliApplication
 {
     public const string Help = """
-        Tessera — уменьшение изображений в стиле pixel art.
+        Tessera — обработка изображений и графических ассетов из командной строки.
 
         Использование: tessera <изображение> [параметры]
                        tessera --input <изображение> --output <результат.png>
@@ -21,6 +21,21 @@ internal static class CliApplication
                        tessera colors <изображение> -o <результат.png>
                        tessera connected-palette <изображение> -o <результат.png>
                        tessera smooth-colors <изображение> -o <результат.png>
+                       tessera trim <изображение> -o <результат.png>
+                       tessera sharpen <изображение> -o <результат.png>
+                       tessera adjust-channel <изображение> -o <результат.png>
+                       tessera tcr <изображение> -o <результат.png>
+                       tessera contour-map <изображение> -o <карта.png>
+                       tessera grid-preview <изображение> -o <просмотр.png>
+                       tessera material-maps <изображение> --output-dir <папка>
+                       tessera material-document export <карты.tmaps> --output-dir <папка>
+                       tessera inspect-tiles <изображение> [--second <изображение>]
+                       tessera suggest-tiles <атлас.png> --json
+                       tessera slice-tiles <атлас.png> --tile-width 16 --tile-height 16
+                       tessera tile-smooth <тайл.png> -o <результат.png>
+                       tessera board create -o <доска.tboard> --width 1024 --height 768
+                       tessera board add <доска.tboard> --image <изображение> -o <новая.tboard>
+                       tessera board export <доска.tboard> -o <результат.png>
                        tessera clean-contours <изображение> -o <результат.png>
                        tessera structure-probe <изображение> -o <результат.png>
                        tessera monochrome <изображение> -o <результат.png>
@@ -39,6 +54,11 @@ internal static class CliApplication
         Отдельные размер и цвета: tessera resize --help; tessera colors --help.
         Сглаживание, монохром и ASCII: tessera smooth-colors --help;
         tessera monochrome --help; tessera ascii --help.
+        Обрезка, резкость, каналы и TCR: tessera trim --help;
+        tessera sharpen --help; tessera adjust-channel --help; tessera tcr --help.
+        Карты и тайлы: tessera contour-map --help; tessera material-maps --help;
+        tessera grid-preview --help; tessera inspect-tiles --help; tessera suggest-tiles --help;
+        tessera slice-tiles --help; tessera tile-smooth --help.
         Палитра и замена цвета: tessera palette-info --help; tessera replace-color --help.
         Связная палитра: tessera connected-palette --help.
         Очистка контуров: tessera clean-contours --help.
@@ -123,6 +143,30 @@ internal static class CliApplication
             return IndependentCommand.Run(args[1..], false, output, error);
         if (args.Length > 0 && args[0] is "smooth-colors" or "smooth")
             return ImageToolsCommand.RunSmooth(args[1..], output, error);
+        if (args.Length > 0 && args[0] is "trim" or "trim-transparent")
+            return ImageToolsCommand.RunTrim(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "sharpen")
+            return ImageToolsCommand.RunSharpen(args[1..], output, error);
+        if (args.Length > 0 && args[0] is "adjust-channel" or "channel")
+            return ImageToolsCommand.RunChannel(args[1..], output, error);
+        if (args.Length > 0 && args[0] is "tcr" or "finalist-reduce")
+            return ImageToolsCommand.RunTcr(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "contour-map")
+            return ImageToolsCommand.RunContourMap(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "grid-preview")
+            return ImageToolsCommand.RunGridPreview(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "material-maps")
+            return ImageToolsCommand.RunMaterialMaps(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "material-document")
+            return MaterialDocumentCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "inspect-tiles")
+            return ImageToolsCommand.RunInspectTiles(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "suggest-tiles")
+            return ImageToolsCommand.RunSuggestTiles(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "slice-tiles")
+            return ImageToolsCommand.RunSliceTiles(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "tile-smooth")
+            return ImageToolsCommand.RunTileSmooth(args[1..], output, error);
         if (args.Length > 0 && args[0] is "monochrome" or "mono")
             return ImageToolsCommand.RunMonochrome(args[1..], output, error);
         if (args.Length > 0 && args[0] == "ascii")
@@ -135,6 +179,8 @@ internal static class CliApplication
             return ImageToolsCommand.RunReplace(args[1..], output, error);
         if (args.Length > 0 && args[0] == "macro")
             return MacroCommand.Run(args[1..], output, error);
+        if (args.Length > 0 && args[0] == "board")
+            return BoardCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "aseprite")
             return AsepriteCommand.Run(args[1..], output, error);
         if (args.Length == 0 || args is ["--help"] or ["-h"])

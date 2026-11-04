@@ -5,8 +5,36 @@
  <UserControl.Resources>
   <ResourceDictionary>
   <ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries>
-  <ItemsPanelTemplate x:Key="LocalItemsPanel"><WrapPanel/></ItemsPanelTemplate>
-  <ItemsPanelTemplate x:Key="UnrealItemsPanel"><VirtualizingStackPanel/></ItemsPanelTemplate>
+  <ItemsPanelTemplate x:Key="TileItemsPanel"><local:WorkspaceAssetPanel CellWidth="192" CellHeight="242"/></ItemsPanelTemplate>
+  <ItemsPanelTemplate x:Key="SmallTileItemsPanel"><local:WorkspaceAssetPanel CellWidth="140" CellHeight="180"/></ItemsPanelTemplate>
+  <ItemsPanelTemplate x:Key="ListItemsPanel"><local:WorkspaceAssetPanel CellHeight="66"/></ItemsPanelTemplate>
+  <DataTemplate x:Key="AssetPreviewTemplate">
+   <Border Background="{DynamicResource Ts.Thumbnail}"><Grid>
+    <TextBlock Text="{Binding KindLabel}" Foreground="{DynamicResource Ts.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+    <Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="6" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+   </Grid></Border>
+  </DataTemplate>
+  <DataTemplate x:Key="AssetListPreviewTemplate">
+   <Border Background="{DynamicResource Ts.Thumbnail}"><Grid>
+    <TextBlock Text="▧" ToolTip="{Binding KindLabel}" FontSize="20" Foreground="{DynamicResource Ts.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+    <Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="3" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+   </Grid></Border>
+  </DataTemplate>
+  <DataTemplate x:Key="AssetTileTemplate"><Grid ToolTip="{Binding Name}">
+   <Grid.RowDefinitions><RowDefinition Height="128"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetPreviewTemplate}"/>
+   <StackPanel Grid.Row="1" Margin="10"><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Summary}" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding TagLabel}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,5,0,0"/></StackPanel>
+  </Grid></DataTemplate>
+  <DataTemplate x:Key="AssetSmallTileTemplate"><Grid ToolTip="{Binding Name}">
+   <Grid.RowDefinitions><RowDefinition Height="94"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+   <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetPreviewTemplate}"/>
+   <StackPanel Grid.Row="1" Margin="7"><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,0"/></StackPanel>
+  </Grid></DataTemplate>
+  <DataTemplate x:Key="AssetListTemplate"><Grid Margin="7" ToolTip="{Binding Name}">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+   <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetListPreviewTemplate}"/>
+   <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}"/></StackPanel>
+  </Grid></DataTemplate>
   <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource Ts.CompactButton}">
    <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Margin" Value="0,2"/>
   </Style>
@@ -49,7 +77,7 @@
    </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style x:Key="AssetItem" TargetType="ListBoxItem">
-   <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,12,12"/>
+   <Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
    <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
     <Border x:Name="frame" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Panel}"><ContentPresenter/></Border>
@@ -60,6 +88,9 @@
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
+  <Style x:Key="TileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="180"/><Setter Property="Height" Value="230"/><Setter Property="Margin" Value="0,0,12,12"/></Style>
+  <Style x:Key="SmallTileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="130"/><Setter Property="Height" Value="170"/><Setter Property="Margin" Value="0,0,10,10"/></Style>
+  <Style x:Key="ListAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Height" Value="62"/><Setter Property="Margin" Value="0,0,0,4"/></Style>
   </ResourceDictionary>
  </UserControl.Resources>
  <Grid x:Name="browserGrid">
@@ -125,16 +156,13 @@
     <Button Content="{local:Translate Text407F871778D3}" Click="ResetFilters" Margin="6,0,0,0" Padding="6,4"/>
    </WrapPanel>
    <Grid Grid.Row="3">
-    <ListBox x:Name="assetList" SelectionMode="Extended" SelectionChanged="AssetSelected" MouseDoubleClick="OpenDoubleClick" KeyDown="AssetKeyDown" PreviewMouseLeftButtonDown="AssetMouseDown" PreviewMouseMove="AssetMouseMove" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel" ItemContainerStyle="{StaticResource AssetItem}" AutomationProperties.Name="{local:Translate Text36484D8C388F}">
-     <ListBox.ItemTemplate><DataTemplate><Grid Width="180" ToolTip="{Binding Name}">
-      <Grid.RowDefinitions><RowDefinition Height="128"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-      <Border Background="{DynamicResource Ts.Thumbnail}"><Grid><TextBlock Text="{Binding KindLabel}" Foreground="{DynamicResource Ts.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock><Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="10" RenderOptions.BitmapScalingMode="NearestNeighbor"/></Grid></Border>
-      <StackPanel Grid.Row="1" Margin="10"><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Summary}" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding TagLabel}" FontSize="11" Foreground="{DynamicResource Ts.TextMuted}" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/><TextBlock Text="{Binding LocationLabel}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}" TextTrimming="CharacterEllipsis" Margin="0,5,0,0"/></StackPanel>
-     </Grid></DataTemplate></ListBox.ItemTemplate>
-    </ListBox>
+    <ListBox x:Name="assetList" SelectionMode="Extended" SelectionChanged="AssetSelected" MouseDoubleClick="OpenDoubleClick" KeyDown="AssetKeyDown" PreviewMouseLeftButtonDown="AssetMouseDown" PreviewMouseMove="AssetMouseMove" Background="Transparent" BorderThickness="0" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" ItemContainerStyle="{StaticResource TileAssetItem}" ItemTemplate="{StaticResource AssetTileTemplate}" AutomationProperties.Name="{local:Translate Text36484D8C388F}"/>
     <StackPanel x:Name="emptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="330" IsHitTestVisible="False"><TextBlock Text="{local:Translate TextB69BDD2BCE72}" FontSize="19" TextAlignment="Center"/><TextBlock Text="{local:Translate Text8E308FD21650}" TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,12,0,0"/></StackPanel>
    </Grid>
-   <TextBlock x:Name="countLabel" Grid.Row="4" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,8" FontSize="11"/>
+   <Grid Grid.Row="4" Margin="0,8,4,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <TextBlock x:Name="countLabel" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" FontSize="11" Margin="0,0,10,0"/>
+    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBlock x:Name="assetViewLabel" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,7,0"/><ComboBox x:Name="assetViewInput" Width="164" SelectedIndex="0" SelectionChanged="AssetViewChanged"/></StackPanel>
+   </Grid>
   </Grid>
   <Border x:Name="detailsBorder" Grid.Column="3" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="18">
