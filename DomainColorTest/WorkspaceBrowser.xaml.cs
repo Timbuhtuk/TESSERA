@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Data;
+using System.Windows.Automation;
 using System.Xml.Linq;
 
 namespace DomainColorTest;
@@ -110,14 +111,21 @@ public partial class WorkspaceBrowser : UserControl
     }
     private TreeViewItem MakeNode(string name, object tag, bool selected)
     {
-        var node = new TreeViewItem { Header = name, Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 5, 2, 5) };
+        var node = new TreeViewItem
+        {
+            Header = new TextBlock { Text = name, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis },
+            Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 5, 2, 5)
+        };
+        AutomationProperties.SetName(node, name);
         Guid project = tag is WorkspaceProject p ? p.Id : ((WorkspaceFolder)tag).ProjectId;
         Guid? folder = (tag as WorkspaceFolder)?.Id;
         if (_catalog!.IsUnrealProject(project))
         {
             if (tag is WorkspaceProject)
             {
-                var header = new StackPanel { Orientation = Orientation.Horizontal };
+                var header = new Grid();
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 var icon = new System.Windows.Shapes.Path
                 {
                     Data = UnrealLogo.Value, Width = 18, Height = 18, Stretch = Stretch.Uniform,
@@ -125,7 +133,9 @@ public partial class WorkspaceBrowser : UserControl
                 };
                 icon.SetBinding(System.Windows.Shapes.Path.FillProperty, new Binding(nameof(Foreground)) { Source = node });
                 header.Children.Add(icon);
-                header.Children.Add(new TextBlock { Text = name, VerticalAlignment = VerticalAlignment.Center });
+                var title = new TextBlock { Text = name, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+                Grid.SetColumn(title, 1);
+                header.Children.Add(title);
                 node.Header = header;
             }
             return node;
