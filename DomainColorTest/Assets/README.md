@@ -4,7 +4,7 @@
 - Build-Icon.ps1: renders the vector tile coordinates on the pixel grid; regenerates app-icon.png and the seven-size app.ico on Windows.
 - app-icon.png: 1024 px brand mark used in the title bar and ICO banner.
 - app.ico: Windows icon with 16, 24, 32, 48, 64, 128 and 256 px PNG frames.
-- unreal-mark.svg: Tessera's UE project badge. The library uses it to identify connected Unreal projects.
+- unreal-mark.svg: Unreal Engine SVG logo supplied by the user as unreal-engine-svgrepo-com.svg (SVG Repo). The library uses it to identify connected Unreal projects.
 - landscape.png: generated landscape processed by the user in the app on 2026-09-11 (384 × 256 px). Embedded unchanged, nearest-neighbor scaling and mild parallax.
 
 ## Landscape prompt

@@ -33,7 +33,6 @@ public partial class WorkspaceBrowser : UserControl
             bool compact = ActualWidth < 1050;
             detailColumn.Width = new GridLength(compact ? 0 : 270);
             detailsBorder.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-            navColumn.Width = new GridLength(ActualWidth < 760 ? 150 : 210);
         };
         PreviewDragOver += (_, e) =>
         {
