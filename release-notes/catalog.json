@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Исправления библиотеки Unreal Engine",
+        "en": "Unreal Engine library corrections"
+      },
+      "notes": {
+        "ru": "- Библиотека Unreal Engine: дерево Content показывает только папки с Texture2D и их родительские ветки. Пустые и нетекстурные ветки исчезают также из сохранённого каталога.\n- Для Unreal-текстур справа доступны превью, сведения, путь и открытие. Действия с тегами и организацией ассетов скрыты в панели и контекстном меню; у локальных ассетов они остаются доступными.\n- Плагин Tessera Sync обновлён до 0.2.1. После установки обновления перезапустите Unreal Editor.",
+        "en": "- Unreal Engine library: the Content tree shows only folders containing Texture2D assets and their parent branches. Empty and non-texture branches are also removed from the cached catalog.\n- Unreal textures retain their preview, details, location and Open action. Tag and asset organization actions are hidden from the panel and context menu; local assets retain these actions.\n- Tessera Sync is updated to 0.2.1. Restart Unreal Editor after installing the plugin update."
+      }
+    },
+    {
+      "version": "2.27.0",
+      "title": {
         "ru": "Настраиваемая ширина библиотеки",
         "en": "Resizable library sidebar"
       },

@@ -1,6 +1,6 @@
 # Unreal Engine 5 projects in Tessera
 
-Connect an Unreal project to browse its Content folders and edit PNG-compatible Texture2D assets, including Height, Normal and AO textures. Saving a linked texture updates its existing Unreal asset. Unreal owns the folder structure.
+Connect an Unreal project to browse the Content branches containing textures and edit PNG-compatible Texture2D assets, including Height, Normal and AO textures. Each texture folder appears with its ancestors. Saving a linked texture updates its existing Unreal asset. Unreal owns the folder structure.
 
 ## Install and connect
 
@@ -8,6 +8,8 @@ Connect an Unreal project to browse its Content folders and edit PNG-compatible 
 2. Accept the installation prompt. Tessera installs its bundled plugin into `<project>/Plugins/TesseraSync`. To reinstall it, select the project in the library and use **File → Unreal Engine 5 → Install plugin into project…**.
 3. Open the project in Unreal Editor. Under **Edit → Plugins**, search for **Tessera Sync** and enable it. Accept the required dependencies **Python Editor Script Plugin** and **Editor Scripting Utilities**. Restart Unreal Editor after enabling or updating the plugin.
 4. In Tessera, select the project with the Unreal Engine icon. When the plugin finishes indexing the project, the library shows the Content tree with its textures. Unreal Editor 5.3 is the verified engine version.
+
+For Unreal assets, the right panel provides the preview, texture details, project location, and the action to open the texture. Tags and asset management controls are available for local Tessera assets.
 
 If the project stays disconnected, check that the editor opened the same `.uproject`, the plugin is enabled, and Unreal was restarted. The Unreal Output Log shows plugin and import errors.
 

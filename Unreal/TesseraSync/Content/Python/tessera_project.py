@@ -51,13 +51,8 @@ def publish_catalog():
     registry = unreal.AssetRegistryHelpers.get_asset_registry()
     if registry.is_loading_assets():
         return
-    folders = {"/Game"}
+    folders = set()
     textures, redirects = [], {}
-    for directory, children, _ in os.walk(CONTENT):
-        children[:] = [name for name in children if name.lower() not in SYSTEM_FOLDERS]
-        relative = os.path.relpath(directory, CONTENT)
-        if relative != ".":
-            folders.add("/Game/" + relative.replace(os.sep, "/"))
     for data in registry.get_assets_by_path("/Game", recursive=True, include_only_on_disk_assets=True) or []:
         folder = str(data.package_path)
         if not _visible(folder):
@@ -72,7 +67,9 @@ def publish_catalog():
             continue
         if kind == "Texture2D":
             textures.append({"path": path, "revision": revision})
-            folders.add(folder)
+            while _visible(folder):
+                folders.add(folder)
+                folder = folder.rsplit("/", 1)[0]
         else:
             cached = _redirect_cache.get(path)
             if cached is None or cached[0] != revision:

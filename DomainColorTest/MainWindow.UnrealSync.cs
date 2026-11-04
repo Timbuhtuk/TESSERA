@@ -9,13 +9,14 @@ public partial class MainWindow
 {
     private UnrealSyncBridge _unrealSync = null!;
 
-    private async Task SelectUnrealProjectAsync()
+    private Task SelectUnrealProjectAsync()
     {
         var dialog = new OpenFileDialog { Title = Localization.Text("Выберите проект Unreal Engine"), Filter = "Unreal Engine project|*.uproject" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(this) != true) return Task.CompletedTask;
         _unrealSync.SelectProject(dialog.FileName);
-        if (_workspaceCatalog is not null) await ConnectUnrealProjectAsync(dialog.FileName);
+        if (_workspaceCatalog is not null) ConnectUnrealProject(dialog.FileName);
         else statusLabel.Text = Localization.Text("Проект Unreal подключён: ") + _unrealSync.ProjectPath;
+        return Task.CompletedTask;
     }
 
     private Task InstallUnrealPluginAsync()
