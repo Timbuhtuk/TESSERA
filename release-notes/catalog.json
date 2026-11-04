@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Компактное дерево проектов",
+        "en": "Compact project tree"
+      },
+      "notes": {
+        "ru": "- Библиотека: уменьшены вертикальные промежутки между папками и проектами. На той же высоте панели помещается больше строк, при этом названия, значки и стрелки раскрытия остаются читаемыми.",
+        "en": "- Library: reduced vertical spacing between folders and projects. More rows fit in the same sidebar height while names, icons and disclosure arrows remain readable."
+      }
+    },
+    {
+      "version": "2.30.0",
+      "title": {
         "ru": "Версия приложения и обновление переименованных файлов",
         "en": "Installed version and renamed executable updates"
       },

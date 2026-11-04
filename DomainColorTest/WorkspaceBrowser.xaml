@@ -48,13 +48,13 @@
     <Grid SnapsToDevicePixels="True" UseLayoutRounding="True">
      <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-     <Border x:Name="HeaderFrame" Grid.ColumnSpan="2" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}" MinHeight="28">
+     <Border x:Name="HeaderFrame" Grid.ColumnSpan="2" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" Padding="{TemplateBinding Padding}" MinHeight="20">
       <Grid>
        <Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
        <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header" Margin="6,0,0,0" VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
       </Grid>
      </Border>
-     <ToggleButton x:Name="Expander" Width="20" Focusable="False" IsTabStop="False" ClickMode="Press" Foreground="{TemplateBinding Foreground}"
+     <ToggleButton x:Name="Expander" Width="20" Height="20" MinHeight="0" Padding="0" Focusable="False" IsTabStop="False" ClickMode="Press" Foreground="{TemplateBinding Foreground}"
                    IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" AutomationProperties.Name="{local:Translate TextC7F4E3E28851}">
       <ToggleButton.Template><ControlTemplate TargetType="ToggleButton">
        <Border Background="Transparent">
