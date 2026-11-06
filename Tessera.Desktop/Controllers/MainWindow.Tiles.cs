@@ -28,7 +28,7 @@ public partial class MainWindow
         inspector.WorkspaceSaved += () =>
         {
             if (_workspaceCatalog is null || inspector.WorkspaceSavePath is not { } path) return;
-            var document = _workspaceCatalog.State.Assets.FirstOrDefault(asset => asset.Kind == WorkspaceAssetKind.Tiles &&
+            var document = _workspaceCatalog.State.Assets.FirstOrDefault(asset => asset.Kind == EWorkspaceAssetKind.Tiles &&
                 string.Equals(_workspaceCatalog.ContentPath(asset), path, StringComparison.OrdinalIgnoreCase));
             if (document is null) return;
             document.ModifiedAt = DateTimeOffset.Now; UpdateDocumentPreview(document); _workspaceCatalog.Save();
@@ -52,9 +52,9 @@ public partial class MainWindow
     {
         var state = _workspaceCatalog?.State;
         bool browser = _workspaceBrowser?.Visibility == Visibility.Visible;
-        Guid? project = state is null ? null : !browser && _workspaceActive?.Kind == WorkspaceAssetKind.Image
+        Guid? project = state is null ? null : !browser && _workspaceActive?.Kind == EWorkspaceAssetKind.Image
             ? _workspaceSourceProject : state.View == "project" ? state.ProjectId : null;
-        bool unassigned = state is not null && (!browser && _workspaceActive?.Kind == WorkspaceAssetKind.Image
+        bool unassigned = state is not null && (!browser && _workspaceActive?.Kind == EWorkspaceAssetKind.Image
             ? _workspaceSourcesUnassigned : state.View == "unassigned");
         var members = state?.Links.Where(link => project is null || link.ProjectId == project).Select(link => link.AssetId).ToHashSet() ?? [];
         var sources = _sources.Where(source => project is not null ? members.Contains(source.Id) : !unassigned || !members.Contains(source.Id));

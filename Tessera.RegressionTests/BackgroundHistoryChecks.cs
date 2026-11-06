@@ -114,7 +114,7 @@ internal static class BackgroundHistoryChecks
 
     private static GenerationEntry Entry(string name, int width, int height) => new()
     {
-        Operation = name, Settings = new() { Downscale = new() { TargetWidth = width, TargetHeight = height, Palette = PaletteKind.None } }
+        Operation = name, Settings = new() { Downscale = new() { TargetWidth = width, TargetHeight = height, Palette = EPaletteKind.None } }
     };
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path)));

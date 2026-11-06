@@ -34,7 +34,7 @@ internal static class InfoPickerChecks
             if (docked)
             {
                 Wait(window.ImportWorkspaceFilesAsync(new[] { path }));
-                Wait(window.OpenWorkspaceAssetAsync(window.Workspace!.State.Assets.Single(asset => asset.Kind == WorkspaceAssetKind.Image)));
+                Wait(window.OpenWorkspaceAssetAsync(window.Workspace!.State.Assets.Single(asset => asset.Kind == EWorkspaceAssetKind.Image)));
             }
             else Call(window, "LoadImage", path);
             Get<MenuItem>(window, "infoMenuItem").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent)); Pump();

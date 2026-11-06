@@ -148,7 +148,7 @@ Tessera checks the latest GitHub release in the background at startup and every 
 
 Open the title-bar gear and use **Settings → General → Updates** to check or retry manually, including after choosing Later. Only after confirmation does Tessera download the standalone executable, verify its SHA-256 digest, close, replace the executable and restart. `WorkspaceData` stays in place. The install is available when running the published `Tessera.exe` from a writable folder; development builds offer to open the release page instead.
 
-For more detail, see [grid alignment](../Tessera.Core/Alignment/README.md), [ICO export](../Tessera.Core/Imaging/ICO.md) and the [CLI reference](CLI.md).
+For more detail, see [grid alignment](../Tessera.Core/Alignment/README.md), [ICO export](../Tessera.Core/Imaging/Export/ICO.md) and the [CLI reference](CLI.md).
 
 ## Standalone background removal
 

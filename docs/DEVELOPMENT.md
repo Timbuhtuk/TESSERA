@@ -50,7 +50,7 @@ The [architecture guide](ARCHITECTURE.md) defines ownership and dependency direc
 - `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md); `.agents/plugins/marketplace.json` registers the repository marketplace.
 - `artifacts`: ignored local builds, test output and archives.
 
-See [grid alignment](../Tessera.Core/Alignment/README.md), [ICO export](../Tessera.Core/Imaging/ICO.md) and [operation progress](PROGRESS.md).
+See [grid alignment](../Tessera.Core/Alignment/README.md), [ICO export](../Tessera.Core/Imaging/Export/ICO.md) and [operation progress](PROGRESS.md).
 
 The editable Tessera mark and its generation script are documented in the [asset README](../Tessera.Desktop/Assets/README.md).
 
@@ -76,7 +76,7 @@ Holding either Alt key temporarily enables the heatmap without changing the save
 
 `Tessera.Desktop/Views/TileInspectorWindow.xaml(.cs)` owns the independent inspector view. Its `Controllers/TileInspectorWindow.Collection.cs` and `Controllers/TileInspectorWindow.Painting.cs` partials handle projects, export, edits and smoothing. `Controllers/MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `Views/TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
 
-`Tessera.Core/Imaging/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
+`Tessera.Core/Imaging/Tiles/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
 
 `TileAsset.cs` keeps BGRA pixels, a WPF bitmap, edit state and bounded per-asset undo/redo snapshots (up to 20 entries / 64 MiB, retaining at least one). `TileAsset.Compare(A, B)` compares A.right/B.left and A.bottom/B.top; reverse joins are computed independently. The checkerboard arrangement alternates A/B. Pair candidates require equal dimensions; incompatible assets remain available in the collection. `TileAssetProcessing.Smooth` delegates to `IndependentImageProcessor.ApplyNeighborColors`, preserving its color selection and alpha behavior, then optionally restores pixels outside the selected edge strip. It does not synthesize colors across asset boundaries.
 
@@ -88,7 +88,7 @@ Painting and both fills use straight-alpha source-over, with color alpha multipl
 
 ### Tileset slicing
 
-`Tessera.Core/Imaging/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
+`Tessera.Core/Imaging/Tiles/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
 
 `TileSetImportWindow.xaml(.cs)` provides manual/automatic layout controls and an outlined pixel preview in `TileSetPreview.cs`. The `TileInspectorWindow.TileSet.cs` partial adds the confirmed batch to the collection. Each slice keeps an optional `AtlasSourcePath` instead of an ordinary single-image watcher path. Version-1 `.ttiles` manifests accept this optional field, retain embedded pixels, and protect the original atlas from PNG/project overwrite. Existing projects without the field remain supported.
 
@@ -143,7 +143,7 @@ The tool-improvement checks run with `Tessera.RegressionTests --tool-improvement
 
 ## Material-map editor
 
-The material-map editor is available under the image editor's Tools menu. `Tessera.Core/Imaging/MaterialMapDocument.cs` owns luminance Height initialization, central-difference normalized normals, eight-direction/four-distance horizon AO and independent normal/AO masks. Canonical normals use +Y up; DirectX export flips only green. Color preview lighting runs in linear light and AO modulates its ambient term. Transparent neighbors are excluded and image edges do not wrap. This is a 2D height-field approximation, not geometry baking or AI depth estimation.
+The material-map editor is available under the image editor's Tools menu. `Tessera.Core/Imaging/Materials/MaterialMapDocument.cs` owns luminance Height initialization, central-difference normalized normals, eight-direction/four-distance horizon AO and independent normal/AO masks. Canonical normals use +Y up; DirectX export flips only green. Color preview lighting runs in linear light and AO modulates its ambient term. Transparent neighbors are excluded and image edges do not wrap. This is a 2D height-field approximation, not geometry baking or AI depth estimation.
 
 `MaterialMapFile` stores versioned `.tmaps` ZIP files with a JSON header and lossless binary source/layers, validates dimensions and finite layer values, and replaces saves atomically. Stroke/reset/settings history is capped at 30 snapshots or approximately 128 MiB, retaining at least one action. `MaterialMapsWindow` provides the three paint surfaces, per-map reset, throttled preview light, source overlay, PNG/project persistence and source-path protection. It snapshots the selected source/result and holds one session per source/result, so switching assets cannot redirect existing strokes.
 

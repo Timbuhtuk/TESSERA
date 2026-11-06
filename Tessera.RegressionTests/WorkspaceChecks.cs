@@ -196,8 +196,8 @@ internal static class WorkspaceChecks
             string animationPath = Path.Combine(root, "walk.aseprite");
             File.WriteAllBytes(animationPath, Tessera.Aseprite.Tests.Fixtures.File(2, 2, [new Tessera.Aseprite.Tests.Fixtures.Frame(100, Tessera.Aseprite.Tests.Fixtures.Layer(), Tessera.Aseprite.Tests.Fixtures.Cel(2, 2, [255,0,0,255, 0,255,0,255, 0,0,255,255, 255,255,255,255]))]));
             Wait(window.ImportWorkspaceFilesAsync([boardPath, animationPath]));
-            Require(window.Workspace.State.Assets.Single(a => a.Kind == WorkspaceAssetKind.Board).Thumbnail is not null, "Board thumbnail is available before opening the document");
-            var animation = window.Workspace.State.Assets.Single(a => a.Kind == WorkspaceAssetKind.Animation);
+            Require(window.Workspace.State.Assets.Single(a => a.Kind == EWorkspaceAssetKind.Board).Thumbnail is not null, "Board thumbnail is available before opening the document");
+            var animation = window.Workspace.State.Assets.Single(a => a.Kind == EWorkspaceAssetKind.Animation);
             Wait(window.OpenWorkspaceAssetAsync(animation));
             var aseprite = Get<AsepriteWorkspace>(window, "asepriteWorkspace");
             Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && Equals(Get<MenuItem>(window, "saveMenuItem").Header, "PNG + JSON…") && Get<MenuItem>(window, "exportIcoMenuItem").Visibility == Visibility.Collapsed, "File menu follows the active animation and hides image-only exports");
@@ -208,7 +208,7 @@ internal static class WorkspaceChecks
             string animationOutput = Path.Combine(root, "animation-export"); Directory.CreateDirectory(animationOutput); Wait(window.OpenWorkspaceAssetAsync(animation)); Wait(aseprite.SaveAsync(animationOutput, false));
             Require(Directory.EnumerateFiles(animationOutput, "*.png").Any() && Directory.EnumerateFiles(animationOutput, "*.json").Any(), "Animation exports PNG and JSON");
 
-            var board = window.Workspace.State.Assets.Single(a => a.Kind == WorkspaceAssetKind.Board);
+            var board = window.Workspace.State.Assets.Single(a => a.Kind == EWorkspaceAssetKind.Board);
             Wait(window.OpenWorkspaceAssetAsync(board)); var boardEditor = Get<MoodboardWorkspace>(window, "moodboardWorkspace");
             Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && !Get<MenuItem>(window, "toolsMenu").IsEnabled, "Board file commands are available while image tools are disabled");
             Wait(boardEditor.AddFilesAsync([second])); Wait(boardEditor.SaveWorkspaceAsync());
@@ -231,7 +231,7 @@ internal static class WorkspaceChecks
             Wait(Action("new-board", board));
             var createdBoard = window.Workspace.State.Assets.Single(a => !existingBoards.Contains(a.Id));
             string createdPath = window.Workspace.ContentPath(createdBoard);
-            Require(createdBoard.Kind == WorkspaceAssetKind.Board && File.Exists(createdPath) &&
+            Require(createdBoard.Kind == EWorkspaceAssetKind.Board && File.Exists(createdPath) &&
                 new WorkspaceCatalog(libraryRoot).State.Assets.Any(a => a.Id == createdBoard.Id),
                 "New board was not saved and registered in its own library");
             var createdReload = new MoodboardWorkspace(); createdReload.LoadFromFile(createdPath);

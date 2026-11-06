@@ -52,7 +52,7 @@ public partial class MainWindow
         asepriteWorkspace.WorkspaceImport = async paths =>
         {
             await ImportWorkspaceFilesAsync(paths);
-            var imported = _workspaceCatalog.State.Assets.LastOrDefault(a => a.Kind == WorkspaceAssetKind.Animation);
+            var imported = _workspaceCatalog.State.Assets.LastOrDefault(a => a.Kind == EWorkspaceAssetKind.Animation);
             if (imported is not null) await OpenWorkspaceAssetAsync(imported);
         };
         _workspaceBrowser.Resources.MergedDictionaries.Add(Resources);
@@ -85,11 +85,11 @@ public partial class MainWindow
         };
         moodboardWorkspace.ProjectSaved += path =>
         {
-            if (_workspaceActive is not { Kind: WorkspaceAssetKind.Board } asset || _workspaceCatalog.ContentPath(asset) != path) return;
+            if (_workspaceActive is not { Kind: EWorkspaceAssetKind.Board } asset || _workspaceCatalog.ContentPath(asset) != path) return;
             asset.ModifiedAt = DateTimeOffset.Now;
             UpdateDocumentPreview(asset); _workspaceCatalog.Save();
         };
-        foreach (var document in _workspaceCatalog.State.Assets.Where(a => a.Kind != WorkspaceAssetKind.Image)) UpdateDocumentPreview(document);
+        foreach (var document in _workspaceCatalog.State.Assets.Where(a => a.Kind != EWorkspaceAssetKind.Image)) UpdateDocumentPreview(document);
         _restoringHistory = true;
         try { sourceStrip.ItemsSource = _traySources; }
         finally { _restoringHistory = false; }
@@ -121,7 +121,7 @@ public partial class MainWindow
                     {
                         asset = _workspaceCatalog.ImportDocument(path);
                         pendingDocument = asset;
-                        if (asset.Kind == WorkspaceAssetKind.Animation)
+                        if (asset.Kind == EWorkspaceAssetKind.Animation)
                         {
                             string previewFolder = Path.Combine(Path.GetDirectoryName(_workspaceCatalog.ContentPath(asset))!, "preview-build");
                             var converted = await Task.Run(() => Tessera.Aseprite.AsepriteConverter.Convert(_workspaceCatalog.ContentPath(asset), previewFolder, new Tessera.Aseprite.AsepriteExportOptions(), progress: operation.Work.Slice(progressDone, progressFiles.Length)));
@@ -161,13 +161,13 @@ public partial class MainWindow
     public async Task OpenWorkspaceAssetAsync(WorkspaceAsset asset)
     {
         if (_workspaceCatalog is null || WorkspaceBusy) return;
-        if (asset.Kind == WorkspaceAssetKind.Board && moodboardWorkspace.HasBoard && moodboardWorkspace.WorkspaceSavePath != _workspaceCatalog.ContentPath(asset) && !moodboardWorkspace.CanLeave()) return;
+        if (asset.Kind == EWorkspaceAssetKind.Board && moodboardWorkspace.HasBoard && moodboardWorkspace.WorkspaceSavePath != _workspaceCatalog.ContentPath(asset) && !moodboardWorkspace.CanLeave()) return;
         try
         {
             _unrealOpening = asset.Id;
             if (!await EnsureUnrealImageAsync(asset)) return;
             PersistWorkspaceState(); _workspaceActive = asset; asset.OpenedAt = DateTimeOffset.Now;
-            if (asset.Kind == WorkspaceAssetKind.Image)
+            if (asset.Kind == EWorkspaceAssetKind.Image)
             {
                 var source = _sources.Single(s => s.Id == asset.Id);
                 SetWorkspaceSourceScope(asset);
@@ -180,13 +180,13 @@ public partial class MainWindow
                 PreviewBackground = Math.Clamp(asset.Background, 0, 3);
                 OpenDockedWorkspaceTool("size", Localization.Text("Размер"), sizeToolGroup, frameToolGroup, pixelToolGroup);
             }
-            else if (asset.Kind == WorkspaceAssetKind.Animation)
+            else if (asset.Kind == EWorkspaceAssetKind.Animation)
             {
                 ShowAsepriteWorkspace(); asepriteWorkspace.Clear(); asepriteWorkspace.ApplyWorkspaceSettings(asset);
                 await asepriteWorkspace.AddFilesAsync([_workspaceCatalog.ContentPath(asset)]);
                 PersistWorkspaceState();
             }
-            else if (asset.Kind == WorkspaceAssetKind.Board)
+            else if (asset.Kind == EWorkspaceAssetKind.Board)
             {
                 ShowMoodboardWorkspace(); await moodboardWorkspace.LoadFromFileAsync(_workspaceCatalog.ContentPath(asset));
                 moodboardWorkspace.WorkspaceSavePath = _workspaceCatalog.ContentPath(asset);
@@ -200,7 +200,7 @@ public partial class MainWindow
     private async Task WorkspaceActionAsync(string action, WorkspaceAsset? asset)
     {
         if (_workspaceCatalog is null || WorkspaceBusy) return;
-        if (action == "create-unreal" && asset?.Kind == WorkspaceAssetKind.Image)
+        if (action == "create-unreal" && asset?.Kind == EWorkspaceAssetKind.Image)
         {
             if (_activeSource?.Id != asset.Id) await OpenWorkspaceAssetAsync(asset);
             if (_activeSource?.Id == asset.Id) await CreateUnrealTextureAsync();
@@ -227,7 +227,7 @@ public partial class MainWindow
             if (asset.Unreal is { } binding && UnrealProject(binding.ProjectId) is { } unreal &&
                 Mailbox(unreal).Jobs().Any(j => j.Request.AssetId == asset.Id && j.Request.Operation != "read"))
                 throw new InvalidOperationException(Localization.Text("У этой текстуры есть незавершённое сохранение в Unreal."));
-            if (asset.Kind == WorkspaceAssetKind.Image && _sources.FirstOrDefault(s => s.Id == asset.Id) is { } source) RemoveSource(source);
+            if (asset.Kind == EWorkspaceAssetKind.Image && _sources.FirstOrDefault(s => s.Id == asset.Id) is { } source) RemoveSource(source);
             _workspaceCatalog.ForgetAsset(asset.Id);
             // Orphaned document payloads are retained in the prototype for recovery.
             ShowHome(); _workspaceBrowser!.Refresh(); return;
@@ -236,7 +236,7 @@ public partial class MainWindow
         {
             string? name = _workspaceBrowser!.Prompt(Localization.Text("Создать доску"), Localization.Text("Название доски"), Localization.Text("Новая доска")); if (string.IsNullOrWhiteSpace(name)) return;
             if (moodboardWorkspace.HasBoard && !moodboardWorkspace.CanLeave()) return;
-            var board = new WorkspaceAsset { Kind = WorkspaceAssetKind.Board, Name = name, ContentFile = "content.tboard" };
+            var board = new WorkspaceAsset { Kind = EWorkspaceAssetKind.Board, Name = name, ContentFile = "content.tboard" };
             string path = _workspaceCatalog.ContentPath(board); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             ShowMoodboardWorkspace(); moodboardWorkspace.CreateWorkspaceBoard(1024, 768);
             moodboardWorkspace.WorkspaceSavePath = path;
@@ -248,11 +248,11 @@ public partial class MainWindow
         if (action == "new-tiles")
         {
             string? name = _workspaceBrowser!.Prompt(Localization.Text("Создать коллекцию тайлов"), Localization.Text("Название коллекции"), Localization.Text("Новые тайлы")); if (string.IsNullOrWhiteSpace(name)) return;
-            var tiles = new WorkspaceAsset { Kind = WorkspaceAssetKind.Tiles, Name = name, ContentFile = "content.ttiles" };
+            var tiles = new WorkspaceAsset { Kind = EWorkspaceAssetKind.Tiles, Name = name, ContentFile = "content.ttiles" };
             string path = _workspaceCatalog.ContentPath(tiles); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             TileCollectionFile.Save(path, [], new()); _workspaceCatalog.State.Assets.Add(tiles); AddNewWorkspaceAsset(tiles); _workspaceActive = tiles; await OpenWorkspaceTilesAsync(tiles); return;
         }
-        if (asset is null || asset.Kind != WorkspaceAssetKind.Image) return;
+        if (asset is null || asset.Kind != EWorkspaceAssetKind.Image) return;
         if (_activeSource?.Id != asset.Id) await OpenWorkspaceAssetAsync(asset);
         if (_activeSource?.Id != asset.Id || _sourceImage is null) return;
         if (action == "background")
@@ -272,7 +272,7 @@ public partial class MainWindow
         else if (action == "board")
         {
             string path = WorkspaceBasisPath();
-            var boards = _workspaceCatalog.State.Assets.Where(a => a.Kind == WorkspaceAssetKind.Board).ToList();
+            var boards = _workspaceCatalog.State.Assets.Where(a => a.Kind == EWorkspaceAssetKind.Board).ToList();
             string? choice = _workspaceBrowser!.ChooseBoard(boards); if (choice is null) return;
             var board = boards.Single(a => a.Id.ToString() == choice);
             await OpenWorkspaceAssetAsync(board); await moodboardWorkspace.AddFilesAsync([path]);
@@ -325,7 +325,7 @@ public partial class MainWindow
     {
         var inspector = GetTileInspector();
         if (!inspector.RefreshWorkspaceMaterials()) return;
-        if (asset.Kind == WorkspaceAssetKind.Tiles)
+        if (asset.Kind == EWorkspaceAssetKind.Tiles)
         {
             if (!inspector.OpenWorkspaceCollection(_workspaceCatalog!.ContentPath(asset))) return;
         }
@@ -385,12 +385,12 @@ public partial class MainWindow
     {
         if (_workspaceCatalog is null) return;
         string path = _workspaceCatalog.ContentPath(asset), preview = Path.Combine(Path.GetDirectoryName(path)!, "preview.png");
-        if (asset.Kind == WorkspaceAssetKind.Tiles)
+        if (asset.Kind == EWorkspaceAssetKind.Tiles)
         {
             var loaded = TileCollectionFile.Load(path); var first = loaded.Assets.FirstOrDefault();
             if (first is not null) { asset.Width = first.Width; asset.Height = first.Height; asset.Thumbnail = first.Image; asset.Transparent = HasTransparency(first.Image); using var output = File.Create(preview); first.WritePng(output); }
         }
-        else if (asset.Kind == WorkspaceAssetKind.Board)
+        else if (asset.Kind == EWorkspaceAssetKind.Board)
         {
             var board = moodboardWorkspace;
             if (!board.HasBoard || _workspaceActive?.Id != asset.Id) { board = new MoodboardWorkspace(); board.LoadFromFile(path); }
@@ -400,7 +400,7 @@ public partial class MainWindow
         }
         if (File.Exists(preview))
         {
-            if (asset.Kind == WorkspaceAssetKind.Animation) asset.Transparent = HasTransparency(TileAsset.DecodeFile(preview));
+            if (asset.Kind == EWorkspaceAssetKind.Animation) asset.Transparent = HasTransparency(TileAsset.DecodeFile(preview));
             using var input = File.OpenRead(preview);
             var frame = BitmapFrame.Create(input, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
             if (frame.PixelWidth <= 180 && frame.PixelHeight <= 128) { frame.Freeze(); asset.Thumbnail = frame; }
@@ -425,7 +425,7 @@ public partial class MainWindow
     {
         if (!_workspaceReady || _workspaceCatalog is null) return;
         foreach (var window in _materialMapWindows.Values.ToArray()) window.SaveWorkspace();
-        if (_workspaceActive is { Kind: WorkspaceAssetKind.Animation } animation && asepriteWorkspace.Visibility == Visibility.Visible)
+        if (_workspaceActive is { Kind: EWorkspaceAssetKind.Animation } animation && asepriteWorkspace.Visibility == Visibility.Visible)
         {
             asepriteWorkspace.CaptureWorkspaceSettings(animation);
             if (asepriteWorkspace.CurrentSheetPath is { } sheet)

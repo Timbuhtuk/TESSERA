@@ -152,12 +152,12 @@ public partial class IconWorkspace : UserControl, IDisposable
         return new IconExportOptions
         {
             Sizes = sizes.Distinct().Order().ToArray(),
-            ResizeMode = iconResizeMode.SelectedIndex == 0 ? IconResizeMode.NearestNeighbor : IconResizeMode.Smooth,
+            ResizeMode = iconResizeMode.SelectedIndex == 0 ? EIconResizeMode.NearestNeighbor : EIconResizeMode.Smooth,
             RemoveBackground = iconRemoveBackground.IsChecked == true,
-            BackgroundRemovalMode = iconBackgroundMode.SelectedIndex == 1 ? BackgroundRemovalMode.EdgeConnected : BackgroundRemovalMode.GlobalColor,
+            BackgroundRemovalMode = iconBackgroundMode.SelectedIndex == 1 ? EBackgroundRemovalMode.EdgeConnected : EBackgroundRemovalMode.GlobalColor,
             BackgroundTolerance = (int)iconBackgroundTolerance.Value,
             BackgroundColor = iconBackgroundColor.SelectedIndex switch { 1 => System.Drawing.Color.White, 2 => System.Drawing.Color.Black, _ => (System.Drawing.Color?)null },
-            FitMode = (IconFitMode)Math.Clamp(iconFitMode.SelectedIndex, 0, 2)
+            FitMode = (EIconFitMode)Math.Clamp(iconFitMode.SelectedIndex, 0, 2)
         };
     }
 

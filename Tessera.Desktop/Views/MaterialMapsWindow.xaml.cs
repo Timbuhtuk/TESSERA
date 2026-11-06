@@ -26,7 +26,7 @@ public partial class MaterialMapsWindow : Window
     private BitmapSource? _source;
     private MaterialMapDocument? _boundDocument;
     private MaterialMapSnapshot? _strokeBefore;
-    private MaterialMapKind _strokeKind;
+    private EMaterialMapKind _strokeKind;
     private (int X, int Y)? _lastPoint;
     private Vector3 _light = Vector3.Normalize(new(-.5f, .5f, 1));
     private readonly DispatcherTimer _generationTimer = new() { Interval = TimeSpan.FromMilliseconds(200) };
@@ -38,7 +38,7 @@ public partial class MaterialMapsWindow : Window
     public MaterialMapsWindow()
     {
         InitializeComponent();
-        Wire(heightView, MaterialMapKind.Height); Wire(normalView, MaterialMapKind.Normal); Wire(aoView, MaterialMapKind.AO);
+        Wire(heightView, EMaterialMapKind.Height); Wire(normalView, EMaterialMapKind.Normal); Wire(aoView, EMaterialMapKind.AO);
         foreach (var view in AllViews)
         {
             view.ZoomRequested += delta => zoomInput.SelectedIndex = Math.Clamp(zoomInput.SelectedIndex + delta, 0, zoomInput.Items.Count - 1);
@@ -51,7 +51,7 @@ public partial class MaterialMapsWindow : Window
         _paintTimer.Tick += (_, _) =>
         {
             if (!_paintPending || Document is null) return;
-            _paintPending = false; RefreshMap(_strokeKind); if (_strokeKind != MaterialMapKind.Height) RefreshLighting();
+            _paintPending = false; RefreshMap(_strokeKind); if (_strokeKind != EMaterialMapKind.Height) RefreshLighting();
         };
         _lightTimer.Tick += (_, _) => { if (_lightPending && !IsBusy) { _lightPending = false; RefreshLighting(); } };
         litView.LightMoved += (x, y) => { _light = Vector3.Normalize(new((float)x, (float)y, .8f)); _lightPending = true; };
@@ -113,27 +113,27 @@ public partial class MaterialMapsWindow : Window
         statusLabel.Text = Localization.Text("Рисуйте на любой карте. Height обновляет Normal и AO, сохраняя их ручные слои.");
     }
 
-    private void Wire(MaterialMapView view, MaterialMapKind kind)
+    private void Wire(MaterialMapView view, EMaterialMapKind kind)
     {
         view.PaintRequested += (x, y, begin) => Paint(kind, x, y, begin);
         view.StrokeEnded += async () => await FinishStrokeAsync();
     }
 
-    private void Paint(MaterialMapKind kind, int x, int y, bool begin)
+    private void Paint(EMaterialMapKind kind, int x, int y, bool begin)
     {
         if (!_ready || IsBusy || Document is null) return;
         if (brushInput.SelectedIndex == 2)
         {
             int q = y * Document.Width + x;
-            if (kind == MaterialMapKind.Normal) directionPicker.SetNormal(Document.NormalAt(q));
-            else valueInput.Value = kind == MaterialMapKind.Height ? Document.Heights[q] : Document.AoAt(q);
+            if (kind == EMaterialMapKind.Normal) directionPicker.SetNormal(Document.NormalAt(q));
+            else valueInput.Value = kind == EMaterialMapKind.Height ? Document.Heights[q] : Document.AoAt(q);
             statusLabel.Text = Localization.Format("{0} · пиксель ({1}, {2})", kind, x, y); return;
         }
         if (begin)
         {
             _strokeBefore = Document.Capture(); _strokeKind = kind; _lastPoint = (x, y);
             foreach (var border in new[] { heightBorder, normalBorder, aoBorder }) border.SetResourceReference(Border.BorderBrushProperty, "Ts.Border");
-            (kind == MaterialMapKind.Height ? heightBorder : kind == MaterialMapKind.Normal ? normalBorder : aoBorder).SetResourceReference(Border.BorderBrushProperty, "Ts.Text");
+            (kind == EMaterialMapKind.Height ? heightBorder : kind == EMaterialMapKind.Normal ? normalBorder : aoBorder).SetResourceReference(Border.BorderBrushProperty, "Ts.Text");
         }
         if (_strokeBefore is null || kind != _strokeKind) return;
         var from = _lastPoint ?? (x, y);
@@ -147,7 +147,7 @@ public partial class MaterialMapsWindow : Window
         if (_strokeBefore is not { } before || Document is null) return;
         _strokeBefore = null; _lastPoint = null; _paintPending = false;
         if (!Document.Commit(before)) return;
-        if (_strokeKind == MaterialMapKind.Height) await RecalculateAsync();
+        if (_strokeKind == EMaterialMapKind.Height) await RecalculateAsync();
         else RefreshAll();
     }
 
@@ -193,14 +193,14 @@ public partial class MaterialMapsWindow : Window
     private void RefreshAll()
     {
         if (Document is null || _closed) return;
-        foreach (var kind in Enum.GetValues<MaterialMapKind>()) RefreshMap(kind);
+        foreach (var kind in Enum.GetValues<EMaterialMapKind>()) RefreshMap(kind);
         ApplyView(); RefreshLighting(); UpdateHistory();
         ScheduleWorkspaceSave();
     }
-    private void RefreshMap(MaterialMapKind kind)
+    private void RefreshMap(EMaterialMapKind kind)
     {
         if (Document is null) return;
-        var view = kind == MaterialMapKind.Height ? heightView : kind == MaterialMapKind.Normal ? normalView : aoView;
+        var view = kind == EMaterialMapKind.Height ? heightView : kind == EMaterialMapKind.Normal ? normalView : aoView;
         view.Image = ToImage(Document.MapPixels(kind), Document.Width, Document.Height);
     }
     private void RefreshLighting()
@@ -253,9 +253,9 @@ public partial class MaterialMapsWindow : Window
         FlushGeneration();
         if (redo ? Document.Redo() : Document.Undo()) BindDocument();
     }
-    private void ResetNormalClicked(object sender, RoutedEventArgs e) => Reset(MaterialMapKind.Normal);
-    private void ResetAoClicked(object sender, RoutedEventArgs e) => Reset(MaterialMapKind.AO);
-    public void Reset(MaterialMapKind kind)
+    private void ResetNormalClicked(object sender, RoutedEventArgs e) => Reset(EMaterialMapKind.Normal);
+    private void ResetAoClicked(object sender, RoutedEventArgs e) => Reset(EMaterialMapKind.AO);
+    public void Reset(EMaterialMapKind kind)
     {
         if (IsBusy || Document is null || _strokeBefore is not null) return;
         FlushGeneration();
@@ -296,7 +296,7 @@ public partial class MaterialMapsWindow : Window
         finally { SetBusy(false); }
     }
 
-    public void ExportMap(MaterialMapKind kind, string path)
+    public void ExportMap(EMaterialMapKind kind, string path)
     {
         if (Document is null || IsBusy) return;
         FlushGeneration();
@@ -311,7 +311,7 @@ public partial class MaterialMapsWindow : Window
     private void ExportMapClicked(object sender, RoutedEventArgs e) => Safely(() =>
     {
         if (IsBusy || Document is null) return;
-        var kind = Enum.Parse<MaterialMapKind>((string)((Button)sender).Tag);
+        var kind = Enum.Parse<EMaterialMapKind>((string)((Button)sender).Tag);
         var dialog = PngDialog(_name + "_" + kind.ToString().ToLowerInvariant() + ".png");
         if (dialog.ShowDialog(this) == true) { ExportMap(kind, dialog.FileName); statusLabel.Text = Localization.Text("Карта сохранена: ") + dialog.FileName; }
     });
@@ -321,7 +321,7 @@ public partial class MaterialMapsWindow : Window
         var dialog = PngDialog(_name + ".png"); dialog.OverwritePrompt = false;
         if (dialog.ShowDialog(this) != true) return;
         string prefix = Path.Combine(Path.GetDirectoryName(dialog.FileName)!, Path.GetFileNameWithoutExtension(dialog.FileName));
-        var paths = Enum.GetValues<MaterialMapKind>().Select(kind => (Kind: kind, Path: prefix + "_" + kind.ToString().ToLowerInvariant() + ".png")).ToArray();
+        var paths = Enum.GetValues<EMaterialMapKind>().Select(kind => (Kind: kind, Path: prefix + "_" + kind.ToString().ToLowerInvariant() + ".png")).ToArray();
         foreach (var item in paths) ValidateExportPath?.Invoke(item.Path);
         string[] existing = paths.Where(item => File.Exists(item.Path)).Select(item => Path.GetFileName(item.Path)).ToArray();
         if (existing.Length > 0 && TesseraDialog.Show(this, Localization.Text("Заменить существующие карты?\n") + string.Join("\n", existing), "Tessera",

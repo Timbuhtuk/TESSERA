@@ -78,7 +78,7 @@ internal static class IconExportChecks
         using var snapshot = (Bitmap)source.Clone();
         using var sameSize = IconExporter.CreateFrame(source, 16);
         EqualPixels(source, sameSize);
-        using var enlarged = IconExporter.CreateFrame(source, 32, IconResizeMode.NearestNeighbor);
+        using var enlarged = IconExporter.CreateFrame(source, 32, EIconResizeMode.NearestNeighbor);
         for (int y = 0; y < 32; y++)
             for (int x = 0; x < 32; x++)
                 Require(enlarged.GetPixel(x, y).ToArgb() == source.GetPixel(x / 2, y / 2).ToArgb(), "Nearest sampling changed RGBA");
@@ -104,9 +104,9 @@ internal static class IconExportChecks
         using var source = new Bitmap(8, 4);
         for (int y = 0; y < 4; y++)
             for (int x = 0; x < 8; x++) source.SetPixel(x, y, Color.FromArgb(255, x * 30, y * 60, 0));
-        using var contain = IconExporter.CreateFrame(source, 8, IconResizeMode.NearestNeighbor);
-        using var cover = IconExporter.CreateFrame(source, 4, IconResizeMode.NearestNeighbor, IconFitMode.Cover);
-        using var stretch = IconExporter.CreateFrame(source, 8, IconResizeMode.NearestNeighbor, IconFitMode.Stretch);
+        using var contain = IconExporter.CreateFrame(source, 8, EIconResizeMode.NearestNeighbor);
+        using var cover = IconExporter.CreateFrame(source, 4, EIconResizeMode.NearestNeighbor, EIconFitMode.Cover);
+        using var stretch = IconExporter.CreateFrame(source, 8, EIconResizeMode.NearestNeighbor, EIconFitMode.Stretch);
         for (int y = 0; y < 8; y++)
             for (int x = 0; x < 8; x++)
             {
@@ -151,7 +151,7 @@ internal static class IconExportChecks
             string input = Path.Combine(directory, $"исходник.{extension}");
             string output = Path.Combine(directory, $"иконка-{extension}.ico");
             source.Save(input, format);
-            IconExporter.Convert(input, output, new() { Sizes = new[] { 24 }, ResizeMode = IconResizeMode.NearestNeighbor });
+            IconExporter.Convert(input, output, new() { Sizes = new[] { 24 }, ResizeMode = EIconResizeMode.NearestNeighbor });
             using var stream = File.OpenRead(output);
             var decoded = new IconBitmapDecoder(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
             Require(decoded.Frames.Count == 1 && decoded.Frames[0].PixelWidth == 24, $"Conversion failed: {extension}");
@@ -187,7 +187,7 @@ internal static class IconExportChecks
             file.Write(original, 2, original.Length - 2);
         }
         string rotated = Path.Combine(directory, "rotated.ico");
-        IconExporter.Convert(input, rotated, new() { Sizes = new[] { 8 }, ResizeMode = IconResizeMode.NearestNeighbor });
+        IconExporter.Convert(input, rotated, new() { Sizes = new[] { 8 }, ResizeMode = EIconResizeMode.NearestNeighbor });
         using var rotatedIcon = new Icon(rotated, 8, 8);
         using var bitmap = rotatedIcon.ToBitmap();
         Require(bitmap.GetPixel(0, 4).A == 0 && bitmap.GetPixel(4, 0).A == 255, "EXIF rotation was ignored");
@@ -199,11 +199,11 @@ internal static class IconExportChecks
         var result = new PixelArtDownscaler().Process(source, new()
         {
             TargetWidth = 16, TargetHeight = 16, SpriteMode = true,
-            Palette = PaletteKind.None, QuantizationColors = 256, Quantization = QuantizationMethod.MedianCut
+            Palette = EPaletteKind.None, QuantizationColors = 256, Quantization = EQuantizationMethod.MedianCut
         });
         using var cropped = result.CroppedSource;
         using var processed = result.Downscaled;
-        using var frame = IconExporter.CreateFrame(processed, 16, IconResizeMode.NearestNeighbor);
+        using var frame = IconExporter.CreateFrame(processed, 16, EIconResizeMode.NearestNeighbor);
         EqualPixels(processed, frame);
         Require(IconExporter.Encode(processed).Length > 0, "Processed result was rejected");
     }
@@ -216,8 +216,8 @@ internal static class IconExportChecks
         Expect<ArgumentNullException>(() => IconExporter.Encode(null!));
         Expect<ArgumentNullException>(() => IconExporter.Encode(source, new() { Sizes = null! }));
         Expect<ArgumentOutOfRangeException>(() => IconExporter.CreateFrame(source, 257));
-        Expect<ArgumentOutOfRangeException>(() => IconExporter.Encode(source, new() { FitMode = (IconFitMode)99 }));
-        Expect<ArgumentOutOfRangeException>(() => IconExporter.Encode(source, new() { ResizeMode = (IconResizeMode)99 }));
+        Expect<ArgumentOutOfRangeException>(() => IconExporter.Encode(source, new() { FitMode = (EIconFitMode)99 }));
+        Expect<ArgumentOutOfRangeException>(() => IconExporter.Encode(source, new() { ResizeMode = (EIconResizeMode)99 }));
         string output = Path.Combine(directory, "result.ICO");
         IconExporter.Save(source, output);
         byte[] before = File.ReadAllBytes(output);

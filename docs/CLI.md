@@ -230,7 +230,7 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 
 `--sizes` accepts unique integer sizes from 1 to 256 separated by commas. The default set is 16, 24, 32, 48, 64, 128 and 256. `--resize` accepts `smooth` or `nearest-neighbor`; the latter avoids color blending for pixel art. `--fit contain` preserves aspect ratio with transparent padding, `cover` fills the frame with a centered crop, and `stretch` fills it by stretching.
 
-`--overwrite` and `--json` are supported. Without `--output`, the result is `<name>.ico` beside the input. Full command help is `tessera ico --help`. See the [ICO format and shared API](../Tessera.Core/Imaging/ICO.md) for details, including background removal in the desktop workspace and library API.
+`--overwrite` and `--json` are supported. Without `--output`, the result is `<name>.ico` beside the input. Full command help is `tessera ico --help`. See the [ICO format and shared API](../Tessera.Core/Imaging/Export/ICO.md) for details, including background removal in the desktop workspace and library API.
 
 ## Aseprite sprite sheets
 

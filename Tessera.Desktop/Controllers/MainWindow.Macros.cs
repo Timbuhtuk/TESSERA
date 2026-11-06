@@ -232,7 +232,7 @@ public partial class MainWindow
         }
         if (step.OperationId is ProcessingOperations.Align or ProcessingOperations.AlignLocal or ProcessingOperations.AlignLocalSnapped)
         {
-            result.AlignmentMode = step.OperationId == ProcessingOperations.Align ? GridAlignmentMode.Global : GridAlignmentMode.Local;
+            result.AlignmentMode = step.OperationId == ProcessingOperations.Align ? EGridAlignmentMode.Global : EGridAlignmentMode.Local;
             result.SnapToGlobalGrid = step.OperationId == ProcessingOperations.AlignLocalSnapped;
             result.DetectGrid = step.CellSize is null;
         }

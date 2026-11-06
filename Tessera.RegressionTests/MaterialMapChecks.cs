@@ -39,11 +39,11 @@ internal static class MaterialMapChecks
         foreach (var dimensions in new[] { (1, 1), (1, 19), (23, 1), (4097, 3) })
         {
             var image = Fixture(dimensions.Item1, dimensions.Item2);
-            Require(image.MapPixels(MaterialMapKind.Normal).Length == dimensions.Item1 * dimensions.Item2 * 4, "Non-square image was cropped");
+            Require(image.MapPixels(EMaterialMapKind.Normal).Length == dimensions.Item1 * dimensions.Item2 * 4, "Non-square image was cropped");
         }
         var pixels = (byte[])document.Source.Clone(); pixels[3] = 0; pixels[7] = 91;
         var alpha = new MaterialMapDocument(document.Width, document.Height, pixels);
-        foreach (var kind in Enum.GetValues<MaterialMapKind>())
+        foreach (var kind in Enum.GetValues<EMaterialMapKind>())
         {
             byte[] output = alpha.MapPixels(kind);
             Require(output[3] == 0 && output[7] == 91, "Map destroyed source transparency");
@@ -57,8 +57,8 @@ internal static class MaterialMapChecks
         for (int y = 0; y < 9; y++) for (int x = 0; x < 9; x++) document.Heights[y * 9 + x] = (x + y) / 16f;
         document.Recalculate();
         Require(document.GeneratedNormals[40].X < 0 && document.GeneratedNormals[40].Y > 0, "Height gradients point the wrong way");
-        byte[] dx = document.MapPixels(MaterialMapKind.Normal); document.DirectX = false;
-        byte[] gl = document.MapPixels(MaterialMapKind.Normal);
+        byte[] dx = document.MapPixels(EMaterialMapKind.Normal); document.DirectX = false;
+        byte[] gl = document.MapPixels(EMaterialMapKind.Normal);
         Require(dx[161] + gl[161] == 255 && dx[160] == gl[160] && dx[162] == gl[162], "Convention changed channels other than green");
         Array.Fill(document.Heights, 1); document.Heights[40] = 0; document.Recalculate();
         Require(document.GeneratedAO[40] < .9f && document.GeneratedAO[0] == 1, "AO did not darken a cavity or darkened an exposed plateau");
@@ -69,33 +69,33 @@ internal static class MaterialMapChecks
     {
         var document = Fixture();
         var target = Vector3.Normalize(new Vector3(.8f, .3f, 1));
-        document.PaintLine(MaterialMapKind.Normal, 5, 5, 5, 5, 1, .5f, target, 1, 0, false);
-        document.PaintLine(MaterialMapKind.AO, 5, 5, 5, 5, 1, .2f, Vector3.UnitZ, 1, 0, false);
+        document.PaintLine(EMaterialMapKind.Normal, 5, 5, 5, 5, 1, .5f, target, 1, 0, false);
+        document.PaintLine(EMaterialMapKind.AO, 5, 5, 5, 5, 1, .2f, Vector3.UnitZ, 1, 0, false);
         var original = document.Capture();
-        document.PaintLine(MaterialMapKind.Height, 4, 5, 4, 5, 1, 1, Vector3.UnitZ, 1, 0, false); document.Recalculate();
+        document.PaintLine(EMaterialMapKind.Height, 4, 5, 4, 5, 1, 1, Vector3.UnitZ, 1, 0, false); document.Recalculate();
         int index = 5 * document.Width + 5;
         Require(document.GeneratedNormals[index].X > 0 && Vector3.Distance(document.NormalAt(index), target) < .00001f, "Height destroyed manual normal");
         Require(document.AoAt(index) == .2f && original.NormalMask.SequenceEqual(document.NormalMask) && original.OcclusionMask.SequenceEqual(document.AoMask), "Height changed manual layer contents");
-        document.ResetManual(MaterialMapKind.Normal);
+        document.ResetManual(EMaterialMapKind.Normal);
         Require(document.NormalAt(index) == document.GeneratedNormals[index] && document.AoAt(index) == .2f, "Normal reset affected AO");
         document.Undo(); Require(Vector3.Distance(document.NormalAt(index), target) < .00001f, "Cannot undo a manual layer reset");
-        document.ResetManual(MaterialMapKind.AO);
+        document.ResetManual(EMaterialMapKind.AO);
         Require(document.AoAt(index) == document.GeneratedAO[index] && Vector3.Distance(document.NormalAt(index), target) < .00001f, "AO reset affected Normal");
     }
     private static void Painting()
     {
         var document = Fixture(); var before = document.Capture();
-        document.PaintLine(MaterialMapKind.Height, 0, 5, 16, 5, 1, 1, Vector3.UnitZ, 1, 0, false);
+        document.PaintLine(EMaterialMapKind.Height, 0, 5, 16, 5, 1, 1, Vector3.UnitZ, 1, 0, false);
         document.Recalculate(); Require(document.Commit(before), "Stroke was not recorded");
         Require(Enumerable.Range(0, 17).All(x => document.Heights[85 + x] == 1), "Fast stroke has holes");
         document.Undo(); Require(document.Heights.SequenceEqual(before.Heights), "Undo failed to restore height");
         document.Redo(); Require(document.Heights[85] == 1 && document.Heights[101] == 1, "Redo failed");
-        document.PaintLine(MaterialMapKind.AO, 8, 5, 8, 5, 7, 0, Vector3.UnitZ, 1, 1, false);
+        document.PaintLine(EMaterialMapKind.AO, 8, 5, 8, 5, 7, 0, Vector3.UnitZ, 1, 1, false);
         Require(document.AoMask[93] > document.AoMask[91] && document.AoMask[91] > 0, "Softness has no radial falloff");
-        document.PaintLine(MaterialMapKind.AO, 8, 5, 8, 5, 1, 1, Vector3.UnitZ, 1, 0, true);
+        document.PaintLine(EMaterialMapKind.AO, 8, 5, 8, 5, 1, 1, Vector3.UnitZ, 1, 0, true);
         Require(document.AoMask[93] == 0, "Eraser did not uncover the generated AO");
         document.Source[3] = 0;
-        document.PaintLine(MaterialMapKind.Normal, 0, 0, 0, 0, 1, 1, Vector3.UnitX, 1, 0, false);
+        document.PaintLine(EMaterialMapKind.Normal, 0, 0, 0, 0, 1, 1, Vector3.UnitX, 1, 0, false);
         Require(document.NormalMask[0] == 0, "Brush painted outside source alpha");
     }
     private static void Persistence()
@@ -103,14 +103,14 @@ internal static class MaterialMapChecks
         string folder = Path.GetFullPath(Path.Combine("artifacts", "material-map-tests")); Directory.CreateDirectory(folder);
         string path = Path.Combine(folder, "roundtrip.tmaps");
         var document = Fixture();
-        document.PaintLine(MaterialMapKind.Height, 1, 1, 8, 7, 3, .9f, Vector3.UnitZ, .7f, .5f, false);
-        document.PaintLine(MaterialMapKind.Normal, 3, 4, 7, 5, 2, 1, Vector3.Normalize(new Vector3(1, 1, 1)), .65f, .4f, false);
-        document.PaintLine(MaterialMapKind.AO, 3, 3, 8, 5, 2, .1f, Vector3.UnitZ, .3f, .2f, false);
+        document.PaintLine(EMaterialMapKind.Height, 1, 1, 8, 7, 3, .9f, Vector3.UnitZ, .7f, .5f, false);
+        document.PaintLine(EMaterialMapKind.Normal, 3, 4, 7, 5, 2, 1, Vector3.Normalize(new Vector3(1, 1, 1)), .65f, .4f, false);
+        document.PaintLine(EMaterialMapKind.AO, 3, 3, 8, 5, 2, .1f, Vector3.UnitZ, .3f, .2f, false);
         document.Recalculate(); MaterialMapFile.Save(document, path);
         var loaded = MaterialMapFile.Load(path);
-        foreach (var kind in Enum.GetValues<MaterialMapKind>()) Require(document.MapPixels(kind).SequenceEqual(loaded.MapPixels(kind)), "Project changed " + kind);
+        foreach (var kind in Enum.GetValues<EMaterialMapKind>()) Require(document.MapPixels(kind).SequenceEqual(loaded.MapPixels(kind)), "Project changed " + kind);
         Require(document.NormalMask.SequenceEqual(loaded.NormalMask) && document.AoMask.SequenceEqual(loaded.AoMask) && !loaded.HasChanges, "Project lost masks or dirty state");
-        loaded.PaintLine(MaterialMapKind.Height, 8, 8, 8, 8, 1, 0, Vector3.UnitZ, 1, 0, false); loaded.Recalculate();
+        loaded.PaintLine(EMaterialMapKind.Height, 8, 8, 8, 8, 1, 0, Vector3.UnitZ, 1, 0, false); loaded.Recalculate();
         Require(loaded.NormalMask.SequenceEqual(document.NormalMask), "Reloaded manual layer became destructive");
         string invalid = Path.Combine(folder, "invalid.tmaps"); File.WriteAllText(invalid, "not a material");
         try { MaterialMapFile.Load(invalid); throw new Exception("Invalid project accepted"); } catch (InvalidDataException) { }
@@ -159,24 +159,24 @@ internal static class MaterialMapChecks
             Require(new[] { "heightView", "normalView", "aoView", "litView" }.All(n => ((MaterialMapView)maps.FindName(n)).Image is not null), "One of the four previews is missing");
             VerifyGrid(maps);
             // Exercise the same controller used by pointer strokes, including linked regeneration.
-            Paint(maps, MaterialMapKind.Normal, 6, 6); Wait(maps.FinishStrokeAsync());
-            Paint(maps, MaterialMapKind.AO, 6, 6); Wait(maps.FinishStrokeAsync());
+            Paint(maps, EMaterialMapKind.Normal, 6, 6); Wait(maps.FinishStrokeAsync());
+            Paint(maps, EMaterialMapKind.AO, 6, 6); Wait(maps.FinishStrokeAsync());
             var normal = (float[])maps.Document.NormalMask.Clone(); var ao = (float[])maps.Document.AoMask.Clone();
             ((Slider)maps.FindName("valueInput")).Value = 1;
-            Paint(maps, MaterialMapKind.Height, 5, 6); Wait(maps.FinishStrokeAsync());
+            Paint(maps, EMaterialMapKind.Height, 5, 6); Wait(maps.FinishStrokeAsync());
             Require(normal.SequenceEqual(maps.Document.NormalMask) && ao.SequenceEqual(maps.Document.AoMask), "UI height edit destroyed manual layers");
             ((Button)maps.FindName("resetNormalButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(maps.Document.NormalMask.All(v => v == 0) && ao.SequenceEqual(maps.Document.AoMask), "UI reset is not independent");
             ((Button)maps.FindName("undoButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(normal.SequenceEqual(maps.Document.NormalMask), "UI undo did not restore the normal layer");
-            foreach (var kind in Enum.GetValues<MaterialMapKind>())
+            foreach (var kind in Enum.GetValues<EMaterialMapKind>())
             {
                 string output = Path.Combine(folder, kind + ".png"); maps.ExportMap(kind, output);
                 using var image = new Bitmap(output);
                 Require(image.Width == 32 && image.Height == 24 && image.GetPixel(0, 0).A == 0 && image.GetPixel(1, 0).A == 90, "PNG dimensions/alpha changed");
             }
             Require(File.ReadAllBytes(path).SequenceEqual(source), "Material editing changed the external source before export");
-            maps.ExportMap(MaterialMapKind.AO, path);
+            maps.ExportMap(EMaterialMapKind.AO, path);
             using (var actual = new Bitmap(path))
             using (var expected = new Bitmap(Path.Combine(folder, "AO.png")))
             {
@@ -190,7 +190,7 @@ internal static class MaterialMapChecks
             string internalPath = exportLibrary.SourcePath(exportSource);
             byte[] internalSource = File.ReadAllBytes(internalPath);
             bool protectedInternal = false;
-            try { maps.ExportMap(MaterialMapKind.AO, internalPath); } catch (InvalidOperationException) { protectedInternal = true; }
+            try { maps.ExportMap(EMaterialMapKind.AO, internalPath); } catch (InvalidOperationException) { protectedInternal = true; }
             Require(protectedInternal && File.ReadAllBytes(internalPath).SequenceEqual(internalSource), "Map export changed the internal library source");
             string project = Path.Combine(folder, "edited.tmaps"); maps.SaveProject(project);
             Require(!maps.Document.HasChanges && MaterialMapFile.Load(project).AoMask.SequenceEqual(ao), "UI save lost edits");
@@ -262,7 +262,7 @@ internal static class MaterialMapChecks
             maps = main.OwnedWindows.OfType<MaterialMapsWindow>().Single();
             var session = catalog.State.MaterialSessions.Single();
             Console.WriteLine("  Workspace: generated sibling assets");
-            Require(Enum.GetValues<MaterialMapKind>().All(k => catalog.State.Links.Any(l => l.AssetId == session.MapId(k) && l.ProjectId == project.Id && l.FolderId == leaf.Id)), "Maps are not siblings in the source folder");
+            Require(Enum.GetValues<EMaterialMapKind>().All(k => catalog.State.Links.Any(l => l.AssetId == session.MapId(k) && l.ProjectId == project.Id && l.FolderId == leaf.Id)), "Maps are not siblings in the source folder");
             Require(catalog.State.Links.Count(l => l.ProjectId == other.Id) == 1, "Current-folder generation added assets to another project");
             Require(((Button)maps.FindName("saveProjectButton")).Visibility == Visibility.Collapsed && ((Button)maps.FindName("returnButton")).Visibility == Visibility.Visible, "Workspace still requires standalone map-project saving");
             VerifyGrid(maps);
@@ -286,8 +286,8 @@ internal static class MaterialMapChecks
             zoom.SelectedIndex = 0; Pump();
             Console.WriteLine("  Workspace: synchronized viewport");
             Require(views.All(v => Math.Abs(v.Scale - views[0].Scale) < .00001), "Fit uses different scales");
-            Paint(maps, MaterialMapKind.Normal, 8, 8); Wait(maps.FinishStrokeAsync());
-            Paint(maps, MaterialMapKind.AO, 9, 9); Wait(maps.FinishStrokeAsync());
+            Paint(maps, EMaterialMapKind.Normal, 8, 8); Wait(maps.FinishStrokeAsync());
+            Paint(maps, EMaterialMapKind.AO, 9, 9); Wait(maps.FinishStrokeAsync());
             var normals = (float[])maps.Document!.NormalMask.Clone(); var ao = (float[])maps.Document.AoMask.Clone();
             Until(() => !maps.Document.HasChanges);
             Console.WriteLine("  Workspace: autosaved paint layers");
@@ -311,7 +311,7 @@ internal static class MaterialMapChecks
             NavigationTest.Click(main, "saveDocumentMenuItem");
             Require(MaterialMapFile.Load(stored).NormalStrength == 6, "Whole-project save lost a pending slider change");
             Console.WriteLine("  Workspace: saved from main menu");
-            Paint(maps, MaterialMapKind.AO, 10, 10); Wait(maps.FinishStrokeAsync());
+            Paint(maps, EMaterialMapKind.AO, 10, 10); Wait(maps.FinishStrokeAsync());
             ao = (float[])maps.Document.AoMask.Clone();
             using (var locked = new FileStream(stored, FileMode.Open, FileAccess.Read, FileShare.None))
             {
@@ -330,7 +330,7 @@ internal static class MaterialMapChecks
             maps = main.OwnedWindows.OfType<MaterialMapsWindow>().Single();
             Require(maps.Document!.NormalMask.SequenceEqual(normals) && maps.Document.AoMask.SequenceEqual(ao), "Reopening a map asset lost independent layers");
             Require(catalog.State.Assets.Count == 4 && maps.Document.NormalStrength == 6, "Reload generated duplicate assets or reset settings");
-            foreach (var kind in Enum.GetValues<MaterialMapKind>())
+            foreach (var kind in Enum.GetValues<EMaterialMapKind>())
             {
                 var entry = new ImageLibrary(libraryPath).Load().Single(s => s.Id == session.MapId(kind));
                 var image = TileAsset.DecodeFile(new ImageLibrary(libraryPath).SourcePath(entry));
@@ -343,7 +343,7 @@ internal static class MaterialMapChecks
             Wait(main.OpenWorkspaceAssetAsync(catalog.State.Assets.Single(a => a.Id == session.SourceId)));
             NavigationTest.Click(main, "materialMapsMenuItem"); Pump();
             Require(main.OwnedWindows.OfType<MaterialMapsWindow>().Single() == maps, "Shared source opened a duplicate map editor");
-            Require(Enum.GetValues<MaterialMapKind>().All(k => catalog.State.Links.Any(l => l.AssetId == session.MapId(k) && l.ProjectId == other.Id && l.FolderId is null)), "Existing maps were not linked beside the source in the active project");
+            Require(Enum.GetValues<EMaterialMapKind>().All(k => catalog.State.Links.Any(l => l.AssetId == session.MapId(k) && l.ProjectId == other.Id && l.FolderId is null)), "Existing maps were not linked beside the source in the active project");
             Require(catalog.State.Links.Single(l => l.AssetId == session.HeightId && l.ProjectId == project.Id).FolderId == relocated.Id, "Opening another project moved an existing map");
             maps.SaveWorkspace(true);
             Require(catalog.State.Links.Single(l => l.AssetId == session.HeightId && l.ProjectId == project.Id).FolderId == relocated.Id, "Autosaving reset a manually moved map");
@@ -358,7 +358,7 @@ internal static class MaterialMapChecks
         catch (Exception ex) { Console.Error.WriteLine(ex); throw; }
         finally { maps?.Close(); main.Close(); Pump(); }
     }
-    private static void Paint(MaterialMapsWindow maps, MaterialMapKind kind, int x, int y)
+    private static void Paint(MaterialMapsWindow maps, EMaterialMapKind kind, int x, int y)
         => typeof(MaterialMapsWindow).GetMethod("Paint", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(maps, [kind, x, y, true]);
     private static void Snapshot(Window window, string path)
     {

@@ -25,8 +25,8 @@ internal static class ProgressChecks
             TargetHeight = 12,
             QuantizationColors = 16,
             ThreadCount = 4,
-            Quantization = QuantizationMethod.KMeansLab,
-            IndependentColorMode = IndependentColorMode.Quantization
+            Quantization = EQuantizationMethod.KMeansLab,
+            IndependentColorMode = EIndependentColorMode.Quantization
         };
         Compare(p => IndependentImageProcessor.Scale(source, options, p));
         Compare(p => IndependentImageProcessor.Scale(source, new DownscaleOptions { TargetWidth = 96, TargetHeight = 72 }, p));
@@ -37,9 +37,9 @@ internal static class ProgressChecks
         Compare(p => ImageFilters.RenderAscii(source, columns: 16, fontSize: 10, progress: p));
         Compare(p => ImageFilters.RenderAscii(source, columns: 16, fontSize: ImageFilters.DefaultAsciiFontSize, progress: p));
         Compare(p => ImageColorTools.ReplaceColor(source, Color.White, Color.Black, p));
-        Compare(p => ChannelAdjustment.Apply(source, new ChannelAdjustmentOptions { Channel = RgbaChannel.R, Amount = 5 }, progress: p));
-        Compare(p => BackgroundRemover.Remove(source, BackgroundRemovalMode.GlobalColor, 8, Color.White, progress: p));
-        Compare(p => BackgroundRemover.Remove(source, BackgroundRemovalMode.EdgeConnected, 8, Color.White, progress: p));
+        Compare(p => ChannelAdjustment.Apply(source, new ChannelAdjustmentOptions { Channel = ERgbaChannel.R, Amount = 5 }, progress: p));
+        Compare(p => BackgroundRemover.Remove(source, EBackgroundRemovalMode.GlobalColor, 8, Color.White, progress: p));
+        Compare(p => BackgroundRemover.Remove(source, EBackgroundRemovalMode.EdgeConnected, 8, Color.White, progress: p));
         Compare(p => BitmapFactory.CropTransparentEdges(source, p));
         Compare(p => FinalistReducer.Reduce(source, FinalistMode.T3P44, 2, p));
         using var logicalGrid = Fixtures.Logical(1, 73);
@@ -52,7 +52,7 @@ internal static class ProgressChecks
             result.CroppedSource.Dispose();
             return result.Downscaled;
         });
-        Compare(p => IconExporter.CreateFrame(source, 32, IconResizeMode.NearestNeighbor, progress: p));
+        Compare(p => IconExporter.CreateFrame(source, 32, EIconResizeMode.NearestNeighbor, progress: p));
 
         var ascii = new Capture();
         string actual = ImageFilters.ToAscii(source, 32, progress: ascii);
@@ -103,7 +103,7 @@ internal static class ProgressChecks
         catch (ArgumentOutOfRangeException) { Require(!invalidFont.Values.Contains(1), "Invalid ASCII font reported completion"); }
         using var cancellation = new CancellationTokenSource();
         var canceled = new Capture(value => { if (value > .1) cancellation.Cancel(); });
-        try { using var ignored = BackgroundRemover.Remove(source, BackgroundRemovalMode.GlobalColor, 8, cancellationToken: cancellation.Token, progress: canceled); throw new Exception("Cancellation was ignored"); }
+        try { using var ignored = BackgroundRemover.Remove(source, EBackgroundRemovalMode.GlobalColor, 8, cancellationToken: cancellation.Token, progress: canceled); throw new Exception("Cancellation was ignored"); }
         catch (OperationCanceledException) { Require(!canceled.Values.Contains(1), "Canceled removal reported completion"); }
     }
 

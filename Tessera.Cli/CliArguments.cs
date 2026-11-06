@@ -82,13 +82,13 @@ internal sealed record CliArguments(
 
         var defaults = new DownscaleOptions();
         var palette = Choice("--palette", defaults.Palette,
-            ("none", PaletteKind.None), ("db16", PaletteKind.DB16), ("db32", PaletteKind.DB32),
-            ("nes", PaletteKind.NES), ("gameboy", PaletteKind.GameBoy), ("step", PaletteKind.Step));
+            ("none", EPaletteKind.None), ("db16", EPaletteKind.DB16), ("db32", EPaletteKind.DB32),
+            ("nes", EPaletteKind.NES), ("gameboy", EPaletteKind.GameBoy), ("step", EPaletteKind.Step));
         var colorMode = Choice("--color-mode", defaults.IndependentColorMode,
-            ("combined", IndependentColorMode.Combined), ("quantization", IndependentColorMode.Quantization),
-            ("palette", IndependentColorMode.Palette));
+            ("combined", EIndependentColorMode.Combined), ("quantization", EIndependentColorMode.Quantization),
+            ("palette", EIndependentColorMode.Palette));
         var blockMode = Choice("--block-mode", defaults.BlockMode,
-            ("automatic", BlockSelectionMode.Automatic), ("manual", BlockSelectionMode.Manual));
+            ("automatic", EBlockSelectionMode.Automatic), ("manual", EBlockSelectionMode.Manual));
 
         if (values.ContainsKey("--color-mode") && !independentColors)
             throw new CliUsageException("--color-mode доступен только для команды colors.");
@@ -100,17 +100,17 @@ internal sealed record CliArguments(
             throw new CliUsageException("Настройки связности требуют --connected.");
         if (connected && !independentColors)
             throw new CliUsageException("--connected доступен только для команды colors.");
-        if (independentColors && colorMode == IndependentColorMode.Quantization &&
+        if (independentColors && colorMode == EIndependentColorMode.Quantization &&
             new[] { "--palette", "--palette-step", "--dithering" }.Any(values.ContainsKey))
             throw new CliUsageException("Режим quantization не принимает настройки палитры и дизеринга.");
-        if (independentColors && colorMode == IndependentColorMode.Palette &&
+        if (independentColors && colorMode == EIndependentColorMode.Palette &&
             new[] { "--quantization", "--quantization-colors", "--color-weights" }.Any(values.ContainsKey))
             throw new CliUsageException("Режим palette не принимает настройки квантования.");
-        if (values.ContainsKey("--dithering") && palette is PaletteKind.None or PaletteKind.Step)
+        if (values.ContainsKey("--dithering") && palette is EPaletteKind.None or EPaletteKind.Step)
             throw new CliUsageException("--dithering доступен только для DB16, DB32, NES и GameBoy.");
-        if (values.ContainsKey("--palette-step") && palette != PaletteKind.Step)
+        if (values.ContainsKey("--palette-step") && palette != EPaletteKind.Step)
             throw new CliUsageException("--palette-step требует --palette step.");
-        if (blockMode != BlockSelectionMode.Manual &&
+        if (blockMode != EBlockSelectionMode.Manual &&
             new[] { "--brightness", "--contrast", "--saturation", "--edge" }.Any(values.ContainsKey))
             throw new CliUsageException("Настройки яркости, контраста, насыщенности и контура требуют --block-mode manual.");
         if (values.ContainsKey("--preview-scale") && !values.ContainsKey("--preview-output"))
@@ -129,11 +129,11 @@ internal sealed record CliArguments(
             TargetWidth = Integer("--width", defaults.TargetWidth, 1, int.MaxValue),
             TargetHeight = Integer("--height", defaults.TargetHeight, 1, int.MaxValue),
             CropHorizontal = Choice("--crop-horizontal", defaults.CropHorizontal,
-                ("center", CropHorizontalAlignment.Center), ("left", CropHorizontalAlignment.Left),
-                ("right", CropHorizontalAlignment.Right)),
+                ("center", ECropHorizontalAlignment.Center), ("left", ECropHorizontalAlignment.Left),
+                ("right", ECropHorizontalAlignment.Right)),
             CropVertical = Choice("--crop-vertical", defaults.CropVertical,
-                ("center", CropVerticalAlignment.Center), ("top", CropVerticalAlignment.Top),
-                ("bottom", CropVerticalAlignment.Bottom)),
+                ("center", ECropVerticalAlignment.Center), ("top", ECropVerticalAlignment.Top),
+                ("bottom", ECropVerticalAlignment.Bottom)),
             Palette = palette,
             PaletteStep = Integer("--palette-step", defaults.PaletteStep, 1, 255),
             EnableDithering = values.ContainsKey("--dithering"),
@@ -141,11 +141,11 @@ internal sealed record CliArguments(
             IndependentColorMode = colorMode,
             UseColorWeights = values.ContainsKey("--color-weights"),
             Quantization = Choice("--quantization", defaults.Quantization,
-                ("median-cut", QuantizationMethod.MedianCut), ("kmeans-lab", QuantizationMethod.KMeansLab),
-                ("kmeans-linear", QuantizationMethod.KMeansLinear)),
+                ("median-cut", EQuantizationMethod.MedianCut), ("kmeans-lab", EQuantizationMethod.KMeansLab),
+                ("kmeans-linear", EQuantizationMethod.KMeansLinear)),
             ThreadCount = Integer("--threads", defaults.ThreadCount, 1, Environment.ProcessorCount),
             BlockMode = blockMode,
-            ManualCriteria = blockMode == BlockSelectionMode.Manual ? new ManualBlockCriteria
+            ManualCriteria = blockMode == EBlockSelectionMode.Manual ? new ManualBlockCriteria
             {
                 TargetBrightness = Integer("--brightness", (int)(criteria.TargetBrightness * 100), 0, 100) / 100.0,
                 TargetContrast = Integer("--contrast", (int)(criteria.TargetContrast * 100), 0, 100) / 100.0,
@@ -167,8 +167,8 @@ internal sealed record CliArguments(
             LocalWeight = Number("--local-weight", 55, 0, 100) / 100,
             DetailWeight = Number("--detail-weight", 66, 0, 100) / 100,
             ContextWeight = Number("--context-weight", 30, 0, 100) / 100,
-            DistanceSpace = Choice("--distance-space", PaletteDistanceSpace.Oklab,
-                ("oklab", PaletteDistanceSpace.Oklab), ("cielab", PaletteDistanceSpace.CieLab))
+            DistanceSpace = Choice("--distance-space", EPaletteDistanceSpace.Oklab,
+                ("oklab", EPaletteDistanceSpace.Oklab), ("cielab", EPaletteDistanceSpace.CieLab))
         } : null;
         if (connectivity is { TileSize: > 0 and < 4 })
             throw new CliUsageException("--tile-size должен быть 0 или 4–256.");

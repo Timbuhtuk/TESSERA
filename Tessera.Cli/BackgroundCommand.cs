@@ -108,9 +108,9 @@ internal static class BackgroundCommand
         if (!Path.GetExtension(target).Equals(".png", StringComparison.OrdinalIgnoreCase))
             throw new CliUsageException("Результат удаления фона нужно сохранить в PNG.");
 
-        var mode = Choice("--mode", BackgroundRemovalMode.GlobalColor,
-            ("global", BackgroundRemovalMode.GlobalColor), ("global-color", BackgroundRemovalMode.GlobalColor),
-            ("edges", BackgroundRemovalMode.EdgeConnected), ("edge-connected", BackgroundRemovalMode.EdgeConnected));
+        var mode = Choice("--mode", EBackgroundRemovalMode.GlobalColor,
+            ("global", EBackgroundRemovalMode.GlobalColor), ("global-color", EBackgroundRemovalMode.GlobalColor),
+            ("edges", EBackgroundRemovalMode.EdgeConnected), ("edge-connected", EBackgroundRemovalMode.EdgeConnected));
         int tolerance = Integer("--tolerance", 8, 0, 100);
         Color? color = values.TryGetValue("--background-color", out string? colorName) ? ParseColor(colorName) : null;
         return new BackgroundArguments(input, target, mode, tolerance, color,
@@ -175,9 +175,9 @@ internal static class BackgroundCommand
         catch { source.Dispose(); throw; }
     }
 
-    private static string Name(BackgroundRemovalMode value) => value == BackgroundRemovalMode.GlobalColor ? "global" : "edges";
+    private static string Name(EBackgroundRemovalMode value) => value == EBackgroundRemovalMode.GlobalColor ? "global" : "edges";
     private static string ColorName(Color? value) => value is null ? "auto" : $"#{value.Value.R:X2}{value.Value.G:X2}{value.Value.B:X2}";
 
-    private sealed record BackgroundArguments(string Input, string Output, BackgroundRemovalMode Mode, int Tolerance,
+    private sealed record BackgroundArguments(string Input, string Output, EBackgroundRemovalMode Mode, int Tolerance,
         Color? BackgroundColor, bool Overwrite, bool Json);
 }

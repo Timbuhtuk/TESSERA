@@ -6,13 +6,12 @@ using System.Windows.Media.Imaging;
 
 namespace Tessera.Desktop;
 
-public enum WorkspaceAssetKind { Image, Animation, Board, Tiles }
 
 public sealed class WorkspaceAsset : INotifyPropertyChanged
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public UnrealTextureLink? Unreal { get; set; }
-    public WorkspaceAssetKind Kind { get; set; }
+    public EWorkspaceAssetKind Kind { get; set; }
     public string Name { get; set; } = "";
     public string ContentFile { get; set; } = "";
     public List<string> Tags { get; set; } = [];
@@ -41,7 +40,7 @@ public sealed class WorkspaceAsset : INotifyPropertyChanged
         }
     }
     public event PropertyChangedEventHandler? PropertyChanged;
-    [JsonIgnore] public string KindLabel => Kind switch { WorkspaceAssetKind.Animation => Localization.Text("Анимация"), WorkspaceAssetKind.Board => Localization.Text("Доска"), WorkspaceAssetKind.Tiles => Localization.Text("Коллекция тайлов"), _ => Localization.Text("Изображение") };
+    [JsonIgnore] public string KindLabel => Kind switch { EWorkspaceAssetKind.Animation => Localization.Text("Анимация"), EWorkspaceAssetKind.Board => Localization.Text("Доска"), EWorkspaceAssetKind.Tiles => Localization.Text("Коллекция тайлов"), _ => Localization.Text("Изображение") };
     [JsonIgnore] public string Summary
     {
         get
@@ -59,9 +58,9 @@ public sealed class WorkspaceProject
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public string Name { get; set; } = "";
-    public WorkspaceProjectKind Kind { get; set; }
+    public EWorkspaceProjectKind Kind { get; set; }
     public string? UnrealProjectPath { get; set; }
-    [JsonIgnore] public bool IsUnreal => Kind == WorkspaceProjectKind.Unreal && !string.IsNullOrWhiteSpace(UnrealProjectPath);
+    [JsonIgnore] public bool IsUnreal => Kind == EWorkspaceProjectKind.Unreal && !string.IsNullOrWhiteSpace(UnrealProjectPath);
 }
 
 public sealed class WorkspaceFolder
@@ -226,8 +225,8 @@ public sealed partial class WorkspaceCatalog
     {
         var kind = Path.GetExtension(path).ToLowerInvariant() switch
         {
-            ".ase" or ".aseprite" => WorkspaceAssetKind.Animation, ".tboard" => WorkspaceAssetKind.Board,
-            ".ttiles" => WorkspaceAssetKind.Tiles, _ => throw new ArgumentException(Localization.Text("Формат документа не поддерживается."))
+            ".ase" or ".aseprite" => EWorkspaceAssetKind.Animation, ".tboard" => EWorkspaceAssetKind.Board,
+            ".ttiles" => EWorkspaceAssetKind.Tiles, _ => throw new ArgumentException(Localization.Text("Формат документа не поддерживается."))
         };
         var asset = new WorkspaceAsset { Kind = kind, Name = Path.GetFileName(path), ContentFile = "content" + Path.GetExtension(path).ToLowerInvariant() };
         string target = ContentPath(asset); Directory.CreateDirectory(Path.GetDirectoryName(target)!); File.Copy(path, target);
@@ -242,7 +241,7 @@ public sealed partial class WorkspaceCatalog
         var copy = JsonSerializer.Deserialize<WorkspaceAsset>(JsonSerializer.Serialize(original))!;
         copy.Unreal = null;
         copy.Id = Guid.NewGuid(); copy.Name = original.Name + Localization.Text(" — копия"); copy.OpenedAt = default; copy.ModifiedAt = DateTimeOffset.Now;
-        if (original.Kind == WorkspaceAssetKind.Image)
+        if (original.Kind == EWorkspaceAssetKind.Image)
         {
             var source = images.Load().Single(s => s.Id == original.Id);
             source.SelectedGeneration = source.Generations.FirstOrDefault(g => g.Id == original.SelectedResult) ?? source.SelectedGeneration;

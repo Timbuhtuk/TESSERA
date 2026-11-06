@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Совместимость инструментов",
+        "en": "Tool compatibility"
+      },
+      "notes": {
+        "ru": "- Редактор, CLI, доски изображений, тайлы и карты материалов сохраняют совместимость настроек, документов, макросов и истории обработки.",
+        "en": "- The editor, CLI, image boards, tiles and material maps retain compatibility with existing settings, documents, macros and processing history."
+      }
+    },
+    {
+      "version": "2.30.2",
+      "title": {
         "ru": "Совместимость рабочих процессов",
         "en": "Workflow compatibility"
       },

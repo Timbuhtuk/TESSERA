@@ -286,7 +286,7 @@ public partial class WorkspaceBrowser : UserControl
             item.Visibility = item.Tag switch
             {
                 "open" => Visibility.Visible,
-                "create-unreal" => selection.Count == 1 && asset?.Kind == WorkspaceAssetKind.Image &&
+                "create-unreal" => selection.Count == 1 && asset?.Kind == EWorkspaceAssetKind.Image &&
                     _catalog!.State.Projects.Any(p => p.IsUnreal) ? Visibility.Visible : Visibility.Collapsed,
                 _ => managementVisibility
             };
@@ -355,7 +355,7 @@ public partial class WorkspaceBrowser : UserControl
         switch (action)
         {
             case "create-unreal":
-                if (Selection is [var asset] && asset.Kind == WorkspaceAssetKind.Image)
+                if (Selection is [var asset] && asset.Kind == EWorkspaceAssetKind.Image)
                     ActionRequested?.Invoke(action, asset);
                 break;
             case "open": OpenClicked(this, new()); break; case "link": AddToProjectClicked(this, new()); break;

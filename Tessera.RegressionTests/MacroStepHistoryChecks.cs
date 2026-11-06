@@ -42,7 +42,7 @@ internal static class MacroStepHistoryChecks
         var normal = store.Save(new MacroDefinition { Name = "Five steps", Steps =
         [
             resize,
-            new ProcessingStep { OperationId = ProcessingOperations.Colors, Downscale = new DownscaleOptions { TargetWidth = 17, TargetHeight = 11, Palette = PaletteKind.None, IndependentColorMode = IndependentColorMode.Quantization, QuantizationColors = 4, Quantization = QuantizationMethod.KMeansLab }, ConnectedPalette = new ConnectivityPaletteOptions { TargetColors = 4, TileSize = 0 } },
+            new ProcessingStep { OperationId = ProcessingOperations.Colors, Downscale = new DownscaleOptions { TargetWidth = 17, TargetHeight = 11, Palette = EPaletteKind.None, IndependentColorMode = EIndependentColorMode.Quantization, QuantizationColors = 4, Quantization = EQuantizationMethod.KMeansLab }, ConnectedPalette = new ConnectivityPaletteOptions { TargetColors = 4, TileSize = 0 } },
             new ProcessingStep { OperationId = ProcessingOperations.Sharpen, Sharpen = new SharpenSettings { Strength = 150, Threshold = 3 } },
             new ProcessingStep { OperationId = ProcessingOperations.Monochrome },
             new ProcessingStep { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = FinalistMode.P5Off, FinalistFactor = 2 }

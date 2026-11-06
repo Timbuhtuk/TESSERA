@@ -205,7 +205,7 @@ public partial class MainWindow
         UpdateGridLens();
     }
 
-    private bool ImageEditorVisible => workspaceHost.Visibility == Visibility.Visible && _sourceImage is not null && _activeSource is not null && (!_workspaceReady || _workspaceActive?.Kind == WorkspaceAssetKind.Image);
+    private bool ImageEditorVisible => workspaceHost.Visibility == Visibility.Visible && _sourceImage is not null && _activeSource is not null && (!_workspaceReady || _workspaceActive?.Kind == EWorkspaceAssetKind.Image);
     private void UpdateNavigationState()
     {
         if (!_navigationReady) return;
@@ -215,7 +215,7 @@ public partial class MainWindow
         bool animation = asepriteWorkspace.Visibility == Visibility.Visible && asepriteWorkspace.CurrentSheetPath is not null;
         bool background = backgroundWorkspace.Visibility == Visibility.Visible;
         bool ico = iconWorkspace.Visibility == Visibility.Visible;
-        bool tiles = _workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null;
+        bool tiles = _workspaceActive?.Kind == EWorkspaceAssetKind.Tiles && _tileInspector is not null;
         bool canExport = image && !ContourPreviewVisible && !StructurePreviewVisible && !LiveToolPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
@@ -234,7 +234,7 @@ public partial class MainWindow
         ((MenuItem)FindName("exportIcoMenuItem")).Visibility = image ? Visibility.Visible : Visibility.Collapsed;
         if (image) { fileLabel.Text = _activeSource!.Label; fileLabel.ToolTip = _activeSource.OriginalPath; }
         else if (_workspaceActive is { } asset && _workspaceBrowser?.Visibility != Visibility.Visible)
-        { fileLabel.Text = asset.Name; fileLabel.ToolTip = asset.Kind == WorkspaceAssetKind.Image ? _activeSource?.OriginalPath : _workspaceCatalog?.ContentPath(asset); }
+        { fileLabel.Text = asset.Name; fileLabel.ToolTip = asset.Kind == EWorkspaceAssetKind.Image ? _activeSource?.OriginalPath : _workspaceCatalog?.ContentPath(asset); }
         else { fileLabel.Text = ""; fileLabel.ToolTip = null; }
         UpdateNavigationChecks();
     }
@@ -300,7 +300,7 @@ public partial class MainWindow
     {
         foreach (var window in _materialMapWindows.Values.ToArray()) await window.SaveWorkspaceAsync();
         if (moodboardWorkspace.Visibility == Visibility.Visible) await moodboardWorkspace.SaveWorkspaceAsync();
-        if (_workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.SaveWorkspaceDocument();
+        if (_workspaceActive?.Kind == EWorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.SaveWorkspaceDocument();
         PersistWorkspaceState();
         if (ImageEditorVisible && _workspaceActive is { Unreal: not null } linked)
         {
@@ -316,6 +316,6 @@ public partial class MainWindow
         else if (asepriteWorkspace.Visibility == Visibility.Visible) await asepriteWorkspace.ExportDialogAsync();
         else if (backgroundWorkspace.Visibility == Visibility.Visible) await backgroundWorkspace.ExportDialogAsync();
         else if (iconWorkspace.Visibility == Visibility.Visible) await iconWorkspace.ExportDialogAsync();
-        else if (_workspaceActive?.Kind == WorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.ExportDialog();
+        else if (_workspaceActive?.Kind == EWorkspaceAssetKind.Tiles && _tileInspector is not null) _tileInspector.ExportDialog();
     }
 }

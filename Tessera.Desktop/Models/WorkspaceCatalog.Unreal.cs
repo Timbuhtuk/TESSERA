@@ -14,7 +14,7 @@ public sealed partial class WorkspaceCatalog
         var project = new WorkspaceProject
         {
             Name = Path.GetFileNameWithoutExtension(full),
-            Kind = WorkspaceProjectKind.Unreal,
+            Kind = EWorkspaceProjectKind.Unreal,
             UnrealProjectPath = full
         };
         State.Projects.Add(project);

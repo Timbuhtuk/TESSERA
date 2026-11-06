@@ -253,7 +253,7 @@ internal static class UiChecks
             Require(!Get<bool>("_resultIsAlignment") && Get<Bitmap>("_downscaledResult").Width == 15, "Downscale no longer works independently");
             var options = (DownscaleOptions)Invoke("BuildOptionsFromUi")!;
             Require(options.QuantizationColors == 64 && !options.UseColorWeights &&
-                options.Quantization == QuantizationMethod.KMeansLab, "Process did not apply the selected scene profile");
+                options.Quantization == EQuantizationMethod.KMeansLab, "Process did not apply the selected scene profile");
             var expected = new PixelArtDownscaler().Process(source, options);
             using (expected.Downscaled)
             using (expected.CroppedSource) EqualPixels(expected.Downscaled, Get<Bitmap>("_downscaledResult"), "WPF result differs from shared algorithm");
@@ -263,7 +263,7 @@ internal static class UiChecks
             Require(Get<bool>("_resultStale"), "Color options did not invalidate downscale");
             Require(Get<ComboBox>("paletteInput").Items.Count == 5 &&
                 ((ComboBoxItem)Get<ComboBox>("paletteInput").Items[0]).Content?.ToString() == "DB16" &&
-                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).Palette != PaletteKind.None,
+                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).Palette != EPaletteKind.None,
                 "Palette tool still offers a no-palette choice");
             Require(Get<RadioButton>("quantizationColorModeInput").IsChecked == true &&
                 Get<StackPanel>("quantizationColorControls").IsEnabled &&
@@ -273,7 +273,7 @@ internal static class UiChecks
             Get<RadioButton>("paletteColorModeInput").IsChecked = true;
             Require(!Get<StackPanel>("quantizationColorControls").IsEnabled &&
                 Get<StackPanel>("paletteColorControls").IsEnabled &&
-                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == IndependentColorMode.Palette,
+                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == EIndependentColorMode.Palette,
                 "Palette mode did not disable quantization controls");
             Click("colorMenuItem"); Pump();
             var activeColorTool = Window.GetWindow(Get<ComboBox>("paletteInput"));
@@ -295,11 +295,11 @@ internal static class UiChecks
             var colorGeneration = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             var colorOnly = Get<Bitmap>("_downscaledResult");
             Require(colorGeneration.ParentGenerationId == sizeGeneration.Id &&
-                colorGeneration.Settings.Downscale.IndependentColorMode == IndependentColorMode.Palette &&
+                colorGeneration.Settings.Downscale.IndependentColorMode == EIndependentColorMode.Palette &&
                 colorGeneration.Operation == "Палитра" &&
                 colorOnly.Width == 15 && colorOnly.Height == 7,
                 "Color operation did not use the selected result without resizing it");
-            var paletteColors = Palettes.GetPalette(PaletteKind.GameBoy).ToHashSet();
+            var paletteColors = Palettes.GetPalette(EPaletteKind.GameBoy).ToHashSet();
             for (int y = 0; y < colorOnly.Height; y++) for (int x = 0; x < colorOnly.Width; x++)
                 Require(paletteColors.Contains(colorOnly.GetPixel(x, y).ToArgb() & 0xFFFFFF), "Color operation ignored the palette");
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0;
@@ -310,12 +310,12 @@ internal static class UiChecks
             Get<RadioButton>("quantizationColorModeInput").IsChecked = true;
             Require(Get<StackPanel>("quantizationColorControls").IsEnabled &&
                 !Get<StackPanel>("paletteColorControls").IsEnabled &&
-                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == IndependentColorMode.Quantization,
+                ((DownscaleOptions)Invoke("BuildOptionsFromUi")!).IndependentColorMode == EIndependentColorMode.Quantization,
                 "Quantization mode did not disable palette controls");
             Get<IntegerInput>("quantizationColorsInput").Value = 1;
             Click("colorOnlyButton"); Wait();
             Require(Get<SourceEntry>("_activeSource").SelectedGeneration is { Operation: "Квантование" } quantizedGeneration &&
-                quantizedGeneration.Settings.Downscale.IndependentColorMode == IndependentColorMode.Quantization,
+                quantizedGeneration.Settings.Downscale.IndependentColorMode == EIndependentColorMode.Quantization,
                 "Quantization choice was not saved with the result");
             Invoke("SelectGeneration", paletteSourceGeneration);
             Require(Get<RadioButton>("paletteColorModeInput").IsChecked == true &&
@@ -392,12 +392,12 @@ internal static class UiChecks
             Click("processButton"); Wait();
             Window.GetWindow(action)!.Close();
             options = Get<SourceEntry>("_activeSource").SelectedGeneration!.Settings.Downscale;
-            Require(options.SpriteMode && options.Quantization == QuantizationMethod.MedianCut &&
-                options.Palette == PaletteKind.None && options.AlphaThreshold == 75 &&
+            Require(options.SpriteMode && options.Quantization == EQuantizationMethod.MedianCut &&
+                options.Palette == EPaletteKind.None && options.AlphaThreshold == 75 &&
                 options.QuantizationColors == 64 && !options.UseColorWeights &&
                 options.TargetWidth == 15 && options.TargetHeight == 7,
                 "Processing did not apply the details profile");
-            Require(((DownscaleOptions)Invoke("BuildOptionsFromUi")!).Palette == PaletteKind.DB16,
+            Require(((DownscaleOptions)Invoke("BuildOptionsFromUi")!).Palette == EPaletteKind.DB16,
                 "Restoring Details exposed an unavailable no-palette option");
             Require(Get<SourceEntry>("_activeSource").SelectedGeneration?.ParentGenerationId == selectedParent.Id,
                 "Mode processing ignored the selected result");

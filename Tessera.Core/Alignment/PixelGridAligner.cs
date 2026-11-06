@@ -27,11 +27,11 @@ public sealed class PixelGridAligner
         ArgumentNullException.ThrowIfNull(source);
         options ??= new GridAlignmentOptions();
         if (!Enum.IsDefined(options.Mode)) throw new ArgumentOutOfRangeException(nameof(options.Mode));
-        if (options.SnapToGlobalGrid && options.Mode != GridAlignmentMode.Local)
+        if (options.SnapToGlobalGrid && options.Mode != EGridAlignmentMode.Local)
             throw new ArgumentException("SnapToGlobalGrid requires local mode.", nameof(options));
-        if (options.Mode == GridAlignmentMode.Local && options.CellSize > 64)
+        if (options.Mode == EGridAlignmentMode.Local && options.CellSize > 64)
             throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Local cell size must be 2..64.");
-        if (options.CellSize is < 2 || options.Mode == GridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height))
+        if (options.CellSize is < 2 || options.Mode == EGridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height))
             throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Cell size must be 2..min(width,height).");
         if (options.MaxDetectedCellSize is < 2 or > 256)
             throw new ArgumentOutOfRangeException(nameof(options.MaxDetectedCellSize));
@@ -54,7 +54,7 @@ public sealed class PixelGridAligner
         double[] xp = Project(ex, w, h, true, 0, h), yp = Project(ey, w, h, false, 0, w);
         var detected = options.CellSize is null ? Detect(xp, yp, options.MaxDetectedCellSize) : (options.CellSize.Value, 1.0);
         int pitch = detected.Item1;
-        if (options.Mode == GridAlignmentMode.Local)
+        if (options.Mode == EGridAlignmentMode.Local)
         {
             if (pitch > 64) throw new ArgumentOutOfRangeException(nameof(options.CellSize), "Local cell size must be 2..64.");
             LocalDeltaResult cleaned = LocalDeltaProcessor.Process(source, new LocalDeltaOptions());
@@ -65,7 +65,7 @@ public sealed class PixelGridAligner
             {
                 Aligned = restored.Image,
                 CellSize = pitch,
-                Mode = GridAlignmentMode.Local,
+                Mode = EGridAlignmentMode.Local,
                 LocalRegionCount = restored.Regions.Count(r => r.Status == "restored"),
                 SnapToGlobalGrid = options.SnapToGlobalGrid,
                 ShiftedRegionCount = restored.ShiftedRegionCount,

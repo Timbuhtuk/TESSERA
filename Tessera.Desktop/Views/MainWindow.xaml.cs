@@ -395,15 +395,15 @@ public partial class MainWindow : Window
         TargetHeight = TryGetTargetSize(out _, out int height) ? height : (int)heightInput.Value,
         SpriteMode = spriteInput.IsChecked == true,
         AlphaThreshold = (int)alphaInput.Value,
-        CropHorizontal = (CropHorizontalAlignment)cropHorizontalInput.SelectedIndex,
-        CropVertical = (CropVerticalAlignment)cropVerticalInput.SelectedIndex,
+        CropHorizontal = (ECropHorizontalAlignment)cropHorizontalInput.SelectedIndex,
+        CropVertical = (ECropVerticalAlignment)cropVerticalInput.SelectedIndex,
         Palette = _capturingReadyMode && detailsMode.IsChecked == true
-            ? PaletteKind.None : (PaletteKind)(paletteInput.SelectedIndex + 1),
+            ? EPaletteKind.None : (EPaletteKind)(paletteInput.SelectedIndex + 1),
         PaletteStep = (int)paletteStepInput.Value,
-        Quantization = (QuantizationMethod)quantizationInput.SelectedIndex,
+        Quantization = (EQuantizationMethod)quantizationInput.SelectedIndex,
         QuantizationColors = (int)quantizationColorsInput.Value,
         IndependentColorMode = paletteColorModeInput.IsChecked == true
-            ? IndependentColorMode.Palette : IndependentColorMode.Quantization,
+            ? EIndependentColorMode.Palette : EIndependentColorMode.Quantization,
         LocalColorPasses = (int)localColorPassesInput.Value,
         Cleanup = new ColorCleanupOptions
         {
@@ -415,7 +415,7 @@ public partial class MainWindow : Window
         UseColorWeights = colorWeightsInput.IsChecked == true,
         ThreadCount = (int)threadsInput.Value,
         EnableDithering = (!_capturingReadyMode || spriteInput.IsChecked != true) && paletteInput.SelectedIndex is >= 0 and <= 3 && ditheringInput.IsChecked == true,
-        BlockMode = manualInput.IsChecked == true ? BlockSelectionMode.Manual : BlockSelectionMode.Automatic,
+        BlockMode = manualInput.IsChecked == true ? EBlockSelectionMode.Manual : EBlockSelectionMode.Automatic,
         ManualCriteria = manualInput.IsChecked == true ? new ManualBlockCriteria
         {
             TargetBrightness = brightnessInput.Value / 100.0,
@@ -553,11 +553,11 @@ public partial class MainWindow : Window
             throw new InvalidOperationException(Localization.Text("Выберите файл вне внутренней библиотеки Tessera."));
     }
 
-    private GridAlignmentMode SelectedGridAlignmentMode => localGridModeInput.IsChecked == true ? GridAlignmentMode.Local : GridAlignmentMode.Global;
+    private EGridAlignmentMode SelectedGridAlignmentMode => localGridModeInput.IsChecked == true ? EGridAlignmentMode.Local : EGridAlignmentMode.Global;
 
     private void UpdateGridAlignmentMode()
     {
-        bool local = SelectedGridAlignmentMode == GridAlignmentMode.Local;
+        bool local = SelectedGridAlignmentMode == EGridAlignmentMode.Local;
         gridCellInput.Maximum = local ? 64 : 256;
         gridCellInput.Value = Math.Min(gridCellInput.Value, gridCellInput.Maximum);
         globalGridHint.Visibility = local ? Visibility.Collapsed : Visibility.Visible;
@@ -587,7 +587,7 @@ public partial class MainWindow : Window
             Mode = settings.AlignmentMode,
             SnapToGlobalGrid = settings.SnapToGlobalGrid
         };
-        string operation = settings.AlignmentMode == GridAlignmentMode.Global ? ProcessingOperations.Align
+        string operation = settings.AlignmentMode == EGridAlignmentMode.Global ? ProcessingOperations.Align
             : settings.SnapToGlobalGrid ? ProcessingOperations.AlignLocalSnapped : ProcessingOperations.AlignLocal;
         bool useResult = ProcessingBasis == 1 && _downscaledResult is not null;
         var basis = useResult ? _downscaledResult! : _sourceImage;
@@ -610,11 +610,11 @@ public partial class MainWindow : Window
                     PreservesTransparency = true,
                     CellSize = result.CellSize,
                     ParentGenerationId = parentId,
-                    Caption = Localization.Format(settings.AlignmentMode == GridAlignmentMode.Local
+                    Caption = Localization.Format(settings.AlignmentMode == EGridAlignmentMode.Local
                         ? settings.SnapToGlobalGrid ? "ЛОКАЛЬНАЯ СЕТКА С ПРИВЯЗКОЙ · {0} × {1} · ячейка {2} px"
                             : "ЛОКАЛЬНАЯ СЕТКА · {0} × {1} · ячейка {2} px" : "ВЫРОВНЕННАЯ СЕТКА · {0} × {1} · ячейка {2} px",
                         result.Aligned.Width, result.Aligned.Height, result.CellSize),
-                    Log = settings.AlignmentMode == GridAlignmentMode.Local
+                    Log = settings.AlignmentMode == EGridAlignmentMode.Local
                         ? Localization.Format("Локальное выравнивание: {0:F3} с. Ячейка: {1} px. Областей: {2}.", result.ElapsedSeconds, result.CellSize, result.LocalRegionCount)
                             + (settings.SnapToGlobalGrid ? "\n" + Localization.Format("Привязка к общей сетке: сдвинуто областей {0}, конфликтов ячеек {1}.",
                                 result.ShiftedRegionCount, result.ConflictingCellCount) : "")

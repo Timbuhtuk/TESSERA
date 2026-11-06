@@ -106,8 +106,8 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         SchedulePreview();
     }
 
-    public (BackgroundRemovalMode Mode, int Tolerance, Color? Color) GetOptions() =>
-        (backgroundModeInput.SelectedIndex == 1 ? BackgroundRemovalMode.EdgeConnected : BackgroundRemovalMode.GlobalColor,
+    public (EBackgroundRemovalMode Mode, int Tolerance, Color? Color) GetOptions() =>
+        (backgroundModeInput.SelectedIndex == 1 ? EBackgroundRemovalMode.EdgeConnected : EBackgroundRemovalMode.GlobalColor,
         (int)backgroundToleranceInput.Value,
         backgroundColorInput.SelectedIndex switch { 1 => Color.White, 2 => Color.Black, 3 => _customBackgroundColor, _ => (Color?)null });
 

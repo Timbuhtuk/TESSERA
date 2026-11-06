@@ -18,15 +18,15 @@ flowchart LR
 
 ## MVC mapping
 
-- **Model:** `Tessera.Models` contains processing options, results and tile layouts. `Tessera.Desktop/Models` contains persisted workspace state and WPF-facing image assets.
+- **Model:** `Tessera.Models/Options`, `Results`, `Tiles` and `Enums` contain shared processing contracts. `Tessera.Desktop/Models` contains persisted workspace state and WPF-facing image assets; its enum types live under `Models/Enums`.
 - **Controller:** `Tessera.Desktop/Controllers` handles UI actions and connects the view to processing and storage. `Tessera.Core/Workflows` coordinates reusable processing steps. CLI commands are the second controller adapter.
 - **View:** XAML, code-behind and visual helpers in `Tessera.Desktop/Views` render and collect input. `Tessera.Rendering` owns the WPF-based board PNG renderer used by both entry points.
 
-`Tessera.Core/Imaging` and `Tessera.Core/Alignment` contain image processing. `Tessera.Aseprite` keeps its independent `net8.0` decoder and exporter. The shared model and core never reference the desktop, CLI or rendering projects. The CLI never references the desktop project or compiles its source files through a linked `Compile` item.
+`Tessera.Core/Imaging` groups code by operation: `Color`, `Downscaling`, `Filters`, `Materials`, `Tiles`, `Export` and `Infrastructure`. `Tessera.Core/Alignment` contains grid alignment, and `Tessera.Core/Workflows` coordinates processing steps. These folders retain the `Tessera.Core.Imaging` namespace so moving a file does not change its processing API. `Tessera.Aseprite` keeps its independent `net8.0` decoder and exporter. The shared model and core never reference the desktop, CLI or rendering projects. The CLI never references the desktop project or compiles its source files through a linked `Compile` item.
 
 Existing `.tboard`, `.ttiles`, `.tmaps`, recipe and library formats retain their fields and operation IDs. The executable names remain `Tessera.exe` and `tessera.exe`. Project and namespace names changed; user data paths did not.
 
-Source integrations that reference the former assemblies or namespaces need updated project references and `using` directives. The public model contracts are under `Tessera.Models`; processing APIs are under `Tessera.Core.Imaging`, `Tessera.Core.Alignment` and `Tessera.Core.Workflows`.
+Source integrations that reference the former assemblies or namespaces need updated project references and `using` directives. Model enum type names now begin with `E`; serialized enum values and existing option property names remain the same. The public model contracts are under `Tessera.Models`; processing APIs are under `Tessera.Core.Imaging`, `Tessera.Core.Alignment` and `Tessera.Core.Workflows`.
 
 ## Verification
 

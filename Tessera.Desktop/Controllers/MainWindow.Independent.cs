@@ -71,8 +71,8 @@ public partial class MainWindow
                 };
                 string colorOperation = options.IndependentColorMode switch
                 {
-                    IndependentColorMode.Quantization => Localization.Text("Квантование"),
-                    IndependentColorMode.Palette => Localization.Text("Палитра"),
+                    EIndependentColorMode.Quantization => Localization.Text("Квантование"),
+                    EIndependentColorMode.Palette => Localization.Text("Палитра"),
                     _ => Localization.Text("Цвет")
                 };
                 if (settings.ConnectedPalette is not null && !changeSize && !neighborColors)

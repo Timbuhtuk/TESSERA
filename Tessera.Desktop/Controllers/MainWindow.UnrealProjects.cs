@@ -327,7 +327,7 @@ public partial class MainWindow
     {
         var parent = _workspaceCatalog!.State.Assets.FirstOrDefault(a => a.Id == session.SourceId)?.Unreal;
         if (parent is null || parent.Missing || UnrealProject(parent.ProjectId) is not { } project) return;
-        foreach (var kind in Enum.GetValues<MaterialMapKind>())
+        foreach (var kind in Enum.GetValues<EMaterialMapKind>())
         {
             Guid id = session.MapId(kind);
             var asset = _workspaceCatalog.State.Assets.Single(a => a.Id == id);
