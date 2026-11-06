@@ -109,11 +109,11 @@ internal static class IconCommand
         var options = new IconExportOptions
         {
             Sizes = sizes,
-            ResizeMode = Choice("--resize", IconResizeMode.Smooth,
-                ("smooth", IconResizeMode.Smooth), ("nearest", IconResizeMode.NearestNeighbor),
-                ("nearest-neighbor", IconResizeMode.NearestNeighbor)),
-            FitMode = Choice("--fit", IconFitMode.Contain,
-                ("contain", IconFitMode.Contain), ("cover", IconFitMode.Cover), ("stretch", IconFitMode.Stretch))
+            ResizeMode = Choice("--resize", EIconResizeMode.Smooth,
+                ("smooth", EIconResizeMode.Smooth), ("nearest", EIconResizeMode.NearestNeighbor),
+                ("nearest-neighbor", EIconResizeMode.NearestNeighbor)),
+            FitMode = Choice("--fit", EIconFitMode.Contain,
+                ("contain", EIconFitMode.Contain), ("cover", EIconFitMode.Cover), ("stretch", EIconFitMode.Stretch))
         };
         return new IconArguments(input, target, values.ContainsKey("--overwrite"), values.ContainsKey("--json"), options);
 
@@ -145,8 +145,8 @@ internal static class IconCommand
         return sizes;
     }
 
-    private static string Name(IconResizeMode value) => value == IconResizeMode.Smooth ? "smooth" : "nearest-neighbor";
-    private static string Name(IconFitMode value) => value.ToString().ToLowerInvariant();
+    private static string Name(EIconResizeMode value) => value == EIconResizeMode.Smooth ? "smooth" : "nearest-neighbor";
+    private static string Name(EIconFitMode value) => value.ToString().ToLowerInvariant();
 
     private sealed record IconArguments(string Input, string Output, bool Overwrite, bool Json, IconExportOptions Options);
 }

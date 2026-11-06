@@ -146,7 +146,7 @@ public sealed class WorkflowExecutor
             case ProcessingOperations.AlignLocal:
             case ProcessingOperations.AlignLocalSnapped:
             {
-                var mode = step.OperationId == ProcessingOperations.Align ? GridAlignmentMode.Global : GridAlignmentMode.Local;
+                var mode = step.OperationId == ProcessingOperations.Align ? EGridAlignmentMode.Global : EGridAlignmentMode.Local;
                 bool snap = step.OperationId == ProcessingOperations.AlignLocalSnapped;
                 var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap }, operationProgress);
                 return (alignment.Aligned, alignment.CellSize);
@@ -328,7 +328,7 @@ public sealed class WorkflowExecutor
             !Enum.IsDefined(options.IndependentColorMode) || !Enum.IsDefined(options.BlockMode) ||
             !Enum.IsDefined(options.CropHorizontal) || !Enum.IsDefined(options.CropVertical))
             throw new InvalidDataException("A downscale option contains an unsupported enum value.");
-        if (options.BlockMode == BlockSelectionMode.Manual && options.ManualCriteria is null)
+        if (options.BlockMode == EBlockSelectionMode.Manual && options.ManualCriteria is null)
             throw new InvalidDataException("Manual criteria are required for manual block selection.");
         ValidateCriteria(options.ManualCriteria);
         ValidateCriteria(options.LocalColorCriteria);

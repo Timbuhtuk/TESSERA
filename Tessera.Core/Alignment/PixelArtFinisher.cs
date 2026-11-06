@@ -45,9 +45,9 @@ public static class PixelArtFinisher
 
         return IndependentImageProcessor.ApplyColors(reduced, new DownscaleOptions
         {
-            Palette = PaletteKind.None,
-            IndependentColorMode = IndependentColorMode.Quantization,
-            Quantization = QuantizationMethod.KMeansLab,
+            Palette = EPaletteKind.None,
+            IndependentColorMode = EIndependentColorMode.Quantization,
+            Quantization = EQuantizationMethod.KMeansLab,
             QuantizationColors = options.ColorCount
         });
     }

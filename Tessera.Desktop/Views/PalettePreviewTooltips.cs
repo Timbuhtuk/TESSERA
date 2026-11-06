@@ -17,9 +17,9 @@ public partial class MainWindow
     {
         _palettePreviews = new PalettePreviewTooltips();
         _palettePreviews.Attach(paletteInput, index => new ColorPreviewSettings(
-            (PaletteKind)(index + 1), paletteStepInput.Value, ditheringInput.IsChecked == true));
+            (EPaletteKind)(index + 1), paletteStepInput.Value, ditheringInput.IsChecked == true));
         _palettePreviews.Attach(quantizationInput, index => new ColorPreviewSettings(
-            PaletteKind.None, Quantization: (QuantizationMethod)index,
+            EPaletteKind.None, Quantization: (EQuantizationMethod)index,
             ColorCount: quantizationColorsInput.Value, UseColorWeights: colorWeightsInput.IsChecked == true));
         paletteStepInput.ValueChanged += (_, _) => _palettePreviews.RefreshOpenTooltips();
         quantizationColorsInput.ValueChanged += (_, _) => _palettePreviews.RefreshOpenTooltips();
@@ -33,23 +33,23 @@ public partial class MainWindow
 }
 
 /// <summary>Options include their real settings so an open preview never shows a previous step/count.</summary>
-internal readonly record struct ColorPreviewSettings(PaletteKind Palette, int Step = 16, bool Dithering = false,
-    QuantizationMethod? Quantization = null, int ColorCount = 64, bool UseColorWeights = false)
+internal readonly record struct ColorPreviewSettings(EPaletteKind Palette, int Step = 16, bool Dithering = false,
+    EQuantizationMethod? Quantization = null, int ColorCount = 64, bool UseColorWeights = false)
 {
     public ColorPreviewSettings Normalize() => Quantization.HasValue
-        ? this with { Palette = PaletteKind.None, Step = 16, Dithering = false }
-        : this with { Step = Palette == PaletteKind.Step ? Step : 16,
-            Dithering = Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && Dithering,
+        ? this with { Palette = EPaletteKind.None, Step = 16, Dithering = false }
+        : this with { Step = Palette == EPaletteKind.Step ? Step : 16,
+            Dithering = Palette is >= EPaletteKind.DB16 and <= EPaletteKind.GameBoy && Dithering,
             ColorCount = 64, UseColorWeights = false };
 
     public string Label => Quantization.HasValue
         ? Localization.Format("{0} · {1} цветов", Quantization.Value switch
         {
-            QuantizationMethod.MedianCut => "Median Cut",
-            QuantizationMethod.KMeansLab => "K-Means LAB",
+            EQuantizationMethod.MedianCut => "Median Cut",
+            EQuantizationMethod.KMeansLab => "K-Means LAB",
             _ => "K-Means Linear"
         }, ColorCount)
-        : Palette == PaletteKind.Step ? Localization.Format("Шаг · {0}", Step)
+        : Palette == EPaletteKind.Step ? Localization.Format("Шаг · {0}", Step)
             : Dithering ? Localization.Format("{0} · дизеринг", Palette) : Palette.ToString();
 }
 
@@ -206,9 +206,9 @@ internal sealed class PalettePreviewTooltips
         using var source = CreateSample();
         using var result = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
         {
-            IndependentColorMode = settings.Quantization.HasValue ? IndependentColorMode.Quantization : IndependentColorMode.Palette,
+            IndependentColorMode = settings.Quantization.HasValue ? EIndependentColorMode.Quantization : EIndependentColorMode.Palette,
             Palette = settings.Palette, PaletteStep = settings.Step, EnableDithering = settings.Dithering,
-            Quantization = settings.Quantization ?? QuantizationMethod.KMeansLab,
+            Quantization = settings.Quantization ?? EQuantizationMethod.KMeansLab,
             QuantizationColors = settings.ColorCount, UseColorWeights = settings.UseColorWeights, ThreadCount = 1
         });
         using var comparison = new Bitmap(360, 200, System.Drawing.Imaging.PixelFormat.Format32bppArgb);

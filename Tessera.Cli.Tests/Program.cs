@@ -314,8 +314,8 @@ try
         var resize = new DownscaleOptions { TargetWidth = 6, TargetHeight = 4 };
         var colors = new DownscaleOptions
         {
-            IndependentColorMode = IndependentColorMode.Palette,
-            Palette = PaletteKind.Step,
+            IndependentColorMode = EIndependentColorMode.Palette,
+            Palette = EPaletteKind.Step,
             PaletteStep = 51
         };
         var cleanup = new DownscaleOptions
@@ -345,7 +345,7 @@ try
                     OperationId = ProcessingOperations.RemoveBackground,
                     Background = new BackgroundSettings
                     {
-                        Mode = BackgroundRemovalMode.GlobalColor,
+                        Mode = EBackgroundRemovalMode.GlobalColor,
                         Tolerance = 0,
                         ColorArgb = Color.White.ToArgb()
                     }
@@ -362,7 +362,7 @@ try
         using var cleaned = IndependentImageProcessor.ApplyNeighborColors(colored, cleanup);
         using var monochrome = ImageFilters.Monochrome(cleaned);
         using var replaced = ImageColorTools.ReplaceColor(monochrome, Color.Black, Color.Magenta);
-        using var expected = BackgroundRemover.Remove(replaced, BackgroundRemovalMode.GlobalColor, 0, Color.White);
+        using var expected = BackgroundRemover.Remove(replaced, EBackgroundRemovalMode.GlobalColor, 0, Color.White);
         EqualPixels(expected, actual);
         Require(updates.Select(update => update.Index).SequenceEqual(Enumerable.Range(1, recipe.Steps.Count)),
             "Workflow progress is not one-based or skipped a completed step");
@@ -477,8 +477,8 @@ try
         {
             TargetWidth = 11,
             TargetHeight = 9,
-            Palette = PaletteKind.DB16,
-            Quantization = QuantizationMethod.MedianCut,
+            Palette = EPaletteKind.DB16,
+            Quantization = EQuantizationMethod.MedianCut,
             QuantizationColors = 12,
             ThreadCount = 1
         };
@@ -573,12 +573,12 @@ try
         source.Save(sourcePath, ImageFormat.Png);
         byte[] original = File.ReadAllBytes(sourcePath);
         var store = new MacroStore(Path.Combine(directory, "channels-library"));
-        foreach (var channel in Enum.GetValues<RgbaChannel>())
-        foreach (var mode in Enum.GetValues<ChannelAdjustmentMode>())
+        foreach (var channel in Enum.GetValues<ERgbaChannel>())
+        foreach (var mode in Enum.GetValues<EChannelAdjustmentMode>())
         foreach (bool subtract in new[] { false, true })
         {
             var options = new ChannelAdjustmentOptions { Channel = channel, Mode = mode,
-                Amount = mode == ChannelAdjustmentMode.Value ? 12.5 : 25.5, Subtract = subtract };
+                Amount = mode == EChannelAdjustmentMode.Value ? 12.5 : 25.5, Subtract = subtract };
             string label = $"{channel}-{mode}-{subtract}";
             var saved = store.Save(new MacroDefinition { Name = label,
                 Steps = [new ProcessingStep { OperationId = ProcessingOperations.AdjustChannel, ChannelAdjustment = options }] });
@@ -689,8 +689,8 @@ try
         using (var source = new Bitmap(input))
         using (var expected = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
         {
-            IndependentColorMode = IndependentColorMode.Quantization,
-            Quantization = QuantizationMethod.MedianCut,
+            IndependentColorMode = EIndependentColorMode.Quantization,
+            Quantization = EQuantizationMethod.MedianCut,
             QuantizationColors = 8
         }))
         using (var actual = new Bitmap(quantizedPath))
@@ -702,8 +702,8 @@ try
         using (var source = new Bitmap(input))
         using (var expected = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
         {
-            IndependentColorMode = IndependentColorMode.Palette,
-            Palette = PaletteKind.Step,
+            IndependentColorMode = EIndependentColorMode.Palette,
+            Palette = EPaletteKind.Step,
             PaletteStep = 32
         }))
         using (var actual = new Bitmap(palettePath))
@@ -930,11 +930,11 @@ try
                 source.SetPixel(x, y, color);
                 hidden.SetPixel(x, y, x % 2 == 0 ? color : Color.FromArgb(0, x * 10, y * 10, 200));
             }
-        foreach (var method in Enum.GetValues<QuantizationMethod>())
+        foreach (var method in Enum.GetValues<EQuantizationMethod>())
         foreach (bool weighted in new[] { false, true })
         {
             var options = new DownscaleOptions { SpriteMode = true, TargetWidth = 12, TargetHeight = 12,
-                Palette = PaletteKind.None, Quantization = method, QuantizationColors = 8,
+                Palette = EPaletteKind.None, Quantization = method, QuantizationColors = 8,
                 UseColorWeights = weighted, AlphaThreshold = 25, ThreadCount = 1 };
             var first = new PixelArtDownscaler().Process(source, options);
             var second = new PixelArtDownscaler().Process(hidden, options);
@@ -944,7 +944,7 @@ try
             Require(a.GetPixel(0, 0).A == 255 && a.GetPixel(0, 0).B == 180, "Transparent RGB leaked into color");
         }
         var thin = new PixelArtDownscaler().Process(source, new DownscaleOptions { SpriteMode = true,
-            TargetWidth = 12, TargetHeight = 12, Palette = PaletteKind.None, AlphaThreshold = 75 });
+            TargetWidth = 12, TargetHeight = 12, Palette = EPaletteKind.None, AlphaThreshold = 75 });
         using var thinOutput = thin.Downscaled; using var thinCrop = thin.CroppedSource;
         Require(thinOutput.GetPixel(0, 0).A == 0, "Coverage threshold ignored");
         using var empty = new Bitmap(5, 3, PixelFormat.Format32bppArgb);
@@ -960,12 +960,12 @@ try
         var largeSize = CliArguments.Parse([input, "--width", "7680", "--height", "4320"]).Options;
         Require(largeSize.TargetWidth == 7680 && largeSize.TargetHeight == 4320,
             "CLI resize retained the 4K dimension cap");
-        Require(options.Palette == PaletteKind.DB16 && options.PaletteStep == 32, "Default palette");
-        Require(options.Quantization == QuantizationMethod.KMeansLab && options.QuantizationColors == 64, "Default quantization");
+        Require(options.Palette == EPaletteKind.DB16 && options.PaletteStep == 32, "Default palette");
+        Require(options.Quantization == EQuantizationMethod.KMeansLab && options.QuantizationColors == 64, "Default quantization");
         Require(!options.UseColorWeights, "Color weights must be opt-in");
         Require(options.ThreadCount == Environment.ProcessorCount, "Default threads");
-        Require(options.CropHorizontal == CropHorizontalAlignment.Center && options.CropVertical == CropVerticalAlignment.Center, "Default crop");
-        Require(options.BlockMode == BlockSelectionMode.Automatic && options.ManualCriteria is null && !options.EnableDithering, "Default mode");
+        Require(options.CropHorizontal == ECropHorizontalAlignment.Center && options.CropVertical == ECropVerticalAlignment.Center, "Default crop");
+        Require(options.BlockMode == EBlockSelectionMode.Automatic && options.ManualCriteria is null && !options.EnableDithering, "Default mode");
         string path = Path.Combine(directory, "исходное изображение_downscaled.png");
         ExpectSuccess([input, "--json"]);
         CompareWithLibrary(input, path, new DownscaleOptions());
@@ -979,7 +979,7 @@ try
             int gray = x == 0 ? 120 : x == 1 ? 200 : 40;
             source.SetPixel(x, 0, Color.FromArgb(gray, gray, gray));
         }
-        foreach (var method in Enum.GetValues<QuantizationMethod>())
+        foreach (var method in Enum.GetValues<EQuantizationMethod>())
         {
             using var unweighted = ColorQuantizer.Quantize(source, 1, method, 1, false);
             using var weighted = ColorQuantizer.Quantize(source, 1, method, 1, true);
@@ -997,7 +997,7 @@ try
             int gray = x < 100 ? 0 : (x - 99) * 80;
             source.SetPixel(x, 0, Color.FromArgb(gray, gray, gray));
         }
-        using var weighted = ColorQuantizer.Quantize(source, 2, QuantizationMethod.MedianCut, 1, true);
+        using var weighted = ColorQuantizer.Quantize(source, 2, EQuantizationMethod.MedianCut, 1, true);
         Require(weighted.GetPixel(0, 0).R == 0, "Common black color lost");
         Require(weighted.GetPixel(100, 0).ToArgb() == weighted.GetPixel(102, 0).ToArgb(), "Rare colors were not grouped together");
         Require(DistinctColors(weighted) == 2, "Weighted split created an empty bucket");
@@ -1008,7 +1008,7 @@ try
         using var source = new Bitmap(128, 1, PixelFormat.Format24bppRgb);
         for (int x = 0; x < source.Width; x++)
             source.SetPixel(x, 0, Color.FromArgb(x * 2, 100, 180));
-        foreach (var method in Enum.GetValues<QuantizationMethod>())
+        foreach (var method in Enum.GetValues<EQuantizationMethod>())
         foreach (bool weighted in new[] { false, true })
         {
             using var reduced = ColorQuantizer.Quantize(source, 8, method, 1, weighted);
@@ -1021,7 +1021,7 @@ try
         foreach (int invalid in new[] { 0, DownscaleOptions.MaxQuantizationColors + 1 })
         {
             bool rejected = false;
-            try { using var output = ColorQuantizer.Quantize(source, invalid, QuantizationMethod.MedianCut); }
+            try { using var output = ColorQuantizer.Quantize(source, invalid, EQuantizationMethod.MedianCut); }
             catch (ArgumentOutOfRangeException) { rejected = true; }
             Require(rejected, "Library accepted invalid color count");
         }
@@ -1051,10 +1051,10 @@ try
         using var source = new Bitmap(100, 1, PixelFormat.Format32bppArgb);
         for (int x = 0; x < source.Width; x++)
             source.SetPixel(x, 0, x == 0 ? Color.Red : Color.FromArgb(127, 0, 255, 0));
-        foreach (var method in Enum.GetValues<QuantizationMethod>())
+        foreach (var method in Enum.GetValues<EQuantizationMethod>())
         {
             var options = new DownscaleOptions { SpriteMode = true, TargetWidth = 100, TargetHeight = 1,
-                QuantizationColors = 1, UseColorWeights = true, Quantization = method, Palette = PaletteKind.None };
+                QuantizationColors = 1, UseColorWeights = true, Quantization = method, Palette = EPaletteKind.None };
             var result = new PixelArtDownscaler().Process(source, options);
             using var output = result.Downscaled; using var crop = result.CroppedSource;
             Require((output.GetPixel(0, 0).ToArgb() & 0xFFFFFF) == (Color.Lime.ToArgb() & 0xFFFFFF), "Visible partial-alpha colors were excluded from the histogram");
@@ -1287,37 +1287,37 @@ try
     });
 
     int variant = 0;
-    foreach (var palette in Enum.GetValues<PaletteKind>())
-    foreach (var method in Enum.GetValues<QuantizationMethod>())
-    foreach (var mode in Enum.GetValues<BlockSelectionMode>())
+    foreach (var palette in Enum.GetValues<EPaletteKind>())
+    foreach (var method in Enum.GetValues<EQuantizationMethod>())
+    foreach (var mode in Enum.GetValues<EBlockSelectionMode>())
     {
         int index = variant++;
         Check($"Pixel parity: {palette}, {method}, {mode}", () =>
         {
             string output = Path.Combine(directory, $"variant-{index}.png");
             string crop = Path.Combine(directory, $"crop-{index}.bmp");
-            var horizontal = (CropHorizontalAlignment)(index % 3);
-            var vertical = (CropVerticalAlignment)((index / 3) % 3);
-            bool dither = palette is not PaletteKind.None and not PaletteKind.Step;
+            var horizontal = (ECropHorizontalAlignment)(index % 3);
+            var vertical = (ECropVerticalAlignment)((index / 3) % 3);
+            bool dither = palette is not EPaletteKind.None and not EPaletteKind.Step;
             int threads = index % 2 == 0 ? 1 : Environment.ProcessorCount;
             var arguments = new List<string>
             {
                 "--input", input, "--output", output, "--width=12", "--height", "10",
                 "--palette", palette.ToString(), "--quantization", method switch
                 {
-                    QuantizationMethod.MedianCut => "median-cut",
-                    QuantizationMethod.KMeansLab => "kmeans-lab",
+                    EQuantizationMethod.MedianCut => "median-cut",
+                    EQuantizationMethod.KMeansLab => "kmeans-lab",
                     _ => "kmeans-linear"
                 },
                 "--block-mode", mode.ToString(), "--crop-horizontal", horizontal.ToString(),
                 "--crop-vertical", vertical.ToString(), "--threads", threads.ToString(),
                 "--cropped-output", crop, "--json"
             };
-            if (palette == PaletteKind.Step)
+            if (palette == EPaletteKind.Step)
                 arguments.AddRange(["--palette-step", "51"]);
             if (dither)
                 arguments.Add("--dithering");
-            if (mode == BlockSelectionMode.Manual)
+            if (mode == EBlockSelectionMode.Manual)
                 arguments.AddRange(["--brightness", "20", "--contrast", "70", "--saturation", "90", "--edge", "30"]);
 
             string report = ExpectSuccess(arguments.ToArray());
@@ -1327,10 +1327,10 @@ try
             var expected = new DownscaleOptions
             {
                 TargetWidth = 12, TargetHeight = 10, Palette = palette,
-                PaletteStep = palette == PaletteKind.Step ? 51 : 32,
+                PaletteStep = palette == EPaletteKind.Step ? 51 : 32,
                 Quantization = method, EnableDithering = dither, ThreadCount = threads,
                 CropHorizontal = horizontal, CropVertical = vertical, BlockMode = mode,
-                ManualCriteria = mode == BlockSelectionMode.Manual ? new ManualBlockCriteria
+                ManualCriteria = mode == EBlockSelectionMode.Manual ? new ManualBlockCriteria
                 {
                     TargetBrightness = 0.2, TargetContrast = 0.7, TargetSaturation = 0.9, TargetEdge = 0.3
                 } : null
@@ -1471,7 +1471,7 @@ try
         Require(Run(["adjust-channel", input, "-o", channel, "--channel", "A", "--amount", "20",
             "--mode", "percent", "--subtract"]).Code == 0, "Channel command failed");
         using (var expected = ChannelAdjustment.Apply(source, new ChannelAdjustmentOptions
-        { Channel = RgbaChannel.A, Mode = ChannelAdjustmentMode.Percent, Amount = 20, Subtract = true }))
+        { Channel = ERgbaChannel.A, Mode = EChannelAdjustmentMode.Percent, Amount = 20, Subtract = true }))
         using (var actual = new Bitmap(channel)) EqualPixels(expected, actual);
 
         Require(Run(["tcr", input, "-o", tcr, "--mode", "mixed", "--factor", "4"]).Code == 0,

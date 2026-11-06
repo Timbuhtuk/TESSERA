@@ -96,6 +96,6 @@ public partial class MainWindow
         LocalWeight = connectedLocalInput.Value / 100.0,
         DetailWeight = connectedDetailInput.Value / 100.0,
         ContextWeight = connectedContextInput.Value / 100.0,
-        DistanceSpace = connectedSpaceInput.SelectedIndex == 1 ? PaletteDistanceSpace.CieLab : PaletteDistanceSpace.Oklab
+        DistanceSpace = connectedSpaceInput.SelectedIndex == 1 ? EPaletteDistanceSpace.CieLab : EPaletteDistanceSpace.Oklab
     } : null;
 }

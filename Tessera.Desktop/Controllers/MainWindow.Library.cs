@@ -402,7 +402,7 @@ public partial class MainWindow
         ContourMinimumOpposition = contourOppositionInput.Value,
         DetectGrid = detectGridInput.IsChecked == true,
         AlignmentMode = SelectedGridAlignmentMode,
-        SnapToGlobalGrid = SelectedGridAlignmentMode == GridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
+        SnapToGlobalGrid = SelectedGridAlignmentMode == EGridAlignmentMode.Local && snapLocalGridInput.IsChecked == true,
         AspectLock = aspectLock.IsChecked == true
     };
 
@@ -433,9 +433,9 @@ public partial class MainWindow
             connectedLocalInput.Value = (int)Math.Round((connected?.LocalWeight ?? .55) * 100);
             connectedDetailInput.Value = (int)Math.Round((connected?.DetailWeight ?? .66) * 100);
             connectedContextInput.Value = (int)Math.Round((connected?.ContextWeight ?? .3) * 100);
-            connectedSpaceInput.SelectedIndex = connected?.DistanceSpace == PaletteDistanceSpace.CieLab ? 1 : 0;
-            paletteColorModeInput.IsChecked = options.IndependentColorMode == IndependentColorMode.Palette ||
-                options.IndependentColorMode == IndependentColorMode.Combined && options.Palette != PaletteKind.None;
+            connectedSpaceInput.SelectedIndex = connected?.DistanceSpace == EPaletteDistanceSpace.CieLab ? 1 : 0;
+            paletteColorModeInput.IsChecked = options.IndependentColorMode == EIndependentColorMode.Palette ||
+                options.IndependentColorMode == EIndependentColorMode.Combined && options.Palette != EPaletteKind.None;
             quantizationColorModeInput.IsChecked = paletteColorModeInput.IsChecked != true;
             if (settings.ConnectedPaletteEnabled is null && operationId == ProcessingOperations.ConnectedPalette && connected is not null)
             {
@@ -452,8 +452,8 @@ public partial class MainWindow
             localEdgeInput.Value = cleanup.EdgeProtection * 100;
             colorWeightsInput.IsChecked = options.UseColorWeights;
             threadsInput.Value = options.ThreadCount;
-            automaticInput.IsChecked = options.BlockMode != BlockSelectionMode.Manual;
-            manualInput.IsChecked = options.BlockMode == BlockSelectionMode.Manual;
+            automaticInput.IsChecked = options.BlockMode != EBlockSelectionMode.Manual;
+            manualInput.IsChecked = options.BlockMode == EBlockSelectionMode.Manual;
             brightnessInput.Value = (options.ManualCriteria?.TargetBrightness ?? .5) * 100;
             contrastInput.Value = (options.ManualCriteria?.TargetContrast ?? .5) * 100;
             saturationInput.Value = (options.ManualCriteria?.TargetSaturation ?? .5) * 100;
@@ -468,13 +468,13 @@ public partial class MainWindow
             contourNeighborCountInput.Value = settings.ContourMinimumSimilarNeighbors;
             contourAgreementInput.Value = settings.ContourMinimumAgreement;
             contourOppositionInput.Value = settings.ContourMinimumOpposition;
-            (settings.AlignmentMode == GridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
+            (settings.AlignmentMode == EGridAlignmentMode.Local ? localGridModeInput : globalGridModeInput).IsChecked = true;
             snapLocalGridInput.IsChecked = settings.SnapToGlobalGrid;
             UpdateGridAlignmentMode();
             gridCellInput.Value = settings.CellSize; detectGridInput.IsChecked = settings.DetectGrid;
             UpdateDependentControls();
             UpdateConnectedControls();
-            ditheringInput.IsChecked = options.Palette is >= PaletteKind.DB16 and <= PaletteKind.GameBoy && options.EnableDithering;
+            ditheringInput.IsChecked = options.Palette is >= EPaletteKind.DB16 and <= EPaletteKind.GameBoy && options.EnableDithering;
             profileState.Text = Localization.Text("Параметры выбранного результата");
         }
         finally { _restoringHistory = false; }

@@ -352,7 +352,7 @@ internal static class MoodboardWorkspaceChecks
             var task = (Task)typeof(MainWindow).GetMethod("WorkspaceActionAsync", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(window, ["new-board", null])!;
             AwaitWithPump(task);
-            var board = window.Workspace!.State.Assets.Single(asset => asset.Kind == WorkspaceAssetKind.Board && asset.Name == "Audit board");
+            var board = window.Workspace!.State.Assets.Single(asset => asset.Kind == EWorkspaceAssetKind.Board && asset.Name == "Audit board");
             string path = window.Workspace.ContentPath(board);
             Require(File.Exists(path), "New workspace board has no saved document");
             Require(new WorkspaceCatalog(folder).State.Assets.Any(asset => asset.Id == board.Id),

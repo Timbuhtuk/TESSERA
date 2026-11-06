@@ -28,8 +28,8 @@ internal static class IndependentImageProcessorChecks
             for (int x = 0; x < source.Width; x++) source.SetPixel(x, y, colors[x]);
         var options = new DownscaleOptions
         {
-            TargetWidth = 2, TargetHeight = 1, Palette = PaletteKind.GameBoy,
-            QuantizationColors = 1, Quantization = QuantizationMethod.MedianCut
+            TargetWidth = 2, TargetHeight = 1, Palette = EPaletteKind.GameBoy,
+            QuantizationColors = 1, Quantization = EQuantizationMethod.MedianCut
         };
         using var result = IndependentImageProcessor.Scale(source, options);
         if (result.Width != 2 || result.Height != 1) throw new Exception("Scaling dimensions are wrong.");
@@ -54,7 +54,7 @@ internal static class IndependentImageProcessorChecks
             using var result = IndependentImageProcessor.Scale(source, new DownscaleOptions
             {
                 TargetWidth = size.Width, TargetHeight = size.Height, SpriteMode = true,
-                Palette = PaletteKind.GameBoy, QuantizationColors = 1
+                Palette = EPaletteKind.GameBoy, QuantizationColors = 1
             });
             if (result.Size != size) throw new Exception("Enlargement returned the wrong dimensions.");
             for (int y = 0; y < size.Height; y++)
@@ -82,13 +82,13 @@ internal static class IndependentImageProcessorChecks
         for (int q = 0; q < colors.Length; q++) source.SetPixel(q % 3, q / 3, colors[q]);
         var options = new DownscaleOptions
         {
-            TargetWidth = 1, TargetHeight = 1, Palette = PaletteKind.GameBoy,
-            QuantizationColors = 2, Quantization = QuantizationMethod.MedianCut
+            TargetWidth = 1, TargetHeight = 1, Palette = EPaletteKind.GameBoy,
+            QuantizationColors = 2, Quantization = EQuantizationMethod.MedianCut
         };
         using var result = IndependentImageProcessor.ApplyColors(source, options);
         if (result.Width != source.Width || result.Height != source.Height)
             throw new Exception("Color processing changed canvas dimensions.");
-        var palette = Palettes.GetPalette(PaletteKind.GameBoy).ToHashSet();
+        var palette = Palettes.GetPalette(EPaletteKind.GameBoy).ToHashSet();
         for (int y = 0; y < result.Height; y++)
             for (int x = 0; x < result.Width; x++)
             {
@@ -107,14 +107,14 @@ internal static class IndependentImageProcessorChecks
         source.SetPixel(2, 0, Color.FromArgb(255, 220, 220, 220));
         using var quantized = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
         {
-            IndependentColorMode = IndependentColorMode.Quantization,
-            Quantization = QuantizationMethod.MedianCut, QuantizationColors = 1,
-            Palette = PaletteKind.Step, PaletteStep = 64
+            IndependentColorMode = EIndependentColorMode.Quantization,
+            Quantization = EQuantizationMethod.MedianCut, QuantizationColors = 1,
+            Palette = EPaletteKind.Step, PaletteStep = 64
         });
         using var mapped = IndependentImageProcessor.ApplyColors(source, new DownscaleOptions
         {
-            IndependentColorMode = IndependentColorMode.Palette,
-            QuantizationColors = 0, Palette = PaletteKind.Step, PaletteStep = 64
+            IndependentColorMode = EIndependentColorMode.Palette,
+            QuantizationColors = 0, Palette = EPaletteKind.Step, PaletteStep = 64
         });
         if (Enumerable.Range(0, 3).Select(x => quantized.GetPixel(x, 0).R).Distinct().Count() != 1 ||
             Enumerable.Range(0, 3).Select(x => mapped.GetPixel(x, 0).R).Distinct().Count() != 3)
@@ -136,7 +136,7 @@ internal static class IndependentImageProcessorChecks
 
         using var result = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
         {
-            LocalColorPasses = 1, Palette = PaletteKind.GameBoy, QuantizationColors = 1
+            LocalColorPasses = 1, Palette = EPaletteKind.GameBoy, QuantizationColors = 1
         });
         if (result.Size != source.Size) throw new Exception("Neighbor processing changed canvas dimensions.");
         if (result.GetPixel(1, 1).ToArgb() != Color.FromArgb(128, 100, 100, 100).ToArgb())
@@ -199,7 +199,7 @@ internal static class IndependentImageProcessorChecks
 
         using var sizeOnly = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
         {
-            BlockMode = BlockSelectionMode.Manual,
+            BlockMode = EBlockSelectionMode.Manual,
             ManualCriteria = new ManualBlockCriteria { TargetBrightness = 1 }
         });
         using var localBright = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
@@ -208,7 +208,7 @@ internal static class IndependentImageProcessorChecks
         });
         using var localDark = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
         {
-            BlockMode = BlockSelectionMode.Manual,
+            BlockMode = EBlockSelectionMode.Manual,
             ManualCriteria = new ManualBlockCriteria { TargetBrightness = 1 },
             LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 0 }
         });

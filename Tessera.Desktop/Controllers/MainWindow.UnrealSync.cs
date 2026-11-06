@@ -50,7 +50,7 @@ public partial class MainWindow
         if (session is not null)
         {
             string name = _sources.FirstOrDefault(s => s.Id == session.SourceId)?.Label ?? _activeSource.Label;
-            foreach (var kind in Enum.GetValues<MaterialMapKind>())
+            foreach (var kind in Enum.GetValues<EMaterialMapKind>())
             {
                 var source = _sources.FirstOrDefault(s => s.Id == session.MapId(kind)) ?? throw new InvalidOperationException(Localization.Text("Сначала сохраните карты материала."));
                 _unrealSync.SendPng(_library.SourcePath(source), session.SourceId, name, kind.ToString().ToLowerInvariant());
@@ -61,7 +61,7 @@ public partial class MainWindow
             string prefix = _activeSource.Id.ToString("N") + ":";
             var window = _materialMapWindows.FirstOrDefault(pair => pair.Key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)).Value;
             if (window?.Document is null) throw new InvalidOperationException(Localization.Text("Сначала откройте карты материала для выбранного изображения."));
-            foreach (var kind in Enum.GetValues<MaterialMapKind>())
+            foreach (var kind in Enum.GetValues<EMaterialMapKind>())
             {
                 string path = Path.Combine(Path.GetTempPath(), "tessera-map-" + Guid.NewGuid().ToString("N") + ".png");
                 try { window.ExportMap(kind, path); _unrealSync.SendPng(path, _activeSource.Id, _activeSource.Label, kind.ToString().ToLowerInvariant()); }

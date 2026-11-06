@@ -57,13 +57,13 @@ internal static class ToolImprovementsChecks
                 source.SetPixel(x, y, Color.FromArgb(new[] { 0, 1, 127, 255 }[y % 4],
                     x * 255 / 127, (x * 7 + y * 19) % 256, (255 - x * 2 + y * 5) % 256));
         int[] original = Pixels(source);
-        foreach (PaletteKind kind in new[] { PaletteKind.DB16, PaletteKind.DB32, PaletteKind.NES, PaletteKind.GameBoy })
+        foreach (EPaletteKind kind in new[] { EPaletteKind.DB16, EPaletteKind.DB32, EPaletteKind.NES, EPaletteKind.GameBoy })
         {
             foreach (bool sprite in new[] { false, true })
             {
                 DownscaleOptions Options(bool dither) => new()
                 {
-                    IndependentColorMode = IndependentColorMode.Palette, Palette = kind,
+                    IndependentColorMode = EIndependentColorMode.Palette, Palette = kind,
                     EnableDithering = dither, SpriteMode = sprite, ThreadCount = 1
                 };
                 using var plain = IndependentImageProcessor.ApplyColors(source, Options(false));
@@ -81,16 +81,16 @@ internal static class ToolImprovementsChecks
                 dithered.Save(Path.Combine(ArtifactRoot, $"dither-{kind}-{sprite}.png"));
             }
         }
-        foreach (PaletteKind kind in new[] { PaletteKind.None, PaletteKind.Step })
+        foreach (EPaletteKind kind in new[] { EPaletteKind.None, EPaletteKind.Step })
         {
-            using var plain = IndependentImageProcessor.ApplyColors(source, new() { IndependentColorMode = IndependentColorMode.Palette, Palette = kind });
-            using var dithered = IndependentImageProcessor.ApplyColors(source, new() { IndependentColorMode = IndependentColorMode.Palette, Palette = kind, EnableDithering = true });
+            using var plain = IndependentImageProcessor.ApplyColors(source, new() { IndependentColorMode = EIndependentColorMode.Palette, Palette = kind });
+            using var dithered = IndependentImageProcessor.ApplyColors(source, new() { IndependentColorMode = EIndependentColorMode.Palette, Palette = kind, EnableDithering = true });
             Require(Pixels(plain).SequenceEqual(Pixels(dithered)), "Dithering unexpectedly affects None/Step palette");
         }
         using var quantized = IndependentImageProcessor.ApplyColors(source, new()
         {
-            IndependentColorMode = IndependentColorMode.Quantization, Palette = PaletteKind.GameBoy,
-            Quantization = QuantizationMethod.MedianCut, QuantizationColors = 8, EnableDithering = true
+            IndependentColorMode = EIndependentColorMode.Quantization, Palette = EPaletteKind.GameBoy,
+            Quantization = EQuantizationMethod.MedianCut, QuantizationColors = 8, EnableDithering = true
         });
         Require(Pixels(quantized).Where(c => (uint)c >> 24 > 0).Select(c => c & 0xFFFFFF).Distinct().Count() <= 8,
             "Quantization-only mode applied palette/dither instead of honoring color count");
@@ -174,8 +174,8 @@ internal static class ToolImprovementsChecks
                     Require(sourcePreview.SelectedRegion == expected, "Source crop outline does not match known integer region");
                     using var actual = IndependentImageProcessor.Scale(source, new()
                     {
-                        TargetWidth = 5, TargetHeight = 4, CropHorizontal = (CropHorizontalAlignment)horizontal,
-                        CropVertical = (CropVerticalAlignment)vertical
+                        TargetWidth = 5, TargetHeight = 4, CropHorizontal = (ECropHorizontalAlignment)horizontal,
+                        CropVertical = (ECropVerticalAlignment)vertical
                     });
                     using var cropped = source.Clone(new System.Drawing.Rectangle((int)expected.X, (int)expected.Y, 20, 16), source.PixelFormat);
                     using var oracle = IndependentImageProcessor.Scale(cropped, new() { TargetWidth = 5, TargetHeight = 4, SpriteMode = true });
@@ -237,7 +237,7 @@ internal static class ToolImprovementsChecks
             Get<CheckBox>(window, "ditheringInput").IsChecked = true;
             var savedColorSettings = (EditorSettings)Call(window, "CaptureSettings")!;
             Require(savedColorSettings.Downscale.SpriteMode && savedColorSettings.Downscale.EnableDithering &&
-                savedColorSettings.Downscale.IndependentColorMode == IndependentColorMode.Palette,
+                savedColorSettings.Downscale.IndependentColorMode == EIndependentColorMode.Palette,
                 "Independent palette fixture did not capture sprite sizing plus active dithering");
             Call(window, "SetProcessingState", true);
             Call(window, "RestoreSettings", savedColorSettings);

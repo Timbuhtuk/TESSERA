@@ -70,9 +70,9 @@ internal static partial class ImageToolsCommand
                 if (parsed.Value("--amount") is null) throw new CliUsageException("Укажите --amount.");
                 var options = new ChannelAdjustmentOptions
                 {
-                    Channel = channel switch { "r" => RgbaChannel.R, "g" => RgbaChannel.G, "b" => RgbaChannel.B, _ => RgbaChannel.A },
+                    Channel = channel switch { "r" => ERgbaChannel.R, "g" => ERgbaChannel.G, "b" => ERgbaChannel.B, _ => ERgbaChannel.A },
                     Mode = parsed.Choice("--mode", "value", "value", "percent") == "percent"
-                        ? ChannelAdjustmentMode.Percent : ChannelAdjustmentMode.Value,
+                        ? EChannelAdjustmentMode.Percent : EChannelAdjustmentMode.Value,
                     Amount = parsed.Number("--amount", 0, 0, double.MaxValue),
                     Subtract = parsed.Flag("--subtract")
                 };
@@ -144,7 +144,7 @@ internal static partial class ImageToolsCommand
                 DirectX = convention == "directx"
             };
             document.Recalculate();
-            var kinds = new[] { MaterialMapKind.Height, MaterialMapKind.Normal, MaterialMapKind.AO };
+            var kinds = new[] { EMaterialMapKind.Height, EMaterialMapKind.Normal, EMaterialMapKind.AO };
             for (int q = 0; q < kinds.Length; q++)
             {
                 using var map = FromPixels(document.MapPixels(kinds[q]), document.Width, document.Height);

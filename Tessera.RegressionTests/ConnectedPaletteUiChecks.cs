@@ -78,7 +78,7 @@ internal static class ConnectedPaletteUiChecks
             Get<IntegerInput>("quantizationColorsInput").Value = 3;
             var options = new ConnectivityPaletteOptions { TargetColors = 3, ConnectivityWeight = .25,
                 TileSize = 0, LocalWeight = .65, DetailWeight = .8, ContextWeight = .15,
-                DistanceSpace = PaletteDistanceSpace.CieLab };
+                DistanceSpace = EPaletteDistanceSpace.CieLab };
             using var expected = PaletteProcessor.Apply(source, (DownscaleOptions)typeof(MainWindow).GetMethod("BuildOptionsFromUi", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null)!, options);
             Until(() => Visible() && Get<PixelPreview>("resultPreview").Image is { } image && Same(expected, image));
             Capture(window, Path.Combine(folder, "preview-" + language + ".png"));

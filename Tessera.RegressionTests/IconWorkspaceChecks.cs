@@ -72,7 +72,7 @@ internal static class IconWorkspaceChecks
             Get<ComboBox>("iconResizeMode").SelectedIndex = 1;
             Get<ComboBox>("iconFitMode").SelectedIndex = 2;
             Wait(icons.RefreshFramesAsync());
-            Require(icons.GetOptions().ResizeMode == IconResizeMode.Smooth && icons.GetOptions().FitMode == IconFitMode.Stretch,
+            Require(icons.GetOptions().ResizeMode == EIconResizeMode.Smooth && icons.GetOptions().FitMode == EIconFitMode.Stretch,
                 "ICO scale/fit controls ignored");
             Get<ComboBox>("iconResizeMode").SelectedIndex = 0;
             Get<ComboBox>("iconFitMode").SelectedIndex = 0;
@@ -169,7 +169,7 @@ internal static class IconWorkspaceChecks
             }
             finally { SetCursorPos(previousCursor.X, previousCursor.Y); Pump(); }
             var firstFrame = Get<ItemsControl>("iconFrames").Items.Cast<IconWorkspace.FramePreview>().First();
-            using (var expected = IconExporter.CreateFrame(result, firstFrame.Size, IconResizeMode.NearestNeighbor))
+            using (var expected = IconExporter.CreateFrame(result, firstFrame.Size, EIconResizeMode.NearestNeighbor))
             {
                 var pixels = new byte[firstFrame.Size * firstFrame.Size * 4];
                 var wanted = new byte[pixels.Length];
@@ -200,12 +200,12 @@ internal static class IconWorkspaceChecks
                 var sourcePixels = new byte[32 * 32 * 4];
                 ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
                 Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 0 &&
-                    icons.GetOptions().BackgroundRemovalMode == BackgroundRemovalMode.GlobalColor, "Original removal mode changed");
+                    icons.GetOptions().BackgroundRemovalMode == EBackgroundRemovalMode.GlobalColor, "Original removal mode changed");
                 Get<ComboBox>("iconBackgroundMode").SelectedIndex = 1;
                 WaitIdle();
                 ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
                 Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 255 &&
-                    icons.GetOptions().BackgroundRemovalMode == BackgroundRemovalMode.EdgeConnected, "Edge mode did not preserve enclosed color in preview");
+                    icons.GetOptions().BackgroundRemovalMode == EBackgroundRemovalMode.EdgeConnected, "Edge mode did not preserve enclosed color in preview");
                 var backgroundOutput = Path.Combine(folder, "transparent.ico");
                 Wait(icons.SaveAsync(backgroundOutput));
                 using (var stream = File.OpenRead(backgroundOutput))

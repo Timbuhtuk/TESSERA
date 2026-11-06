@@ -84,8 +84,8 @@ public partial class MainWindow
             channelDirectionInput.SelectedIndex is < 0 or > 1) return false;
         options = new ChannelAdjustmentOptions
         {
-            Channel = (RgbaChannel)channelInput.SelectedIndex,
-            Mode = (ChannelAdjustmentMode)channelModeInput.SelectedIndex,
+            Channel = (ERgbaChannel)channelInput.SelectedIndex,
+            Mode = (EChannelAdjustmentMode)channelModeInput.SelectedIndex,
             Amount = amount,
             Subtract = channelDirectionInput.SelectedIndex == 1
         };
@@ -100,7 +100,7 @@ public partial class MainWindow
         channelApplyButton.IsEnabled = valid && !_processing && GetFilterBasis() is not null;
         channelHint.Text = !valid ? Localization.Text("Введите неотрицательное число.")
             : Localization.Text("Меняется только выбранный канал. Значения ограничены диапазоном 0–255. Процент считается от текущего значения каждого пикселя.") +
-                (options.Channel == RgbaChannel.A ? "\n" + Localization.Text("Прибавление значения к A делает видимыми и полностью прозрачные пиксели. Процент от нуля остаётся нулём.") : "");
+                (options.Channel == ERgbaChannel.A ? "\n" + Localization.Text("Прибавление значения к A делает видимыми и полностью прозрачные пиксели. Процент от нуля остаётся нулём.") : "");
     }
 
     private void RestoreChannelAdjustment(ChannelAdjustmentOptions? options)
@@ -122,7 +122,7 @@ public partial class MainWindow
         var settings = CaptureSettings();
         using var input = (Bitmap)basis.Clone();
         string change = options.Channel + " " + (options.Subtract ? "−" : "+") +
-            options.Amount.ToString("G", CultureInfo.CurrentCulture) + (options.Mode == ChannelAdjustmentMode.Percent ? "%" : "");
+            options.Amount.ToString("G", CultureInfo.CurrentCulture) + (options.Mode == EChannelAdjustmentMode.Percent ? "%" : "");
         SetProcessingState(true);
         statusLabel.Text = Localization.Format("Изменение канала {0}…", options.Channel);
         try

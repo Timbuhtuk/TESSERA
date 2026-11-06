@@ -37,7 +37,7 @@ internal static class ToolDockPaletteChecks
             {
                 using var result = PaletteProcessor.Apply(alpha, new DownscaleOptions
                 {
-                    IndependentColorMode = IndependentColorMode.Quantization, QuantizationColors = 2
+                    IndependentColorMode = EIndependentColorMode.Quantization, QuantizationColors = 2
                 }, enabled ? new ConnectivityPaletteOptions { TargetColors = 2 } : null);
                 for (int y = 0; y < 16; y++) for (int x = 0; x < 16; x++)
                 {
@@ -56,12 +56,12 @@ internal static class ToolDockPaletteChecks
                 q & 255, q >> 8, q * 37 & 255));
         }
         var connected = new ConnectivityPaletteOptions { TargetColors = 8 };
-        foreach (var mode in new[] { IndependentColorMode.Quantization, IndependentColorMode.Palette })
+        foreach (var mode in new[] { EIndependentColorMode.Quantization, EIndependentColorMode.Palette })
         {
             var options = new DownscaleOptions
             {
-                IndependentColorMode = mode, Palette = PaletteKind.Step, PaletteStep = 1,
-                Quantization = QuantizationMethod.MedianCut
+                IndependentColorMode = mode, Palette = EPaletteKind.Step, PaletteStep = 1,
+                Quantization = EQuantizationMethod.MedianCut
             };
             using var result = PaletteProcessor.Apply(source, options, connected);
             var visible = new HashSet<int>();
@@ -131,7 +131,7 @@ internal static class ToolDockPaletteChecks
             using (var actual = new Bitmap(Get<ImageLibrary>(window, "_library").ResultPath(Get<SourceEntry>(window, "_activeSource"), generation)))
             using (var replay = new WorkflowExecutor().Execute(source, WorkflowJson.Snapshot(generation.RecipeSnapshot!)))
             {
-                var db16 = Palettes.GetPalette(PaletteKind.DB16).ToHashSet();
+                var db16 = Palettes.GetPalette(EPaletteKind.DB16).ToHashSet();
                 var visible = new HashSet<int>();
                 for (int y = 0; y < actual.Height; y++)
                 for (int x = 0; x < actual.Width; x++)

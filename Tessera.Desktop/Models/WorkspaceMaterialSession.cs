@@ -11,7 +11,7 @@ public sealed class WorkspaceMaterialSession
     public Guid HeightId { get; set; } = Guid.NewGuid();
     public Guid NormalId { get; set; } = Guid.NewGuid();
     public Guid AoId { get; set; } = Guid.NewGuid();
-    public Guid MapId(MaterialMapKind kind) => kind switch { MaterialMapKind.Height => HeightId, MaterialMapKind.Normal => NormalId, _ => AoId };
+    public Guid MapId(EMaterialMapKind kind) => kind switch { EMaterialMapKind.Height => HeightId, EMaterialMapKind.Normal => NormalId, _ => AoId };
     public bool Contains(Guid id) => id == HeightId || id == NormalId || id == AoId;
 }
 

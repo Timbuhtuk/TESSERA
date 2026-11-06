@@ -40,8 +40,8 @@ The method cannot guarantee recovery of details smaller than the chosen cell, or
 
 ## Global and local modes
 
-`GridAlignmentOptions.Mode` defaults to `GridAlignmentMode.Global`, preserving the original API behavior.
-`GridAlignmentMode.Local` runs the shared local Lab-delta cleanup and per-region geometry restoration
+`GridAlignmentOptions.Mode` defaults to `EGridAlignmentMode.Global`, preserving the original API behavior.
+`EGridAlignmentMode.Local` runs the shared local Lab-delta cleanup and per-region geometry restoration
 (`LocalDeltaProcessor` and `LocalGridProcessor` from `Tessera.Core.Imaging`). It accepts cell sizes 2–64,
 with automatic detection available when `CellSize` is null. Each contrast region keeps an independent
 grid origin. Small and ambiguous regions are preserved; complicated bends may be restored only partly.
@@ -58,7 +58,7 @@ nearest grid origin; a displacement up to less than one cell can avoid clipping 
 When nearby figures cannot fit without overlap, the stronger contrast detail wins that cell.
 `ShiftedRegionCount` and `ConflictingCellCount` report these placements. The canvas size stays fixed.
 
-Use `new GridAlignmentOptions { Mode = GridAlignmentMode.Local, CellSize = 5, SnapToGlobalGrid = true }`.
+Use `new GridAlignmentOptions { Mode = EGridAlignmentMode.Local, CellSize = 5, SnapToGlobalGrid = true }`.
 The setting defaults to false in both public APIs and old editor histories. Snapped recipes use the
 separate `grid.align.local.snapped` operation ID and permit a following reduction with
 `UsePreviousAlignment = true`; older readers reject that operation instead of silently dropping snapping.

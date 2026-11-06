@@ -27,14 +27,14 @@ internal static class LocalGridModeChecks
     private static void VerifyPixels()
     {
         using var input = Fixture();
-        using var result = new PixelGridAligner().Align(input, new GridAlignmentOptions { CellSize = 5, Mode = GridAlignmentMode.Local });
+        using var result = new PixelGridAligner().Align(input, new GridAlignmentOptions { CellSize = 5, Mode = EGridAlignmentMode.Local });
         Equal(input, result.Aligned);
-        Require(result.Mode == GridAlignmentMode.Local && result.CellSize == 5, "Local metadata missing");
-        using var automatic = new PixelGridAligner().Align(input, new GridAlignmentOptions { Mode = GridAlignmentMode.Local });
+        Require(result.Mode == EGridAlignmentMode.Local && result.CellSize == 5, "Local metadata missing");
+        using var automatic = new PixelGridAligner().Align(input, new GridAlignmentOptions { Mode = EGridAlignmentMode.Local });
         Require(automatic.CellSize == 5 && automatic.WasDetected, "Local auto detection chose another pitch");
         Equal(input, automatic.Aligned);
-        Require(new EditorSettings().AlignmentMode == GridAlignmentMode.Global, "Legacy settings changed their mode");
-        Require(JsonSerializer.Deserialize<EditorSettings>("{\"CellSize\":5}")!.AlignmentMode == GridAlignmentMode.Global, "Old history is not global");
+        Require(new EditorSettings().AlignmentMode == EGridAlignmentMode.Global, "Legacy settings changed their mode");
+        Require(JsonSerializer.Deserialize<EditorSettings>("{\"CellSize\":5}")!.AlignmentMode == EGridAlignmentMode.Global, "Old history is not global");
         Require(!JsonSerializer.Deserialize<EditorSettings>("{\"CellSize\":5}")!.SnapToGlobalGrid, "Old history enables snapping");
     }
 
@@ -72,10 +72,10 @@ internal static class LocalGridModeChecks
                 for (int x = 0; x < pitch; x++)
                 {
                     using var input = Fixture(pitch, pitch * 23 + x, pitch * 6 + y);
-                    using var off = new PixelGridAligner().Align(input, new GridAlignmentOptions { Mode = GridAlignmentMode.Local, CellSize = pitch });
+                    using var off = new PixelGridAligner().Align(input, new GridAlignmentOptions { Mode = EGridAlignmentMode.Local, CellSize = pitch });
                     Equal(input, off.Aligned);
                     using var on = new PixelGridAligner().Align(input, new GridAlignmentOptions
-                        { Mode = GridAlignmentMode.Local, CellSize = pitch, SnapToGlobalGrid = true });
+                        { Mode = EGridAlignmentMode.Local, CellSize = pitch, SnapToGlobalGrid = true });
                     int sx = x <= pitch / 2 ? 0 : pitch, sy = y <= pitch / 2 ? 0 : pitch;
                     using var expected = Fixture(pitch, pitch * 23 + sx, pitch * 6 + sy);
                     Equal(expected, on.Aligned);
@@ -84,7 +84,7 @@ internal static class LocalGridModeChecks
                     for (int py = 0; py < input.Height; py++) for (int px = 0; px < input.Width; px++)
                         Require(on.Aligned.GetPixel(px, py) == compact.GetPixel(px / pitch, py / pitch), "Compaction loses a cell");
                     using var again = new PixelGridAligner().Align(on.Aligned, new GridAlignmentOptions
-                        { Mode = GridAlignmentMode.Local, CellSize = pitch, SnapToGlobalGrid = true });
+                        { Mode = EGridAlignmentMode.Local, CellSize = pitch, SnapToGlobalGrid = true });
                     Equal(on.Aligned, again.Aligned);
                 }
     }
@@ -100,7 +100,7 @@ internal static class LocalGridModeChecks
             graphics.FillRectangle(brush, 27, 37, 1, 1);
         }
         using var result = new PixelGridAligner().Align(input, new GridAlignmentOptions
-            { Mode = GridAlignmentMode.Local, CellSize = 5, SnapToGlobalGrid = true });
+            { Mode = EGridAlignmentMode.Local, CellSize = 5, SnapToGlobalGrid = true });
         using var compact = PixelGridReducer.Reduce(result.Aligned, 5);
         Require(result.Aligned.GetPixel(0, 10).R == 255 && result.Aligned.GetPixel(0, 15).R == 255, "Border clipping removed a cell");
         Require(result.Aligned.GetPixel(25, 35).R == 255, "A tiny white star disappeared");
@@ -160,7 +160,7 @@ internal static class LocalGridModeChecks
             Until(() => !Field<bool>(window, "_processing"), "Local alignment did not complete");
             Require(source.Generations.Count == 1, "Local UI did not save a result");
             var localEntry = source.SelectedGeneration!;
-            Require(localEntry.Settings.AlignmentMode == GridAlignmentMode.Local && localEntry.OperationId == ProcessingOperations.AlignLocal,
+            Require(localEntry.Settings.AlignmentMode == EGridAlignmentMode.Local && localEntry.OperationId == ProcessingOperations.AlignLocal,
                 "History lost the selected alignment mode");
             Require(localEntry.AppliedRecipe!.Steps.Single().OperationId == ProcessingOperations.AlignLocal, "Macro lost the local mode");
             using (var saved = new Bitmap(Field<ImageLibrary>(window, "_library").ResultPath(source, localEntry)))

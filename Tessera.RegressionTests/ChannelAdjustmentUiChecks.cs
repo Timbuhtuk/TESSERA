@@ -72,11 +72,11 @@ internal static class ChannelAdjustmentUiChecks
             Require(Get<Border>("livePreviewFrame").Visibility == Visibility.Collapsed &&
                 Get<PixelPreview>("sourcePreview").SelectedRegion is null,
                 "RGBA tool retained another tool's live preview or crop overlay");
-            Apply(new() { Channel = RgbaChannel.R, Mode = ChannelAdjustmentMode.Percent, Amount = 50 }, source, null);
+            Apply(new() { Channel = ERgbaChannel.R, Mode = EChannelAdjustmentMode.Percent, Amount = 50 }, source, null);
             var first = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             using var firstPixels = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
             window.ProcessingBasis = 1;
-            Apply(new() { Channel = RgbaChannel.A, Amount = 32, Subtract = true }, firstPixels, first.Id);
+            Apply(new() { Channel = ERgbaChannel.A, Amount = 32, Subtract = true }, firstPixels, first.Id);
             var second = Get<SourceEntry>("_activeSource").SelectedGeneration!;
             Require(second.RecipeSnapshot?.Steps.Count == 2, "Channel history lost its parent recipe");
             using (var replay = new WorkflowExecutor().Execute(source, second.RecipeSnapshot!)) Equal(replay, Get<Bitmap>("_downscaledResult"));
@@ -90,7 +90,7 @@ internal static class ChannelAdjustmentUiChecks
             Get<TextBox>("channelAmountInput").Text = "0,5";
             Require(Get<Button>("channelApplyButton").IsEnabled, "Decimal comma is rejected");
             window.ProcessingBasis = 0;
-            Apply(new() { Channel = RgbaChannel.G, Mode = ChannelAdjustmentMode.Percent, Amount = 25.5, Subtract = true }, source, null);
+            Apply(new() { Channel = ERgbaChannel.G, Mode = EChannelAdjustmentMode.Percent, Amount = 25.5, Subtract = true }, source, null);
             expectedLast = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();
             window.Width = 620; Pump();
             var host = Window.GetWindow(Get<ComboBox>("channelInput"))!;
@@ -98,7 +98,7 @@ internal static class ChannelAdjustmentUiChecks
             if (host != window) host.Close();
             window.Close(); window = Open();
             Equal(expectedLast, Get<Bitmap>("_downscaledResult"));
-            Require(Get<ComboBox>("channelInput").SelectedIndex == (int)RgbaChannel.G && Get<ComboBox>("channelModeInput").SelectedIndex == 1 &&
+            Require(Get<ComboBox>("channelInput").SelectedIndex == (int)ERgbaChannel.G && Get<ComboBox>("channelModeInput").SelectedIndex == 1 &&
                 Get<ComboBox>("channelDirectionInput").SelectedIndex == 1 && double.Parse(Get<TextBox>("channelAmountInput").Text,
                 System.Globalization.CultureInfo.CurrentCulture) == 25.5, "Saved channel settings were not restored");
             Require(File.ReadAllBytes(path).SequenceEqual(sourceBytes), "Channel adjustment overwrote the original file");

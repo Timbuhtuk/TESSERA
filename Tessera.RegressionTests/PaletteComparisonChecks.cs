@@ -19,13 +19,13 @@ internal static class PaletteComparisonChecks
         using var sample = (Bitmap)Invoke(create, null)!;
         sample.Save(Path.Combine(ArtifactRoot, "palette-hover-original.png"));
         var outputs = new List<byte[]>();
-        foreach (PaletteKind palette in new[] { PaletteKind.DB16, PaletteKind.DB32, PaletteKind.NES, PaletteKind.GameBoy, PaletteKind.Step })
+        foreach (EPaletteKind palette in new[] { EPaletteKind.DB16, EPaletteKind.DB32, EPaletteKind.NES, EPaletteKind.GameBoy, EPaletteKind.Step })
             Verify(palette, null, 7, 64, false);
-        foreach (QuantizationMethod method in Enum.GetValues<QuantizationMethod>())
-            Verify(PaletteKind.None, method, 16, 16, true);
+        foreach (EQuantizationMethod method in Enum.GetValues<EQuantizationMethod>())
+            Verify(EPaletteKind.None, method, 16, 16, true);
         ToolImprovementsChecks.Require(outputs.Skip(1).All(p => !p.SequenceEqual(outputs[0])), "Every tooltip reused the same example");
 
-        void Verify(PaletteKind palette, QuantizationMethod? quantization, int step, int count, bool weighted)
+        void Verify(EPaletteKind palette, EQuantizationMethod? quantization, int step, int count, bool weighted)
         {
             object settings = settingsType.GetConstructors().Single().Invoke(new object?[] { palette, step, false, quantization, count, weighted });
             var actual = (BitmapSource)Invoke(generate, new[] { settings })!;
@@ -36,8 +36,8 @@ internal static class PaletteComparisonChecks
             bgra.CopyPixels(pixels, actual.PixelWidth * 4, 0);
             using var processed = IndependentImageProcessor.ApplyColors(sample, new()
             {
-                Palette = palette, PaletteStep = step, IndependentColorMode = quantization.HasValue ? IndependentColorMode.Quantization : IndependentColorMode.Palette,
-                Quantization = quantization ?? QuantizationMethod.KMeansLab, QuantizationColors = count, UseColorWeights = weighted, ThreadCount = 1
+                Palette = palette, PaletteStep = step, IndependentColorMode = quantization.HasValue ? EIndependentColorMode.Quantization : EIndependentColorMode.Palette,
+                Quantization = quantization ?? EQuantizationMethod.KMeansLab, QuantizationColors = count, UseColorWeights = weighted, ThreadCount = 1
             });
             int changedOnRight = 0, originalOnLeft = 0;
             for (int y = 4; y < actual.PixelHeight - 4; y++)

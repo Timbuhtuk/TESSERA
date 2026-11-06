@@ -67,7 +67,7 @@ public partial class MainWindow
         _workspaceSyncing = true;
         try
         {
-            foreach (var kind in Enum.GetValues<MaterialMapKind>())
+            foreach (var kind in Enum.GetValues<EMaterialMapKind>())
             {
                 Guid id = session.MapId(kind);
                 var source = _sources.FirstOrDefault(s => s.Id == id);
@@ -102,7 +102,7 @@ public partial class MainWindow
     {
         var catalog = _workspaceCatalog!;
         bool changed = false;
-        foreach (var kind in Enum.GetValues<MaterialMapKind>())
+        foreach (var kind in Enum.GetValues<EMaterialMapKind>())
         {
             Guid id = session.MapId(kind);
             if (!catalog.State.Assets.Any(a => a.Id == id)) continue;

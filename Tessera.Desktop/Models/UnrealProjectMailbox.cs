@@ -3,7 +3,6 @@ using System.Text.Json;
 
 namespace Tessera.Desktop;
 
-public enum WorkspaceProjectKind { Local, Unreal }
 
 public sealed class UnrealTextureLink
 {

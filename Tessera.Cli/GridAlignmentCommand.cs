@@ -72,16 +72,16 @@ internal static class GridAlignmentCommand
                 SnapToGlobalGrid = values.ContainsKey("--snap-to-grid"),
                 Mode = values.GetValueOrDefault("--mode", "global").ToLowerInvariant() switch
                 {
-                    "global" => GridAlignmentMode.Global,
-                    "local" => GridAlignmentMode.Local,
+                    "global" => EGridAlignmentMode.Global,
+                    "local" => EGridAlignmentMode.Local,
                     _ => throw new CliUsageException("Режим сетки: global или local.")
                 }
             };
-            if (options.SnapToGlobalGrid && options.Mode != GridAlignmentMode.Local)
+            if (options.SnapToGlobalGrid && options.Mode != EGridAlignmentMode.Local)
                 throw new CliUsageException("--snap-to-grid доступен только с --mode local.");
             if (!File.Exists(input)) throw new IOException($"Исходный файл не найден: {input}");
             using var source = CliApplication.LoadImage(input);
-            if (options.Mode == GridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height)) throw new CliUsageException("Ячейка больше изображения.");
+            if (options.Mode == EGridAlignmentMode.Global && options.CellSize > Math.Min(source.Width, source.Height)) throw new CliUsageException("Ячейка больше изображения.");
             using var result = new PixelGridAligner().Align(source, options);
             CliApplication.SaveImage(result.Aligned, target, overwrite);
             if (values.ContainsKey("--json"))

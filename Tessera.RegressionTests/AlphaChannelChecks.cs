@@ -55,11 +55,11 @@ internal static class AlphaChannelChecks
     private static void CropAlpha()
     {
         using var source = AlphaRamp(1);
-        foreach (var horizontal in Enum.GetValues<CropHorizontalAlignment>())
-        foreach (var vertical in Enum.GetValues<CropVerticalAlignment>())
+        foreach (var horizontal in Enum.GetValues<ECropHorizontalAlignment>())
+        foreach (var vertical in Enum.GetValues<ECropVerticalAlignment>())
         {
             using var result = BitmapFactory.Crop(source, 129, 1, horizontal, vertical);
-            int start = horizontal == CropHorizontalAlignment.Left ? 0 : horizontal == CropHorizontalAlignment.Right ? 127 : 63;
+            int start = horizontal == ECropHorizontalAlignment.Left ? 0 : horizontal == ECropHorizontalAlignment.Right ? 127 : 63;
             for (int x = 0; x < result.Width; x++)
                 Require(result.GetPixel(x, 0).ToArgb() == source.GetPixel(start + x, 0).ToArgb(), "Crop changed RGBA");
             using var stream = new MemoryStream();
@@ -77,13 +77,13 @@ internal static class AlphaChannelChecks
         for (int y = 0; y < source.Height; y++)
             for (int x = 0; x < source.Width; x++)
                 source.SetPixel(x, y, Color.FromArgb(x / 2, x / 2, 210, 30));
-        foreach (var method in Enum.GetValues<QuantizationMethod>())
-        foreach (var palette in new[] { PaletteKind.None, PaletteKind.Step, PaletteKind.GameBoy })
+        foreach (var method in Enum.GetValues<EQuantizationMethod>())
+        foreach (var palette in new[] { EPaletteKind.None, EPaletteKind.Step, EPaletteKind.GameBoy })
         {
             var result = new PixelArtDownscaler().Process(source, new DownscaleOptions
             {
                 TargetWidth = 256, TargetHeight = 2, Quantization = method, QuantizationColors = 1,
-                Palette = palette, EnableDithering = palette == PaletteKind.GameBoy
+                Palette = palette, EnableDithering = palette == EPaletteKind.GameBoy
             });
             using var output = result.Downscaled;
             using var cropped = result.CroppedSource;
@@ -101,7 +101,7 @@ internal static class AlphaChannelChecks
             var result = new PixelArtDownscaler().Process(source, new DownscaleOptions
             {
                 TargetWidth = 256, TargetHeight = 2, SpriteMode = true, AlphaThreshold = threshold,
-                Palette = PaletteKind.None, QuantizationColors = 1
+                Palette = EPaletteKind.None, QuantizationColors = 1
             });
             using var output = result.Downscaled;
             using var cropped = result.CroppedSource;
@@ -143,7 +143,7 @@ internal static class AlphaChannelChecks
             using var crop = BitmapFactory.CropCenter(source, 4, 1);
             var processed = new PixelArtDownscaler().Process(source, new DownscaleOptions
             {
-                TargetWidth = 4, TargetHeight = 1, Palette = PaletteKind.None, QuantizationColors = 4
+                TargetWidth = 4, TargetHeight = 1, Palette = EPaletteKind.None, QuantizationColors = 4
             });
             using var output = processed.Downscaled;
             using var cropped = processed.CroppedSource;

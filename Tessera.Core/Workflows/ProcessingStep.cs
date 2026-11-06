@@ -53,9 +53,9 @@ public sealed class ResizeFactorSettings
     public double Factor { get; init; }
     public bool SpriteMode { get; init; }
     public int AlphaThreshold { get; init; } = 50;
-    public CropHorizontalAlignment CropHorizontal { get; init; }
-    public CropVerticalAlignment CropVertical { get; init; }
-    public BlockSelectionMode BlockMode { get; init; }
+    public ECropHorizontalAlignment CropHorizontal { get; init; }
+    public ECropVerticalAlignment CropVertical { get; init; }
+    public EBlockSelectionMode BlockMode { get; init; }
     public ManualBlockCriteria? ManualCriteria { get; init; }
 
     public static ResizeFactorSettings From(DownscaleOptions options, double factor) => new()
@@ -116,7 +116,7 @@ public sealed class ColorReplacementSettings
 
 public sealed class BackgroundSettings
 {
-    public BackgroundRemovalMode Mode { get; init; }
+    public EBackgroundRemovalMode Mode { get; init; }
     public int Tolerance { get; init; } = 8;
     /// <summary>Null requests a new automatic estimate on each input.</summary>
     public int? ColorArgb { get; init; }

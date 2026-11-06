@@ -22,7 +22,7 @@ public sealed class EditorSettings
     public ChannelAdjustmentOptions ChannelAdjustment { get; set; } = new();
     public int CellSize { get; set; } = 8;
     public bool DetectGrid { get; set; }
-    public GridAlignmentMode AlignmentMode { get; set; } = GridAlignmentMode.Global;
+    public EGridAlignmentMode AlignmentMode { get; set; } = EGridAlignmentMode.Global;
     public bool SnapToGlobalGrid { get; set; }
     public int ContourWindowSize { get; set; } = 15;
     public ContourCleanStrictness ContourStrictness { get; set; } = ContourCleanStrictness.Strong;
@@ -86,13 +86,13 @@ public sealed class GenerationEntry : INotifyPropertyChanged
     }
     public event PropertyChangedEventHandler? PropertyChanged;
     [JsonIgnore] public bool IsHeader => false;
-    [JsonIgnore] public bool IsGlobalAlignment => IsAlignment && (Settings.AlignmentMode == GridAlignmentMode.Global || Settings.SnapToGlobalGrid);
-    [JsonIgnore] public string Label => IsAlignment ? Localization.Format(Settings.AlignmentMode == GridAlignmentMode.Local
+    [JsonIgnore] public bool IsGlobalAlignment => IsAlignment && (Settings.AlignmentMode == EGridAlignmentMode.Global || Settings.SnapToGlobalGrid);
+    [JsonIgnore] public string Label => IsAlignment ? Localization.Format(Settings.AlignmentMode == EGridAlignmentMode.Local
         ? Settings.SnapToGlobalGrid ? "Локальная сетка с привязкой {0} px · {1:HH:mm:ss}" : "Локальная сетка {0} px · {1:HH:mm:ss}"
         : "Сетка {0} px · {1:HH:mm:ss}", CellSize, CreatedAt)
         : $"{(Operation.Length > 0 ? (OperationId == ProcessingOperations.Macro ? Operation : Localization.StoredText(Operation)) + " · " : IsGridReduction ? "1 px · " : "")}{Width} × {Height} · {CreatedAt:HH:mm:ss}";
     [JsonIgnore] public string ToolTipOperation => IsAlignment
-        ? Localization.Text(Settings.AlignmentMode == GridAlignmentMode.Local
+        ? Localization.Text(Settings.AlignmentMode == EGridAlignmentMode.Local
             ? Settings.SnapToGlobalGrid ? "Локальная сетка с привязкой" : "Локальная сетка" : "Глобальная сетка")
         : IsGridReduction ? Localization.Text("Сжатие сетки")
         : Operation.Length > 0 ? OperationId == ProcessingOperations.Macro ? Operation : Localization.StoredText(Operation)

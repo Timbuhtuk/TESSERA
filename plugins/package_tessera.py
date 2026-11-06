@@ -13,7 +13,7 @@ reference = (root / "docs" / "CLI.md").read_text(encoding="utf-8-sig")
 reference = reference.replace(
     "../Tessera.Core/Alignment/README.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Core/Alignment/README.md"
 ).replace(
-    "../Tessera.Core/Imaging/ICO.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Core/Imaging/ICO.md"
+    "../Tessera.Core/Imaging/Export/ICO.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Core/Imaging/Export/ICO.md"
 ).replace(
     "../Tessera.Aseprite/README.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Aseprite/README.md"
 )

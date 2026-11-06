@@ -72,8 +72,8 @@ internal static class ConnectivityPaletteCommand
                 ContextWeight = Percent("--context-weight", 30),
                 DistanceSpace = space switch
                 {
-                    "oklab" => PaletteDistanceSpace.Oklab,
-                    "lab" => PaletteDistanceSpace.CieLab,
+                    "oklab" => EPaletteDistanceSpace.Oklab,
+                    "lab" => EPaletteDistanceSpace.CieLab,
                     _ => throw new CliUsageException("--space: oklab или lab.")
                 }
             };

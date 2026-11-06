@@ -58,7 +58,7 @@ internal static class MacroToolsChecks
             source.Save(input, ImageFormat.Png);
             byte[] original = File.ReadAllBytes(input);
             var store = new MacroStore(Path.Combine(directory, "macro-palette-library"));
-            foreach (var space in new[] { PaletteDistanceSpace.Oklab, PaletteDistanceSpace.CieLab })
+            foreach (var space in new[] { EPaletteDistanceSpace.Oklab, EPaletteDistanceSpace.CieLab })
                 foreach (int tile in new[] { 0, 8 })
                 {
                     var options = new ConnectivityPaletteOptions { TargetColors = 3, TileSize = tile,
@@ -85,7 +85,7 @@ internal static class MacroToolsChecks
                 new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new() { TargetColors = 0 } },
                 new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new() { TileSize = 3 } },
                 new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new() { ContextWeight = double.NaN } },
-                new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new() { DistanceSpace = (PaletteDistanceSpace)99 } },
+                new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new() { DistanceSpace = (EPaletteDistanceSpace)99 } },
                 new() { OperationId = ProcessingOperations.ConnectedPalette, ConnectedPalette = new(), Contours = new() },
                 new() { OperationId = ProcessingOperations.ContourHeatmap, Contours = new(), ConnectedPalette = new() },
                 new() { OperationId = ProcessingOperations.CleanContours, Contours = new() { MinimumAgreement = double.PositiveInfinity } },

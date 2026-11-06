@@ -58,7 +58,7 @@ internal static class MaterialDocumentCommand
         string source = Input(options), target = Output(options, ".tmaps");
         ValidateOutput(source, target, options);
         var document = MaterialMapFile.Load(source);
-        MaterialMapKind kind = Kind(options, allowHeight: true);
+        EMaterialMapKind kind = Kind(options, allowHeight: true);
         if (options.Value("--x") is null || options.Value("--y") is null)
             throw new CliUsageException("Укажите --x и --y.");
         int x = Integer(options, "--x", 0, 0, document.Width - 1);
@@ -73,7 +73,7 @@ internal static class MaterialDocumentCommand
             (float)Number(options, "--normal-y", 0, -1, 1), (float)Number(options, "--normal-z", 1, -1, 1));
         if (normal.LengthSquared() < .000001f) throw new CliUsageException("Нормаль не может быть нулевой.");
         document.PaintLine(kind, x, y, toX, toY, size, value, normal, strength, softness, options.Flag("--erase"));
-        if (kind == MaterialMapKind.Height) document.Recalculate();
+        if (kind == EMaterialMapKind.Height) document.Recalculate();
         Save(document, target);
         Report("material-paint", source, target, document, options, output);
         return 0;
@@ -119,7 +119,7 @@ internal static class MaterialDocumentCommand
         string source = Input(options);
         string directory = Path.GetFullPath(options.Value("--output-dir") ?? Path.GetDirectoryName(source)!);
         string name = Path.GetFileNameWithoutExtension(source);
-        var kinds = new[] { MaterialMapKind.Height, MaterialMapKind.Normal, MaterialMapKind.AO };
+        var kinds = new[] { EMaterialMapKind.Height, EMaterialMapKind.Normal, EMaterialMapKind.AO };
         string[] targets = kinds.Select(kind => Path.Combine(directory, $"{name}_{kind.ToString().ToLowerInvariant()}.png")).ToArray();
         foreach (string target in targets) ValidateOutput(source, target, options);
         var document = MaterialMapFile.Load(source);
@@ -149,12 +149,12 @@ internal static class MaterialDocumentCommand
         return 0;
     }
 
-    private static MaterialMapKind Kind(Options options, bool allowHeight)
+    private static EMaterialMapKind Kind(Options options, bool allowHeight)
     {
         string name = Choice(options, "--map", "", "height", "normal", "ao");
         if (name.Length == 0) throw new CliUsageException("Укажите --map.");
         if (!allowHeight && name == "height") throw new CliUsageException("Высота не имеет отдельного ручного слоя для сброса.");
-        return name switch { "normal" => MaterialMapKind.Normal, "ao" => MaterialMapKind.AO, _ => MaterialMapKind.Height };
+        return name switch { "normal" => EMaterialMapKind.Normal, "ao" => EMaterialMapKind.AO, _ => EMaterialMapKind.Height };
     }
 
     private static void Save(MaterialMapDocument document, string path)
