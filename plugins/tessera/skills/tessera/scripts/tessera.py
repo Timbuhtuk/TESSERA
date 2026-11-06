@@ -68,11 +68,11 @@ def locate(explicit, settings, cwd):
             if root in visited:
                 continue
             visited.add(root)
-            if not (root / "Pixelizator.Cli" / "Pixelizator.Cli.csproj").is_file():
+            if not (root / "Tessera.Cli" / "Tessera.Cli.csproj").is_file():
                 continue
             candidates.append(root / "artifacts" / "cli" / "tessera.exe")
             for configuration in ("Release", "Debug"):
-                candidates.append(root / "Pixelizator.Cli" / "bin" / configuration / "net8.0-windows" / "tessera.exe")
+                candidates.append(root / "Tessera.Cli" / "bin" / configuration / "net8.0-windows" / "tessera.exe")
     on_path = shutil.which("tessera.exe")
     if on_path:
         candidates.append(Path(on_path))

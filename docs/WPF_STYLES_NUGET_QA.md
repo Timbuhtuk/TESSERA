@@ -4,7 +4,7 @@ Verified on Windows on 2026-10-23 in `codex/material-maps`.
 
 ## Dependency
 
-Both `DomainColorTest` and `PixelArtAlignment.Tests` use `PackageReference` to [Tessera.WpfStyles 0.1.0](https://www.nuget.org/packages/Tessera.WpfStyles/0.1.0). The previously checked-in `DomainColorTest/Lib/Tessera.WpfStyles.dll` and its two file references were removed. No local style-library checkout is required.
+Both `Tessera.Desktop` and `Tessera.RegressionTests` use `PackageReference` to [Tessera.WpfStyles 0.1.0](https://www.nuget.org/packages/Tessera.WpfStyles/0.1.0). The previously checked-in `Tessera.Desktop/Lib/Tessera.WpfStyles.dll` and its two file references were removed. No local style-library checkout is required.
 
 The assembly name remains `Tessera.WpfStyles`, so existing theme and font resource URIs continue to work. The desktop publish retains both font license texts under `Assets/Fonts`.
 
@@ -25,12 +25,12 @@ Logs, the isolated package cache, standalone executable and three native theme s
 Run from the repository root in PowerShell:
 
 ```powershell
-dotnet restore Pixelizator.sln --source https://api.nuget.org/v3/index.json --packages artifacts/nuget-migration/packages --no-http-cache --force --nologo
-dotnet clean Pixelizator.sln -c Release --nologo
-dotnet build Pixelizator.sln -c Release --no-restore -m:1 --nologo
-dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --navigation --workspace --localization --ui --invariants
+dotnet restore Tessera.sln --source https://api.nuget.org/v3/index.json --packages artifacts/nuget-migration/packages --no-http-cache --force --nologo
+dotnet clean Tessera.sln -c Release --nologo
+dotnet build Tessera.sln -c Release --no-restore -m:1 --nologo
+dotnet run --project Tessera.RegressionTests -c Release --no-build -- --release-notes --tool-improvements --navigation --workspace --localization --ui --invariants
 
 $env:NUGET_PACKAGES = Join-Path (Get-Location) 'artifacts/nuget-migration/packages'
 $publishPath = Join-Path (Get-Location) 'artifacts/nuget-migration/publish/'
-dotnet publish DomainColorTest/DomainColorTest.csproj -c Release -p:PublishProfile=win-x64 "-p:PublishDir=$publishPath" -p:RestoreSources=https://api.nuget.org/v3/index.json --nologo
+dotnet publish Tessera.Desktop/Tessera.Desktop.csproj -c Release -p:PublishProfile=win-x64 "-p:PublishDir=$publishPath" -p:RestoreSources=https://api.nuget.org/v3/index.json --nologo
 ```

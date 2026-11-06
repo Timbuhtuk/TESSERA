@@ -56,11 +56,11 @@ Organization is saved automatically. Returning to the browser keeps its project,
 Build and check with `Build-WorkspacePrototype.ps1`. The focused suite is:
 
 ```powershell
-dotnet run --project PixelArtAlignment.Tests -c Release -- --workspace
+dotnet run --project Tessera.RegressionTests -c Release -- --workspace
 ```
 
 It covers shared membership, independent deep copies, parent history links, invalid/cyclic folder moves, deletion semantics, combined search, persistence, wide/narrow WPF layouts, multiple selection, image processing, background/tile roundtrips, board layers, document thumbnails and PNG/JSON animation export. Add `--navigation` for RU/EN and dark/light title menus, nested overflow, 560/900/1220 layouts, command dispatch, radio checks, busy guards and navigation persistence. Add `--localization` to check catalog placeholders, English settings/workspaces, language persistence, old settings and unchanged user names. The existing `--invariants --ui` suite checks the previous tools. Captures are under `artifacts/workspace-verification/run-*` and `artifacts/navigation-verification/*`.
 
-Translations live in `DomainColorTest/Localization/en.json`, keyed by the Russian source text. C# uses `Localization.Text` / `Localization.Format`; XAML uses `Translate` with stable keys derived from the source text. Keep format placeholders and file-filter patterns intact when editing translations. `Assets/settings.svg` is the original vector source used by the gear control.
+Translations live in `Tessera.Desktop/Localization/en.json`, keyed by the Russian source text. C# uses `Localization.Text` / `Localization.Format`; XAML uses `Translate` with stable keys derived from the source text. Keep format placeholders and file-filter patterns intact when editing translations. `Assets/settings.svg` is the original vector source used by the gear control.
 
 Tags apply to shared assets. Separate per-project labels, cloud synchronization and project archive interchange are not available. Removed document payloads are retained locally for recovery and are not shown in the catalog.

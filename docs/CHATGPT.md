@@ -50,7 +50,7 @@ Output, errors, and CLI exit codes are preserved. Code 3 indicates a launcher se
 
 ## Saved processing macros
 
-Ask, for example, “Покажи макросы в этой библиотеке и примени «Маленький монохром» к изображению.” The skill lists saved definitions from the library's `macros` directory, resolves the selected JSON file, and applies its steps with the same version-1 `PixelArtWorkflows` executor as the editor:
+Ask, for example, “Покажи макросы в этой библиотеке и примени «Маленький монохром» к изображению.” The skill lists saved definitions from the library's `macros` directory, resolves the selected JSON file, and applies its steps with the same version-1 `Tessera.Core.Workflows` executor as the editor:
 
 ```powershell
 python plugins/tessera/skills/tessera/scripts/tessera.py -- macro --help

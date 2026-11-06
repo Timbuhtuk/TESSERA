@@ -1,4 +1,4 @@
-<img src="DomainColorTest/Assets/tessera-mark.svg" width="88" height="88" alt="Tessera mosaic T">
+<img src="Tessera.Desktop/Assets/tessera-mark.svg" width="88" height="88" alt="Tessera mosaic T">
 
 # Tessera
 
@@ -9,6 +9,8 @@ Organize standalone and shared assets in projects and nested folders, add tags, 
 Tessera is a standalone Windows app for preparing pixel art and icons. It began with a specific problem: AI-generated pixel art often looks pixelated, but its grid is uneven and its “pixels” have different sizes. Tessera helps align those shapes to a consistent grid so you can keep working with the image.
 
 The name comes from a *tessera*, an individual piece of a mosaic.
+
+Developers can start with the [project architecture](docs/ARCHITECTURE.md) and [development guide](docs/DEVELOPMENT.md).
 
 Today, Tessera brings the rest of that workflow together:
 

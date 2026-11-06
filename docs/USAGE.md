@@ -132,7 +132,7 @@ Ctrl+O opens an image for the currently active workspace.
 
 The animation banner opens a separate workspace. Open or drop several `.ase` or `.aseprite` files to convert them automatically into PNG sprite sheets with JSON frame timings. Choose horizontal, vertical or grid layout and adjust columns and transparent gaps. Save one ready result or the whole batch; conflicting output names receive numeric suffixes. A failed file does not stop other files in the batch.
 
-The converter combines all visible RGBA image layers in Aseprite order. Hidden layers and layers inside hidden groups do not appear in the preview or exported PNG. Unsupported features produce an error rather than an incomplete export; see the [supported subset](../PixelArtAseprite/README.md). Animation imports are temporary session data, so save results before closing the app.
+The converter combines all visible RGBA image layers in Aseprite order. Hidden layers and layers inside hidden groups do not appear in the preview or exported PNG. Unsupported features produce an error rather than an incomplete export; see the [supported subset](../Tessera.Aseprite/README.md). Animation imports are temporary session data, so save results before closing the app.
 
 ## Image boards
 
@@ -148,7 +148,7 @@ Tessera checks the latest GitHub release in the background at startup and every 
 
 Open the title-bar gear and use **Settings → General → Updates** to check or retry manually, including after choosing Later. Only after confirmation does Tessera download the standalone executable, verify its SHA-256 digest, close, replace the executable and restart. `WorkspaceData` stays in place. The install is available when running the published `Tessera.exe` from a writable folder; development builds offer to open the release page instead.
 
-For more detail, see [grid alignment](../PixelArtAlignment/README.md), [ICO export](../PixelArtDownscale/ICO.md) and the [CLI reference](CLI.md).
+For more detail, see [grid alignment](../Tessera.Core/Alignment/README.md), [ICO export](../Tessera.Core/Imaging/ICO.md) and the [CLI reference](CLI.md).
 
 ## Standalone background removal
 

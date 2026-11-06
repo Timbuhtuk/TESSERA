@@ -28,7 +28,7 @@ python "<skill>/scripts/tessera.py" --configure "C:/Tools/Tessera-cli/tessera.ex
 python "<skill>/scripts/tessera.py" --cli "C:/Tools/Tessera-cli/tessera.exe" -- --help
 ```
 
-`--configure` stores only the executable path in `%LOCALAPPDATA%/Tessera/chatgpt-cli.json`. `--config PATH` selects alternate settings for isolated setups. If the executable is absent, the Windows x64 CLI is available from [Tessera releases](https://github.com/Timbuhtuk/TESSERA/releases/latest); a source checkout can also publish `Pixelizator.Cli`. Do not substitute the desktop Tessera.exe.
+`--configure` stores only the executable path in `%LOCALAPPDATA%/Tessera/chatgpt-cli.json`. `--config PATH` selects alternate settings for isolated setups. If the executable is absent, the Windows x64 CLI is available from [Tessera releases](https://github.com/Timbuhtuk/TESSERA/releases/latest); a source checkout can also publish `Tessera.Cli`. Do not substitute the desktop Tessera.exe.
 
 When local execution redirects `LOCALAPPDATA` and that location has no settings, the launcher also checks the existing `~/AppData/Local/Tessera/chatgpt-cli.json`. Settings in the current `LOCALAPPDATA` take precedence; an explicit `--config` selects only that file.
 

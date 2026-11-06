@@ -12,7 +12,7 @@ Prepared for the next release from `main` / v1.0.57 (`6dc72e31d0ed67e47bd69a79c2
 
 ## Local verification
 
-Release solution build passed with zero warnings/errors. `PixelArtAlignment.Tests --updates` passed (six top-level checks, including the dedicated updater group). The updater group covers pending requests and deduplication, no-update/offline startup, shutdown before reply, periodic scheduling, busy/disabled/owned/minimized guards, modal blocking, decline, same-version suppression, manual retry, a newer release, RU/EN labels and the pre-existing installer close/failure/retry guards. No real update was downloaded or installed.
+Release solution build passed with zero warnings/errors. `Tessera.RegressionTests --updates` passed (six top-level checks, including the dedicated updater group). The updater group covers pending requests and deduplication, no-update/offline startup, shutdown before reply, periodic scheduling, busy/disabled/owned/minimized guards, modal blocking, decline, same-version suppression, manual retry, a newer release, RU/EN labels and the pre-existing installer close/failure/retry guards. No real update was downloaded or installed.
 
 Logs: ignored `artifacts/automatic-updates/build.log` and `focused.log`. The final repeated-tag rollback scenario was added after the native interruption and is checked by PR CI; no further local UI run was started. The full required WPF/processing/CLI/plugin regression also runs in that Windows CI.
 

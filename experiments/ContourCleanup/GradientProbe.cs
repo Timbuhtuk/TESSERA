@@ -1,5 +1,5 @@
 using System.Drawing;
-using PixelArtDownscale;
+using Tessera.Core.Imaging;
 
 internal static class GradientProbe
 {

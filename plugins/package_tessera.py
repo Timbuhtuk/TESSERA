@@ -11,11 +11,11 @@ plugin = root / "plugins" / "tessera"
 skill = plugin / "skills" / "tessera"
 reference = (root / "docs" / "CLI.md").read_text(encoding="utf-8-sig")
 reference = reference.replace(
-    "../PixelArtAlignment/README.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/PixelArtAlignment/README.md"
+    "../Tessera.Core/Alignment/README.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Core/Alignment/README.md"
 ).replace(
-    "../PixelArtDownscale/ICO.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/PixelArtDownscale/ICO.md"
+    "../Tessera.Core/Imaging/ICO.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Core/Imaging/ICO.md"
 ).replace(
-    "../PixelArtAseprite/README.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/PixelArtAseprite/README.md"
+    "../Tessera.Aseprite/README.md", "https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Aseprite/README.md"
 )
 (skill / "references" / "cli.md").write_text(reference, encoding="utf-8")
 parser = argparse.ArgumentParser(description=__doc__)

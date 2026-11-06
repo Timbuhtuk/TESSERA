@@ -26,16 +26,18 @@ Push-Location -LiteralPath $projectRoot
 try {
     & (Join-Path $projectRoot 'Prepare-ReleaseNotes.ps1') -Version $Version -OutputDirectory $artifactsRoot -Repository $ReleaseRepository
     $notesFile = Join-Path $artifactsRoot 'ReleaseNotes.json'
-    Invoke-Dotnet build Pixelizator.sln -c Release "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" --nologo
+    & $python (Join-Path $projectRoot 'tests/Architecture.Checks.py')
+    if ($LASTEXITCODE -ne 0) { throw 'Tessera architecture check failed' }
+    Invoke-Dotnet build Tessera.sln -c Release "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" --nologo
     if (!$SkipChecks) {
         & (Join-Path $projectRoot 'tests/ReleaseVersion.Checks.ps1')
         & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
-        Invoke-Dotnet run --project PixelArtAseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants --unreal-sync
-        Invoke-Dotnet run --project Pixelizator.Cli.Tests -c Release --no-build
+        Invoke-Dotnet run --project Tessera.Aseprite.Tests -c Release --no-build
+        Invoke-Dotnet run --project Tessera.RegressionTests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants --unreal-sync
+        Invoke-Dotnet run --project Tessera.Cli.Tests -c Release --no-build
     }
-    Invoke-Dotnet publish DomainColorTest -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
-    Invoke-Dotnet publish Pixelizator.Cli -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$cliOutput/" --nologo
+    Invoke-Dotnet publish Tessera.Desktop -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
+    Invoke-Dotnet publish Tessera.Cli -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$cliOutput/" --nologo
     $guide = @'
 TESSERA / WINDOWS x64
 

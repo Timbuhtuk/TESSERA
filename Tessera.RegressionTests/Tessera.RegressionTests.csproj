@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Tessera.Aseprite.Tests\Fixtures.cs" Link="AsepriteFixtures.cs" />
+    <Using Include="System.Drawing" />
+    <Using Include="System.IO" />
+    <ProjectReference Include="..\Tessera.Core\Tessera.Core.csproj" />
+    <ProjectReference Include="..\Tessera.Desktop\Tessera.Desktop.csproj" />
+    <PackageReference Include="Tessera.WpfStyles" Version="0.2.0" />
+  </ItemGroup>
+</Project>

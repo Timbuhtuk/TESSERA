@@ -1,6 +1,6 @@
 # Saved Tessera macros
 
-Use `macro --help`, `macro list --help`, and `macro apply --help` on the selected executable. These commands require the CLI with the version-1 `PixelArtWorkflows` executor; earlier Tessera builds may lack them.
+Use `macro --help`, `macro list --help`, and `macro apply --help` on the selected executable. These commands require the CLI with the version-1 `Tessera.Core.Workflows` executor; earlier Tessera builds may lack them.
 
 ## Find and apply a macro
 
