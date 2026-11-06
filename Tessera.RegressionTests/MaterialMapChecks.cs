@@ -318,7 +318,8 @@ internal static class MaterialMapChecks
                 maps.Close(); Pump();
                 Require(main.OwnedWindows.OfType<MaterialMapsWindow>().Contains(maps) && maps.Document.HasChanges, "Failed persistence closed the editor or cleared dirty state");
             }
-            maps.Close(); Pump(); Require(!main.OwnedWindows.OfType<MaterialMapsWindow>().Any(), "Return still waits for a file dialog"); maps = null;
+            maps.Close(); Pump(); Require(!main.OwnedWindows.OfType<MaterialMapsWindow>().Any(), "Return still waits for a file dialog");
+            Require(main.WindowState == WindowState.Normal && main.IsVisible, "Closing the map editor minimized the main window"); maps = null;
             Console.WriteLine("  Workspace: returned after failed-save retry");
             Require(File.ReadAllBytes(path).SequenceEqual(original) && catalog.State.Assets.Count == 4, "Autosave changed the original or duplicated map assets");
             main.Close(); Pump();

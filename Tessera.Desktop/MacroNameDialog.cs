@@ -15,6 +15,7 @@ internal sealed class MacroNameDialog : Window
     {
         Title = title; Width = 420; SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = Brushes.Transparent;
+        ShowInTaskbar = false;
         ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Resources.MergedDictionaries.Add(new AppearanceResources());
         SetResourceReference(FontFamilyProperty, "UiFont"); SetResourceReference(ForegroundProperty, "Ts.Text");

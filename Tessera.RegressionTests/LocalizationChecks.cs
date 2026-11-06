@@ -53,6 +53,10 @@ internal static class LocalizationChecks
             Require(Get<Button>(window, "appearanceButton").Content is SettingsIcon { ActualWidth: > 0 }, "Settings SVG did not render");
             Require(AutomationProperties.GetName(Get<Button>(window, "appearanceButton")) == "Settings", "Settings accessibility label is not translated");
             var browser = window.Browser!;
+            var assetMenu = Get<ListBox>(browser, "assetList").ContextMenu;
+            Require(Equals(assetMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Tag, "move-unreal")).Header, "Rename or move in Unreal…") &&
+                Equals(assetMenu.Items.OfType<MenuItem>().Single(item => Equals(item.Tag, "delete-unreal")).Header, "Delete texture from Unreal…"),
+                "Unreal mutation actions are not translated in the English library menu");
             Require(Get<TextBlock>(browser, "viewTitle").Text == "All assets", "Library title is not in English");
             var node = Get<TreeView>(browser, "projectTree").Items.Cast<TreeViewItem>().Single();
             var folderNode = (TreeViewItem)node.Items[0];

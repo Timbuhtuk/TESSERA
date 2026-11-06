@@ -20,7 +20,7 @@ if (args is ["--progress"])
 
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("Tessera.RegressionTests: --progress, --unreal-sync, --compact-switch, --relative-resize, --ascii, --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --ascii-preview, --clipboard, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("Tessera.RegressionTests: --progress, --window-chrome, --unreal-sync, --compact-switch, --relative-resize, --ascii, --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --ascii-preview, --clipboard, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Programmatic editor regression checks without native input: --editor-regressions");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
@@ -50,7 +50,7 @@ if (args is ["--finalists-ui", var uiLabRoot])
     FinalistUiChecks.Run(uiLabRoot);
     return 0;
 }
-if (args.Any(a => a is not ("--unreal-sync" or "--compact-switch" or "--relative-resize" or "--ascii" or "--editor-regressions" or "--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--result-icons" or "--ascii-preview" or "--clipboard" or "--size-factor" or "--history-edits" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--window-chrome" or "--unreal-sync" or "--compact-switch" or "--relative-resize" or "--ascii" or "--editor-regressions" or "--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--result-icons" or "--ascii-preview" or "--clipboard" or "--size-factor" or "--history-edits" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -66,6 +66,14 @@ if (args.Contains("--project-notes") || args.Contains("--ui")) Check("Project no
 if (args.Contains("--detail-protection") || args.Contains("--ui")) DetailProtectionChecks.Run(Check);
 if (args.Contains("--local-grid") || args.Contains("--ui")) LocalGridModeChecks.Run(Check);
 if (args.Contains("--unreal-sync")) UnrealSyncChecks.Run(Check);
+if (args.Contains("--window-chrome")) Check("Window chrome and child window lifecycle", () =>
+{
+    Exception? error = null;
+    var ui = new Thread(() => { try { WindowChromeChecks.Run(); } catch (Exception ex) { error = ex; } }) { IsBackground = true };
+    ui.SetApartmentState(ApartmentState.STA); ui.Start();
+    if (!ui.Join(TimeSpan.FromSeconds(60))) throw new TimeoutException("Window chrome check timed out");
+    if (error is not null) throw error;
+});
 if (args.Contains("--material-maps") || args.Contains("--ui")) MaterialMapChecks.Run(Check);
 Check("Perfect grid and intact artwork score 100", () =>
 {

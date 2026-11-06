@@ -66,13 +66,37 @@ internal static class WindowChromeChecks
             SystemCommands.RestoreWindow(window); Pump();
             WaitFor(() => window.WindowState == WindowState.Normal, "Restore from minimized failed");
 
+            var dialog = new TesseraDialog("Проверка", "Tessera") { Owner = window };
+            dialog.Show(); Pump();
+            ((Button)dialog.FindName("dialogCloseButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            Require(window.WindowState == WindowState.Normal && !IsIconic(handle) && window.IsVisible,
+                "Closing an owned dialog minimized the main window");
+            typeof(MainWindow).GetMethod("OpenAppearance", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(window, [window, new RoutedEventArgs()]);
+            Pump();
+            var appearance = window.OwnedWindows.Cast<Window>().Single(w => w is AppearanceWindow);
+            appearance.Close(); Pump();
+            Require(window.WindowState == WindowState.Normal && !IsIconic(handle) && window.IsVisible,
+                "Closing an owned settings window minimized the main window");
+            Require(!new MaterialMapsWindow().ShowInTaskbar, "The material map window created another taskbar entry");
+            foreach (var child in new Window[] { new TileInspectorWindow() })
+            {
+                child.Owner = window;
+                Require(!child.ShowInTaskbar, "A child window created another taskbar entry");
+                child.Show(); Pump();
+                child.Close(); Pump();
+                Require(!child.IsVisible, "An owned workspace window refused to close: " + child.GetType().Name);
+                Require(window.WindowState == WindowState.Normal && !IsIconic(handle) && window.IsVisible,
+                    "Closing an owned workspace window minimized the main window");
+            }
+
             SetBusy(true);
             Click("closeButton");
             Require(!closed && window.IsVisible, "Custom close bypassed the processing guard");
             SetBusy(false);
             Click("closeButton");
             WaitFor(() => closed, "Custom close did not close the window");
-            Console.WriteLine("  Window chrome: caption/button hit tests, resize edges, maximize/work area, restore, double-click, minimize and guarded close passed.");
+            Console.WriteLine("  Window chrome: caption, resize, minimize/restore, owned windows and guarded close passed.");
         }
         finally
         {
@@ -107,6 +131,7 @@ internal static class WindowChromeChecks
     [StructLayout(LayoutKind.Sequential)] private struct NativeRect { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] private struct MonitorInfo { public int Size; public NativeRect Monitor, Work; public uint Flags; }
     [DllImport("user32.dll")] private static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
+    [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool IsIconic(nint hwnd);
     [DllImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetWindowRect(nint hwnd, out NativeRect rect);
     [DllImport("user32.dll")] private static extern nint MonitorFromWindow(nint hwnd, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Auto)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool GetMonitorInfo(nint monitor, ref MonitorInfo info);

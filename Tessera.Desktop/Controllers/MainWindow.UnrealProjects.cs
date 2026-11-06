@@ -84,13 +84,6 @@ public partial class MainWindow
             {
                 var mailbox = Mailbox(project);
                 bool online = mailbox.Online;
-                long stamp = mailbox.CatalogStamp;
-                if (_unrealCatalogStamps.GetValueOrDefault(project.Id) != stamp && mailbox.ReadCatalog() is { } catalog)
-                {
-                    _workspaceCatalog.MirrorUnreal(project, catalog);
-                    _unrealCatalogStamps[project.Id] = stamp;
-                    changed = true;
-                }
                 var assets = _workspaceCatalog.State.Assets.Where(a => a.Unreal?.ProjectId == project.Id).ToDictionary(a => a.Id);
                 var jobs = mailbox.Jobs();
                 if (_workspaceCatalog.State.ProjectId == project.Id)
@@ -102,12 +95,24 @@ public partial class MainWindow
                 foreach (var job in jobs.Where(j => j.Response is not null && !_unrealResolving.Contains(j.Request.AssetId)))
                 {
                     if (!assets.TryGetValue(job.Request.AssetId, out var asset)) continue;
-                    if (job.Response!.Status is "saved" or "read") ApplyUnrealResponse(asset, job);
+                    if (job.Response!.Status is "saved" or "read" or "moved" or "deleted")
+                    {
+                        ApplyUnrealResponse(asset, job);
+                        if (job.Response.Status is "moved" or "deleted") changed = true;
+                    }
                     else if (_unrealReportedJobs.Add(job.Directory) &&
                         (job.Request.Operation != "read" || _unrealOpenReads.Contains(asset.Id)))
                         statusLabel.Text = job.Request.Operation == "read" ? UnrealJobError(job) :
-                            Localization.Format("{0}: {1} · Ctrl+S", asset.Name, UnrealJobError(job));
+                            Localization.Format("{0}: {1}", asset.Name, UnrealJobError(job));
                 }
+                long stamp = mailbox.CatalogStamp;
+                if (_unrealCatalogStamps.GetValueOrDefault(project.Id) != stamp && mailbox.ReadCatalog() is { } catalog)
+                {
+                    _workspaceCatalog.MirrorUnreal(project, catalog);
+                    _unrealCatalogStamps[project.Id] = stamp;
+                    changed = true;
+                }
+                assets = _workspaceCatalog.State.Assets.Where(a => a.Unreal?.ProjectId == project.Id).ToDictionary(a => a.Id);
                 if (!online || jobs.Count(j => j.Response is null && j.Request.Operation == "read") >= 3) continue;
                 visible ??= _workspaceBrowser!.VisibleUnrealAssets().Take(8).ToArray();
                 var cached = _sources.Select(s => s.Id).ToHashSet();
@@ -138,6 +143,39 @@ public partial class MainWindow
         var binding = asset.Unreal!;
         if (!WorkspaceCatalog.UnrealPathComparer.Equals(binding.Path, job.Request.Path))
         {
+            job.Remove();
+            return;
+        }
+        if (job.Request.Operation == "delete" && job.Response?.Status == "deleted")
+        {
+            if (_sources.Any(s => s.Id == asset.Id))
+            {
+                binding.Missing = binding.NeedsDestination = true;
+                _workspaceCatalog!.Save();
+            }
+            else _workspaceCatalog!.ForgetAsset(asset.Id);
+            statusLabel.Text = Localization.Format("Удалено из Unreal: {0}", asset.Name);
+            job.Remove();
+            return;
+        }
+        if (job.Request.Operation == "move" && job.Response?.Status == "moved")
+        {
+            if (job.Response.Revision is not { Length: > 0 })
+                throw new IOException(Localization.Text("Ответ Unreal не прошёл проверку."));
+            string movedRevision = job.Response.Revision;
+            string destination = job.Request.Destination ?? throw new IOException(Localization.Text("Ответ Unreal не прошёл проверку."));
+            if (!WorkspaceCatalog.ValidObjectPath(destination)) throw new IOException(Localization.Text("Ответ Unreal не прошёл проверку."));
+            string previousRevision = binding.Revision;
+            binding.Path = destination;
+            binding.Revision = movedRevision;
+            if (binding.LoadedRevision == previousRevision) binding.LoadedRevision = movedRevision;
+            foreach (Guid id in binding.ResultRevisions.Where(pair => pair.Value == previousRevision).Select(pair => pair.Key).ToArray())
+                binding.ResultRevisions[id] = movedRevision;
+            asset.Name = destination[(destination.LastIndexOf('.') + 1)..];
+            if (_sources.FirstOrDefault(s => s.Id == asset.Id) is { } source)
+                _library.RenameSource(source, asset.Name + ".png");
+            _workspaceCatalog!.Save();
+            statusLabel.Text = Localization.Format("Перемещено в Unreal: {0}", destination);
             job.Remove();
             return;
         }

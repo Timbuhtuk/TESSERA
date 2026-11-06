@@ -1505,5 +1505,20 @@
   "Сначала подключите проект Unreal в библиотеке.": "Connect an Unreal project in the library first.",
   "Текстура ожидает создания в Unreal: {0}": "Texture queued for creation in Unreal: {0}",
   "Укажите папку /Game/… и имя текстуры без пробелов и расширения.": "Enter a /Game/… folder and a texture name without spaces or an extension.",
-  "Ожидает создания в Unreal": "Waiting for creation in Unreal"
+  "Ожидает создания в Unreal": "Waiting for creation in Unreal",
+  "Переименовать или переместить в Unreal": "Rename or move in Unreal",
+  "Переименовать или переместить в Unreal…": "Rename or move in Unreal…",
+  "Переместить": "Move",
+  "Перемещение ожидает Unreal.": "Move is waiting for Unreal.",
+  "Перемещено в Unreal: {0}": "Moved in Unreal: {0}",
+  "Удаление ожидает Unreal.": "Deletion is waiting for Unreal.",
+  "Удалено из Unreal: {0}": "Deleted from Unreal: {0}",
+  "Удалить из Unreal": "Delete from Unreal",
+  "Удалить текстуру в Unreal: {0}?": "Delete the texture in Unreal: {0}?",
+  "Удалить текстуру из Unreal…": "Delete texture from Unreal…",
+  "Укажите другое имя или папку.": "Choose a different name or folder.",
+  "Для этой текстуры уже есть операция в очереди Unreal.": "An operation for this texture is already queued in Unreal.",
+  "Обновите Tessera Sync через меню Unreal Engine и перезапустите Unreal Editor.": "Update Tessera Sync through the Unreal Engine menu and restart Unreal Editor.",
+  "Текстура изменилась в Unreal. Выполнить операцию над текущей версией?": "The texture changed in Unreal. Apply the operation to its current version?",
+  "Unreal удалит пакет даже при наличии ссылок. История изображения в Tessera сохранится.": "Unreal will delete the package even if references exist. The image history in Tessera will be preserved."
 }

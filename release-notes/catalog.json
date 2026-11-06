@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Текстуры Unreal и дочерние окна",
+        "en": "Unreal textures and child windows"
+      },
+      "notes": {
+        "ru": "- Библиотека Unreal Engine: связанные текстуры можно переименовывать, перемещать и удалять из Tessera; конфликты версий требуют подтверждения, история изображения сохраняется.\n- Интеграция Unreal Engine: для новых действий установите Tessera Sync 0.4.0 через меню Unreal Engine и перезапустите Unreal Editor.\n- Окна тайлов, карт материалов и диалоги больше не создают отдельные кнопки в панели задач; главное окно остаётся открытым при их закрытии.",
+        "en": "- Unreal Engine library: rename, move and delete linked textures from Tessera; version conflicts require confirmation and image history is retained.\n- Unreal Engine integration: install Tessera Sync 0.4.0 through the Unreal Engine menu and restart Unreal Editor to use the new actions.\n- Tile windows, material-map windows and dialogs no longer create separate taskbar buttons; closing them keeps the main window open."
+      }
+    },
+    {
+      "version": "2.30.3",
+      "title": {
         "ru": "Совместимость инструментов",
         "en": "Tool compatibility"
       },

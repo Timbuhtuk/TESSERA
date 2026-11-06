@@ -17,16 +17,19 @@ internal sealed class UnrealTextureDialog : Window
     internal string ObjectPath => FolderInput.Text.Trim().TrimEnd('/') + "/" + NameInput.Text.Trim() + "." + NameInput.Text.Trim();
 
     internal UnrealTextureDialog(IReadOnlyList<WorkspaceProject> projects, IReadOnlyList<WorkspaceFolder> folders,
-        Guid? selectedProject, string initialFolder, string initialName, Func<WorkspaceProject, string, string?> validate)
+        Guid? selectedProject, string initialFolder, string initialName, Func<WorkspaceProject, string, string?> validate,
+        string? title = null, string? confirmText = null)
     {
-        Title = Localization.Text("Создать текстуру в Unreal");
+        Title = title ?? Localization.Text("Создать текстуру в Unreal");
         Width = 520;
         SizeToContent = SizeToContent.Height;
         WindowStyle = WindowStyle.None;
+        ShowInTaskbar = false;
         AllowsTransparency = true;
         Background = Brushes.Transparent;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        if (confirmText is not null) Confirm.Content = confirmText;
         Resources.MergedDictionaries.Add(new AppearanceResources());
         SetResourceReference(FontFamilyProperty, "UiFont");
         SetResourceReference(ForegroundProperty, "Ts.Text");
