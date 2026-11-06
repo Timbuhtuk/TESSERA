@@ -19,11 +19,11 @@ The footer uses a 240 DIP by 14 DIP Cells bar without a numeric percentage. Belo
 ## Verification
 
 ```powershell
-dotnet restore Pixelizator.sln
-dotnet build Pixelizator.sln -c Debug --no-restore -m:1
-dotnet build Pixelizator.sln -c Release --no-restore -m:1
-dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --progress
-dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --ui --invariants
+dotnet restore Tessera.sln
+dotnet build Tessera.sln -c Debug --no-restore -m:1
+dotnet build Tessera.sln -c Release --no-restore -m:1
+dotnet run --project Tessera.RegressionTests -c Release --no-build -- --progress
+dotnet run --project Tessera.RegressionTests -c Release --no-build -- --ui --invariants
 ```
 
 The focused progress checks cover pixel/alpha parity, intermediate callbacks, parallel ranges, early completion, cancellation, validation failures, macro substeps and Aseprite publication. WPF checks verify all 20 cells, three themes, narrow layouts, value updates without a percentage label, stale callbacks, preview priority, throttling and the completion timer. Captures are written to `artifacts/wpf/progress`.

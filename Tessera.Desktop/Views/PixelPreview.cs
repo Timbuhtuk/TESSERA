@@ -1,0 +1,479 @@
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using Bitmap = System.Drawing.Bitmap;
+
+namespace Tessera.Desktop;
+
+public sealed class PixelColorPickedEventArgs(System.Drawing.Color color, int x, int y) : EventArgs
+{
+    public System.Drawing.Color Color { get; } = color;
+    public int Rgb => Color.ToArgb() & 0xFFFFFF;
+    public int X { get; } = x;
+    public int Y { get; } = y;
+}
+
+public readonly record struct PreviewGridLens(int CellWidth, int CellHeight, int OffsetX, int OffsetY, Color Color);
+
+public sealed class PreviewGridMovedEventArgs(int offsetX, int offsetY) : EventArgs
+{
+    public int OffsetX { get; } = offsetX;
+    public int OffsetY { get; } = offsetY;
+}
+
+/// <summary>Native WPF preview: integer device-pixel zoom, alpha and scrolling.</summary>
+public sealed class PixelPreview : Grid
+{
+    private readonly ScrollViewer _scroll;
+    private readonly Surface _surface = new();
+    private readonly TextBlock _empty;
+    private Bitmap? _image;
+    private System.Drawing.Size? _referenceImageSize;
+    private double _zoom;
+    private int _background;
+    private double _relativeX, _relativeY;
+    private bool _applyingScroll;
+    private int _scrollRevision;
+    private bool _isColorPicking, _continuousFit;
+    private readonly DispatcherTimer _highlightTimer = new() { Interval = TimeSpan.FromMilliseconds(110) };
+    private int _highlightPhase;
+    private bool _movingGrid;
+    private Point _gridDragStart;
+    private PreviewGridLens _gridDragOrigin;
+    public event EventHandler? ScrollPositionChanged;
+    public event EventHandler? ImageChanged;
+    public event EventHandler<PixelColorPickedEventArgs>? ColorPicked;
+    public event EventHandler<PreviewGridMovedEventArgs>? GridMoved;
+    public (double X, double Y) ScrollPosition => (_relativeX, _relativeY);
+    public double EffectiveZoom => _surface.Source is { } source ? _surface.ImageWidth * VisualTreeHelper.GetDpi(this).DpiScaleX / source.PixelWidth : 1;
+    public System.Drawing.Size? ReferenceImageSize
+    {
+        get => _referenceImageSize;
+        set { _referenceImageSize = value; UpdateScale(); }
+    }
+    public void ScrollByWheel(int delta)
+    {
+        if (_scroll.ScrollableHeight > 0) _scroll.ScrollToVerticalOffset(_scroll.VerticalOffset - delta);
+        else if (_scroll.ScrollableWidth > 0) _scroll.ScrollToHorizontalOffset(_scroll.HorizontalOffset - delta);
+    }
+    public Bitmap? Image
+    {
+        get => _image;
+        set
+        {
+            _surface.Source = value is null ? null : ToBitmapSource(value);
+            _surface.HighlightRgb = null;
+            _surface.HighlightOutline = null;
+            _highlightTimer.Stop();
+            _image = value;
+            _empty.Visibility = value is null ? Visibility.Visible : Visibility.Collapsed;
+            UpdateScale();
+            ImageChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+    public string EmptyText { get => _empty.Text; set => _empty.Text = value; }
+    public double Zoom { get => _zoom; set { _zoom = value; UpdateScale(); } }
+    public int PreviewBackground { get => _background; set { _background = value; UpdateBackground(); } }
+    public bool ContinuousFit { get => _continuousFit; set { _continuousFit = value; UpdateScale(); } }
+    /// <summary>Source-pixel rectangle to outline; overlays never modify the bitmap.</summary>
+    public Rect? SelectedRegion { get => _surface.SelectedRegion; set { _surface.SelectedRegion = value; _surface.InvalidateVisual(); } }
+    public PreviewGridLens? GridLens
+    {
+        get => _surface.GridLens;
+        set
+        {
+            _surface.GridLens = value;
+            Cursor = _isColorPicking ? Cursors.Cross : value.HasValue ? Cursors.SizeAll : null;
+            _surface.InvalidateVisual();
+        }
+    }
+    public bool IsColorPicking
+    {
+        get => _isColorPicking;
+        set { _isColorPicking = value; Cursor = value ? Cursors.Cross : GridLens.HasValue ? Cursors.SizeAll : null; }
+    }
+    public int? HighlightRgb
+    {
+        get => _surface.HighlightRgb;
+        set
+        {
+            int? rgb = value.HasValue ? value.Value & 0xFFFFFF : null;
+            if (_surface.HighlightRgb == rgb) return;
+            _surface.HighlightRgb = rgb;
+            UpdateHighlightOutline();
+            UpdateHighlightAnimation();
+        }
+    }
+
+    public PixelPreview()
+    {
+        ClipToBounds = true;
+        _highlightTimer.Tick += (_, _) =>
+        {
+            _highlightPhase = (_highlightPhase + 1) % 8;
+            _surface.HighlightPhase = _highlightPhase;
+            _surface.InvalidateVisual();
+        };
+        Loaded += (_, _) => UpdateHighlightAnimation();
+        Unloaded += (_, _) => _highlightTimer.Stop();
+        _scroll = new ScrollViewer { Content = _surface, Background = Brushes.Transparent, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled, CanContentScroll = false };
+        Children.Add(_scroll);
+        _empty = new TextBlock { TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(16), IsHitTestVisible = false };
+        Children.Add(_empty);
+        SizeChanged += (_, _) => UpdateScale();
+        _ = new PreviewThemeSubscription(this, RefreshTheme);
+        PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            for (var current = e.OriginalSource as DependencyObject; current is not null && !ReferenceEquals(current, this); current = VisualTreeHelper.GetParent(current))
+                if (current is ScrollBar) return;
+            if (!_isColorPicking && GridLens is { } grid && TryGetImagePixel(e.GetPosition(this), out int gridX, out int gridY))
+            {
+                _movingGrid = true;
+                _gridDragStart = e.GetPosition(this);
+                _gridDragOrigin = grid;
+                CaptureMouse();
+                e.Handled = true;
+                return;
+            }
+            if (!IsColorPicking || _image is null || !TryGetImagePixel(e.GetPosition(this), out int x, out int y)) return;
+            var color = _image.GetPixel(x, y);
+            if (color.A == 0) return;
+            e.Handled = true;
+            ColorPicked?.Invoke(this, new PixelColorPickedEventArgs(color, x, y));
+        };
+        PreviewMouseMove += (_, e) =>
+        {
+            if (!_movingGrid || e.LeftButton != MouseButtonState.Pressed || _surface.Source is not { } source) return;
+            Point current = e.GetPosition(this);
+            Rect image = _surface.ImageBounds;
+            if (image.Width <= 0 || image.Height <= 0) return;
+            int dx = (int)Math.Round((current.X - _gridDragStart.X) * source.PixelWidth / image.Width);
+            int dy = (int)Math.Round((current.Y - _gridDragStart.Y) * source.PixelHeight / image.Height);
+            int x = Mod(_gridDragOrigin.OffsetX + dx, _gridDragOrigin.CellWidth);
+            int y = Mod(_gridDragOrigin.OffsetY + dy, _gridDragOrigin.CellHeight);
+            GridMoved?.Invoke(this, new PreviewGridMovedEventArgs(x, y));
+            e.Handled = true;
+        };
+        PreviewMouseLeftButtonUp += (_, e) =>
+        {
+            if (!_movingGrid) return;
+            _movingGrid = false;
+            ReleaseMouseCapture();
+            e.Handled = true;
+        };
+        LostMouseCapture += (_, _) => _movingGrid = false;
+        _scroll.ScrollChanged += (_, e) =>
+        {
+            UpdateGridViewport();
+            if (e.ViewportWidthChange != 0 || e.ViewportHeightChange != 0 || e.ExtentWidthChange != 0 || e.ExtentHeightChange != 0)
+            {
+                UpdateScale();
+                ScrollToRelativePosition(_relativeX, _relativeY);
+                return;
+            }
+            if (_applyingScroll || (e.HorizontalChange == 0 && e.VerticalChange == 0)) return;
+            if (_scroll.ScrollableWidth > 0) _relativeX = _scroll.HorizontalOffset / _scroll.ScrollableWidth;
+            if (_scroll.ScrollableHeight > 0) _relativeY = _scroll.VerticalOffset / _scroll.ScrollableHeight;
+            ScrollPositionChanged?.Invoke(this, EventArgs.Empty);
+        };
+        UpdateBackground();
+    }
+
+    private static int Mod(int value, int size) => (value % size + size) % size;
+
+    private void UpdateGridViewport()
+    {
+        _surface.VisibleBounds = new Rect(_scroll.HorizontalOffset, _scroll.VerticalOffset,
+            Math.Max(0, _scroll.ViewportWidth), Math.Max(0, _scroll.ViewportHeight));
+        _surface.InvalidateVisual();
+    }
+
+    public bool TryGetImagePixel(Point viewportPoint, out int x, out int y)
+    {
+        x = y = 0;
+        if (_surface.Source is not { } source) return false;
+        if (!Inside(viewportPoint, ActualWidth, ActualHeight)) return false;
+        // Captured pointers can leave the control while the scrolled image still extends beneath them.
+        // The content presenter excludes scrollbars and any template chrome from the visible viewport.
+        if (_scroll.Template?.FindName("PART_ScrollContentPresenter", _scroll) is not ScrollContentPresenter viewport ||
+            !Inside(TranslatePoint(viewportPoint, viewport), viewport.ActualWidth, viewport.ActualHeight)) return false;
+        Point point = TranslatePoint(viewportPoint, _surface);
+        Rect bounds = _surface.ImageBounds;
+        if (!bounds.Contains(point) || bounds.Width <= 0 || bounds.Height <= 0) return false;
+        x = Math.Clamp((int)((point.X - bounds.X) * source.PixelWidth / bounds.Width), 0, source.PixelWidth - 1);
+        y = Math.Clamp((int)((point.Y - bounds.Y) * source.PixelHeight / bounds.Height), 0, source.PixelHeight - 1);
+        return true;
+
+        static bool Inside(Point point, double width, double height)
+            => double.IsFinite(point.X) && double.IsFinite(point.Y) && point.X >= 0 && point.Y >= 0 && point.X < width && point.Y < height;
+    }
+
+    private void UpdateHighlightAnimation()
+    {
+        if (IsLoaded && _surface.HighlightOutline is not null) _highlightTimer.Start();
+        else _highlightTimer.Stop();
+    }
+
+    private void UpdateHighlightOutline()
+    {
+        _surface.HighlightOutline = null;
+        if (_surface.Source is { } source && _surface.HighlightRgb is int rgb)
+        {
+            int width = source.PixelWidth, height = source.PixelHeight;
+            int stride = checked(width * 4);
+            var pixels = new byte[checked(stride * height)];
+            source.CopyPixels(pixels, stride, 0);
+            var selected = new bool[checked(width * height)];
+            for (int q = 0; q < selected.Length; q++)
+            {
+                int at = q * 4;
+                selected[q] = pixels[at + 3] > 0 &&
+                    (pixels[at + 2] << 16 | pixels[at + 1] << 8 | pixels[at]) == rgb;
+            }
+            var outline = new StreamGeometry();
+            using (var lines = outline.Open())
+            {
+                for (int y = 0; y <= height; y++)
+                {
+                    int start = -1;
+                    for (int x = 0; x <= width; x++)
+                    {
+                        bool boundary = x < width &&
+                            (y > 0 && selected[(y - 1) * width + x]) != (y < height && selected[y * width + x]);
+                        if (boundary && start < 0) start = x;
+                        if (!boundary && start >= 0)
+                        {
+                            lines.BeginFigure(new Point(start, y), false, false);
+                            lines.LineTo(new Point(x, y), true, false);
+                            start = -1;
+                        }
+                    }
+                }
+                for (int x = 0; x <= width; x++)
+                {
+                    int start = -1;
+                    for (int y = 0; y <= height; y++)
+                    {
+                        bool boundary = y < height &&
+                            (x > 0 && selected[y * width + x - 1]) != (x < width && selected[y * width + x]);
+                        if (boundary && start < 0) start = y;
+                        if (!boundary && start >= 0)
+                        {
+                            lines.BeginFigure(new Point(x, start), false, false);
+                            lines.LineTo(new Point(x, y), true, false);
+                            start = -1;
+                        }
+                    }
+                }
+            }
+            outline.Freeze();
+            _surface.HighlightOutline = outline.IsEmpty() ? null : outline;
+        }
+        _surface.InvalidateVisual();
+    }
+
+    public void ScrollToRelativePosition(double x, double y)
+    {
+        _relativeX = double.IsFinite(x) ? Math.Clamp(x, 0, 1) : 0;
+        _relativeY = double.IsFinite(y) ? Math.Clamp(y, 0, 1) : 0;
+        _applyingScroll = true;
+        int revision = ++_scrollRevision;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
+        {
+            if (revision != _scrollRevision) return;
+            _scroll.ScrollToHorizontalOffset(_relativeX * _scroll.ScrollableWidth);
+            _scroll.ScrollToVerticalOffset(_relativeY * _scroll.ScrollableHeight);
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
+            {
+                if (revision == _scrollRevision) _applyingScroll = false;
+            }));
+        }));
+    }
+
+    public Point ImagePointAt(Point viewportPoint)
+    {
+        double left = Math.Max(0, (_surface.ActualWidth - _surface.ImageWidth) / 2);
+        double top = Math.Max(0, (_surface.ActualHeight - _surface.ImageHeight) / 2);
+        return new Point(
+            Math.Clamp((_scroll.HorizontalOffset + viewportPoint.X - left) / Math.Max(1, _surface.ImageWidth), 0, 1),
+            Math.Clamp((_scroll.VerticalOffset + viewportPoint.Y - top) / Math.Max(1, _surface.ImageHeight), 0, 1));
+    }
+
+    public void PlaceImagePointAt(Point imagePoint, Point viewportPoint)
+    {
+        UpdateLayout();
+        double left = Math.Max(0, (_surface.ActualWidth - _surface.ImageWidth) / 2);
+        double top = Math.Max(0, (_surface.ActualHeight - _surface.ImageHeight) / 2);
+        ScrollToRelativePosition(
+            _scroll.ScrollableWidth > 0 ? (left + imagePoint.X * _surface.ImageWidth - viewportPoint.X) / _scroll.ScrollableWidth : _relativeX,
+            _scroll.ScrollableHeight > 0 ? (top + imagePoint.Y * _surface.ImageHeight - viewportPoint.Y) / _scroll.ScrollableHeight : _relativeY);
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        UpdateScale();
+    }
+
+    private void UpdateScale()
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        bool fit = _zoom <= 0;
+        _scroll.HorizontalScrollBarVisibility = _scroll.VerticalScrollBarVisibility = fit ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        double availableWidth = Math.Max(1, _scroll.ViewportWidth > 0 ? _scroll.ViewportWidth : ActualWidth);
+        double availableHeight = Math.Max(1, _scroll.ViewportHeight > 0 ? _scroll.ViewportHeight : ActualHeight);
+        if (_surface.Source is { } source)
+        {
+            int referenceWidth = _referenceImageSize?.Width ?? source.PixelWidth;
+            int referenceHeight = _referenceImageSize?.Height ?? source.PixelHeight;
+            double scale = fit ? Math.Min(Math.Max(1, availableWidth * dpi.DpiScaleX - 16) / referenceWidth, Math.Max(1, availableHeight * dpi.DpiScaleY - 16) / referenceHeight) : _zoom;
+            if (fit && !_continuousFit && scale >= 1) scale = Math.Floor(scale);
+            scale = Math.Min(referenceWidth * scale / source.PixelWidth, referenceHeight * scale / source.PixelHeight);
+            _surface.ImageWidth = (_continuousFit ? source.PixelWidth * scale : Math.Max(1, Math.Round(source.PixelWidth * scale))) / dpi.DpiScaleX;
+            _surface.ImageHeight = (_continuousFit ? source.PixelHeight * scale : Math.Max(1, Math.Round(source.PixelHeight * scale))) / dpi.DpiScaleY;
+        }
+        else _surface.ImageWidth = _surface.ImageHeight = 0;
+        // Let the scroll presenter stretch small images without feeding its viewport back into the extent.
+        _surface.MinWidth = _surface.ImageWidth;
+        _surface.MinHeight = _surface.ImageHeight;
+        _surface.InvalidateVisual();
+        UpdateGridViewport();
+    }
+
+    private void UpdateBackground()
+    {
+        bool lightBackground = _background is 2 or 3;
+        Background = PreviewBackgroundBrushes.Create(this, _background);
+        _empty.Foreground = PreviewBackgroundBrushes.Solid(this, !lightBackground);
+        _surface.RegionPen = new Pen(ThemeBrush("Ts.Accent"), 2);
+        _surface.RegionContrastPen = new Pen(ThemeBrush("Ts.Canvas"), 4);
+        _surface.InvalidateVisual();
+    }
+
+    private SolidColorBrush ThemeBrush(string key) => PreviewBackgroundBrushes.Resource(this, key);
+
+    private void RefreshTheme()
+    {
+        UpdateBackground();
+        if (_surface.HighlightRgb.HasValue) UpdateHighlightOutline();
+    }
+
+    public static BitmapSource ToBitmapSource(Bitmap bitmap)
+    {
+        // Copy BGRA directly; HBITMAP conversion can lose alpha and requires GDI handle ownership.
+        using var converted = bitmap.Clone(new System.Drawing.Rectangle(0, 0, bitmap.Width, bitmap.Height), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        var bits = converted.LockBits(new System.Drawing.Rectangle(0, 0, converted.Width, converted.Height), ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        try
+        {
+            int stride = checked(converted.Width * 4);
+            byte[] pixels = new byte[checked(stride * converted.Height)];
+            for (int y = 0; y < converted.Height; y++) Marshal.Copy(IntPtr.Add(bits.Scan0, y * bits.Stride), pixels, y * stride, stride);
+            var source = BitmapSource.Create(converted.Width, converted.Height, 96, 96, PixelFormats.Bgra32, null, pixels, stride);
+            source.Freeze();
+            return source;
+        }
+        finally { converted.UnlockBits(bits); }
+    }
+
+    private sealed class Surface : FrameworkElement
+    {
+        public BitmapSource? Source { get; set; }
+        public double ImageWidth { get; set; }
+        public double ImageHeight { get; set; }
+        public Rect? SelectedRegion { get; set; }
+        public PreviewGridLens? GridLens { get; set; }
+        public Rect VisibleBounds { get; set; }
+        public int? HighlightRgb { get; set; }
+        public Geometry? HighlightOutline { get; set; }
+        public int HighlightPhase { get; set; }
+        public Pen? RegionPen { get; set; }
+        public Pen? RegionContrastPen { get; set; }
+        public Rect ImageBounds
+        {
+            get
+            {
+                var dpi = VisualTreeHelper.GetDpi(this);
+                double x = Math.Round(Math.Max(0, (ActualWidth - ImageWidth) / 2) * dpi.DpiScaleX) / dpi.DpiScaleX;
+                double y = Math.Round(Math.Max(0, (ActualHeight - ImageHeight) / 2) * dpi.DpiScaleY) / dpi.DpiScaleY;
+                return new Rect(x, y, ImageWidth, ImageHeight);
+            }
+        }
+        public Surface() { RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor); SnapsToDevicePixels = true; }
+        protected override void OnRender(DrawingContext drawingContext)
+        {
+            if (Source is null) return;
+            Rect image = ImageBounds;
+            drawingContext.DrawImage(Source, image);
+            if (GridLens is { } grid) DrawGrid(drawingContext, image, Source, grid);
+            if (HighlightOutline is { } outline) DrawHighlightOutline(drawingContext, image, Source, outline);
+            if (SelectedRegion is { } region)
+            {
+                Rect bounds = new(image.X + region.X * image.Width / Source.PixelWidth,
+                    image.Y + region.Y * image.Height / Source.PixelHeight,
+                    region.Width * image.Width / Source.PixelWidth, region.Height * image.Height / Source.PixelHeight);
+                bounds.Intersect(image);
+                if (!bounds.IsEmpty)
+                {
+                    bounds.Inflate(-Math.Min(2, bounds.Width / 4), -Math.Min(2, bounds.Height / 4));
+                    drawingContext.DrawRectangle(null, RegionContrastPen, bounds);
+                    drawingContext.DrawRectangle(null, RegionPen, bounds);
+                }
+            }
+        }
+
+        private void DrawHighlightOutline(DrawingContext context, Rect image, BitmapSource source, Geometry outline)
+        {
+            double scaleX = image.Width / source.PixelWidth, scaleY = image.Height / source.PixelHeight;
+            if (scaleX <= 0 || scaleY <= 0) return;
+            var dpi = VisualTreeHelper.GetDpi(this);
+            double thickness = 1.5 / Math.Max(scaleX * dpi.DpiScaleX, scaleY * dpi.DpiScaleY);
+            var black = new Pen(Brushes.Black, thickness) { DashStyle = new DashStyle([4, 4], HighlightPhase) };
+            var white = new Pen(Brushes.White, thickness) { DashStyle = new DashStyle([4, 4], HighlightPhase + 4) };
+            context.PushClip(new RectangleGeometry(image));
+            context.PushTransform(new MatrixTransform(scaleX, 0, 0, scaleY, image.X, image.Y));
+            context.DrawGeometry(null, black, outline);
+            context.DrawGeometry(null, white, outline);
+            context.Pop();
+            context.Pop();
+        }
+
+        private void DrawGrid(DrawingContext context, Rect image, BitmapSource source, PreviewGridLens grid)
+        {
+            if (grid.CellWidth < 1 || grid.CellHeight < 1 || image.Width <= 0 || image.Height <= 0) return;
+            Rect visible = VisibleBounds.Width > 0 && VisibleBounds.Height > 0 ? VisibleBounds : new Rect(0, 0, ActualWidth, ActualHeight);
+            visible.Intersect(image);
+            if (visible.IsEmpty) return;
+            var dpi = VisualTreeHelper.GetDpi(this);
+            var brush = new SolidColorBrush(grid.Color);
+            brush.Freeze();
+            var vertical = new Pen(brush, 1 / dpi.DpiScaleX);
+            var horizontal = new Pen(brush, 1 / dpi.DpiScaleY);
+            vertical.Freeze(); horizontal.Freeze();
+            double scaleX = image.Width / source.PixelWidth, scaleY = image.Height / source.PixelHeight;
+            context.PushClip(new RectangleGeometry(image));
+            long firstX = (long)Math.Ceiling(((visible.Left - image.Left) / scaleX - grid.OffsetX) / grid.CellWidth);
+            long lastX = (long)Math.Floor(((visible.Right - image.Left) / scaleX - grid.OffsetX) / grid.CellWidth);
+            for (long q = firstX; q <= lastX && q - firstX < 20000; q++)
+            {
+                double x = image.Left + (grid.OffsetX + q * grid.CellWidth) * scaleX;
+                x = (Math.Round(x * dpi.DpiScaleX) + .5) / dpi.DpiScaleX;
+                context.DrawLine(vertical, new Point(x, visible.Top), new Point(x, visible.Bottom));
+            }
+            long firstY = (long)Math.Ceiling(((visible.Top - image.Top) / scaleY - grid.OffsetY) / grid.CellHeight);
+            long lastY = (long)Math.Floor(((visible.Bottom - image.Top) / scaleY - grid.OffsetY) / grid.CellHeight);
+            for (long q = firstY; q <= lastY && q - firstY < 20000; q++)
+            {
+                double y = image.Top + (grid.OffsetY + q * grid.CellHeight) * scaleY;
+                y = (Math.Round(y * dpi.DpiScaleY) + .5) / dpi.DpiScaleY;
+                context.DrawLine(horizontal, new Point(visible.Left, y), new Point(visible.Right, y));
+            }
+            context.Pop();
+        }
+    }
+}

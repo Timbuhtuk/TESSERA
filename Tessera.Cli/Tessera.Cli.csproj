@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <DisableWinExeOutputInference>true</DisableWinExeOutputInference>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>tessera</AssemblyName>
+    <Product>Tessera</Product>
+    <AssemblyTitle>Tessera CLI</AssemblyTitle>
+    <RootNamespace>Tessera.Cli</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Include="System.IO" />
+    <ProjectReference Include="..\Tessera.Models\Tessera.Models.csproj" />
+    <ProjectReference Include="..\Tessera.Core\Tessera.Core.csproj" />
+    <ProjectReference Include="..\Tessera.Aseprite\Tessera.Aseprite.csproj" />
+    <ProjectReference Include="..\Tessera.Rendering\Tessera.Rendering.csproj" />
+    <InternalsVisibleTo Include="Tessera.Cli.Tests" />
+  </ItemGroup>
+</Project>

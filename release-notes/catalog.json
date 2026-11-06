@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Совместимость рабочих процессов",
+        "en": "Workflow compatibility"
+      },
+      "notes": {
+        "ru": "- Редактор, CLI, Aseprite, доски изображений, тайлы и карты материалов сохраняют прежние команды, настройки, форматы документов, макросы и историю обработки.",
+        "en": "- The editor, CLI, Aseprite, image boards, tiles and material maps retain their existing commands, settings, document formats, macros and processing history."
+      }
+    },
+    {
+      "version": "2.30.1",
+      "title": {
         "ru": "Компактное дерево проектов",
         "en": "Compact project tree"
       },

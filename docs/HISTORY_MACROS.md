@@ -21,7 +21,7 @@
 - `<library>/editor-history.json`: версия 1, высота/ширина лент, прокрутка, свёрнутые папки и отдельный порядок визуальных корней для каждого исходника.
 - `generation.json`: `ParentGenerationId` сохраняет происхождение; `OperationId` — стабильный вид операции; `AppliedRecipe` — операции этого результата; `RecipeSnapshot` — полная последовательность от текущего исходника. `RecipeUnavailableReason` объясняет невозможность полного воспроизведения.
 - `<library>/macros/<id N>.json`: независимое определение с `version`, `id`, `name`, упорядоченным `steps`. Схема и примеры: [формат макросов](../plugins/tessera/skills/tessera/references/macros.md).
-- `PixelArtWorkflows`: модели, `MacroStore`, `WorkflowExecutor`, общий для WPF и CLI. Исполнитель вызывает обычные `PixelArtDownscale`/`PixelArtAlignment` процессоры. Рецепты не содержат файловых путей, темы и числа потоков.
+- `Tessera.Core.Workflows`: модели, `MacroStore`, `WorkflowExecutor`, общий для WPF и CLI. Исполнитель вызывает обычные `Tessera.Core.Imaging`/`Tessera.Core.Alignment` процессоры. Рецепты не содержат файловых путей, темы и числа потоков.
 
 Снимок рецепта не зависит от удаления родительских карточек или определения макроса. Перед удалением старого родителя библиотека фиксирует однозначно восстанавливаемые рецепты его детей. Старые PNG не пересчитываются. Миграция проверяет наличие нужных полей в исходном JSON; отсутствующие параметры не подменяются текущими значениями по умолчанию. Журналы и локализованные подписи не исполняются. Только известные старые названия операций используются для ограниченного распознавания старого формата.
 
@@ -32,8 +32,8 @@
 ```powershell
 tessera macro list --library C:\TesseraLibrary --json
 tessera macro apply input.png --macro C:\TesseraLibrary\macros\ID.json -o output.png --json
-dotnet run --project PixelArtAlignment.Tests -c Release -- --history-macros
-dotnet run --project Pixelizator.Cli.Tests -c Release
+dotnet run --project Tessera.RegressionTests -c Release -- --history-macros
+dotnet run --project Tessera.Cli.Tests -c Release
 ```
 
 `--history-macros` проверяет дерево из 30 000 результатов, перенос/удаление/циклы, точные размеры и прозрачность, независимость рецептов, неполную старую историю, связь с выбранной основой, отдельную карточку для каждого шага и их родительские связи, папки/пустые папки/общие ассеты, обе темы, минимальный размер, сохранение после перезапуска и виртуализацию каталога из 20 000 исходников. Это проверки моделей и WPF с программными событиями и рендером; они не заменяют проверку настоящего ввода мышью.

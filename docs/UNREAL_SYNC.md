@@ -47,4 +47,4 @@ Only PNG pixels and the map kind cross the manual bridge. PNG export from a comp
 
 ## Verification
 
-`dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --unreal-sync` checks the installer, manual transfer compatibility, project tree and icon, and a save resumed after Tessera restarts.
+`dotnet run --project Tessera.RegressionTests -c Release --no-build -- --unreal-sync` checks the installer, manual transfer compatibility, project tree and icon, and a save resumed after Tessera restarts.

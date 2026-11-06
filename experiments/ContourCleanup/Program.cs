@@ -1,6 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
-using PixelArtDownscale;
+using Tessera.Core.Imaging;
 
 if (args.Length > 0 && args[0] == "generate-corpus")
 {

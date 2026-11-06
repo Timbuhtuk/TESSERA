@@ -1,5 +1,5 @@
 using System.Drawing.Imaging;
-using PixelArtDownscale;
+using Tessera.Core.Imaging;
 
 namespace ColorFrequencyFilter;
 

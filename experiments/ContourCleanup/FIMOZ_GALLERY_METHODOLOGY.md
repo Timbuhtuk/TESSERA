@@ -30,7 +30,7 @@
 Пример воспроизведения для Assaultman из рабочего каталога ветки:
 
 ```powershell
-dotnet Pixelizator.Cli/bin/Release/net8.0-windows/tessera.dll finish-pixel-art `
+dotnet Tessera.Cli/bin/Release/net8.0-windows/tessera.dll finish-pixel-art `
   experiments/ContourCleanup/artifacts/fimoz-user-samples/FIMOZ/T_Assaultman_UNP.png `
   -o experiments/ContourCleanup/artifacts/shape-research/methodology-check/Assaultman-from-original.png `
   --cell-size 8 --smooth-passes 1 --colors 128 --json

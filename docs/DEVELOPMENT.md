@@ -23,35 +23,36 @@ Relative output paths are resolved from the repository root. Executables, archiv
 Individual commands:
 
 ```powershell
-dotnet build Pixelizator.sln -c Release
-dotnet run --project PixelArtAseprite.Tests -c Release
-dotnet run --project PixelArtAlignment.Tests -c Release -- --ui --invariants
-dotnet run --project Pixelizator.Cli.Tests -c Release
-dotnet publish DomainColorTest -c Release -p:PublishProfile=win-x64
-dotnet publish Pixelizator.Cli -c Release -p:PublishProfile=win-x64
+dotnet build Tessera.sln -c Release
+dotnet run --project Tessera.Aseprite.Tests -c Release
+dotnet run --project Tessera.RegressionTests -c Release -- --ui --invariants
+dotnet run --project Tessera.Cli.Tests -c Release
+dotnet publish Tessera.Desktop -c Release -p:PublishProfile=win-x64
+dotnet publish Tessera.Cli -c Release -p:PublishProfile=win-x64
 ```
 
-Checks generate their own images and temporary libraries. They do not use the user's library or external image collections. See the [alignment evaluation protocol](../PixelArtAlignment.Tests/README.md).
+Checks generate their own images and temporary libraries. They do not use the user's library or external image collections. See the [alignment evaluation protocol](../Tessera.RegressionTests/README.md).
 
-`dotnet run --project PixelArtAlignment.Tests -c Release -- --channels` checks RGBA channel arithmetic, fractions, clamping, unchanged channels and sources, cancellation, recipe replay, docked/floating UI, RU/EN, PNG and persisted settings. Arithmetic checks also run with `--invariants`; UI checks also run with `--ui`.
+`dotnet run --project Tessera.RegressionTests -c Release -- --channels` checks RGBA channel arithmetic, fractions, clamping, unchanged channels and sources, cancellation, recipe replay, docked/floating UI, RU/EN, PNG and persisted settings. Arithmetic checks also run with `--invariants`; UI checks also run with `--ui`.
 
 ## Source layout
 
-Historical project and namespace names are retained:
+The [architecture guide](ARCHITECTURE.md) defines ownership and dependency direction:
 
-- `DomainColorTest`: WPF desktop application, including its embedded assets.
-- `Tessera.WpfStyles` 0.2.0: restored from the checked-in `.nuget/local-packages` feed using the repository `NuGet.Config`. Source mapping reserves this package ID for that local feed; other dependencies use NuGet.org. No adjacent style-library checkout or manually copied DLL is required. Font licenses remain in `DomainColorTest/Assets/Fonts`. See [operation progress](PROGRESS.md) for reporting and validation.
-- `PixelArtDownscale`: downscaling, quantization, palettes, sprites and [ICO export](../PixelArtDownscale/ICO.md).
-- `PixelArtAlignment`: [grid alignment and cell reduction](../PixelArtAlignment/README.md).
-- `PixelArtAseprite`: offline [Aseprite decoding and sprite sheet export](../PixelArtAseprite/README.md).
-- `PixelArtAseprite.Tests`: synthetic format, transparency, export, limits and cancellation checks.
-- `Pixelizator.Cli`: [command-line interface](CLI.md) to the image algorithms.
-- `PixelArtAlignment.Tests`: algorithms, editor, library and navigation checks.
-- `Pixelizator.Cli.Tests`: CLI integration and image-processing checks.
-- `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md) for all Tessera CLI commands and options; `.agents/plugins/marketplace.json` registers the repository marketplace.
-- `artifacts`: local builds, test output and archives; ignored by Git.
+- `Tessera.Models`: shared processing options, result contracts and tile layouts. It has no project references.
+- `Tessera.Core`: image algorithms, grid alignment and workflows under `Imaging`, `Alignment` and `Workflows`. It references only `Tessera.Models`.
+- `Tessera.Aseprite`: offline [Aseprite decoding and sprite sheet export](../Tessera.Aseprite/README.md) on plain .NET 8.
+- `Tessera.Rendering`: WPF image-board PNG rendering shared by desktop and CLI.
+- `Tessera.Desktop`: WPF views, UI controllers and workspace state. `Views`, `Controllers` and `Models` separate rendering, action orchestration and stored state.
+- `Tessera.Cli`: [command-line interface](CLI.md) to the same core services.
+- `Tessera.Aseprite.Tests`, `Tessera.RegressionTests` and `Tessera.Cli.Tests`: format, algorithm, desktop and CLI checks.
+- `Tessera.WpfStyles` 0.2.0: restored from the checked-in `.nuget/local-packages` feed using `NuGet.Config`. Font licenses remain in `Tessera.Desktop/Assets/Fonts`.
+- `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md); `.agents/plugins/marketplace.json` registers the repository marketplace.
+- `artifacts`: ignored local builds, test output and archives.
 
-The editable Tessera mark and its generation script are documented in the [asset README](../DomainColorTest/Assets/README.md).
+See [grid alignment](../Tessera.Core/Alignment/README.md), [ICO export](../Tessera.Core/Imaging/ICO.md) and [operation progress](PROGRESS.md).
+
+The editable Tessera mark and its generation script are documented in the [asset README](../Tessera.Desktop/Assets/README.md).
 
 ## Project notes implementation
 
@@ -73,21 +74,21 @@ Library PNG writes use .NET file streams rather than GDI+ filename APIs, which f
 
 Holding either Alt key temporarily enables the heatmap without changing the saved checkbox state or marking the project dirty. Preview key-up and window deactivation restore the selected mode; only the preview is invalidated, so holding Alt does not rerun edge analysis. Seam statistics are below the preview, while drawing/smoothing stays above it. The WPF checks exercise rendered press/release behavior, repeated keydown, both Alt keys, focus loss, persistent visibility, project settings and panel order at normal/minimum sizes.
 
-`DomainColorTest/TileInspectorWindow.xaml(.cs)` owns the independent inspector window, collection selection, file loading and debounced directory watchers. Its `Collection` partial handles projects, export and unsaved changes; its `Painting` partial handles strokes, histories and smoothing. `MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
+`Tessera.Desktop/Views/TileInspectorWindow.xaml(.cs)` owns the independent inspector view. Its `Controllers/TileInspectorWindow.Collection.cs` and `Controllers/TileInspectorWindow.Painting.cs` partials handle projects, export, edits and smoothing. `Controllers/MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `Views/TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
 
-`PixelArtDownscale/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
+`Tessera.Core/Imaging/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
 
 `TileAsset.cs` keeps BGRA pixels, a WPF bitmap, edit state and bounded per-asset undo/redo snapshots (up to 20 entries / 64 MiB, retaining at least one). `TileAsset.Compare(A, B)` compares A.right/B.left and A.bottom/B.top; reverse joins are computed independently. The checkerboard arrangement alternates A/B. Pair candidates require equal dimensions; incompatible assets remain available in the collection. `TileAssetProcessing.Smooth` delegates to `IndependentImageProcessor.ApplyNeighborColors`, preserving its color selection and alpha behavior, then optionally restores pixels outside the selected edge strip. It does not synthesize colors across asset boundaries.
 
 `TileCollectionFile.cs` stores version-1 `.ttiles` ZIP projects containing `collection.json` and embedded PNGs. It reads and validates all images before replacing session state. Project and PNG writes use adjacent temporary files and atomic replacement; exports reject imported source paths. Embedded local-edit protection survives reopening. Original source paths serve only for optional watching/reloading; portable project images remain usable without originals.
 
-Build the tests, then run `dotnet run --project PixelArtAlignment.Tests -c Release --no-build -- --tiles`. This checks known distances, alpha, axis mapping, the home entry, repetition modes, rendered heatmap toggling/opacity/direction, fit and fixed zoom, the minimum layout, failed loads, file writes, atomic replacement and disabling the watcher. Collection checks cover pair selection, pencil/eraser/eyedropper, stroke isolation, undo/redo, local-edit protection, portable project round trips, failed project loads, export protection and smoothing parity with the shared algorithm. Rendered captures are written under `artifacts/wpf/verification/tiles-*`. These checks also run with `--ui`.
+Build the tests, then run `dotnet run --project Tessera.RegressionTests -c Release --no-build -- --tiles`. This checks known distances, alpha, axis mapping, the home entry, repetition modes, rendered heatmap toggling/opacity/direction, fit and fixed zoom, the minimum layout, failed loads, file writes, atomic replacement and disabling the watcher. Collection checks cover pair selection, pencil/eraser/eyedropper, stroke isolation, undo/redo, local-edit protection, portable project round trips, failed project loads, export protection and smoothing parity with the shared algorithm. Rendered captures are written under `artifacts/wpf/verification/tiles-*`. These checks also run with `--ui`.
 
 Painting and both fills use straight-alpha source-over, with color alpha multiplied by `PaintOpacity`. Brush dabs read the stroke's original snapshot, avoiding buildup within a stroke. Flood fill uses an iterative four-neighbor traversal over the pre-edit pixels; fully transparent pixels compare equal regardless of hidden RGB. It stays within one asset and creates one undo entry. Version-1 collections accept the optional `PaintOpacity` setting (default 100, finite range 0–100). `TilePaintChecks` and the inspector WPF checks cover blending over opaque/partial/zero alpha, overlapping dabs, separate strokes, boundaries, no-op history, A/B targeting, project compatibility and translated controls.
 
 ### Tileset slicing
 
-`PixelArtDownscale/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
+`Tessera.Core/Imaging/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
 
 `TileSetImportWindow.xaml(.cs)` provides manual/automatic layout controls and an outlined pixel preview in `TileSetPreview.cs`. The `TileInspectorWindow.TileSet.cs` partial adds the confirmed batch to the collection. Each slice keeps an optional `AtlasSourcePath` instead of an ordinary single-image watcher path. Version-1 `.ttiles` manifests accept this optional field, retain embedded pixels, and protect the original atlas from PNG/project overwrite. Existing projects without the field remain supported.
 
@@ -95,7 +96,7 @@ Painting and both fills use straight-alpha source-over, with color alpha multipl
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository is `Timbuhtuk/TESSERA`; historical solution and namespace names remain unchanged. Startup prepares the portable `WorkspaceData/Library` beside the executable. It copies existing GUID image/history directories from `%LOCALAPPDATA%\Tessera\Library` once. `LibraryLocation` first handles older `%LOCALAPPDATA%\Pixelizator\Library` entries without deleting their originals. Migration markers prevent later launches from overwriting workspace edits.
+Tessera was previously named Pixelizator. The repository is `Timbuhtuk/TESSERA`; the solution and code namespaces now use Tessera names. Startup prepares the portable `WorkspaceData/Library` beside the executable. It copies existing GUID image/history directories from `%LOCALAPPDATA%\Tessera\Library` once. `LibraryLocation` first handles older `%LOCALAPPDATA%\Pixelizator\Library` entries without deleting their originals. Migration markers prevent later launches from overwriting workspace edits.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 
@@ -125,7 +126,7 @@ Preparation compares the actual `next` title and notes with the last published t
 
 `ReleaseNotesStartup` opens the owned, non-modal notes window after the main window or direct tile inspector first renders. It records the version only after the notes themselves render. `ReleaseNotesState` atomically preserves all seen versions beside the appearance settings, tolerates corrupt state, and reports failed writes without blocking the app. The Settings patch-notes tab uses the same `ReleaseNotesView` and catalog as the startup window. Release text is rendered as plain text with simple headings and bullets; no HTML, scripts or external content is loaded.
 
-Run `PixelArtAlignment.Tests --release-notes` for first-launch/restart state, upgrades/downgrades, offline history selection, RU/EN, three themes, minimum layouts and failed writes. `tests/ReleaseNotes.Checks.ps1` checks curated notes, reruns, rejection of unchanged notes and unreviewed history, API arrays, translated archives and exact GitHub/bundle text parity with isolated fixtures. Both are mandatory in `Build-Standalone.ps1`. Rendered WPF captures are written under `artifacts/wpf/patch-notes`; physical mouse/keyboard desktop interaction remains a separate check.
+Run `Tessera.RegressionTests --release-notes` for first-launch/restart state, upgrades/downgrades, offline history selection, RU/EN, three themes, minimum layouts and failed writes. `tests/ReleaseNotes.Checks.ps1` checks curated notes, reruns, rejection of unchanged notes and unreviewed history, API arrays, translated archives and exact GitHub/bundle text parity with isolated fixtures. Both are mandatory in `Build-Standalone.ps1`. Rendered WPF captures are written under `artifacts/wpf/patch-notes`; physical mouse/keyboard desktop interaction remains a separate check.
 
 The release stays a draft until all assets are uploaded. Rerunning a completed publication preserves the existing release; an interrupted draft can resume. An old build is skipped if `main` already points to a newer commit.
 
@@ -138,17 +139,17 @@ See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 
 `WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
 
-The tool-improvement checks run with `PixelArtAlignment.Tests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
+The tool-improvement checks run with `Tessera.RegressionTests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
 
 ## Material-map editor
 
-The material-map editor is available under the image editor's Tools menu. `PixelArtDownscale/MaterialMapDocument.cs` owns luminance Height initialization, central-difference normalized normals, eight-direction/four-distance horizon AO and independent normal/AO masks. Canonical normals use +Y up; DirectX export flips only green. Color preview lighting runs in linear light and AO modulates its ambient term. Transparent neighbors are excluded and image edges do not wrap. This is a 2D height-field approximation, not geometry baking or AI depth estimation.
+The material-map editor is available under the image editor's Tools menu. `Tessera.Core/Imaging/MaterialMapDocument.cs` owns luminance Height initialization, central-difference normalized normals, eight-direction/four-distance horizon AO and independent normal/AO masks. Canonical normals use +Y up; DirectX export flips only green. Color preview lighting runs in linear light and AO modulates its ambient term. Transparent neighbors are excluded and image edges do not wrap. This is a 2D height-field approximation, not geometry baking or AI depth estimation.
 
 `MaterialMapFile` stores versioned `.tmaps` ZIP files with a JSON header and lossless binary source/layers, validates dimensions and finite layer values, and replaces saves atomically. Stroke/reset/settings history is capped at 30 snapshots or approximately 128 MiB, retaining at least one action. `MaterialMapsWindow` provides the three paint surfaces, per-map reset, throttled preview light, source overlay, PNG/project persistence and source-path protection. It snapshots the selected source/result and holds one session per source/result, so switching assets cannot redirect existing strokes.
 
 `MaterialMapsWindow.Viewport` synchronizes a common source-space center and scale across the 2×2 grid, including the downsampled lighting image, whose logical dimensions remain full-size. Shared header rows keep all four scroll viewports equal. `WorkspaceState.MaterialSessions` stores source/result identities and stable IDs for the three generated image assets. The library keeps the editable `.tmaps` payload internally, while `ImageLibrary.StoreMaterialMap` atomically updates only generated image bases and their metadata. Imported originals and result histories retain their existing behavior. The workspace autosave timer waits for strokes and regeneration to finish; return, main-window save and close flush pending settings. Failed persistence leaves the editor open and dirty. New assets inherit the source's folder in the active project; existing map placements are retained.
 
-Run `dotnet run --project PixelArtAlignment.Tests -c Release -- --material-maps` for the focused checks; they also run with `--ui` in the existing release pipeline. They exercise flat/gradient/cavity fields, dimensions and alpha, normal conventions, independent masks and resets, history, soft/interpolated strokes, project roundtrips, Tools entry, PNG source protection, wide/minimum 2×2 WPF renders, all four scroll origins, fit/zoom, sibling asset placement, idle/main-menu saving, locked-file failure/retry and layer recovery after reopening the library. Physical pointer interaction remains a separate desktop verification.
+Run `dotnet run --project Tessera.RegressionTests -c Release -- --material-maps` for the focused checks; they also run with `--ui` in the existing release pipeline. They exercise flat/gradient/cavity fields, dimensions and alpha, normal conventions, independent masks and resets, history, soft/interpolated strokes, project roundtrips, Tools entry, PNG source protection, wide/minimum 2×2 WPF renders, all four scroll origins, fit/zoom, sibling asset placement, idle/main-menu saving, locked-file failure/retry and layer recovery after reopening the library. Physical pointer interaction remains a separate desktop verification.
 
 ## Deferred ideas
 

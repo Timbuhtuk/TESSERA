@@ -1,0 +1,317 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using Microsoft.Win32;
+using Tessera.Core.Imaging;
+using Bitmap = System.Drawing.Bitmap;
+
+namespace Tessera.Desktop;
+
+public partial class IconWorkspace : UserControl, IDisposable
+{
+    private Bitmap? _image;
+    private string? _inputPath;
+    private readonly HashSet<string> _sourcePaths = new(StringComparer.OrdinalIgnoreCase);
+    public Action<string>? ValidateExportPath { get; set; }
+    public IReadOnlyCollection<string> SourcePaths => _sourcePaths;
+    private bool _disposed;
+    private bool _busy;
+    private int _revision;
+    private CancellationTokenSource? _previewCancellation;
+    private readonly DispatcherTimer _previewTimer = new() { Interval = TimeSpan.FromMilliseconds(140) };
+    public bool IsBusy => _busy;
+    public bool IsRendering { get; private set; }
+    public event EventHandler? BackRequested;
+    public event Action<EditorMaterial>? MaterialRequested;
+
+    public event EventHandler? BusyChanged;
+    public Func<string, bool, OperationProgressSession>? ProgressFactory { get; set; }
+    private OperationProgressSession BeginProgress(string label, bool preview = false)
+        => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
+
+    public event Action<string>? StatusChanged;
+    public sealed record FramePreview(int Size, BitmapSource Image)
+    {
+        public string Label => $"{Size} × {Size}";
+    }
+
+    public IconWorkspace()
+    {
+        InitializeComponent();
+        foreach (int size in new[] { 16, 24, 32, 48, 64, 96, 128, 256 })
+        {
+            var check = new CheckBox
+            {
+                Style = (Style)FindResource("Ts.SwitchBox"),
+                Content = $"{size} × {size}",
+                Tag = size,
+                IsChecked = size != 96,
+                Margin = new Thickness(0, 0, 22, 16),
+                ToolTip = Localization.Format("Включить кадр {0} × {0} пикселей в ICO. Выключите, чтобы исключить этот размер из файла.", size)
+            };
+            ToolTipService.SetShowOnDisabled(check, true);
+            check.Checked += (_, _) => SchedulePreview();
+            check.Unchecked += (_, _) => SchedulePreview();
+            iconSizes.Children.Add(check);
+        }
+        iconBackButton.Click += (_, _) => BackRequested?.Invoke(this, EventArgs.Empty);
+        iconOpenButton.Click += async (_, _) => await OpenAsync();
+        iconSaveButton.Click += async (_, _) => await SaveDialogAsync();
+        iconEditorChoices.MaterialSelected += material => MaterialRequested?.Invoke(material);
+
+        iconCustomCheck.Checked += (_, _) => { iconCustomSize.IsEnabled = true; SchedulePreview(); };
+        iconCustomCheck.Unchecked += (_, _) => { iconCustomSize.IsEnabled = false; SchedulePreview(); };
+        iconCustomSize.ValueChanged += (_, _) => SchedulePreview();
+        iconResizeMode.SelectionChanged += (_, _) => SchedulePreview();
+        iconFitMode.SelectionChanged += (_, _) => SchedulePreview();
+        iconRemoveBackground.Checked += (_, _) => { iconBackgroundSettings.Visibility = Visibility.Visible; SchedulePreview(); };
+        iconRemoveBackground.Unchecked += (_, _) => { iconBackgroundSettings.Visibility = Visibility.Collapsed; SchedulePreview(); };
+        iconBackgroundTolerance.ValueChanged += (_, _) => SchedulePreview();
+        iconBackgroundColor.SelectionChanged += (_, _) => SchedulePreview();
+        iconBackgroundMode.SelectionChanged += (_, _) => SchedulePreview();
+        _previewTimer.Tick += async (_, _) => { _previewTimer.Stop(); await RefreshFramesAsync(); };
+        SizeChanged += (_, _) => UpdateLayoutForWidth();
+    }
+
+    public void SetEditorMaterials(IEnumerable<EditorMaterial> materials)
+        => iconEditorChoices.SetMaterials(materials);
+
+    public static bool SupportsFile(string path) => File.Exists(path) && Path.GetExtension(path).ToLowerInvariant() is
+        ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".tif" or ".tiff";
+
+    public async Task OpenAsync()
+    {
+        if (_busy || _disposed) return;
+        var dialog = new OpenFileDialog { Title = Localization.Text("Изображение для иконки"), Filter = Localization.Text("Изображения|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.tif;*.tiff") };
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true) await LoadFileAsync(dialog.FileName);
+    }
+
+    public async Task LoadFileAsync(string path)
+    {
+        if (_busy || _disposed) return;
+        SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Открытие изображения…"));
+        try
+        {
+            using var image = await Task.Run(() => ReadImage(path));
+            if (_disposed) return;
+            SetImage(image, Path.GetFileName(path), path);
+            StatusChanged?.Invoke(Localization.Text("Изображение открыто. Выберите размеры и сохраните ICO."));
+            operation.Complete();
+        }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось открыть изображение: {0}", ex.Message)); }
+        finally { SetBusy(false); }
+    }
+
+    internal static Bitmap ReadImage(string path)
+    {
+        using var metadata = new Bitmap(path);
+        int orientation = metadata.PropertyIdList.Contains(0x112) && metadata.GetPropertyItem(0x112)?.Value is { Length: >= 2 } bytes
+            ? BitConverter.ToUInt16(bytes, 0) : 1;
+        var image = ImageLibrary.ReadBitmap(path);
+        try
+        {
+            image.RotateFlip(orientation switch
+            {
+                2 => System.Drawing.RotateFlipType.RotateNoneFlipX,
+                3 => System.Drawing.RotateFlipType.Rotate180FlipNone,
+                4 => System.Drawing.RotateFlipType.Rotate180FlipX,
+                5 => System.Drawing.RotateFlipType.Rotate90FlipX,
+                6 => System.Drawing.RotateFlipType.Rotate90FlipNone,
+                7 => System.Drawing.RotateFlipType.Rotate270FlipX,
+                8 => System.Drawing.RotateFlipType.Rotate270FlipNone,
+                _ => System.Drawing.RotateFlipType.RotateNoneFlipNone
+            });
+            return image;
+        }
+        catch { image.Dispose(); throw; }
+    }
+
+    public void SetImage(Bitmap source, string label, string? inputPath = null)
+    {
+        if (_disposed) return;
+        var preview = PixelPreview.ToBitmapSource(source);
+        var copy = (Bitmap)source.Clone();
+        _image?.Dispose();
+        _image = copy;
+        _inputPath = inputPath is null ? null : Path.GetFullPath(inputPath);
+        if (_inputPath is not null) _sourcePaths.Add(_inputPath);
+        iconSourceImage.Source = preview;
+        iconFileLabel.Text = label;
+        iconFileLabel.ToolTip = label;
+        iconEmptyHint.Visibility = Visibility.Collapsed;
+        SchedulePreview();
+    }
+
+    public IconExportOptions GetOptions()
+    {
+        var sizes = iconSizes.Children.OfType<CheckBox>().Where(c => c.IsChecked == true).Select(c => (int)c.Tag).ToList();
+        if (iconCustomCheck.IsChecked == true) sizes.Add(iconCustomSize.Value);
+        return new IconExportOptions
+        {
+            Sizes = sizes.Distinct().Order().ToArray(),
+            ResizeMode = iconResizeMode.SelectedIndex == 0 ? IconResizeMode.NearestNeighbor : IconResizeMode.Smooth,
+            RemoveBackground = iconRemoveBackground.IsChecked == true,
+            BackgroundRemovalMode = iconBackgroundMode.SelectedIndex == 1 ? BackgroundRemovalMode.EdgeConnected : BackgroundRemovalMode.GlobalColor,
+            BackgroundTolerance = (int)iconBackgroundTolerance.Value,
+            BackgroundColor = iconBackgroundColor.SelectedIndex switch { 1 => System.Drawing.Color.White, 2 => System.Drawing.Color.Black, _ => (System.Drawing.Color?)null },
+            FitMode = (IconFitMode)Math.Clamp(iconFitMode.SelectedIndex, 0, 2)
+        };
+    }
+
+    private void SchedulePreview()
+    {
+        if (_disposed) return;
+        ++_revision;
+        _previewCancellation?.Cancel();
+        iconFrames.ItemsSource = null;
+        IsRendering = _image is not null;
+        UpdateSaveState();
+        _previewTimer.Stop();
+        _previewTimer.Start();
+    }
+
+    public async Task RefreshFramesAsync()
+    {
+        _previewTimer.Stop();
+        _previewCancellation?.Cancel();
+        int revision = ++_revision;
+        var options = GetOptions();
+        if (_disposed || _image is null)
+        {
+            iconFrames.ItemsSource = null;
+            IsRendering = false;
+            iconPreviewHint.Text = options.Sizes.Count == 0 ? Localization.Text("Выберите хотя бы один размер.") : Localization.Text("Выберите размеры — они будут сохранены в одном ICO.");
+            UpdateSaveState();
+            return;
+        }
+        using var cancellation = new CancellationTokenSource();
+        _previewCancellation = cancellation;
+        using var operation = BeginProgress(Localization.Text("Создание иконок…"), true);
+        var image = (Bitmap)_image.Clone();
+        IsRendering = true;
+        UpdateSaveState();
+        try
+        {
+            var frames = await Task.Run(() =>
+            {
+                using (image)
+                {
+                    using var prepared = options.RemoveBackground ? BackgroundRemover.Remove(image, options.BackgroundRemovalMode, options.BackgroundTolerance, options.BackgroundColor, cancellation.Token, operation.Work.Slice(0, 2)) : null;
+                    var preview = PixelPreview.ToBitmapSource(prepared ?? image);
+                    var result = new List<FramePreview>();
+                    int frameIndex = 0;
+                    foreach (int size in options.Sizes)
+                    {
+                        using var frame = IconExporter.CreateFrame(prepared ?? image, size, options.ResizeMode, options.FitMode, cancellation.Token, operation.Work.Range(options.RemoveBackground ? .5 : 0, options.RemoveBackground ? .5 : 1).Slice(frameIndex++, options.Sizes.Count));
+                        result.Add(new FramePreview(size, PixelPreview.ToBitmapSource(frame)));
+                    }
+                    return (Frames: result, Preview: preview);
+                }
+            });
+            if (revision != _revision || _disposed) return;
+            iconFrames.ItemsSource = frames.Frames;
+            iconSourceImage.Source = frames.Preview;
+            iconPreviewHint.Text = options.Sizes.Count == 0 ? Localization.Text("Выберите хотя бы один размер.") : Localization.Text("Выбранные размеры будут сохранены в одном ICO.");
+            operation.Complete();
+            if (IsVisible) StatusChanged?.Invoke(options.Sizes.Count == 0
+                ? Localization.Text("Выберите хотя бы один размер.")
+                : Localization.Text("Предпросмотр иконок готов. Сохраните ICO."));
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("Не удалось построить предпросмотр: {0}", ex.Message));
+        }
+        finally
+        {
+            if (ReferenceEquals(_previewCancellation, cancellation)) _previewCancellation = null;
+            if (revision == _revision) { IsRendering = false; UpdateSaveState(); }
+        }
+    }
+
+    private async Task SaveDialogAsync()
+    {
+        if (_busy || _image is null) return;
+        iconCustomSize.Commit();
+        if (GetOptions().Sizes.Count == 0) return;
+        var dialog = new SaveFileDialog
+        {
+            Title = Localization.Text("Сохранить иконку"),
+            Filter = Localization.Text("Иконка Windows|*.ico"),
+            DefaultExt = ".ico",
+            AddExtension = true,
+            OverwritePrompt = true,
+            FileName = Path.GetFileNameWithoutExtension(iconFileLabel.Text) + ".ico"
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+        try { await SaveAsync(dialog.FileName, true); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("Не удалось сохранить ICO: {0}", ex.Message)); }
+    }
+
+    public async Task SaveAsync(string path, bool overwrite = false)
+    {
+        if (_busy || _disposed || _image is null) throw new InvalidOperationException(Localization.Text("Сначала откройте изображение."));
+        ValidateExportPath?.Invoke(Path.GetFullPath(path));
+        if (_sourcePaths.Contains(Path.GetFullPath(path)))
+            throw new InvalidOperationException(Localization.Text("Нельзя перезаписать исходное изображение."));
+        var options = GetOptions();
+        if (options.Sizes.Count == 0) throw new InvalidOperationException(Localization.Text("Выберите хотя бы один размер."));
+        using var image = (Bitmap)_image.Clone();
+        SetBusy(true);
+        using var operation = BeginProgress(Localization.Text("Сохранение ICO…"));
+        StatusChanged?.Invoke(Localization.Text("Сохранение ICO…"));
+        try
+        {
+            await Task.Run(() => IconExporter.Save(image, path, options, overwrite, progress: operation.Work));
+            operation.Complete();
+            StatusChanged?.Invoke(Localization.Format("Сохранено: {0}", path));
+        }
+        finally { SetBusy(false); }
+    }
+
+    private void SetBusy(bool busy)
+    {
+        _busy = busy;
+        iconControls.IsEnabled = iconOpenButton.IsEnabled = iconBackButton.IsEnabled = !busy;
+        UpdateSaveState();
+        BusyChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void UpdateSaveState() => iconSaveButton.IsEnabled = !_busy && !IsRendering && _image is not null && GetOptions().Sizes.Count > 0;
+
+    private void UpdateLayoutForWidth()
+    {
+        bool compact = ActualWidth < 900;
+        iconContent.Margin = new Thickness();
+        iconSetupGrid.ColumnDefinitions[0].Width = new GridLength(compact ? 1 : 260, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        iconSetupGrid.ColumnDefinitions[1].Width = new GridLength(compact ? 0 : 1, compact ? GridUnitType.Pixel : GridUnitType.Star);
+        iconSetupGrid.RowDefinitions[0].Height = compact ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        iconSetupGrid.RowDefinitions[0].MaxHeight = compact ? 220 : double.PositiveInfinity;
+        iconSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        iconSettingsPanel.MaxHeight = compact ? 220 : double.PositiveInfinity;
+        iconSetupGrid.RowDefinitions[1].Height = new GridLength(compact ? 1 : 0, compact ? GridUnitType.Star : GridUnitType.Pixel);
+        Grid.SetColumn(iconSettingsPanel, 0);
+        Grid.SetRow(iconSettingsPanel, 0);
+        Grid.SetColumn(iconScroll, compact ? 0 : 1);
+        Grid.SetRow(iconScroll, compact ? 1 : 0);
+        iconSettingsPanel.BorderThickness = compact ? new Thickness(0, 0, 0, 1) : new Thickness(0, 0, 1, 0);
+        iconImagePanel.Width = double.NaN;
+        iconImagePanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        iconImagePanel.Margin = new Thickness();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        ++_revision;
+        _previewTimer.Stop();
+        _previewCancellation?.Cancel();
+        _image?.Dispose();
+        _image = null;
+        iconSourceImage.Source = null;
+        iconFrames.ItemsSource = null;
+    }
+}
