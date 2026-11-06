@@ -206,6 +206,16 @@ public partial class MainWindow
             if (_activeSource?.Id == asset.Id) await CreateUnrealTextureAsync();
             return;
         }
+        if (action == "move-unreal" && asset?.Unreal is not null)
+        {
+            MoveUnrealTexture(asset);
+            return;
+        }
+        if (action == "delete-unreal" && asset?.Unreal is not null)
+        {
+            DeleteUnrealTexture(asset);
+            return;
+        }
         if (action == "copy" && asset is not null && _workspaceCatalog.State.ProjectId is { } project)
         {
             if (_workspaceCatalog.IsUnrealProject(project)) return;

@@ -24,7 +24,7 @@ internal sealed class UnrealProjectMailbox(string projectPath)
 
     internal sealed record Texture(string Path, string Revision);
     internal sealed record Catalog(int Version, string[] Folders, Texture[] Textures, Dictionary<string, string> Redirects);
-    internal sealed record Request(int Version, Guid AssetId, string Operation, string Path, string Revision, string? Kind, string? Sha256, Guid? ResultId);
+    internal sealed record Request(int Version, Guid AssetId, string Operation, string Path, string Revision, string? Kind, string? Sha256, Guid? ResultId, string? Destination);
     internal sealed record Response(string Status, string? Revision, string? Sha256, string? Message);
     internal sealed record Job(string Directory, Request Request, Response? Response)
     {
@@ -60,7 +60,7 @@ internal sealed class UnrealProjectMailbox(string projectPath)
         return jobs.ToArray();
     }
 
-    public void Queue(Guid assetId, string operation, string objectPath, string revision, string? kind = null, string? png = null, Guid? resultId = null)
+    public void Queue(Guid assetId, string operation, string objectPath, string revision, string? kind = null, string? png = null, Guid? resultId = null, string? destination = null)
     {
         string folder = Path.Combine(_root, "requests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
@@ -72,7 +72,7 @@ internal sealed class UnrealProjectMailbox(string projectPath)
             hash = UnrealSyncBridge.Hash(payload);
         }
         string manifest = Path.Combine(folder, "request.json");
-        File.WriteAllText(manifest + ".tmp", JsonSerializer.Serialize(new Request(2, assetId, operation, objectPath, revision, kind, hash, resultId), Json));
+        File.WriteAllText(manifest + ".tmp", JsonSerializer.Serialize(new Request(2, assetId, operation, objectPath, revision, kind, hash, resultId, destination), Json));
         File.Move(manifest + ".tmp", manifest);
     }
 

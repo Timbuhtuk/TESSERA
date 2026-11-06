@@ -134,6 +134,11 @@ public sealed partial class ImageLibrary(string directory)
     public string DirectoryPath { get; } = Path.GetFullPath(directory);
     public List<string> LoadWarnings { get; } = [];
     public string SourcePath(SourceEntry source) => Path.Combine(SourceDirectory(source), "source.png");
+    public void RenameSource(SourceEntry source, string name)
+    {
+        source.DisplayName = name;
+        WriteRecord(Path.Combine(SourceDirectory(source), "source.json"), source, overwrite: true);
+    }
     public string ResultPath(SourceEntry source, GenerationEntry generation) => Path.Combine(GenerationDirectory(source, generation), "result.png");
     public string CropPath(SourceEntry source, GenerationEntry generation) => Path.Combine(GenerationDirectory(source, generation), "crop.png");
     private string SourceDirectory(SourceEntry source) => Path.Combine(DirectoryPath, source.Id.ToString("N"));

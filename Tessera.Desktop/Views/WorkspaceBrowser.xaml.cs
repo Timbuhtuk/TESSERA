@@ -58,6 +58,12 @@ public partial class WorkspaceBrowser : UserControl
         var createUnreal = new MenuItem { Header = Localization.Text("Создать текстуру в Unreal…"), Tag = "create-unreal" };
         createUnreal.Click += (_, _) => RunMenuAction("create-unreal");
         context.Items.Insert(1, createUnreal);
+        var moveUnreal = new MenuItem { Header = Localization.Text("Переименовать или переместить в Unreal…"), Tag = "move-unreal" };
+        moveUnreal.Click += (_, _) => RunMenuAction("move-unreal");
+        context.Items.Insert(2, moveUnreal);
+        var deleteUnreal = new MenuItem { Header = Localization.Text("Удалить текстуру из Unreal…"), Tag = "delete-unreal" };
+        deleteUnreal.Click += (_, _) => RunMenuAction("delete-unreal");
+        context.Items.Insert(3, deleteUnreal);
         assetList.PreviewMouseLeftButtonUp += (_, _) =>
         {
             if (_deferredClick is not { } asset) return;
@@ -288,6 +294,8 @@ public partial class WorkspaceBrowser : UserControl
                 "open" => Visibility.Visible,
                 "create-unreal" => selection.Count == 1 && asset?.Kind == EWorkspaceAssetKind.Image &&
                     _catalog!.State.Projects.Any(p => p.IsUnreal) ? Visibility.Visible : Visibility.Collapsed,
+                "move-unreal" or "delete-unreal" => selection.Count == 1 && asset?.Unreal is { Missing: false, CreatePending: false }
+                    ? Visibility.Visible : Visibility.Collapsed,
                 _ => managementVisibility
             };
         openAssetButton.IsEnabled = asset is not null;
@@ -351,12 +359,16 @@ public partial class WorkspaceBrowser : UserControl
     });
     private void RunMenuAction(string action)
     {
-        if (action is not ("open" or "create-unreal") && !CanManageSelection) return;
+        if (action is not ("open" or "create-unreal" or "move-unreal" or "delete-unreal") && !CanManageSelection) return;
         switch (action)
         {
             case "create-unreal":
                 if (Selection is [var asset] && asset.Kind == EWorkspaceAssetKind.Image)
                     ActionRequested?.Invoke(action, asset);
+                break;
+            case "move-unreal": case "delete-unreal":
+                if (Selection is [var linked] && linked.Unreal is { Missing: false, CreatePending: false })
+                    ActionRequested?.Invoke(action, linked);
                 break;
             case "open": OpenClicked(this, new()); break; case "link": AddToProjectClicked(this, new()); break;
             case "move": MoveClicked(this, new()); break; case "copy": CopyClicked(this, new()); break;

@@ -35,6 +35,9 @@ try {
         Invoke-Dotnet run --project Tessera.Aseprite.Tests -c Release --no-build
         Invoke-Dotnet run --project Tessera.RegressionTests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants --unreal-sync
         Invoke-Dotnet run --project Tessera.Cli.Tests -c Release --no-build
+        & $python (Join-Path $projectRoot 'tests/UnrealProjectChecks.py')
+        if ($LASTEXITCODE -ne 0) { throw 'Unreal project mutation checks failed' }
+        Write-Output 'PASS Unreal project mailbox moves, deletion, conflicts and destination protection'
     }
     Invoke-Dotnet publish Tessera.Desktop -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
     Invoke-Dotnet publish Tessera.Cli -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$cliOutput/" --nologo

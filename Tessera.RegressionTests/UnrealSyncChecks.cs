@@ -116,7 +116,9 @@ public static class UnrealSyncChecks
         {
             Catalog(paths);
             new WorkspaceCatalog(libraryRoot).CreateProject("Local");
-            new UnrealSyncBridge(Path.Combine(libraryRoot, "unreal-sync.json")).SelectProject(project);
+            var sync = new UnrealSyncBridge(Path.Combine(libraryRoot, "unreal-sync.json"));
+            sync.SelectProject(project);
+            sync.InstallPlugin();
             Guid assetId;
             Guid createdId;
             Guid createdResultId;
@@ -179,8 +181,9 @@ public static class UnrealSyncChecks
                 list.SelectedItem = asset;
                 Require(((StackPanel)window.Browser.FindName("assetTagsPanel")).Visibility == Visibility.Collapsed &&
                     ((StackPanel)window.Browser.FindName("assetManagementPanel")).Visibility == Visibility.Collapsed &&
-                    list.ContextMenu.Items.OfType<MenuItem>().Where(i => i.Visibility == Visibility.Visible).All(i => i.Tag is "open" or "create-unreal"),
-                    "Unreal selection exposes asset management actions");
+                    list.ContextMenu.Items.OfType<MenuItem>().Where(i => i.Visibility == Visibility.Visible)
+                        .Select(i => i.Tag).OrderBy(tag => tag).SequenceEqual(new object[] { "create-unreal", "delete-unreal", "move-unreal", "open" }),
+                    "Unreal selection shows the wrong asset actions");
                 var local = new WorkspaceAsset { Name = "Local image" };
                 workspace.State.Assets.Add(local);
                 window.Browser.Navigate("all"); list.SelectedItem = asset;
@@ -325,6 +328,81 @@ public static class UnrealSyncChecks
                 var retained = new ImageLibrary(libraryRoot).Load().Single(s => s.Id == assetId);
                 Require(asset.Unreal.NeedsDestination && retained.Generations.Count == 1, "Deleting an Unreal asset erased local history or left the link writable");
                 Require(state.Folders.All(f => f.UnrealPath != "/Game/A"), "Removing the final texture retained an empty parent branch");
+
+                const string destination = "/Game/New/StoneMoved.StoneMoved";
+                var otherAsset = state.Assets.Single(a => a.Unreal?.Path == other);
+                var moveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+                moveTimer.Tick += (_, _) =>
+                {
+                    var dialog = window.OwnedWindows.Cast<Window>().FirstOrDefault(w => w is UnrealTextureDialog);
+                    if (dialog is null) return;
+                    moveTimer.Stop();
+                    var folder = (ComboBox)dialog.GetType().GetProperty("FolderInput", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dialog)!;
+                    var name = (TextBox)dialog.GetType().GetProperty("NameInput", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dialog)!;
+                    var confirm = (Button)dialog.GetType().GetProperty("Confirm", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dialog)!;
+                    folder.Text = "/Game/New";
+                    name.Text = "StoneMoved";
+                    Require(confirm.IsEnabled, "Unreal move dialog rejected an empty destination");
+                    confirm.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                };
+                moveTimer.Start();
+                try { typeof(MainWindow).GetMethod("MoveUnrealTexture", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [otherAsset]); }
+                finally { moveTimer.Stop(); }
+                string moveFolder = Directory.EnumerateDirectories(Path.Combine(bridge, "requests")).Single(p =>
+                {
+                    using var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(p, "request.json")));
+                    return request.RootElement.GetProperty("operation").GetString() == "move";
+                });
+                using (var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(moveFolder, "request.json"))))
+                    Require(request.RootElement.GetProperty("path").GetString() == other &&
+                        request.RootElement.GetProperty("destination").GetString() == destination &&
+                        request.RootElement.GetProperty("revision").GetString() == "rev3",
+                        "Unreal move request lost source, destination or conflict revision");
+                File.WriteAllText(Path.Combine(moveFolder, "response.json"), JsonSerializer.Serialize(new
+                {
+                    status = "moved", revision = "rev4"
+                }));
+                Catalog([destination], revision: "rev4"); Poll(window);
+                Require(otherAsset.Unreal?.Path == destination && otherAsset.Name == "StoneMoved" &&
+                    state.Assets.Count(a => a.Unreal?.Path == destination) == 1,
+                    "Unreal move confirmation duplicated or lost the linked asset");
+                string cachedPng = Path.Combine(root, "moved-local.png");
+                using (var pixels = new Bitmap(8, 8)) pixels.Save(cachedPng, System.Drawing.Imaging.ImageFormat.Png);
+                typeof(MainWindow).GetMethod("LoadUnrealImage", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(window, [otherAsset, cachedPng, "rev4"]);
+                window.OpenWorkspaceAssetAsync(otherAsset).GetAwaiter().GetResult();
+                var movedSource = (SourceEntry)typeof(MainWindow).GetField("_activeSource", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+                using (var pixels = new Bitmap(4, 4))
+                    movedSource.Generations.Add(new ImageLibrary(libraryRoot).SaveGeneration(movedSource, pixels, null, new GenerationEntry { Operation = "Keep after delete" }));
+
+                var deleteTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(30) };
+                deleteTimer.Tick += (_, _) =>
+                {
+                    var dialog = window.OwnedWindows.Cast<Window>().FirstOrDefault(w => w is TesseraDialog);
+                    if (dialog is null) return;
+                    deleteTimer.Stop();
+                    var buttons = (StackPanel)dialog.FindName("dialogButtons");
+                    buttons.Children.OfType<Button>().Single(b => Equals(b.Tag, MessageBoxResult.Yes))
+                        .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                };
+                deleteTimer.Start();
+                try { typeof(MainWindow).GetMethod("DeleteUnrealTexture", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [otherAsset]); }
+                finally { deleteTimer.Stop(); }
+                string deleteFolder = Directory.EnumerateDirectories(Path.Combine(bridge, "requests")).Single(p =>
+                {
+                    using var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(p, "request.json")));
+                    return request.RootElement.GetProperty("operation").GetString() == "delete";
+                });
+                using (var request = JsonDocument.Parse(File.ReadAllText(Path.Combine(deleteFolder, "request.json"))))
+                    Require(request.RootElement.GetProperty("path").GetString() == destination &&
+                        request.RootElement.GetProperty("revision").GetString() == "rev4",
+                        "Unreal delete request lost the conflict revision");
+                File.WriteAllText(Path.Combine(deleteFolder, "response.json"), "{\"status\":\"deleted\"}");
+                Catalog([]); Poll(window);
+                Require(state.Assets.Contains(otherAsset) && otherAsset.Unreal is { Missing: true, NeedsDestination: true } &&
+                    state.Links.All(l => l.AssetId != otherAsset.Id) &&
+                    new ImageLibrary(libraryRoot).Load().Single(s => s.Id == otherAsset.Id).Generations.Count == 1,
+                    "Unreal deletion did not retain local history or remove the project entry");
             }
             finally { window.Close(); Pump(); }
         }

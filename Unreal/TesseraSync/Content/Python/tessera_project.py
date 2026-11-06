@@ -166,7 +166,7 @@ def _process(directory, request):
     path = request["path"]
     package = _package(path)
     operation = request["operation"]
-    if operation not in ("read", "save", "create"):
+    if operation not in ("read", "save", "create", "move", "delete"):
         raise ValueError("Unknown Tessera operation")
     exists = unreal.EditorAssetLibrary.does_asset_exist(package)
     texture = unreal.EditorAssetLibrary.load_asset(package) if exists else None
@@ -185,8 +185,32 @@ def _process(directory, request):
         if not revision:
             return {"status": "missing"}
         if operation == "read" or revision != request.get("revision"):
+            if operation in ("move", "delete"):
+                return {"status": "conflict", "revision": revision}
             digest = _export(texture, directory)
             return {"status": "read" if operation == "read" else "conflict", "revision": revision, "sha256": digest}
+    if operation == "move":
+        destination = request.get("destination")
+        if not isinstance(destination, str) or destination == path:
+            raise ValueError("Invalid destination for Unreal texture")
+        target = _package(destination)
+        if unreal.EditorAssetLibrary.does_asset_exist(target) or _revision(target):
+            return {"status": "occupied"}
+        if not unreal.EditorAssetLibrary.rename_asset(package, target):
+            raise ValueError("Unreal could not move the texture")
+        moved = unreal.EditorAssetLibrary.load_asset(target)
+        if not isinstance(moved, unreal.Texture2D) or moved.get_path_name() != destination:
+            raise ValueError("Unreal did not move the requested Texture2D")
+        if not unreal.EditorAssetLibrary.save_loaded_asset(moved, only_if_is_dirty=False):
+            raise ValueError("Unreal could not save the moved texture")
+        revision = _revision(target)
+        if not revision:
+            raise ValueError("Unreal did not save the moved texture")
+        return {"status": "moved", "revision": revision}
+    if operation == "delete":
+        if not unreal.EditorAssetLibrary.delete_asset(package):
+            raise ValueError("Unreal could not delete the texture")
+        return {"status": "deleted"}
     payload = os.path.join(directory, "local.png")
     if legacy._hash(payload) != request.get("sha256"):
         raise ValueError("Tessera PNG checksum mismatch")
@@ -216,7 +240,7 @@ def process_requests(limit=1):
             result = {"status": "error", "message": str(error)}
             unreal.log_warning("Tessera project: " + str(error))
         if result is not None:
-            if result.get("status") == "saved" and request["operation"] == "create":
+            if result.get("status") in ("saved", "moved", "deleted"):
                 publish_catalog()
             legacy._write_json(response, result)
             completed += 1
