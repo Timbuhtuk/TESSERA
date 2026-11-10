@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Переключение вида библиотеки",
+        "en": "Library view buttons"
+      },
+      "notes": {
+        "ru": "- Библиотека: плитка, мелкая плитка и список переключаются кнопками с иконками. Активный вид выделен рамкой, выбор сохраняется после перезапуска.",
+        "en": "- Library: switch between tiles, small tiles and list using icon buttons. A border highlights the active view, and Tessera remembers your choice after restart."
+      }
+    },
+    {
+      "version": "2.31.1",
+      "title": {
         "ru": "Меню проектов и статус Unreal",
         "en": "Project menu and Unreal status"
       },

@@ -91,6 +91,19 @@
   <Style x:Key="TileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="180"/><Setter Property="Height" Value="230"/><Setter Property="Margin" Value="0,0,12,12"/></Style>
   <Style x:Key="SmallTileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="130"/><Setter Property="Height" Value="170"/><Setter Property="Margin" Value="0,0,10,10"/></Style>
   <Style x:Key="ListAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Height" Value="62"/><Setter Property="Margin" Value="0,0,0,4"/></Style>
+  <Style x:Key="AssetViewModeButton" TargetType="RadioButton">
+   <Setter Property="Width" Value="34"/><Setter Property="Height" Value="32"/><Setter Property="Margin" Value="0,0,3,0"/><Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+    <Border x:Name="Frame" Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="5">
+     <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </Border>
+    <ControlTemplate.Triggers>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.TextSecondary}"/></Trigger>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Pressed}"/><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Focus}"/></Trigger>
+    </ControlTemplate.Triggers>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
   </ResourceDictionary>
  </UserControl.Resources>
  <Grid x:Name="browserGrid">
@@ -169,7 +182,18 @@
    </Grid>
    <Grid Grid.Row="4" Margin="0,8,4,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <TextBlock x:Name="countLabel" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" FontSize="11" Margin="0,0,10,0"/>
-    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBlock x:Name="assetViewLabel" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,7,0"/><ComboBox x:Name="assetViewInput" Width="164" SelectedIndex="0" SelectionChanged="AssetViewChanged"/></StackPanel>
+    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+     <TextBlock x:Name="assetViewLabel" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,7,0"/>
+     <RadioButton x:Name="assetViewTiles" GroupName="AssetViewMode" Style="{StaticResource AssetViewModeButton}" Checked="AssetViewChanged">
+      <UniformGrid Rows="2" Columns="2" Width="20" Height="20"><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/></UniformGrid>
+     </RadioButton>
+     <RadioButton x:Name="assetViewSmallTiles" GroupName="AssetViewMode" Style="{StaticResource AssetViewModeButton}" Checked="AssetViewChanged">
+      <UniformGrid Rows="3" Columns="3" Width="20" Height="20"><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="0.7"/></UniformGrid>
+     </RadioButton>
+     <RadioButton x:Name="assetViewList" GroupName="AssetViewMode" Style="{StaticResource AssetViewModeButton}" Margin="0" Checked="AssetViewChanged">
+      <StackPanel Width="20"><Rectangle Height="4" Fill="{DynamicResource Ts.Text}" Margin="0,0,0,3"/><Rectangle Height="4" Fill="{DynamicResource Ts.Text}" Margin="0,0,0,3"/><Rectangle Height="4" Fill="{DynamicResource Ts.Text}"/></StackPanel>
+     </RadioButton>
+    </StackPanel>
    </Grid>
   </Grid>
   <Border x:Name="detailsBorder" Grid.Column="3" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">

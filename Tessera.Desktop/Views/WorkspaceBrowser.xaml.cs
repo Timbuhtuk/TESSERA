@@ -34,9 +34,16 @@ public partial class WorkspaceBrowser : UserControl
         localProjectMenuItem.Header = Localization.Text("Обычный проект…");
         unrealProjectMenuItem.Header = Localization.Text("Из Unreal…");
         assetViewLabel.Text = Localization.Text("Вид");
-        assetViewInput.ItemsSource = new[] { Localization.Text("Плитка"), Localization.Text("Список"), Localization.Text("Мелкая плитка") };
-        assetViewInput.ToolTip = Localization.Text("Режим отображения ассетов");
-        AutomationProperties.SetName(assetViewInput, Localization.Text("Режим отображения ассетов"));
+        foreach (var (button, label) in new[]
+        {
+            (assetViewTiles, Localization.Text("Плитка")),
+            (assetViewSmallTiles, Localization.Text("Мелкая плитка")),
+            (assetViewList, Localization.Text("Список"))
+        })
+        {
+            button.ToolTip = label;
+            AutomationProperties.SetName(button, label);
+        }
         SizeChanged += (_, _) =>
         {
             bool compact = ActualWidth < 1050;
@@ -84,7 +91,9 @@ public partial class WorkspaceBrowser : UserControl
         searchInput.Text = state.Search; scopeInput.SelectedIndex = state.Scope;
         kindInput.SelectedIndex = state.Kind; filterWidth.Text = state.Width; filterHeight.Text = state.Height; alphaInput.SelectedIndex = state.Transparency;
         state.AssetView = Math.Clamp(state.AssetView, 0, 2);
-        assetViewInput.SelectedIndex = state.AssetView;
+        if (state.AssetView == 0) assetViewTiles.IsChecked = true;
+        else if (state.AssetView == 1) assetViewList.IsChecked = true;
+        else assetViewSmallTiles.IsChecked = true;
         _ready = true; RebuildTree(); Refresh();
     }
 
@@ -248,10 +257,15 @@ public partial class WorkspaceBrowser : UserControl
         _catalog.Save();
     }
     private void FiltersChanged(object sender, RoutedEventArgs e) { if (_ready) Safe(() => Refresh()); }
-    private void AssetViewChanged(object sender, SelectionChangedEventArgs e)
+    private void AssetViewChanged(object sender, RoutedEventArgs e)
     {
-        if (!_ready || _catalog is null || assetViewInput.SelectedIndex < 0) return;
-        _catalog.State.AssetView = assetViewInput.SelectedIndex;
+        if (!_ready || _catalog is null) return;
+        int view;
+        if (ReferenceEquals(sender, assetViewTiles)) view = 0;
+        else if (ReferenceEquals(sender, assetViewList)) view = 1;
+        else if (ReferenceEquals(sender, assetViewSmallTiles)) view = 2;
+        else return;
+        _catalog.State.AssetView = view;
         Safe(() => Refresh());
     }
     private void ResetFilters(object sender, RoutedEventArgs e)

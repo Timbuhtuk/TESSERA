@@ -163,15 +163,17 @@ public static class UnrealSyncChecks
                 }
                 var list = (ListBox)window.Browser.FindName("assetList");
                 Require(list.Items.Count == paths.Length && list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null, "Large Unreal view was not virtualized");
-                var viewInput = (ComboBox)window.Browser.FindName("assetViewInput");
+                var viewButtons = new[] { "assetViewTiles", "assetViewList", "assetViewSmallTiles" }
+                    .Select(name => (RadioButton)window.Browser.FindName(name)).ToArray();
                 var retained = (WorkspaceAsset)list.Items[0];
                 list.SelectedItem = retained;
                 foreach (int mode in new[] { 1, 2, 0 })
                 {
-                    viewInput.SelectedIndex = mode; Pump(); window.UpdateLayout();
+                    viewButtons[mode].IsChecked = true; Pump(); window.UpdateLayout();
                     Require(list.Items.Count == paths.Length && ReferenceEquals(list.SelectedItem, retained) &&
                         list.ItemContainerGenerator.ContainerFromIndex(paths.Length - 1) is null &&
-                        new WorkspaceCatalog(libraryRoot).State.AssetView == mode,
+                        new WorkspaceCatalog(libraryRoot).State.AssetView == mode &&
+                        viewButtons.Count(button => button.IsChecked == true) == 1 && viewButtons[mode].ToolTip is not null,
                         "Changing asset view lost selection, persistence or virtualization");
                     var first = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(0)!;
                     var second = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(1)!;
