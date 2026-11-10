@@ -132,7 +132,21 @@ public static class UnrealSyncChecks
                 var unreal = workspace.State.Projects.Single(p => p.IsUnreal);
                 window.Browser!.Navigate("project", unreal.Id);
                 window.Browser.RebuildTree();
+                Poll(window);
                 Pump(); window.UpdateLayout();
+                var addProject = (Button)window.Browser.FindName("addProjectButton");
+                var projectMenu = addProject.ContextMenu!;
+                Require(projectMenu.Items.OfType<MenuItem>().Select(item => item.Name)
+                    .SequenceEqual(["localProjectMenuItem", "unrealProjectMenuItem"]),
+                    "The project plus does not offer local and Unreal projects");
+                addProject.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+                Require(projectMenu.IsOpen, "The project plus did not open its menu");
+                projectMenu.IsOpen = false;
+                var statusPanel = (Grid)window.Browser.FindName("unrealStatusPanel");
+                var statusDot = (System.Windows.Shapes.Ellipse)window.Browser.FindName("unrealStatusDot");
+                Require(statusPanel.Visibility == Visibility.Visible && statusDot.Fill == System.Windows.Media.Brushes.Transparent &&
+                    statusDot.Stroke is SolidColorBrush { Color.R: > 200, Color.G: > 100, Color.B: < 100 },
+                    "Disconnected Unreal status is not an orange outline");
                 var tree = (TreeView)window.Browser.FindName("projectTree");
                 var rootNode = tree.Items.OfType<TreeViewItem>().Single(n => n.Tag == unreal);
                 Require(((Border)rootNode.Template.FindName("HeaderFrame", rootNode)).ActualHeight <= 21,
@@ -203,6 +217,9 @@ public static class UnrealSyncChecks
                 File.WriteAllText(Path.Combine(bridge, "editor.json"), "{}");
                 Task opening = window.OpenWorkspaceAssetAsync(asset);
                 Poll(window);
+                Require(statusDot.Fill is SolidColorBrush { Color.G: > 150, Color.R: < 100 } &&
+                    ReferenceEquals(statusDot.Fill, statusDot.Stroke),
+                    "Connected Unreal status is not a solid green dot");
                 var deadline = DateTime.UtcNow.AddSeconds(10);
                 while (!opening.IsCompleted && DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(10); }
                 Require(opening.IsCompletedSuccessfully && asset.Unreal!.LoadedRevision == "rev1", "Unreal texture was not opened from the mailbox");

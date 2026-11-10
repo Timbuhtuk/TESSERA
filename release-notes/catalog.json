@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Меню проектов и статус Unreal",
+        "en": "Project menu and Unreal status"
+      },
+      "notes": {
+        "ru": "- Библиотека: кнопка «+» в разделе «Проекты» открывает меню «Обычный проект…» и «Из Unreal…».\n- Интеграция Unreal Engine: рядом со статусом показывается оранжевое кольцо без подключения и зелёный круг при подключении.",
+        "en": "- Library: the + button in Projects opens a menu with “Local project…” and “From Unreal…” options.\n- Unreal Engine integration: an orange ring marks a disconnected project and a solid green dot marks a connection."
+      }
+    },
+    {
+      "version": "2.31.0",
+      "title": {
         "ru": "Текстуры Unreal и дочерние окна",
         "en": "Unreal textures and child windows"
       },
