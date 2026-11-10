@@ -17,8 +17,8 @@ public partial class WorkspaceBrowser : UserControl
     private Point _dragStart;
     private object? _treeDrag;
     private WorkspaceAsset? _deferredClick;
-    private static readonly Brush UnrealOnlineBrush = new SolidColorBrush(Color.FromRgb(53, 190, 105));
-    private static readonly Brush UnrealOfflineBrush = new SolidColorBrush(Color.FromRgb(235, 157, 47));
+    private readonly Brush _unrealOnlineBrush = new SolidColorBrush(Color.FromRgb(53, 190, 105));
+    private readonly Brush _unrealOfflineBrush = new SolidColorBrush(Color.FromRgb(235, 157, 47));
     public const string AssetDragFormat = "Tessera.WorkspaceAssets";
     private const string FolderDragFormat = "Tessera.WorkspaceFolder";
     public event Action<IReadOnlyList<string>>? ImportRequested;
@@ -216,8 +216,8 @@ public partial class WorkspaceBrowser : UserControl
     internal void ShowUnrealStatus(string? status, bool connected)
     {
         unrealStatus.Text = status ?? "";
-        unrealStatusDot.Fill = connected ? UnrealOnlineBrush : Brushes.Transparent;
-        unrealStatusDot.Stroke = connected ? UnrealOnlineBrush : UnrealOfflineBrush;
+        unrealStatusDot.Fill = connected ? _unrealOnlineBrush : Brushes.Transparent;
+        unrealStatusDot.Stroke = connected ? _unrealOnlineBrush : _unrealOfflineBrush;
         unrealStatusPanel.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
