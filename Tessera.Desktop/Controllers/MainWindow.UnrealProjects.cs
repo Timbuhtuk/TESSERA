@@ -74,9 +74,10 @@ public partial class MainWindow
     {
         if (!_workspaceReady || WorkspaceBusy || _workspaceCatalog is null || _unrealResolving.Count > 0 || _unrealCreating) return;
         var projects = _workspaceCatalog.State.Projects.Where(p => p.IsUnreal).ToArray();
-        if (projects.Length == 0) return;
+        if (projects.Length == 0) { _workspaceBrowser!.ShowUnrealStatus(null, false); return; }
         bool changed = false;
         string? status = null;
+        bool connected = false;
         WorkspaceAsset[]? visible = null;
         foreach (var project in projects)
         {
@@ -88,6 +89,7 @@ public partial class MainWindow
                 var jobs = mailbox.Jobs();
                 if (_workspaceCatalog.State.ProjectId == project.Id)
                 {
+                    connected = online;
                     int pending = jobs.Count(j => j.Response is null && j.Request.Operation != "read");
                     status = online ? Localization.Text("Unreal подключён") : Localization.Text("Unreal не подключён");
                     if (pending > 0) status += " · " + Localization.Format("Ожидает Unreal: {0}", pending);
@@ -135,7 +137,7 @@ public partial class MainWindow
             if (_workspaceBrowser.IsVisible) _workspaceBrowser.Refresh();
             RefreshWorkspaceSources();
         }
-        _workspaceBrowser!.ShowUnrealStatus(status);
+        _workspaceBrowser!.ShowUnrealStatus(status, connected);
     }
 
     private void ApplyUnrealResponse(WorkspaceAsset asset, UnrealProjectMailbox.Job job)

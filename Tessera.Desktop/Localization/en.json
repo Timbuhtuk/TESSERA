@@ -1467,6 +1467,8 @@
   "Получено текстур из Unreal: {0}.": "Textures received from Unreal: {0}.",
   "Сначала выберите проект Unreal Engine в меню Файл → Unreal Engine 5.": "Choose an Unreal Engine project from File → Unreal Engine 5 first.",
   "Подключить проект Unreal…": "Connect Unreal project…",
+  "Обычный проект…": "Local project…",
+  "Из Unreal…": "From Unreal…",
   "Проект Unreal Engine": "Unreal Engine project",
   "Связь с Unreal потеряна": "Unreal link lost",
   "Выберите существующий файл .uproject.": "Choose an existing .uproject file.",

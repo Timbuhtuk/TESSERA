@@ -102,9 +102,17 @@
      <Button Content="{local:Translate TextFC14887CED6F}" Style="{StaticResource NavButton}" Click="AllClicked"/>
      <Button Content="{local:Translate Text7F8044F85387}" Style="{StaticResource NavButton}" Click="UnassignedClicked"/>
      <Button Content="{local:Translate TextF4EDEAE56B65}" Style="{StaticResource NavButton}" Click="RecentClicked"/>
-     <DockPanel Margin="0,24,0,8"><Button Content="+" DockPanel.Dock="Right" Click="NewProjectClicked" ToolTip="{local:Translate Text49ED84AC6492}" AutomationProperties.Name="{local:Translate Text49ED84AC6492}"/><TextBlock Text="{local:Translate TextBB9EC32D295C}" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11"/></DockPanel>
-     <Button x:Name="connectUnrealButton" Style="{StaticResource NavButton}" Click="ConnectUnrealClicked"/>
-     <TextBlock x:Name="unrealStatus" Margin="0,5,0,0" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Visibility="Collapsed"/>
+     <DockPanel x:Name="projectHeader" Margin="0,24,0,8">
+      <Button x:Name="addProjectButton" Content="+" DockPanel.Dock="Right" Click="OpenProjectMenuClicked" ToolTip="{local:Translate Text49ED84AC6492}" AutomationProperties.Name="{local:Translate Text49ED84AC6492}">
+       <Button.ContextMenu><ContextMenu MinWidth="180"><MenuItem x:Name="localProjectMenuItem" Click="NewProjectClicked"/><MenuItem x:Name="unrealProjectMenuItem" Click="ConnectUnrealClicked"/></ContextMenu></Button.ContextMenu>
+      </Button>
+      <TextBlock Text="{local:Translate TextBB9EC32D295C}" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" FontSize="11"/>
+     </DockPanel>
+     <Grid x:Name="unrealStatusPanel" Margin="0,5,0,0" Visibility="Collapsed">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Ellipse x:Name="unrealStatusDot" Width="9" Height="9" StrokeThickness="1.5" Margin="0,1,7,0" VerticalAlignment="Top"/>
+      <TextBlock x:Name="unrealStatus" Grid.Column="1" TextWrapping="Wrap" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}"/>
+     </Grid>
     </StackPanel>
     <TreeView x:Name="projectTree" Margin="0,12,0,0" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" SelectedItemChanged="TreeSelected" AllowDrop="True" Drop="TreeDrop" DragOver="TreeDragOver" PreviewMouseLeftButtonDown="TreeMouseDown" PreviewMouseMove="TreeMouseMove" AutomationProperties.Name="{local:Translate TextA71D10D12ADC}">
      <TreeView.Resources>

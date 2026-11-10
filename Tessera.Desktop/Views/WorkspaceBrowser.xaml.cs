@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Data;
@@ -16,6 +17,8 @@ public partial class WorkspaceBrowser : UserControl
     private Point _dragStart;
     private object? _treeDrag;
     private WorkspaceAsset? _deferredClick;
+    private readonly Brush _unrealOnlineBrush = new SolidColorBrush(Color.FromRgb(53, 190, 105));
+    private readonly Brush _unrealOfflineBrush = new SolidColorBrush(Color.FromRgb(235, 157, 47));
     public const string AssetDragFormat = "Tessera.WorkspaceAssets";
     private const string FolderDragFormat = "Tessera.WorkspaceFolder";
     public event Action<IReadOnlyList<string>>? ImportRequested;
@@ -28,7 +31,8 @@ public partial class WorkspaceBrowser : UserControl
     public WorkspaceBrowser()
     {
         InitializeComponent();
-        connectUnrealButton.Content = new TextBlock { Text = Localization.Text("Подключить проект Unreal…"), TextWrapping = TextWrapping.Wrap };
+        localProjectMenuItem.Header = Localization.Text("Обычный проект…");
+        unrealProjectMenuItem.Header = Localization.Text("Из Unreal…");
         assetViewLabel.Text = Localization.Text("Вид");
         assetViewInput.ItemsSource = new[] { Localization.Text("Плитка"), Localization.Text("Список"), Localization.Text("Мелкая плитка") };
         assetViewInput.ToolTip = Localization.Text("Режим отображения ассетов");
@@ -201,10 +205,20 @@ public partial class WorkspaceBrowser : UserControl
 
     private void ConnectUnrealClicked(object sender, RoutedEventArgs e) => ConnectUnrealRequested?.Invoke();
 
-    internal void ShowUnrealStatus(string? status)
+    private void OpenProjectMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var menu = addProjectButton.ContextMenu!;
+        menu.PlacementTarget = projectHeader;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
+    internal void ShowUnrealStatus(string? status, bool connected)
     {
         unrealStatus.Text = status ?? "";
-        unrealStatus.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
+        unrealStatusDot.Fill = connected ? _unrealOnlineBrush : Brushes.Transparent;
+        unrealStatusDot.Stroke = connected ? _unrealOnlineBrush : _unrealOfflineBrush;
+        unrealStatusPanel.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     internal IEnumerable<WorkspaceAsset> VisibleUnrealAssets()
