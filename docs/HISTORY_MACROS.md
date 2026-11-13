@@ -32,6 +32,7 @@
 ```powershell
 tessera macro list --library C:\TesseraLibrary --json
 tessera macro apply input.png --macro C:\TesseraLibrary\macros\ID.json -o output.png --json
+tessera macro apply-video input.mp4 --macro C:\TesseraLibrary\macros\ID.json -o output.mp4 --json
 dotnet run --project Tessera.RegressionTests -c Release -- --history-macros
 dotnet run --project Tessera.Cli.Tests -c Release
 ```

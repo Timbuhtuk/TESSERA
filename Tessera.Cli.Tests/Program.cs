@@ -561,6 +561,20 @@ try
         File.WriteAllText(invalidMacro, """{"version":2,"id":"00000000-0000-0000-0000-000000000001","name":"Old","steps":[{"operationId":"filter.monochrome"}]}""");
         Require(Run(["macro", "apply", input, "--macro", invalidMacro,
             "-o", Path.Combine(directory, "invalid-macro-output.png")]).Code == 1, "Unsupported macro version was accepted");
+
+        string videoOutput = Path.Combine(directory, "macro-video.mp4");
+        Require(Run(["macro", "apply-video", "--help"]).Output.Contains("ffprobe"), "Video macro help is missing");
+        Require(Run(["macro", "apply-video", input, "--macro", macroPath]).Code == 2,
+            "Video macro accepted a missing output");
+        Require(Run(["macro", "apply-video", input, "--macro", macroPath, "-o",
+            Path.Combine(directory, "macro-video.png")]).Code == 2, "Video macro accepted an image output");
+        var missingProbe = Run(["macro", "apply-video", input, "--macro", macroPath, "-o", videoOutput,
+            "--ffprobe", Path.Combine(directory, "absent-ffprobe.exe")]);
+        Require(missingProbe.Code == 1 && !File.Exists(videoOutput), "Missing ffprobe left a video output");
+        File.WriteAllBytes(videoOutput, [1, 2, 3]);
+        Require(Run(["macro", "apply-video", input, "--macro", macroPath, "-o", videoOutput]).Code == 1 &&
+            File.ReadAllBytes(videoOutput).SequenceEqual(new byte[] { 1, 2, 3 }),
+            "Video macro replaced an existing output without --overwrite");
     });
 
     Check("RGBA channel macros preserve PNG channels and support value/percent add/subtract", () =>

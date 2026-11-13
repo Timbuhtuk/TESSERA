@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Microsoft.Win32;
 using Tessera.Core.Alignment;
 using Bitmap = System.Drawing.Bitmap;
 
@@ -14,7 +16,7 @@ public partial class MainWindow
     private readonly ListBox _macroList = new() { DisplayMemberPath = "Name", MinHeight = 84, MaxHeight = 220 };
     private readonly ListBox _macroSteps = new() { MinHeight = 80, MaxHeight = 260 };
     private readonly ObservableCollection<MacroDefinition> _macros = [];
-    private readonly Button _macroApply = new(), _macroCancel = new();
+    private readonly Button _macroApply = new(), _macroApplyVideo = new(), _macroCancel = new();
     private MacroStore _macroStore = null!;
     private CancellationTokenSource? _macroCancellation;
 
@@ -31,15 +33,18 @@ public partial class MainWindow
         content.Children.Add(new TextBlock { Text = Localization.Text("Последовательность шагов"), Margin = new Thickness(0, 14, 0, 6) });
         content.Children.Add(_macroSteps);
         _macroApply.Content = Localization.Text("Применить"); _macroApply.Style = (Style)FindResource("PrimaryButton"); _macroApply.Margin = new Thickness(0, 10, 0, 0);
+        _macroApplyVideo.Content = Localization.Text("Применить к видео…"); _macroApplyVideo.Margin = new Thickness(0, 6, 0, 0);
         _macroCancel.Content = Localization.Text("Отменить"); _macroCancel.Margin = new Thickness(0, 6, 0, 0); _macroCancel.Visibility = Visibility.Collapsed;
         _macroApply.Click += async (_, _) => await ApplySelectedMacroAsync();
+        _macroApplyVideo.Click += async (_, _) => await ApplySelectedMacroToVideoAsync();
         _macroCancel.Click += (_, _) => _macroCancellation?.Cancel();
-        content.Children.Add(_macroApply); content.Children.Add(_macroCancel);
+        content.Children.Add(_macroApply); content.Children.Add(_macroApplyVideo); content.Children.Add(_macroCancel);
         _macrosGroup.Content = content; settingsPanel.Children.Add(_macrosGroup);
         _macroList.SelectionChanged += (_, _) =>
         {
             _macroSteps.ItemsSource = (_macroList.SelectedItem as MacroDefinition)?.Steps.Select((s, q) => $"{q + 1}. {StepName(s.OperationId)}").ToArray();
             _macroApply.IsEnabled = _macroList.SelectedItem is MacroDefinition && !_processing;
+            _macroApplyVideo.IsEnabled = _macroList.SelectedItem is MacroDefinition && !_processing;
         };
         _macroList.PreviewMouseRightButtonDown += (_, e) =>
         {
@@ -92,6 +97,7 @@ public partial class MainWindow
         _macros.Clear(); foreach (var macro in _macroStore.List()) _macros.Add(macro);
         _macroList.SelectedItem = _macros.FirstOrDefault(m => m.Id == selected) ?? _macros.FirstOrDefault();
         _macroApply.IsEnabled = _macroList.SelectedItem is MacroDefinition && !_processing;
+        _macroApplyVideo.IsEnabled = _macroList.SelectedItem is MacroDefinition && !_processing;
         if (_macroStore.LoadWarnings.Count > 0)
         { statusLabel.Text = Localization.Text("Не удалось прочитать макросы: ") + string.Join("; ", _macroStore.LoadWarnings); }
     }
@@ -146,7 +152,7 @@ public partial class MainWindow
         using var input = (Bitmap)basis.Clone();
         using var cancellation = new CancellationTokenSource(); _macroCancellation = cancellation;
         SetProcessingState(true);
-        _macroList.IsEnabled = _macroApply.IsEnabled = false; _macroCancel.Visibility = Visibility.Visible;
+        _macroList.IsEnabled = _macroApply.IsEnabled = _macroApplyVideo.IsEnabled = false; _macroCancel.Visibility = Visibility.Visible;
         int savedSteps = 0;
         bool historyCommitFailed = false;
         try
@@ -200,7 +206,53 @@ public partial class MainWindow
         finally
         {
             _macroCancellation = null; SetProcessingState(false);
-            _macroList.IsEnabled = true; _macroApply.IsEnabled = _macroList.SelectedItem is MacroDefinition;
+            _macroList.IsEnabled = true; _macroApply.IsEnabled = _macroApplyVideo.IsEnabled = _macroList.SelectedItem is MacroDefinition;
+            _macroCancel.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private async Task ApplySelectedMacroToVideoAsync()
+    {
+        if (_processing || _macroList.SelectedItem is not MacroDefinition selected) return;
+        var inputDialog = new OpenFileDialog
+        {
+            Title = Localization.Text("Выберите видео"),
+            Filter = Localization.Text("Видеофайлы|*.mp4;*.mkv;*.mov;*.avi;*.webm|Все файлы|*.*")
+        };
+        if (inputDialog.ShowDialog(this) != true) return;
+        var outputDialog = new SaveFileDialog
+        {
+            Title = Localization.Text("Сохранить обработанное видео"),
+            Filter = Localization.Text("MP4 видео|*.mp4|Matroska видео|*.mkv"),
+            DefaultExt = ".mp4", AddExtension = true, OverwritePrompt = true,
+            FileName = Path.GetFileNameWithoutExtension(inputDialog.FileName) + "_tessera.mp4"
+        };
+        if (outputDialog.ShowDialog(this) != true) return;
+        MacroDefinition macro = WorkflowJson.Snapshot(selected);
+        var recipe = new ProcessingRecipe { Version = macro.Version, Steps = macro.Steps };
+        using var cancellation = new CancellationTokenSource(); _macroCancellation = cancellation;
+        SetProcessingState(true);
+        _macroList.IsEnabled = _macroApply.IsEnabled = _macroApplyVideo.IsEnabled = false;
+        _macroCancel.Visibility = Visibility.Visible;
+        var progress = new Progress<VideoMacroProgress>(p =>
+        {
+            if (ReferenceEquals(_macroCancellation, cancellation))
+                statusLabel.Text = Localization.Format("Обработано кадров: {0}", p.Frame);
+        });
+        try
+        {
+            VideoMacroResult result = await Task.Run(() => new VideoMacroProcessor().Apply(inputDialog.FileName,
+                outputDialog.FileName, recipe, overwrite: true, cancellationToken: cancellation.Token, progress: progress));
+            CompleteProcessingProgress();
+            statusLabel.Text = Localization.Format("Видео сохранено: {0} кадров — {1}", result.Frames, outputDialog.FileName);
+        }
+        catch (OperationCanceledException) { statusLabel.Text = Localization.Text("Обработка видео отменена."); }
+        catch (Exception ex) { ShowMacroError(ex.Message); }
+        finally
+        {
+            _macroCancellation = null; SetProcessingState(false);
+            _macroList.IsEnabled = true;
+            _macroApply.IsEnabled = _macroApplyVideo.IsEnabled = _macroList.SelectedItem is MacroDefinition;
             _macroCancel.Visibility = Visibility.Collapsed;
         }
     }

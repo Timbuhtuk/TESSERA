@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Макросы для видео",
+        "en": "Video macros"
+      },
+      "notes": {
+        "ru": "- Макросы: «Применить к видео…» обрабатывает каждый кадр выбранным макросом и сохраняет видео со звуком в MP4 или MKV. Видно число обработанных кадров, обработку можно отменить.\n- CLI: команда `macro apply-video` применяет сохранённый макрос к видео. Для обработки видео в Tessera и CLI требуются FFmpeg и ffprobe.",
+        "en": "- Macros: “Apply to video…” applies the selected macro to each frame and saves an MP4 or MKV with audio. You can see how many frames have been processed and cancel the operation.\n- CLI: use `macro apply-video` to run a saved macro on a video. Video processing in Tessera and the CLI requires FFmpeg and ffprobe."
+      }
+    },
+    {
+      "version": "2.31.2",
+      "title": {
         "ru": "Переключение вида библиотеки",
         "en": "Library view buttons"
       },

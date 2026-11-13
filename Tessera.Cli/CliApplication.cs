@@ -44,6 +44,7 @@ internal static class CliApplication
                        tessera replace-color <изображение> --from #000000 --to #FFFFFF
                        tessera macro list --library <папка> --json
                        tessera macro apply <изображение> --macro <macro.json> -o <результат.png>
+                       tessera macro apply-video <видео.mp4> --macro <macro.json> -o <результат.mp4>
                        tessera aseprite <анимация.aseprite> --output-dir <папка>
         Отдельное выравнивание сетки без даунскейла: tessera align --help.
         Сжатие выровненной сетки: tessera reduce-grid --help.

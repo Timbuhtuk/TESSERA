@@ -161,13 +161,16 @@ tessera tile-smooth tile-a.png -o tile-a-smooth.png --passes 2 --edges-only --ba
 
 ## Macros
 
-`macro list --library PATH` lists saved macros. `macro apply INPUT --macro FILE -o OUTPUT` runs a saved macro through the same workflow executor as the desktop editor. A recipe JSON with `version: 1` and a nonempty `steps` array can be saved into the library using `macro save --library PATH --recipe FILE --name NAME`. `macro rename` and `macro delete` take `--library` and `--id GUID`. `--json` works with all five operations; `macro apply` also accepts `--overwrite`. `macro save` accepts an optional `--id` for a stable identifier.
+`macro list --library PATH` lists saved macros. `macro apply INPUT --macro FILE -o OUTPUT` runs a saved macro through the same workflow executor as the desktop editor. `macro apply-video INPUT --macro FILE -o OUTPUT.mp4` applies the same recipe to every video frame. A recipe JSON with `version: 1` and a nonempty `steps` array can be saved into the library using `macro save --library PATH --recipe FILE --name NAME`. `macro rename` and `macro delete` take `--library` and `--id GUID`. `--json` works with all six operations; both apply commands accept `--overwrite`. `macro save` accepts an optional `--id` for a stable identifier.
 
 ```powershell
 tessera macro list --library WorkspaceData/Library --json
 tessera macro save --library WorkspaceData/Library --recipe recipe.json --name "My steps"
 tessera macro apply input.png --macro WorkspaceData/Library/macros/MACRO_ID.json -o result.png
+tessera macro apply-video input.mp4 --macro WorkspaceData/Library/macros/MACRO_ID.json -o result.mp4
 ```
+
+Video processing requires FFmpeg 5.1 or later with H.264 (libx264), AAC and FFV1 support. Put `ffmpeg` and `ffprobe` on PATH, or pass `--ffmpeg PATH` and `--ffprobe PATH` in the CLI. MP4 uses H.264/AAC and pads odd output dimensions to even sizes; MKV uses FFV1 video and copies audio. Each frame is processed independently in memory. The output uses the source's average frame rate, so variable frame timing is normalized. All frames must produce the same dimensions. Only a completed video replaces an existing output; failures and cancellation remove the temporary file. The desktop Macros panel offers **Apply to video…** with frame progress and cancellation.
 
 ## Boards
 
