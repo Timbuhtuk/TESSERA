@@ -11,6 +11,7 @@ internal static class MacroCommand
         Использование:
           tessera macro list --library PATH [--json]
           tessera macro apply INPUT --macro FILE -o OUTPUT [--overwrite] [--json]
+          tessera macro apply-video INPUT --macro FILE -o OUTPUT.mp4 [--overwrite] [--json]
           tessera macro save --library PATH --recipe FILE --name NAME [--id GUID] [--json]
           tessera macro rename --library PATH --id GUID --name NAME [--json]
           tessera macro delete --library PATH --id GUID [--json]
@@ -18,6 +19,7 @@ internal static class MacroCommand
         Команды:
           list       Прочитать корректные *.json из <library>/macros.
           apply      Выполнить все шаги в памяти и сохранить только итоговое изображение.
+          apply-video Обработать макросом каждый кадр видео; требуется FFmpeg и ffprobe.
           save       Сохранить рецепт обработки как макрос библиотеки.
           rename     Переименовать макрос библиотеки.
           delete     Удалить макрос библиотеки.
@@ -44,6 +46,19 @@ internal static class MacroCommand
           -h, --help         Эта справка.
         """;
 
+    private const string ApplyVideoHelp = """
+        Использование: tessera macro apply-video INPUT --macro FILE -o OUTPUT.mp4 [--overwrite] [--json]
+
+          -i, --input PATH   Исходное видео.
+          --macro FILE       JSON-файл макроса.
+          -o, --output PATH  Результат MP4 или MKV.
+          --ffmpeg PATH      Путь к ffmpeg (по умолчанию из PATH).
+          --ffprobe PATH     Путь к ffprobe (по умолчанию из PATH).
+          --overwrite        Разрешить замену существующего результата.
+          --json             JSON-отчёт.
+          -h, --help         Эта справка.
+        """;
+
     public static int Run(string[] args, TextWriter output, TextWriter error)
     {
         if (args.Length == 0 || args is ["--help"] or ["-h"])
@@ -55,6 +70,7 @@ internal static class MacroCommand
         {
             "list" => List(args[1..], output, error),
             "apply" => Apply(args[1..], output, error),
+            "apply-video" => ApplyVideo(args[1..], output, error),
             "save" => Save(args[1..], output, error),
             "rename" => Rename(args[1..], output, error),
             "delete" => Delete(args[1..], output, error),
@@ -145,6 +161,41 @@ internal static class MacroCommand
                     outputSize = new { width = result.Width, height = result.Height }
                 }, WorkflowJson.Options));
             else output.WriteLine($"Макрос применён: {macro.Name}; сохранено: {target} ({result.Width}x{result.Height})");
+            return 0;
+        }
+        catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }
+        catch (Exception ex) { error.WriteLine(BaseMessage(ex)); return 1; }
+    }
+
+    private static int ApplyVideo(string[] args, TextWriter output, TextWriter error)
+    {
+        if (args.Length == 0 || args is ["--help"] or ["-h"])
+        {
+            output.WriteLine(ApplyVideoHelp);
+            return 0;
+        }
+        try
+        {
+            var parsed = Parse(args, ["--input", "--macro", "--output", "--ffmpeg", "--ffprobe"], ["--overwrite", "--json"]);
+            string input = Path.GetFullPath(Required(parsed, "--input"));
+            string macroPath = Path.GetFullPath(Required(parsed, "--macro"));
+            string target = Path.GetFullPath(Required(parsed, "--output"));
+            if (string.Equals(input, target, StringComparison.OrdinalIgnoreCase) ||
+                Path.GetExtension(target).ToLowerInvariant() is not (".mp4" or ".mkv"))
+                throw new CliUsageException("Укажите отдельный выходной файл MP4 или MKV.");
+            if (!File.Exists(macroPath)) throw new IOException($"Файл макроса не найден: {macroPath}");
+            MacroDefinition macro = MacroStore.Read(macroPath);
+            var recipe = new ProcessingRecipe { Version = macro.Version, Steps = macro.Steps };
+            var processor = new VideoMacroProcessor();
+            VideoMacroResult result = processor.Apply(input, target, recipe, parsed.ContainsKey("--overwrite"),
+                parsed.GetValueOrDefault("--ffmpeg", "ffmpeg"), parsed.GetValueOrDefault("--ffprobe", "ffprobe"));
+            if (parsed.ContainsKey("--json")) output.WriteLine(JsonSerializer.Serialize(new
+            {
+                process = "macro-apply-video", input, output = target,
+                macro = new { macro.Id, macro.Name, macro.Version, stepCount = macro.Steps.Count },
+                frames = result.Frames, width = result.Width, height = result.Height, frameRate = result.FrameRate
+            }, WorkflowJson.Options));
+            else output.WriteLine($"Макрос применён к {result.Frames} кадрам; сохранено: {target}");
             return 0;
         }
         catch (CliUsageException ex) { error.WriteLine(ex.Message); return 2; }

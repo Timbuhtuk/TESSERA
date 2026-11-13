@@ -1522,5 +1522,13 @@
   "Для этой текстуры уже есть операция в очереди Unreal.": "An operation for this texture is already queued in Unreal.",
   "Обновите Tessera Sync через меню Unreal Engine и перезапустите Unreal Editor.": "Update Tessera Sync through the Unreal Engine menu and restart Unreal Editor.",
   "Текстура изменилась в Unreal. Выполнить операцию над текущей версией?": "The texture changed in Unreal. Apply the operation to its current version?",
-  "Unreal удалит пакет даже при наличии ссылок. История изображения в Tessera сохранится.": "Unreal will delete the package even if references exist. The image history in Tessera will be preserved."
+  "Unreal удалит пакет даже при наличии ссылок. История изображения в Tessera сохранится.": "Unreal will delete the package even if references exist. The image history in Tessera will be preserved.",
+  "Применить к видео…": "Apply to video…",
+  "Выберите видео": "Select a video",
+  "Видеофайлы|*.mp4;*.mkv;*.mov;*.avi;*.webm|Все файлы|*.*": "Video files|*.mp4;*.mkv;*.mov;*.avi;*.webm|All files|*.*",
+  "Сохранить обработанное видео": "Save processed video",
+  "MP4 видео|*.mp4|Matroska видео|*.mkv": "MP4 video|*.mp4|Matroska video|*.mkv",
+  "Обработано кадров: {0}": "Frames processed: {0}",
+  "Видео сохранено: {0} кадров — {1}": "Video saved: {0} frames — {1}",
+  "Обработка видео отменена.": "Video processing canceled."
 }
