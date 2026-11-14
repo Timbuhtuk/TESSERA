@@ -1530,5 +1530,15 @@
   "MP4 видео|*.mp4|Matroska видео|*.mkv": "MP4 video|*.mp4|Matroska video|*.mkv",
   "Обработано кадров: {0}": "Frames processed: {0}",
   "Видео сохранено: {0} кадров — {1}": "Video saved: {0} frames — {1}",
-  "Обработка видео отменена.": "Video processing canceled."
+  "Обработка видео отменена.": "Video processing canceled.",
+  "Добавить палитру из картинки…": "Add palette from image…",
+  "Добавить палитру из картинки": "Add palette from image",
+  "Цвета выбранной палитры": "Selected palette colors",
+  "Добавить палитру из изображения": "Add palette from image",
+  "Не удалось загрузить палитры: {0}": "Could not load palettes: {0}",
+  "На изображении нет видимых цветов.": "The image has no visible colors.",
+  "Палитра «{0}»: {1} цветов.": "Palette “{0}”: {1} colors.",
+  "Не удалось добавить палитру": "Could not add palette",
+  "{0} цветов": "{0} colors",
+  "Палитра из истории": "Palette from history"
 }

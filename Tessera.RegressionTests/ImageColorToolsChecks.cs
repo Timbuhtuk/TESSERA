@@ -9,6 +9,7 @@ internal static class ImageColorToolsChecks
     {
         check("Palette accepts 1024 colors and reports the 1025th", PaletteLimit);
         check("Unrestricted color count includes colors beyond palette limit", UnrestrictedCount);
+        check("Imported palette keeps every visible RGB and applies exact colors", ImportedPalette);
         check("Color replacement preserves alpha and source image", Replacement);
     }
 
@@ -57,6 +58,32 @@ internal static class ImageColorToolsChecks
             throw new Exception("Replacement changed opacity or an unrelated pixel.");
         if (source.GetPixel(0, 0).ToArgb() != Color.FromArgb(255, 10, 20, 30).ToArgb())
             throw new Exception("Replacement modified the source bitmap.");
+    }
+
+    private static void ImportedPalette()
+    {
+        using var image = CreateColors(1028);
+        image.SetPixel(0, 0, Color.Transparent);
+        image.SetPixel(1, 0, Color.FromArgb(60, 22, 44, 66));
+        image.SetPixel(2, 0, Color.FromArgb(255, 22, 44, 66));
+        var colors = ImageColorTools.GetAllVisibleColors(image);
+        if (colors.Count != 1026 || colors[0].ToArgb() != Color.FromArgb(22, 44, 66).ToArgb())
+            throw new Exception("Import omitted colors, counted transparency or changed order.");
+
+        using var source = new Bitmap(2, 1, PixelFormat.Format32bppArgb);
+        source.SetPixel(0, 0, Color.FromArgb(255, 20, 40, 60));
+        source.SetPixel(1, 0, Color.FromArgb(85, 230, 230, 230));
+        var options = new DownscaleOptions
+        {
+            IndependentColorMode = EIndependentColorMode.Palette,
+            Palette = EPaletteKind.Custom,
+            CustomPalette = [0x162C42, 0xFFFFFF],
+            EnableDithering = false
+        };
+        using var result = IndependentImageProcessor.ApplyColors(source, options);
+        if (result.GetPixel(0, 0).ToArgb() != Color.FromArgb(255, 22, 44, 66).ToArgb() ||
+            result.GetPixel(1, 0).ToArgb() != Color.FromArgb(85, 255, 255, 255).ToArgb())
+            throw new Exception("Custom palette was not used or alpha changed.");
     }
 
     private static Bitmap CreateColors(int count)

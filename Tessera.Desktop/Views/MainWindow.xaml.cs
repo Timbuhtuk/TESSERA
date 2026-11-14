@@ -44,6 +44,7 @@ public partial class MainWindow : Window
         _historyUndo = new HistoryUndoStore(libraryDirectory, _appearanceSettings.HistoryUndoDepth);
         _historyUndo.RecoverPending();
         InitializeComponent();
+        InitializeCustomPalettes(libraryDirectory);
         InitializeOperationProgress();
         PreviewKeyDown += HistoryUndoKeyDown;
         insertHistoryInput.Content = Localization.Text("Вставить и пересчитать");
@@ -182,7 +183,7 @@ public partial class MainWindow : Window
         SetVisible(stepControls, paletteInput.SelectedIndex == 4);
         SetVisible(cropControls, spriteInput.IsChecked != true);
         SetVisible(alphaControls, spriteInput.IsChecked == true);
-        bool ditheringAllowed = paletteInput.SelectedIndex is >= 0 and <= 3;
+        bool ditheringAllowed = paletteInput.SelectedIndex is >= 0 and <= 3 or >= 5;
         ditheringInput.IsEnabled = paletteSelected && ditheringAllowed;
         if (!ditheringAllowed) ditheringInput.IsChecked = false;
         SetVisible(manualControls, manualInput.IsChecked == true);
@@ -398,7 +399,8 @@ public partial class MainWindow : Window
         CropHorizontal = (ECropHorizontalAlignment)cropHorizontalInput.SelectedIndex,
         CropVertical = (ECropVerticalAlignment)cropVerticalInput.SelectedIndex,
         Palette = _capturingReadyMode && detailsMode.IsChecked == true
-            ? EPaletteKind.None : (EPaletteKind)(paletteInput.SelectedIndex + 1),
+            ? EPaletteKind.None : paletteInput.SelectedIndex >= 5 ? EPaletteKind.Custom : (EPaletteKind)(paletteInput.SelectedIndex + 1),
+        CustomPalette = SelectedCustomPalette(),
         PaletteStep = (int)paletteStepInput.Value,
         Quantization = (EQuantizationMethod)quantizationInput.SelectedIndex,
         QuantizationColors = (int)quantizationColorsInput.Value,
@@ -414,7 +416,8 @@ public partial class MainWindow : Window
         },
         UseColorWeights = colorWeightsInput.IsChecked == true,
         ThreadCount = (int)threadsInput.Value,
-        EnableDithering = (!_capturingReadyMode || spriteInput.IsChecked != true) && paletteInput.SelectedIndex is >= 0 and <= 3 && ditheringInput.IsChecked == true,
+        EnableDithering = (!_capturingReadyMode || spriteInput.IsChecked != true) &&
+            (paletteInput.SelectedIndex is >= 0 and <= 3 or >= 5) && ditheringInput.IsChecked == true,
         BlockMode = manualInput.IsChecked == true ? EBlockSelectionMode.Manual : EBlockSelectionMode.Automatic,
         ManualCriteria = manualInput.IsChecked == true ? new ManualBlockCriteria
         {
