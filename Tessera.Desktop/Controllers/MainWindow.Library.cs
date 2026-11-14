@@ -421,6 +421,7 @@ public partial class MainWindow
             cropHorizontalInput.SelectedIndex = Math.Clamp((int)options.CropHorizontal, 0, 2);
             cropVerticalInput.SelectedIndex = Math.Clamp((int)options.CropVertical, 0, 2);
             paletteInput.SelectedIndex = Math.Clamp((int)options.Palette - 1, 0, 4);
+            RestoreCustomPalette(options);
             paletteStepInput.Value = options.PaletteStep;
             quantizationInput.SelectedIndex = Math.Clamp((int)options.Quantization, 0, 2);
             quantizationColorsInput.Value = options.QuantizationColors;
@@ -474,7 +475,7 @@ public partial class MainWindow
             gridCellInput.Value = settings.CellSize; detectGridInput.IsChecked = settings.DetectGrid;
             UpdateDependentControls();
             UpdateConnectedControls();
-            ditheringInput.IsChecked = options.Palette is >= EPaletteKind.DB16 and <= EPaletteKind.GameBoy && options.EnableDithering;
+            ditheringInput.IsChecked = options.Palette is >= EPaletteKind.DB16 and <= EPaletteKind.GameBoy or EPaletteKind.Custom && options.EnableDithering;
             profileState.Text = Localization.Text("Параметры выбранного результата");
         }
         finally { _restoringHistory = false; }

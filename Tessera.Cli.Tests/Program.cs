@@ -577,6 +577,42 @@ try
             "Video macro replaced an existing output without --overwrite");
     });
 
+    Check("CLI replays a custom palette macro with exact colors and alpha", () =>
+    {
+        string sourcePath = Path.Combine(directory, "custom-palette-source.png");
+        string macroPath = Path.Combine(directory, "custom-palette.json");
+        string outputPath = Path.Combine(directory, "custom-palette-output.png");
+        using var source = new Bitmap(2, 1, PixelFormat.Format32bppArgb);
+        source.SetPixel(0, 0, Color.FromArgb(255, 20, 40, 60));
+        source.SetPixel(1, 0, Color.FromArgb(85, 230, 230, 230));
+        source.Save(sourcePath, ImageFormat.Png);
+        foreach (bool dithering in new[] { false, true })
+        {
+            var macro = new MacroDefinition
+            {
+                Name = "Custom palette",
+                Steps = [new ProcessingStep
+                {
+                    OperationId = ProcessingOperations.Colors,
+                    Downscale = new DownscaleOptions
+                    {
+                        Palette = EPaletteKind.Custom,
+                        CustomPalette = [0x162C42, 0xFFFFFF],
+                        IndependentColorMode = EIndependentColorMode.Palette,
+                        EnableDithering = dithering
+                    }
+                }]
+            };
+            File.WriteAllText(macroPath, JsonSerializer.Serialize(macro, WorkflowJson.Options));
+            var result = Run(["macro", "apply", sourcePath, "--macro", macroPath, "-o", outputPath, "--overwrite"]);
+            Require(result.Code == 0, result.Error);
+            using var output = new Bitmap(outputPath);
+            Require(output.GetPixel(0, 0).ToArgb() == Color.FromArgb(255, 22, 44, 66).ToArgb() &&
+                output.GetPixel(1, 0).ToArgb() == Color.FromArgb(85, 255, 255, 255).ToArgb(),
+                "Custom palette replay changed alpha or produced unexpected RGB");
+        }
+    });
+
     Check("RGBA channel macros preserve PNG channels and support value/percent add/subtract", () =>
     {
         string sourcePath = Path.Combine(directory, "channels-source.png");
@@ -1301,7 +1337,7 @@ try
     });
 
     int variant = 0;
-    foreach (var palette in Enum.GetValues<EPaletteKind>())
+    foreach (var palette in new[] { EPaletteKind.None, EPaletteKind.DB16, EPaletteKind.DB32, EPaletteKind.NES, EPaletteKind.GameBoy, EPaletteKind.Step })
     foreach (var method in Enum.GetValues<EQuantizationMethod>())
     foreach (var mode in Enum.GetValues<EBlockSelectionMode>())
     {

@@ -59,7 +59,7 @@ public sealed class PixelArtDownscaler
             if (options.EnableDithering && options.Palette is not EPaletteKind.None and not EPaletteKind.Step)
             {
                 var ditherStart = DateTime.UtcNow;
-                finalBitmap = ApplyPaletteDithering(downscaled, options.Palette, tracking.Slice(3, 5));
+                finalBitmap = ApplyPaletteDithering(downscaled, options, tracking.Slice(3, 5));
                 timings["dither"] = (DateTime.UtcNow - ditherStart).TotalSeconds;
             }
             else
@@ -181,7 +181,8 @@ public sealed class PixelArtDownscaler
         if (options.Palette == EPaletteKind.Step)
             return ApplyStepRounding(source, options, tracking);
 
-        var palette = Palettes.GetPalette(options.Palette);
+        var palette = Palettes.GetPalette(options);
+        var paletteIndex = options.Palette == EPaletteKind.Custom && palette.Count > 0 ? new LabPaletteIndex(palette) : null;
         var result = BitmapFactory.CreateLike(source, source.Width, source.Height);
 
         using var readBuffer = BitmapBuffer.FromBitmap(source);
@@ -194,7 +195,7 @@ public sealed class PixelArtDownscaler
                 for (int x = 0; x < readBuffer.Width; x++)
                 {
                     int packed = readBuffer.GetPackedColor(x, y);
-                    writeBuffer.SetPackedColor(x, y, ColorSpace.NearestPacked(palette, packed));
+                    writeBuffer.SetPackedColor(x, y, paletteIndex is null ? ColorSpace.NearestPacked(palette, packed) : palette[paletteIndex.Nearest(packed)]);
                     writeBuffer.SetAlpha(x, y, readBuffer.GetAlpha(x, y));
                 }
 
@@ -244,20 +245,20 @@ public sealed class PixelArtDownscaler
         return result;
     }
 
-    private static Bitmap ApplyPaletteDithering(Bitmap source, EPaletteKind paletteKind)
-        => ApplyPaletteDithering(source, paletteKind, progress: null);
+    private static Bitmap ApplyPaletteDithering(Bitmap source, DownscaleOptions options)
+        => ApplyPaletteDithering(source, options, progress: null);
 
-    private static Bitmap ApplyPaletteDithering(Bitmap source, EPaletteKind paletteKind, IProgress<double>? progress = null)
+    private static Bitmap ApplyPaletteDithering(Bitmap source, DownscaleOptions options, IProgress<double>? progress = null)
     {
         var tracking = new ProcessingProgress(progress);
-        var result = ApplyPaletteDitheringWithProgress(source, paletteKind, tracking);
+        var result = ApplyPaletteDitheringWithProgress(source, options, tracking);
         tracking.Report(1);
         return result;
     }
 
-    private static Bitmap ApplyPaletteDitheringWithProgress(Bitmap source, EPaletteKind paletteKind, ProcessingProgress tracking)
+    private static Bitmap ApplyPaletteDitheringWithProgress(Bitmap source, DownscaleOptions options, ProcessingProgress tracking)
     {
-        var palette = Palettes.GetPalette(paletteKind);
+        var palette = Palettes.GetPalette(options);
         using var readBuffer = BitmapBuffer.FromBitmap(source);
         var input = new int[checked(source.Width * source.Height)];
         for (int y = 0; y < source.Height; y++)

@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Пользовательские палитры",
+        "en": "Custom palettes"
+      },
+      "notes": {
+        "ru": "- Цвета: добавьте палитру из изображения. Tessera соберёт все уникальные видимые цвета, сохранит палитру в библиотеке и сразу выберет её для обработки.\n- Палитра: образцы показаны равными прямоугольниками с HEX-кодами. Результаты и макросы сохраняют цвета палитры для повторной обработки.",
+        "en": "- Colors: add a palette from an image. Tessera collects every unique visible color, saves the palette to the library, and selects it for processing.\n- Palette: equal-sized swatches show each color’s HEX code. Results and macros retain the palette colors for replay."
+      }
+    },
+    {
+      "version": "2.32.0",
+      "title": {
         "ru": "Макросы для видео",
         "en": "Video macros"
       },

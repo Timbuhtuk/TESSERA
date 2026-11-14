@@ -66,7 +66,8 @@ internal static class SpriteDownscaler
 
         int tw = options.TargetWidth, th = options.TargetHeight;
         var output = new int[tw * th];
-        var palette = Palettes.GetPalette(options.Palette);
+        var palette = Palettes.GetPalette(options);
+        var paletteIndex = options.Palette == EPaletteKind.Custom && palette.Count > 0 ? new LabPaletteIndex(palette) : null;
         ParallelImageHelper.ForEachRowChunk(th, options.ThreadCount, (start, end) =>
         {
             for (int oy = start; oy < end; oy++)
@@ -99,7 +100,7 @@ internal static class SpriteDownscaler
                     {
                         EPaletteKind.None => color,
                         EPaletteKind.Step => ColorSpace.RoundToStep(color, options.PaletteStep),
-                        _ => ColorSpace.NearestPacked(palette, color)
+                        _ => paletteIndex is null ? ColorSpace.NearestPacked(palette, color) : palette[paletteIndex.Nearest(color)]
                     };
                     output[oy * tw + ox] = (selected & unchecked((int)0xFF000000)) | color;
                 }

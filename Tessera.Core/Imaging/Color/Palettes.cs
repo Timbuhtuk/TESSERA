@@ -41,4 +41,12 @@ public static class Palettes
         EPaletteKind.GameBoy => GameBoy,
         _ => Array.Empty<int>()
     };
+
+    public static IReadOnlyList<int> GetPalette(DownscaleOptions options)
+    {
+        if (options.Palette != EPaletteKind.Custom) return GetPalette(options.Palette);
+        if (options.CustomPalette is not { Length: > 0 } colors || colors.Any(color => color is < 0 or > 0xFFFFFF))
+            throw new ArgumentException("Пользовательская палитра пуста или содержит неверные цвета.", nameof(options));
+        return colors;
+    }
 }

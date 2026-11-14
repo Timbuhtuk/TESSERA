@@ -24,6 +24,19 @@ public static class ImageColorTools
         return colors;
     }
 
+    /// <summary>Все уникальные видимые RGB-цвета в порядке первого появления.</summary>
+    public static IReadOnlyList<Color> GetAllVisibleColors(Bitmap source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var colors = new List<Color>();
+        var unique = new HashSet<int>();
+        ReadVisibleColors(source, color =>
+        {
+            if (unique.Add(color)) colors.Add(ColorSpace.ToColor(color));
+        });
+        return colors;
+    }
+
     /// <summary>Считает уникальные видимые RGB-цвета без ограничения размера палитры.</summary>
     public static int CountColors(Bitmap source)
     {

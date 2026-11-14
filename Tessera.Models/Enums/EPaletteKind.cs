@@ -7,5 +7,6 @@ public enum EPaletteKind
     DB32,
     NES,
     GameBoy,
-    Step
+    Step,
+    Custom
 }

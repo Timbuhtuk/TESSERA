@@ -25,6 +25,7 @@ public sealed class DownscaleOptions
     public ECropHorizontalAlignment CropHorizontal { get; init; } = ECropHorizontalAlignment.Center;
     public ECropVerticalAlignment CropVertical { get; init; } = ECropVerticalAlignment.Center;
     public EPaletteKind Palette { get; init; } = EPaletteKind.DB16;
+    public int[]? CustomPalette { get; init; }
     public int PaletteStep { get; init; } = 32;
     public bool EnableDithering { get; init; }
     public int QuantizationColors { get; init; } = 64;
