@@ -57,7 +57,20 @@ if ($Repository) {
             foreach ($language in @('ru', 'en')) {
                 if ($current.title.$language -cne $oldEntry.title.$language -or $current.notes.$language -cne $oldEntry.notes.$language) { $changed = $true }
             }
+            $versionFloorAllowsUnchangedNotes = $false
             if (!$changed -and $Version -ne $latest.tag_name.Substring(1)) {
+                $floorText = (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-version.txt') -Raw).Trim()
+                $floor = [version]$floorText
+                $latestVersion = [version]$latest.tag_name.Substring(1)
+                if ($Version -eq $floor.ToString(3) -and ($floor.Major -gt $latestVersion.Major -or ($floor.Major -eq $latestVersion.Major -and $floor.Minor -gt $latestVersion.Minor))) {
+                    $previousFloorText = & git -C $PSScriptRoot show "$($latest.tag_name):release-version.txt" 2>$null
+                    if ($LASTEXITCODE -eq 0 -and $previousFloorText -match '^\d+\.\d+\.\d+$') {
+                        $previousFloor = [version]$previousFloorText
+                        $versionFloorAllowsUnchangedNotes = $floor.Major -gt $previousFloor.Major -or ($floor.Major -eq $previousFloor.Major -and $floor.Minor -gt $previousFloor.Minor)
+                    }
+                }
+            }
+            if (!$changed -and $Version -ne $latest.tag_name.Substring(1) -and !$versionFloorAllowsUnchangedNotes) {
                 throw 'Write new user-facing patch notes in release-notes/catalog.json: affected tools and their changed behavior. Technical details and commit logs must not be published.'
             }
         }
