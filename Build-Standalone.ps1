@@ -28,7 +28,7 @@ try {
     $notesFile = Join-Path $artifactsRoot 'ReleaseNotes.json'
     & $python (Join-Path $projectRoot 'tests/Architecture.Checks.py')
     if ($LASTEXITCODE -ne 0) { throw 'Tessera architecture check failed' }
-    Invoke-Dotnet build Tessera.sln -c Release "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" --nologo
+    Invoke-Dotnet build Tessera.sln -c Release "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-m:1" "-p:UseSharedCompilation=false" --nologo
     if (!$SkipChecks) {
         & (Join-Path $projectRoot 'tests/ReleaseVersion.Checks.ps1')
         & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
@@ -39,8 +39,8 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Unreal project mutation checks failed' }
         Write-Output 'PASS Unreal project mailbox moves, deletion, conflicts and destination protection'
     }
-    Invoke-Dotnet publish Tessera.Desktop -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" --nologo
-    Invoke-Dotnet publish Tessera.Cli -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$cliOutput/" --nologo
+    Invoke-Dotnet publish Tessera.Desktop -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:ReleaseNotesFile=$notesFile" "-p:PublishDir=$output/" "-m:1" "-p:UseSharedCompilation=false" --nologo
+    Invoke-Dotnet publish Tessera.Cli -c Release '-p:PublishProfile=win-x64' "-p:Version=$Version" "-p:PublishDir=$cliOutput/" "-m:1" "-p:UseSharedCompilation=false" --nologo
     $guide = @'
 TESSERA / WINDOWS x64
 
@@ -109,9 +109,11 @@ or render an opaque black-and-white image into the history. Choose a preset
 character set or enter your own. Keep the input size or use one character
 per pixel for a larger image. Input and render inversion are independent.
 
-Open Aseprite conversion from Tools. Drop multiple files
-to prepare sprite sheets automatically; save one result or the entire batch
-as PNG + JSON. Existing output files receive distinct names.
+Open Aseprite conversion from Tools, or choose File > Import Aseprite to select
+files directly. Drop multiple files to prepare sprite sheets automatically;
+save one result or the entire batch as PNG. Enable Save JSON metadata to add a
+JSON sidecar for each image. The CLI keeps PNG + JSON as its default; use
+`tessera aseprite FILE --png-only` to export PNG files only. Existing output files receive distinct names.
 Visible RGBA image layers are composited in order; hidden layers and groups
 are excluded. Visible layers require Normal blending and full layer/cel opacity.
 

@@ -7,7 +7,7 @@ namespace Tessera.Cli;
 internal static class AsepriteCommand
 {
     internal const string Help = """
-        Tessera aseprite — преобразовать .ase/.aseprite в PNG-спрайтлист и JSON.
+        Tessera aseprite — пакетно преобразовать .ase/.aseprite в PNG-спрайтлисты.
         Использование: tessera aseprite file.aseprite [ещё.ase] --output-dir export
 
           -i, --input PATH       Добавить входной файл; можно повторять.
@@ -16,10 +16,12 @@ internal static class AsepriteCommand
           --columns N           Столбцы сетки: 1–256 (4), только для grid.
           --padding N           Промежуток между кадрами: 0–128 (0).
           --inspection          Дополнительно сохранить технический .inspection.json.
+          --png-only            Сохранить только PNG, без JSON метаданных.
           --json                Отчёт по каждому файлу в JSON.
           -h, --help            Эта справка.
 
-        Каждый вход даёт <имя>.png и <имя>.json. Результаты не перезаписываются.
+        По умолчанию каждый вход даёт <имя>.png и <имя>.json; --png-only отключает JSON.
+        Несколько входов можно указать позиционно или повторить -i. Результаты не перезаписываются.
         Ошибка одного файла не останавливает остальные; итоговый код тогда 1.
         Видимые RGBA32-слои объединяются по порядку Aseprite; скрытые слои пропускаются.
         """;
@@ -43,6 +45,7 @@ internal static class AsepriteCommand
                         layout = command.Options.Layout.ToString().ToLowerInvariant(),
                         command.Options.Columns,
                         command.Options.Padding,
+                        command.Options.IncludeMetadata,
                         command.Options.IncludeInspection
                     },
                     succeeded = results.Count(item => item.Success),
@@ -67,7 +70,7 @@ internal static class AsepriteCommand
                 foreach (var item in results)
                 {
                     if (item.Result is { } result)
-                        output.WriteLine($"Сохранено: {result.ImagePath}; {result.JsonPath}; {result.FrameCount} кадров.");
+                        output.WriteLine($"Сохранено: {result.ImagePath}{(result.JsonPath is null ? "" : "; " + result.JsonPath)}; {result.FrameCount} кадров.");
                     else
                         error.WriteLine($"Ошибка {item.Source}: {item.Error}");
                 }
@@ -93,7 +96,7 @@ internal static class AsepriteCommand
             int equals = token.IndexOf('=');
             string name = equals < 0 ? token : token[..equals];
             name = name switch { "-i" => "--input", "-d" => "--output-dir", _ => name };
-            if (name is "--inspection" or "--json")
+            if (name is "--inspection" or "--json" or "--png-only")
             {
                 if (equals >= 0 || !values.TryAdd(name, "true"))
                     throw new CliUsageException($"Повторный параметр или значение для {name}.");
@@ -114,6 +117,8 @@ internal static class AsepriteCommand
         }
 
         if (inputs.Count == 0) throw new CliUsageException("Укажите хотя бы один файл .ase или .aseprite.");
+        if (values.ContainsKey("--png-only") && values.ContainsKey("--inspection"))
+            throw new CliUsageException("--inspection создаёт JSON-файл и несовместим с --png-only.");
         SpriteSheetLayout layout = values.GetValueOrDefault("--layout", "horizontal").ToLowerInvariant() switch
         {
             "horizontal" => SpriteSheetLayout.Horizontal,
@@ -132,6 +137,7 @@ internal static class AsepriteCommand
             Layout = layout,
             Columns = columns,
             Padding = padding,
+            IncludeMetadata = !values.ContainsKey("--png-only"),
             IncludeInspection = values.ContainsKey("--inspection")
         }, values.ContainsKey("--json"));
 

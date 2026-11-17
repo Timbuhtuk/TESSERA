@@ -7,6 +7,7 @@ public sealed class AsepriteExportOptions
     public SpriteSheetLayout Layout { get; init; } = SpriteSheetLayout.Horizontal;
     public int Columns { get; init; } = 4;
     public int Padding { get; init; }
+    public bool IncludeMetadata { get; init; } = true;
     public bool IncludeInspection { get; init; }
 }
 
@@ -111,7 +112,7 @@ public sealed class SpriteSheetMetadata
     public required IReadOnlyList<SheetFrame> Frames { get; init; }
 }
 
-public sealed record AsepriteExportResult(string Source, string ImagePath, string JsonPath, string? InspectionPath,
+public sealed record AsepriteExportResult(string Source, string ImagePath, string? JsonPath, string? InspectionPath,
     int FrameCount, int Width, int Height, long TotalDurationMs, IReadOnlyList<string> Warnings);
 public sealed record AsepriteBatchItem(string Source, AsepriteExportResult? Result, string? Error)
 {

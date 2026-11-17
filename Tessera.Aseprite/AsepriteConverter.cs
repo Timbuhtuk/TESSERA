@@ -25,8 +25,12 @@ public static class AsepriteConverter
             throw new ArgumentException("Требуется файл .ase или .aseprite.", nameof(inputPath));
         string name = Path.GetFileNameWithoutExtension(input);
         string imagePath = Path.Combine(directory, name + ".png"), jsonPath = Path.Combine(directory, name + ".json");
+        string? metadataPath = options.IncludeMetadata ? jsonPath : null;
         string? inspectionPath = options.IncludeInspection ? Path.Combine(directory, name + ".inspection.json") : null;
-        string[] targets = inspectionPath is null ? [imagePath, jsonPath] : [imagePath, jsonPath, inspectionPath];
+        var targetList = new List<string> { imagePath };
+        if (metadataPath is not null) targetList.Add(metadataPath);
+        if (inspectionPath is not null) targetList.Add(inspectionPath);
+        string[] targets = targetList.ToArray();
         foreach (string target in targets) CheckTarget(target);
         var document = AsepriteReader.Read(input, limits, cancellationToken, tracking.Slice(0, 4));
         var sheet = SpriteSheet.Create(document, options, cancellationToken, tracking.Slice(1, 4));
@@ -37,7 +41,11 @@ public static class AsepriteConverter
         try
         {
             using (var stream = Stage()) PngWriter.Write(stream, sheet.Image, document.IsSrgb, cancellationToken, tracking.Slice(2, 4));
-            using (var stream = Stage()) JsonSerializer.Serialize(stream, sheet.Metadata, JsonOptions);
+            if (metadataPath is not null)
+            {
+                using var stream = Stage();
+                JsonSerializer.Serialize(stream, sheet.Metadata, JsonOptions);
+            }
             if (inspectionPath is not null)
             {
                 using var stream = Stage();
@@ -84,7 +92,7 @@ public static class AsepriteConverter
             if (errors.Count > 1) throw new AggregateException("Экспорт не завершён; не удалось удалить часть созданных файлов.", errors);
             throw;
         }
-        return new AsepriteExportResult(input, imagePath, jsonPath, inspectionPath, document.Frames.Count,
+        return new AsepriteExportResult(input, imagePath, metadataPath, inspectionPath, document.Frames.Count,
             sheet.Image.Width, sheet.Image.Height, document.TotalDurationMs, document.Warnings);
 
         FileStream Stage()

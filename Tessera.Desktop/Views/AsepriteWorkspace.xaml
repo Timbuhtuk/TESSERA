@@ -58,6 +58,7 @@
                         <ComboBox x:Name="sheetBackground" SelectedIndex="0" Margin="0,0,0,16">
                             <ComboBoxItem Content="{local:Translate Text5E7EC04C97C5}"/><ComboBoxItem Content="{local:Translate Text21943A44634E}"/><ComboBoxItem Content="{local:Translate Text5405EB821E3A}"/>
                         </ComboBox>
+                        <CheckBox x:Name="sheetIncludeMetadata" Content="{local:Translate TextB6A23F4CB5EA}" ToolTip="{local:Translate TextCA105B581353}" IsChecked="False" Margin="0,0,0,12"/>
                         <Button x:Name="sheetClearButton" Content="{local:Translate TextC57BE9C60728}" IsEnabled="False"/>
                     </StackPanel>
                 </ScrollViewer>

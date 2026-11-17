@@ -40,6 +40,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     private Bitmap? _previewImage;
     private bool _converting, _saving, _disposed, _settingsPending;
     public bool IsBusy => _converting || _saving || _settingsPending;
+    public bool IncludeMetadata => sheetIncludeMetadata.IsChecked == true;
     public bool CanAcceptFiles => !_saving && !_disposed;
     public event EventHandler? BackRequested;
     public event EventHandler? BusyChanged;
@@ -67,6 +68,8 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         sheetPadding.ValueChanged += (_, _) => ScheduleRebuild();
         sheetZoom.SelectionChanged += (_, _) => sheetPreview.Zoom = new[] { 0, .5, 1, 2, 4, 8 }[Math.Clamp(sheetZoom.SelectedIndex, 0, 5)];
         sheetBackground.SelectionChanged += (_, _) => sheetPreview.PreviewBackground = sheetBackground.SelectedIndex;
+        sheetIncludeMetadata.Checked += (_, _) => UpdateControls();
+        sheetIncludeMetadata.Unchecked += (_, _) => UpdateControls();
         _settingsTimer.Tick += async (_, _) => { _settingsTimer.Stop(); await RebuildAsync(); };
         SizeChanged += (_, _) => UpdateLayoutForWidth();
     }
@@ -209,7 +212,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 UpdateControls();
             }
             if (batchFailures == 0) operation?.Complete();
-            StatusChanged?.Invoke(Localization.Format("Готово: {0}. Ошибок: {1}. Сохранение — PNG и JSON для каждой анимации.", converted, failed));
+            StatusChanged?.Invoke(Localization.Format("Готово: {0}. Ошибок: {1}. Сохранение — PNG; JSON можно включить отдельно.", converted, failed));
         }
         catch (OperationCanceledException)
         {
@@ -300,7 +303,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     private async Task SaveDialogAsync(bool all)
     {
         if (IsBusy) return;
-        var dialog = new OpenFolderDialog { Title = all ? Localization.Text("Сохранить все спрайтлисты и JSON") : Localization.Text("Сохранить спрайтлист и JSON") };
+        var dialog = new OpenFolderDialog { Title = all ? Localization.Text("Сохранить все спрайтлисты") : Localization.Text("Сохранить спрайтлист") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         await SaveAsync(dialog.FolderName, all);
     }
@@ -309,6 +312,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     {
         if (IsBusy || _disposed) return Array.Empty<SaveResult>();
         var entries = all ? _entries.Where(e => e.Ready).ToArray() : sheetStrip.SelectedItem is SheetEntry { Ready: true } entry ? new[] { entry } : [];
+        bool includeMetadata = IncludeMetadata;
         var results = new List<SaveResult>();
         using var operation = BeginProgress(Localization.Text("Сохранение анимаций…"));
         _saving = true;
@@ -322,7 +326,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 StatusChanged?.Invoke(Localization.Format("Сохранение: {0}", item.Label));
                 try
                 {
-                    string path = await Task.Run(() => ExportReady(item, directory, cancellation.Token, operation.Work.Slice(results.Count, entries.Length)));
+                    string path = await Task.Run(() => ExportReady(item, directory, includeMetadata, cancellation.Token, operation.Work.Slice(results.Count, entries.Length)));
                     results.Add(new SaveResult(item.InputPath, path, null));
                     item.State = Localization.Text("Сохранён"); item.Detail = path; item.Refresh();
                 }
@@ -338,32 +342,40 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
         return results;
     }
 
-    private static string ExportReady(SheetEntry entry, string directory, CancellationToken token, IProgress<double>? progress = null)
+    private static string ExportReady(SheetEntry entry, string directory, bool includeMetadata, CancellationToken token, IProgress<double>? progress = null)
     {
         directory = Path.GetFullPath(directory);
         Directory.CreateDirectory(directory);
         string stem = Path.GetFileNameWithoutExtension(entry.Label), name = stem;
         int suffix = 2;
-        while (Exists(name + ".png") || Exists(name + ".json")) name = $"{stem} ({suffix++})";
+        while (Exists(name + ".png") || includeMetadata && Exists(name + ".json")) name = $"{stem} ({suffix++})";
         string png = Path.Combine(directory, name + ".png"), json = Path.Combine(directory, name + ".json");
         string stagedPng = Path.Combine(directory, $".tessera-{Guid.NewGuid():N}.tmp"), stagedJson = stagedPng + ".json";
-        bool publishedPng = false, complete = false;
+        bool publishedPng = false, publishedJson = false, complete = false;
         try
         {
             token.ThrowIfCancellationRequested();
             ProgressFile.Copy(entry.Result!.ImagePath, stagedPng, progress, token);
-            var metadata = JsonNode.Parse(File.ReadAllText(entry.Result.JsonPath))!;
-            metadata["image"] = name + ".png";
-            File.WriteAllText(stagedJson, metadata.ToJsonString(AsepriteConverter.JsonOptions));
+            if (includeMetadata)
+            {
+                var metadata = JsonNode.Parse(File.ReadAllText(entry.Result.JsonPath!))!;
+                metadata["image"] = name + ".png";
+                File.WriteAllText(stagedJson, metadata.ToJsonString(AsepriteConverter.JsonOptions));
+            }
             token.ThrowIfCancellationRequested();
             File.Move(stagedPng, png, false); publishedPng = true;
-            token.ThrowIfCancellationRequested();
-            File.Move(stagedJson, json, false); complete = true;
+            if (includeMetadata)
+            {
+                token.ThrowIfCancellationRequested();
+                File.Move(stagedJson, json, false); publishedJson = true;
+            }
+            complete = true;
             return png;
         }
         finally
         {
             if (publishedPng && !complete) File.Delete(png);
+            if (publishedJson && !complete) File.Delete(json);
             File.Delete(stagedPng); File.Delete(stagedJson);
         }
         bool Exists(string file) => File.Exists(Path.Combine(directory, file)) || Directory.Exists(Path.Combine(directory, file));
