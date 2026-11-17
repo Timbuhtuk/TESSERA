@@ -12,6 +12,7 @@ public partial class MainWindow
 {
     private MenuItem fileMenu = null!, toolsMenu = null!, viewMenu = null!, moreMenu = null!;
     private MenuItem openMenuItem = null!, saveMenuItem = null!, saveAllMenuItem = null!, saveDocumentMenuItem = null!, exportMenu = null!;
+    private MenuItem importAsepriteMenuItem = null!;
     private MenuItem createMenu = null!, returnMenuItem = null!;
     private MenuItem sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, infoMenuItem = null!;
     private MenuItem checkUpdatesMenuItem = null!, zoomMenu = null!, backgroundMenu = null!;
@@ -57,6 +58,7 @@ public partial class MainWindow
         moreMenu = NavigationItem("moreMenu", "_Ещё");
         foreach (var menu in new[] { fileMenu, toolsMenu, viewMenu }) mainMenu.Items.Add(menu);
         openMenuItem = AddNavigation(fileMenu, "openMenuItem", "Открыть файлы…", OpenNavigationFilesAsync, "Ctrl+O");
+        importAsepriteMenuItem = AddNavigation(fileMenu, "importAsepriteMenuItem", "Импорт Aseprite…", OpenAsepriteImportAsync);
         createMenu = NavigationItem("createMenu", "Создать"); fileMenu.Items.Add(createMenu);
         AddNavigation(createMenu, "createProjectMenuItem", "Проект…", () => CreateNavigationMaterialAsync("project"));
         AddNavigation(createMenu, "createBoardMenuItem", "Доску…", () => CreateNavigationMaterialAsync("new-board"));
@@ -218,6 +220,7 @@ public partial class MainWindow
         bool tiles = _workspaceActive?.Kind == EWorkspaceAssetKind.Tiles && _tileInspector is not null;
         bool canExport = image && !ContourPreviewVisible && !StructurePreviewVisible && !LiveToolPreviewVisible || board || tiles || animation && asepriteWorkspace.CanExport || background && backgroundWorkspace.CanExport || ico && iconWorkspace.CanExport;
         openMenuItem.IsEnabled = libraryButton.IsEnabled = returnMenuItem.IsEnabled = !busy;
+        importAsepriteMenuItem.IsEnabled = !busy;
         createMenu.IsEnabled = _workspaceReady && !busy;
         toolsMenu.IsEnabled = image && !busy;
         ((MenuItem)FindName("unrealCreateTextureMenuItem")).IsEnabled = _workspaceReady && image && !busy;
@@ -226,7 +229,7 @@ public partial class MainWindow
         saveDocumentMenuItem.IsEnabled = !busy && (_workspaceReady || board || animation || tiles);
         saveDocumentMenuItem.Header = Localization.Text(_workspaceReady ? "Сохранить проект" : "Сохранить документ");
         exportMenu.IsEnabled = !busy && canExport;
-        saveMenuItem.Header = animation ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
+        saveMenuItem.Header = animation && asepriteWorkspace.IncludeMetadata ? Localization.Text("PNG + JSON…") : ico ? Localization.Text("ICO…") : Localization.Text("PNG…");
         saveMenuItem.IsEnabled = !busy && (_workspaceReady ? canExport : image && _downscaledResult is not null && !ContourPreviewVisible && !StructurePreviewVisible && !LiveToolPreviewVisible);
         saveMenuItem.InputGestureText = image && !_workspaceReady ? "Ctrl+S" : "";
         saveAllMenuItem.IsEnabled = !busy && image && _activeSource?.Generations.Count > 0;

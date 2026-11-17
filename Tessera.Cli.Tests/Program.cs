@@ -815,6 +815,14 @@ try
             Require(metadata.RootElement.GetProperty("schema").GetString() == "aseprite-offline/v1", "Aseprite JSON schema");
             Require(metadata.RootElement.GetProperty("frameCount").GetInt32() == 1, "Aseprite frame count");
         }
+        string secondSource = Path.Combine(directory, "sample-2.aseprite"); File.Copy(source, secondSource);
+        string pngOnlyDestination = Path.Combine(directory, "aseprite-png-only");
+        var pngOnly = Run(["aseprite", source, secondSource, "--output-dir", pngOnlyDestination, "--png-only"]);
+        Require(pngOnly.Code == 0 && pngOnly.Error.Length == 0, pngOnly.Error);
+        Require(Directory.GetFiles(pngOnlyDestination, "*.png").Length == 2 && Directory.GetFiles(pngOnlyDestination, "*.json").Length == 0, "Aseprite --png-only did not export two PNG files without metadata");
+        Require(!pngOnly.Output.Contains(".json", StringComparison.OrdinalIgnoreCase), "Aseprite --png-only console output advertised a JSON file");
+        string incompatibleDestination = Path.Combine(directory, "aseprite-png-only-inspection");
+        Require(Run(["aseprite", source, "--output-dir", incompatibleDestination, "--png-only", "--inspection"]).Code == 2 && !Directory.Exists(incompatibleDestination), "Aseprite accepted --inspection with --png-only");
         Require(Run(["aseprite", source, "--output-dir", destination]).Code == 1, "Existing Aseprite output overwritten");
         Require(Run(["aseprite", source, "--columns", "2"]).Code == 2, "Columns accepted outside grid");
         Require(Run(["aseprite", source, "--layout", "wrong"]).Code == 2, "Invalid layout accepted");

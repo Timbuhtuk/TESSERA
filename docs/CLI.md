@@ -237,10 +237,11 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 
 ## Aseprite sprite sheets
 
-`tessera aseprite` converts one or more `.ase`/`.aseprite` files with the offline decoder used by the desktop workspace. Each input produces `<name>.png` and `<name>.json` in `--output-dir`; `--inspection` adds `<name>.inspection.json`. The default directory is `aseprite-export` beside the first input. Layout choices are `horizontal` (default), `vertical` and `grid`; `--columns` applies only to grid and accepts 1–256 (default 4). `--padding` accepts 0–128 pixels (default 0).
+`tessera aseprite` converts one or more `.ase`/`.aseprite` files with the offline decoder used by the desktop workspace. By default, each input produces `<name>.png` and `<name>.json` in `--output-dir`; `--png-only` saves only the PNG. `--inspection` adds `<name>.inspection.json` and cannot be combined with `--png-only`. The default directory is `aseprite-export` beside the first input. Layout choices are `horizontal` (default), `vertical` and `grid`; `--columns` applies only to grid and accepts 1–256 (default 4). `--padding` accepts 0–128 pixels (default 0). You can pass multiple input paths positionally or repeat `-i` / `--input`.
 
 ```powershell
 .\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4 --padding 2 --inspection --json
+.\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/png-only --png-only
 ```
 
 Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder composites visible RGBA32 image layers and excludes hidden layers; see [Aseprite conversion details](../Tessera.Aseprite/README.md) for the remaining format limits.

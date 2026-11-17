@@ -45,6 +45,7 @@ internal static class AsepriteUiChecks
 
             string output = Path.Combine(folder, "export"); Directory.CreateDirectory(output);
             File.WriteAllText(Path.Combine(output, "Walk.png"), "keep");
+            Get<CheckBox>("sheetIncludeMetadata").IsChecked = true;
             var save = screen.SaveAsync(output, true); Wait(save);
             Require(save.Result.Count == 3 && save.Result.All(r => r.Error is null), "Ready results were not saved as a batch");
             Require(File.ReadAllText(Path.Combine(output, "Walk.png")) == "keep", "Existing result was overwritten");
@@ -57,6 +58,9 @@ internal static class AsepriteUiChecks
                 Require(json.RootElement.GetProperty("image").GetString() == Path.GetFileName(result.ImagePath), "Collision suffix broke the JSON image reference");
                 Require(json.RootElement.GetProperty("frames").GetArrayLength() == item.Result.FrameCount, "Frame metadata missing");
             }
+            Get<CheckBox>("sheetIncludeMetadata").IsChecked = false;
+            string pngOnly = Path.Combine(folder, "png-only"); Wait(screen.SaveAsync(pngOnly, true));
+            Require(Directory.GetFiles(pngOnly, "*.png").Length == 3 && Directory.GetFiles(pngOnly, "*.json").Length == 0, "PNG-only export wrote JSON or missed a result");
             File.Delete(first); File.Delete(second); File.Delete(third);
             Get<ComboBox>("sheetLayout").SelectedIndex = 2;
             Get<IntegerInput>("sheetColumns").Value = 2;

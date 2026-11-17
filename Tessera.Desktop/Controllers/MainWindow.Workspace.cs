@@ -51,9 +51,10 @@ public partial class MainWindow
         _workspaceBrowser.StatusChanged += text => statusLabel.Text = text;
         asepriteWorkspace.WorkspaceImport = async paths =>
         {
+            PersistWorkspaceState();
             await ImportWorkspaceFilesAsync(paths);
-            var imported = _workspaceCatalog.State.Assets.LastOrDefault(a => a.Kind == EWorkspaceAssetKind.Animation);
-            if (imported is not null) await OpenWorkspaceAssetAsync(imported);
+            _workspaceActive = null;
+            await asepriteWorkspace.AddFilesAsync(paths);
         };
         _workspaceBrowser.Resources.MergedDictionaries.Add(Resources);
         _workspaceBrowser.Bind(_workspaceCatalog);

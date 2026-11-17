@@ -3,12 +3,12 @@
     {
       "version": "next",
       "title": {
-        "ru": "Пользовательские палитры",
-        "en": "Custom palettes"
+        "ru": "Пакетный экспорт Aseprite в PNG",
+        "en": "Batch Aseprite export to PNG"
       },
       "notes": {
-        "ru": "- Цвета: добавьте палитру из изображения. Tessera соберёт все уникальные видимые цвета, сохранит палитру в библиотеке и сразу выберет её для обработки.\n- Палитра: образцы показаны равными прямоугольниками с HEX-кодами. Результаты и макросы сохраняют цвета палитры для повторной обработки.",
-        "en": "- Colors: add a palette from an image. Tessera collects every unique visible color, saves the palette to the library, and selects it for processing.\n- Palette: equal-sized swatches show each color’s HEX code. Results and macros retain the palette colors for replay."
+        "ru": "- Aseprite: импортируйте несколько файлов `.ase` и `.aseprite` через «Файл → Импорт Aseprite…» или перетащите их в окно; все анимации останутся в списке для общего экспорта.\n- Aseprite: сохраняйте спрайтлисты в PNG без JSON. Включите «Сохранять JSON метаданных», если нужен файл метаданных для каждого PNG.\n- CLI Aseprite: команда `tessera aseprite FILE --png-only` экспортирует только PNG; режим `--inspection` требует JSON и несовместим с этим параметром.",
+        "en": "- Aseprite: import multiple `.ase` and `.aseprite` files through File → Import Aseprite… or drag them into the window; all animations stay in the list for batch export.\n- Aseprite: save sprite sheets as PNG without JSON. Enable “Save JSON metadata” when you need a metadata file for each PNG.\n- Aseprite CLI: `tessera aseprite FILE --png-only` exports PNG files only; `--inspection` requires JSON and cannot be combined with this option."
       }
     },
     {

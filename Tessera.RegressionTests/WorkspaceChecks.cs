@@ -200,13 +200,26 @@ internal static class WorkspaceChecks
             var animation = window.Workspace.State.Assets.Single(a => a.Kind == EWorkspaceAssetKind.Animation);
             Wait(window.OpenWorkspaceAssetAsync(animation));
             var aseprite = Get<AsepriteWorkspace>(window, "asepriteWorkspace");
-            Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && Equals(Get<MenuItem>(window, "saveMenuItem").Header, "PNG + JSON…") && Get<MenuItem>(window, "exportIcoMenuItem").Visibility == Visibility.Collapsed, "File menu follows the active animation and hides image-only exports");
+            Require(Get<MenuItem>(window, "importAsepriteMenuItem").IsEnabled && Equals(Get<MenuItem>(window, "importAsepriteMenuItem").Header, "Импорт Aseprite…"), "File menu does not expose Aseprite import");
+            Require(Get<MenuItem>(window, "saveDocumentMenuItem").IsEnabled && Equals(Get<MenuItem>(window, "saveMenuItem").Header, "PNG…") && Get<MenuItem>(window, "exportIcoMenuItem").Visibility == Visibility.Collapsed, "File menu follows the PNG-only animation export default");
             Require(aseprite.CurrentSheetPath is not null && animation.Thumbnail is not null, "Animation source is retained and its converted preview enters the catalog");
             Get<ComboBox>(aseprite, "sheetLayout").SelectedIndex = 2; Get<IntegerInput>(aseprite, "sheetColumns").Value = 1; Wait(aseprite.RebuildAsync());
             typeof(MainWindow).GetMethod("ShowHome", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null); Pump();
             Require(animation.SheetLayout == 2 && animation.SheetColumns == 1, "Animation layout persists per asset");
-            string animationOutput = Path.Combine(root, "animation-export"); Directory.CreateDirectory(animationOutput); Wait(window.OpenWorkspaceAssetAsync(animation)); Wait(aseprite.SaveAsync(animationOutput, false));
+            string animationOutput = Path.Combine(root, "animation-export"); Directory.CreateDirectory(animationOutput); Wait(window.OpenWorkspaceAssetAsync(animation));
+            Get<CheckBox>(aseprite, "sheetIncludeMetadata").IsChecked = true; Pump();
+            Require(Equals(Get<MenuItem>(window, "saveMenuItem").Header, "PNG + JSON…"), "File menu did not follow the JSON option");
+            Wait(aseprite.SaveAsync(animationOutput, false));
             Require(Directory.EnumerateFiles(animationOutput, "*.png").Any() && Directory.EnumerateFiles(animationOutput, "*.json").Any(), "Animation exports PNG and JSON");
+
+            Get<CheckBox>(aseprite, "sheetIncludeMetadata").IsChecked = false; Pump();
+            string batchPath = Path.Combine(root, "jump.aseprite"); File.Copy(animationPath, batchPath);
+            aseprite.Clear();
+            Wait(aseprite.WorkspaceImport!([animationPath, batchPath]));
+            var batch = Get<ListBox>(aseprite, "sheetStrip").Items.Cast<AsepriteWorkspace.SheetEntry>().ToArray();
+            Require(batch.Length == 2 && batch.All(e => e.Ready) && batch.Select(e => e.InputPath).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals([animationPath, batchPath]), "Workspace import did not keep both animations in the lower strip");
+            string pngOnlyOutput = Path.Combine(root, "batch-png"); Wait(aseprite.SaveAsync(pngOnlyOutput, true));
+            Require(Directory.GetFiles(pngOnlyOutput, "*.png").Length == 2 && Directory.GetFiles(pngOnlyOutput, "*.json").Length == 0, "PNG-only batch export wrote metadata or missed a file");
 
             var board = window.Workspace.State.Assets.Single(a => a.Kind == EWorkspaceAssetKind.Board);
             Wait(window.OpenWorkspaceAssetAsync(board)); var boardEditor = Get<MoodboardWorkspace>(window, "moodboardWorkspace");

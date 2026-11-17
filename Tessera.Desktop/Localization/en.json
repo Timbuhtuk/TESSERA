@@ -225,7 +225,7 @@
   "Готово · {0} × {1}. Результат сохранён в истории.": "Done · {0} × {1}. Result saved to history.",
   "Готово к работе": "Ready",
   "Готово. Ячейка {0} px. Результат сохранён в истории.": "Done. Cell {0} px. Result saved to history.",
-  "Готово: {0}. Ошибок: {1}. Сохранение — PNG и JSON для каждой анимации.": "Done: {0}. Errors: {1}. Save PNG and JSON for each animation.",
+  "Готово: {0}. Ошибок: {1}. Сохранение — PNG; JSON можно включить отдельно.": "Done: {0}. Errors: {1}. PNG is saved; JSON can be enabled separately.",
   "Готовые режимы": "Presets",
   "Готовые сценарии": "Workflows",
   "Границы тайлов": "Tile boundaries",
@@ -1540,5 +1540,8 @@
   "Палитра «{0}»: {1} цветов.": "Palette “{0}”: {1} colors.",
   "Не удалось добавить палитру": "Could not add palette",
   "{0} цветов": "{0} colors",
-  "Палитра из истории": "Palette from history"
+  "Палитра из истории": "Palette from history",
+  "Импорт Aseprite…": "Import Aseprite…",
+  "Сохранять JSON метаданных": "Save JSON metadata",
+  "При включении для каждого PNG сохраняется JSON с кадрами и параметрами экспорта.": "When enabled, a JSON file with frame and export settings is saved for each PNG."
 }

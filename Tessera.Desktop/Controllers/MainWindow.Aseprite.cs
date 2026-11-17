@@ -15,6 +15,13 @@ public partial class MainWindow
 
     private void OpenAsepriteWorkspace(object sender, RoutedEventArgs e) => ShowAsepriteWorkspace();
 
+    private async Task OpenAsepriteImportAsync()
+    {
+        if (WorkspaceBusy) return;
+        ShowAsepriteWorkspace();
+        await asepriteWorkspace.OpenAsync();
+    }
+
     private void ShowAsepriteWorkspace()
     {
         if (_processing || iconWorkspace.IsBusy || backgroundWorkspace.IsBusy) return;
