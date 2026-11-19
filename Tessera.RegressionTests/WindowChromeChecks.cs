@@ -27,21 +27,33 @@ internal static class WindowChromeChecks
             var handle = new WindowInteropHelper(window).Handle;
             Require(WindowChrome.GetWindowChrome(window) is { UseAeroCaptionButtons: false }, "Native title bar was not replaced");
             var caption = (Border)window.FindName("titleBar");
-            var point = DragPoint();
-            Require(HitTest(handle, point) == 2, "Title bar cannot be dragged or double-clicked by Windows");
+            var menu = (Menu)window.FindName("mainMenu");
+            var buttons = (StackPanel)window.FindName("captionButtons");
+            VerifyDragStrip();
+            double menuRight = menu.TranslatePoint(new Point(menu.ActualWidth, 0), caption).X;
+            double buttonsLeft = buttons.TranslatePoint(new Point(), caption).X;
+            foreach (double fraction in new[] { 0.1, 0.5, 0.9 })
+                Require(HitTest(handle, caption.PointToScreen(new Point(menuRight + (buttonsLeft - menuRight) * fraction, 20))) == 2,
+                    "Empty title bar area cannot be dragged");
             var fileMenu = (MenuItem)window.FindName("fileMenu");
             Require(HitTest(handle, fileMenu.PointToScreen(new Point(10, 20))) == 1, "Top menu is swallowed by native dragging");
+            var appearanceButton = (Button)window.FindName("appearanceButton");
+            Require(HitTest(handle, appearanceButton.PointToScreen(new Point(20, 20))) == 1, "Settings button is swallowed by native dragging");
             var close = (Button)window.FindName("closeButton");
             Require(HitTest(handle, close.PointToScreen(new Point(20, 20))) == 1, "Caption button is swallowed by native dragging");
             Require(GetWindowRect(handle, out var normal), "Cannot read window bounds");
             double normalWidth = window.ActualWidth;
             double normalHeight = window.ActualHeight;
             Require(caption.PointToScreen(new Point(0, 0)).Y - normal.Top < 8, "An extra native title bar remains above the custom caption");
+            Require(HitTest(handle, caption.PointToScreen(new Point(caption.ActualWidth / 2, 1))) == 12, "Top resize border is not active");
             Require(HitTest(handle, new Point(normal.Left + 2, normal.Top + 120)) == 10, "Left resize border is not active");
             Require(HitTest(handle, new Point(normal.Right - 2, normal.Bottom - 2)) == 17, "Corner resize border is not active");
+            Require(HitTest(handle, caption.PointToScreen(new Point(caption.ActualWidth / 2, caption.ActualHeight + 2))) == 1,
+                "Drag area extends into the workspace");
 
             Click("maximizeButton");
             WaitFor(() => window.WindowState == WindowState.Maximized, "Maximize button failed");
+            VerifyDragStrip();
             Require(AutomationProperties.GetName((Button)window.FindName("maximizeButton")) == "Восстановить", "Restore label did not update");
             var monitor = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
             Require(GetMonitorInfo(MonitorFromWindow(handle, 2), ref monitor), "Cannot read monitor work area");
@@ -56,7 +68,7 @@ internal static class WindowChromeChecks
             WaitFor(() => window.WindowState == WindowState.Normal && Math.Abs(window.ActualWidth - normalWidth) < 1 && Math.Abs(window.ActualHeight - normalHeight) < 1,
                 $"Restore lost the window dimensions: expected {normalWidth}x{normalHeight}, got {window.ActualWidth}x{window.ActualHeight}");
 
-            point = DragPoint();
+            var point = caption.PointToScreen(new Point(caption.ActualWidth / 2, 5));
             SendMessage(handle, 0xA3, 2, Pack(point));
             Pump();
             WaitFor(() => window.WindowState == WindowState.Maximized, "Native title double-click failed");
@@ -97,6 +109,13 @@ internal static class WindowChromeChecks
             Click("closeButton");
             WaitFor(() => closed, "Custom close did not close the window");
             Console.WriteLine("  Window chrome: caption, resize, minimize/restore, owned windows and guarded close passed.");
+
+            void VerifyDragStrip()
+            {
+                foreach (double fraction in new[] { 0.05, 0.15, 0.3, 0.55, 0.85, 0.97 })
+                    Require(HitTest(handle, caption.PointToScreen(new Point(caption.ActualWidth * fraction, 5))) == 2,
+                        $"Upper title bar does not allow dragging at {fraction:P0} in {window.WindowState} state");
+            }
         }
         finally
         {
@@ -104,7 +123,6 @@ internal static class WindowChromeChecks
         }
 
         void Click(string name) { ((Button)window.FindName(name)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump(); }
-        Point DragPoint() => ((Border)window.FindName("titleBar")).PointToScreen(new Point(((Border)window.FindName("titleBar")).ActualWidth - ((StackPanel)window.FindName("captionButtons")).ActualWidth - 24, 20));
         void SetBusy(bool value) => typeof(MainWindow).GetMethod("SetProcessingState", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [value]);
         void WaitFor(Func<bool> condition, string message)
         {

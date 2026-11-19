@@ -5,35 +5,74 @@
  <UserControl.Resources>
   <ResourceDictionary>
   <ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries>
-  <ItemsPanelTemplate x:Key="TileItemsPanel"><local:WorkspaceAssetPanel CellWidth="192" CellHeight="242"/></ItemsPanelTemplate>
-  <ItemsPanelTemplate x:Key="SmallTileItemsPanel"><local:WorkspaceAssetPanel CellWidth="140" CellHeight="180"/></ItemsPanelTemplate>
+  <ItemsPanelTemplate x:Key="TileItemsPanel"><local:WorkspaceAssetPanel CellWidth="192" CellHeight="196"/></ItemsPanelTemplate>
+  <ItemsPanelTemplate x:Key="SmallTileItemsPanel"><local:WorkspaceAssetPanel CellWidth="140" CellHeight="158"/></ItemsPanelTemplate>
   <ItemsPanelTemplate x:Key="ListItemsPanel"><local:WorkspaceAssetPanel CellHeight="66"/></ItemsPanelTemplate>
+  <Style x:Key="AssetKindGlyph" TargetType="local:WorkspaceAssetIcon">
+   <Setter Property="Kind" Value="{Binding Kind}"/><Setter Property="ToolTip" Value="{Binding KindLabel}"/>
+   <Setter Property="AutomationProperties.Name" Value="{Binding KindLabel}"/>
+   <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}"/>
+  </Style>
+  <Style x:Key="AssetPreviewGlyph" TargetType="local:WorkspaceAssetIcon" BasedOn="{StaticResource AssetKindGlyph}">
+   <Setter Property="Visibility" Value="Collapsed"/>
+   <Setter Property="HorizontalAlignment" Value="Center"/><Setter Property="VerticalAlignment" Value="Center"/>
+   <Style.Triggers>
+    <DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger>
+   </Style.Triggers>
+  </Style>
   <DataTemplate x:Key="AssetPreviewTemplate">
    <Border Background="{DynamicResource Ts.Thumbnail}"><Grid>
-    <TextBlock Text="{Binding KindLabel}" Foreground="{DynamicResource Ts.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+    <local:WorkspaceAssetIcon Style="{StaticResource AssetPreviewGlyph}" Width="28" Height="28"/>
     <Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="6" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
    </Grid></Border>
   </DataTemplate>
   <DataTemplate x:Key="AssetListPreviewTemplate">
    <Border Background="{DynamicResource Ts.Thumbnail}"><Grid>
-    <TextBlock Text="▧" ToolTip="{Binding KindLabel}" FontSize="20" Foreground="{DynamicResource Ts.TextMuted}" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}"><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+    <local:WorkspaceAssetIcon Style="{StaticResource AssetPreviewGlyph}" Width="22" Height="22"/>
     <Image Source="{Binding Thumbnail}" Stretch="Uniform" Margin="3" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
    </Grid></Border>
   </DataTemplate>
-  <DataTemplate x:Key="AssetTileTemplate"><Grid ToolTip="{Binding Name}">
+  <DataTemplate x:Key="AssetMetadataTemplate">
+   <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <local:WorkspaceAssetIcon Style="{StaticResource AssetKindGlyph}" Width="14" Height="14" Margin="0,0,5,0"/>
+    <TextBlock Grid.Column="1" Text="{Binding MetadataLabel}" ToolTip="{Binding MetadataLabel}" TextTrimming="CharacterEllipsis"
+               VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}"/>
+   </Grid>
+  </DataTemplate>
+  <DataTemplate x:Key="AssetTileTemplate"><Grid ToolTip="{Binding DisplayName}">
    <Grid.RowDefinitions><RowDefinition Height="128"/><RowDefinition Height="*"/></Grid.RowDefinitions>
    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetPreviewTemplate}"/>
-   <StackPanel Grid.Row="1" Margin="10"><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Summary}" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding TagLabel}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,5,0,0"/></StackPanel>
+   <StackPanel Grid.Row="1" Margin="8,4">
+    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" LineStackingStrategy="BlockLineHeight" LineHeight="16"/>
+    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetMetadataTemplate}" Margin="0,2,0,0"/>
+    <TextBlock Text="{Binding TagLabel}" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource Ts.TextMuted}"
+               LineStackingStrategy="BlockLineHeight" LineHeight="14"/>
+   </StackPanel>
   </Grid></DataTemplate>
-  <DataTemplate x:Key="AssetSmallTileTemplate"><Grid ToolTip="{Binding Name}">
+  <DataTemplate x:Key="AssetSmallTileTemplate"><Grid ToolTip="{Binding DisplayName}">
    <Grid.RowDefinitions><RowDefinition Height="94"/><RowDefinition Height="*"/></Grid.RowDefinitions>
    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetPreviewTemplate}"/>
-   <StackPanel Grid.Row="1" Margin="7"><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="10" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,0"/></StackPanel>
+   <Grid Grid.Row="1" Margin="6,3">
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+    <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"
+               LineStackingStrategy="BlockLineHeight" LineHeight="15" MaxHeight="30"/>
+    <Grid Grid.Row="1" Margin="0,2,0,0">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <local:WorkspaceAssetIcon Style="{StaticResource AssetKindGlyph}" Width="13" Height="13" Margin="0,0,4,0" VerticalAlignment="Top"/>
+     <TextBlock Grid.Column="1" Text="{Binding MetadataLabel}" ToolTip="{Binding MetadataLabel}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis"
+                LineStackingStrategy="BlockLineHeight" LineHeight="12" MaxHeight="24" VerticalAlignment="Top"
+                FontSize="10" Foreground="{DynamicResource Ts.TextSecondary}"/>
+    </Grid>
+   </Grid>
   </Grid></DataTemplate>
-  <DataTemplate x:Key="AssetListTemplate"><Grid Margin="7" ToolTip="{Binding Name}">
+  <DataTemplate x:Key="AssetListTemplate"><Grid Margin="7" ToolTip="{Binding DisplayName}">
    <Grid.ColumnDefinitions><ColumnDefinition Width="44"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetListPreviewTemplate}"/>
-   <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center"><TextBlock Text="{Binding Name}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/><TextBlock Text="{Binding Summary}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" FontSize="11" Foreground="{DynamicResource Ts.TextSecondary}"/></StackPanel>
+   <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+    <TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AssetMetadataTemplate}"/>
+   </StackPanel>
   </Grid></DataTemplate>
   <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource Ts.CompactButton}">
    <Setter Property="HorizontalContentAlignment" Value="Left"/><Setter Property="Margin" Value="0,2"/>
@@ -78,7 +117,7 @@
   </Style>
   <Style x:Key="AssetItem" TargetType="ListBoxItem">
    <Setter Property="Padding" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-   <Setter Property="AutomationProperties.Name" Value="{Binding Name}"/>
+   <Setter Property="AutomationProperties.Name" Value="{Binding DisplayName}"/>
    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
     <Border x:Name="frame" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Panel}"><ContentPresenter/></Border>
     <ControlTemplate.Triggers>
@@ -88,8 +127,8 @@
     </ControlTemplate.Triggers>
    </ControlTemplate></Setter.Value></Setter>
   </Style>
-  <Style x:Key="TileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="180"/><Setter Property="Height" Value="230"/><Setter Property="Margin" Value="0,0,12,12"/></Style>
-  <Style x:Key="SmallTileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="130"/><Setter Property="Height" Value="170"/><Setter Property="Margin" Value="0,0,10,10"/></Style>
+  <Style x:Key="TileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="180"/><Setter Property="Height" Value="184"/><Setter Property="Margin" Value="0,0,12,12"/></Style>
+  <Style x:Key="SmallTileAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Width" Value="130"/><Setter Property="Height" Value="148"/><Setter Property="Margin" Value="0,0,10,10"/></Style>
   <Style x:Key="ListAssetItem" TargetType="ListBoxItem" BasedOn="{StaticResource AssetItem}"><Setter Property="Height" Value="62"/><Setter Property="Margin" Value="0,0,0,4"/></Style>
   <Style x:Key="AssetViewModeButton" TargetType="RadioButton">
    <Setter Property="Width" Value="34"/><Setter Property="Height" Value="32"/><Setter Property="Margin" Value="0,0,3,0"/><Setter Property="Cursor" Value="Hand"/>
@@ -183,6 +222,7 @@
    <Grid Grid.Row="4" Margin="0,8,4,2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <TextBlock x:Name="countLabel" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" FontSize="11" Margin="0,0,10,0"/>
     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+     <Button x:Name="compactDetailsButton" Visibility="Collapsed" Click="CompactDetailsClicked" Margin="0,0,8,0" Padding="6,4"/>
      <TextBlock x:Name="assetViewLabel" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,7,0"/>
      <RadioButton x:Name="assetViewTiles" GroupName="AssetViewMode" Style="{StaticResource AssetViewModeButton}" Checked="AssetViewChanged">
       <UniformGrid Rows="2" Columns="2" Width="20" Height="20"><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/><Rectangle Fill="{DynamicResource Ts.Text}" Margin="1"/></UniformGrid>
@@ -196,12 +236,26 @@
     </StackPanel>
    </Grid>
   </Grid>
-  <Border x:Name="detailsBorder" Grid.Column="3" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">
+  <Border x:Name="detailsBorder" Grid.Column="3" Panel.ZIndex="1" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1,0,0,0">
    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><StackPanel Margin="18">
-    <TextBlock Text="{local:Translate Text1A5F1627B232}" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}"/>
+    <DockPanel>
+     <Button x:Name="closeCompactDetailsButton" DockPanel.Dock="Right" Content="×" Visibility="Collapsed"
+             Click="CloseCompactDetailsClicked" Padding="6,2"/>
+     <TextBlock Text="{local:Translate Text1A5F1627B232}" VerticalAlignment="Center" FontSize="10" Foreground="{DynamicResource Ts.TextMuted}"/>
+    </DockPanel>
     <Image x:Name="detailPreview" Height="130" Margin="0,16" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
-    <TextBlock x:Name="detailName" Text="{local:Translate Text85DE61BC1CCC}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
-    <TextBlock x:Name="detailSummary" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,7,0,14"/>
+    <DockPanel>
+     <local:WorkspaceAssetIcon x:Name="detailKindIcon" Style="{StaticResource AssetKindGlyph}" DockPanel.Dock="Left"
+                               Width="20" Height="20" Margin="0,2,8,0" VerticalAlignment="Top" Visibility="Collapsed"/>
+     <TextBlock x:Name="detailName" Text="{local:Translate Text85DE61BC1CCC}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    </DockPanel>
+    <StackPanel Margin="0,7,0,14">
+     <TextBlock x:Name="detailSummary" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap"/>
+     <StackPanel x:Name="detailExtensionRow" Orientation="Horizontal" Margin="0,4,0,0" Visibility="Collapsed">
+      <TextBlock x:Name="detailExtensionLabel" Margin="0,0,8,0" Foreground="{DynamicResource Ts.TextSecondary}"/>
+      <TextBlock x:Name="detailExtension"/>
+     </StackPanel>
+    </StackPanel>
     <Button x:Name="openAssetButton" Content="{local:Translate Text7969171D49E8}" Click="OpenClicked" IsEnabled="False"/>
     <StackPanel x:Name="assetTagsPanel">
     <TextBlock Text="{local:Translate TextC8FA45FB52C9}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,20,0,6"/>

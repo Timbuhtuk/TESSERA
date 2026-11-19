@@ -14,6 +14,7 @@ public partial class WorkspaceBrowser : UserControl
 {
     private WorkspaceCatalog? _catalog;
     private bool _ready, _building;
+    private bool _compactDetailsOpen;
     private Point _dragStart;
     private object? _treeDrag;
     private WorkspaceAsset? _deferredClick;
@@ -34,6 +35,10 @@ public partial class WorkspaceBrowser : UserControl
         localProjectMenuItem.Header = Localization.Text("Обычный проект…");
         unrealProjectMenuItem.Header = Localization.Text("Из Unreal…");
         assetViewLabel.Text = Localization.Text("Вид");
+        detailExtensionLabel.Text = Localization.Text("Расширение файла");
+        compactDetailsButton.Content = Localization.Text("Сведения");
+        closeCompactDetailsButton.ToolTip = Localization.Text("Закрыть");
+        AutomationProperties.SetName(closeCompactDetailsButton, Localization.Text("Закрыть"));
         foreach (var (button, label) in new[]
         {
             (assetViewTiles, Localization.Text("Плитка")),
@@ -44,12 +49,7 @@ public partial class WorkspaceBrowser : UserControl
             button.ToolTip = label;
             AutomationProperties.SetName(button, label);
         }
-        SizeChanged += (_, _) =>
-        {
-            bool compact = ActualWidth < 1050;
-            detailColumn.Width = new GridLength(compact ? 0 : 270);
-            detailsBorder.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        };
+        SizeChanged += (_, _) => UpdateDetailsLayout();
         PreviewDragOver += (_, e) =>
         {
             if (e.Data.GetDataPresent(DataFormats.FileDrop)) { e.Effects = DragDropEffects.Copy; e.Handled = true; }
@@ -327,13 +327,49 @@ public partial class WorkspaceBrowser : UserControl
                 _ => managementVisibility
             };
         openAssetButton.IsEnabled = asset is not null;
-        detailName.Text = selection.Count > 1 ? Localization.Format("Выбрано: {0}", selection.Count) : asset?.Name ?? Localization.Text("Выберите ассет");
-        detailSummary.Text = asset?.Summary ?? ""; detailPreview.Source = asset?.Thumbnail;
+        detailName.Text = selection.Count > 1 ? Localization.Format("Выбрано: {0}", selection.Count) : asset?.DisplayName ?? Localization.Text("Выберите ассет");
+        var single = selection.Count == 1 ? asset : null;
+        detailKindIcon.DataContext = single;
+        detailKindIcon.Visibility = single is null ? Visibility.Collapsed : Visibility.Visible;
+        detailSummary.Text = single?.MetadataLabel ?? "";
+        detailPreview.Source = asset?.Thumbnail;
+        detailExtension.Text = single?.FileExtension ?? "";
+        detailExtensionRow.Visibility = detailExtension.Text.Length == 0 ? Visibility.Collapsed : Visibility.Visible;
         tagsInput.Text = asset is null ? "" : string.Join(", ", asset.Tags.Where(t => selection.All(a => a.Tags.Contains(t))));
         usageLabel.Text = asset is null ? "" : Localization.Text("Используется:\n") + (string.IsNullOrEmpty(asset.LocationLabel) ? Localization.Text("Без проекта") :
-            string.Join("\n", asset.LocationLabel.Split(" · ").Select(location => location + " / " + asset.Name)));
+            string.Join("\n", asset.LocationLabel.Split(" · ").Select(location => location + " / " + asset.DisplayName)));
         if (asset is not null && _catalog is not null) _catalog.State.SelectedAsset = asset.Id;
+        UpdateDetailsLayout();
         if (_ready && _catalog is not null) countLabel.Text = Localization.Format("Материалов: {0} · Выбрано: {1} · Ctrl / Shift — несколько · Enter — открыть · Правая кнопка — действия", assetList.Items.Count, selection.Count);
+    }
+
+    private void UpdateDetailsLayout()
+    {
+        const double detailsWidth = 270;
+        bool compact = ActualWidth < 1050;
+        bool hasSelection = assetList.SelectedItem is not null;
+        if (!compact || !hasSelection) _compactDetailsOpen = false;
+        detailColumn.Width = new GridLength(compact ? 0 : detailsWidth);
+        Grid.SetColumn(detailsBorder, compact ? 2 : 3);
+        detailsBorder.Width = compact ? detailsWidth : double.NaN;
+        detailsBorder.HorizontalAlignment = compact ? HorizontalAlignment.Right : HorizontalAlignment.Stretch;
+        detailsBorder.Visibility = !compact || _compactDetailsOpen ? Visibility.Visible : Visibility.Collapsed;
+        compactDetailsButton.Visibility = compact && hasSelection ? Visibility.Visible : Visibility.Collapsed;
+        closeCompactDetailsButton.Visibility = _compactDetailsOpen ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void CompactDetailsClicked(object sender, RoutedEventArgs e)
+    {
+        _compactDetailsOpen = true;
+        UpdateDetailsLayout();
+        closeCompactDetailsButton.Focus();
+    }
+
+    private void CloseCompactDetailsClicked(object sender, RoutedEventArgs e)
+    {
+        _compactDetailsOpen = false;
+        UpdateDetailsLayout();
+        compactDetailsButton.Focus();
     }
     private void OpenClicked(object sender, RoutedEventArgs e) { if (Selection.FirstOrDefault() is { } asset) OpenRequested?.Invoke(asset); }
     private void OpenDoubleClick(object sender, MouseButtonEventArgs e) { if (ItemsControl.ContainerFromElement(assetList, e.OriginalSource as DependencyObject) is ListBoxItem) OpenClicked(sender, e); }

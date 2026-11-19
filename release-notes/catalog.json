@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Карточки библиотеки и перетаскивание окна",
+        "en": "Library cards and window dragging"
+      },
+      "notes": {
+        "ru": "- Библиотека: карточки занимают меньше места, длинные названия в мелкой сетке переносятся на вторую строку, а тип ассета виден по иконке. Расширение файла отображается в сведениях о выбранном ассете.\n- Главное окно: перетаскивание работает по свободной части заголовка и по полосе над меню и кнопками окна. За самую верхнюю кромку по-прежнему можно изменить высоту окна.",
+        "en": "- Library: cards take up less space, long names wrap to a second line in the small grid, and icons identify asset types. File extensions appear in the selected asset’s details.\n- Main window: drag it from the empty title-bar area or the strip above the menu and window buttons. Use the top edge to resize the window vertically."
+      }
+    },
+    {
+      "version": "2.34.0",
+      "title": {
         "ru": "Пакетный экспорт Aseprite в PNG",
         "en": "Batch Aseprite export to PNG"
       },

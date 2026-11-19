@@ -30,6 +30,7 @@
     <Resource Include="Assets\settings.svg" />
     <Resource Include="Assets\unreal-mark.svg" />
     <Resource Include="Assets\ResultIcons\*.svg" />
+    <Resource Include="Assets\WorkspaceAssetIcons\*.svg" />
     <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
     <EmbeddedResource Include="$(ReleaseNotesFile)" LogicalName="Tessera.ReleaseNotes.json" />
     <EmbeddedResource Include="..\Unreal\TesseraSync\TesseraSync.uplugin" LogicalName="Tessera.Unreal.TesseraSync.uplugin" />

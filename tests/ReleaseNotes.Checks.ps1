@@ -1,7 +1,12 @@
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path $PSScriptRoot -Parent
 $taskOutput = Join-Path $taskRoot ('artifacts/notes-script-' + [guid]::NewGuid().ToString('N'))
-$global:notesFixtureSource = Get-Content (Join-Path $taskRoot 'release-notes/catalog.json') -Raw
+$fixtureRoot = Join-Path $taskOutput 'repository'
+$fixtureCatalog = Join-Path $fixtureRoot 'release-notes/catalog.json'
+New-Item -ItemType Directory -Path (Split-Path $fixtureCatalog) -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $taskRoot 'release-notes/catalog.json') -Destination $fixtureCatalog
+Copy-Item -LiteralPath (Join-Path $taskRoot 'Prepare-ReleaseNotes.ps1') -Destination $fixtureRoot
+$global:notesFixtureSource = Get-Content -LiteralPath $fixtureCatalog -Raw
 $global:notesFixtureMode = 'curated'
 
 function Invoke-RestMethod {
@@ -64,8 +69,10 @@ foreach ($mode in @('curated', 'unchanged', 'history-only', 'unknown-history', '
     $global:notesFixtureMode = $mode
     $output = Join-Path $taskOutput $mode
     $version = if ($mode -eq 'rerun') { '9000.0.100' } elseif ($mode -eq 'minor-floor') { '2.34.0' } elseif ($mode -eq 'patch-floor') { '2.33.2' } else { '9000.0.101' }
+    $floor = if ($mode -in @('minor-floor', 'patch-floor')) { $version } else { '9000.0.0' }
+    Set-Content -LiteralPath (Join-Path $fixtureRoot 'release-version.txt') -Value $floor -Encoding utf8
     $errorText = ''
-    try { & (Join-Path $taskRoot 'Prepare-ReleaseNotes.ps1') -Version $version -OutputDirectory $output -Repository 'Test/Notes' }
+    try { & (Join-Path $fixtureRoot 'Prepare-ReleaseNotes.ps1') -Version $version -OutputDirectory $output -Repository 'Test/Notes' }
     catch { $errorText = $_.Exception.Message }
     if ($mode -in @('unchanged', 'history-only', 'unknown-history', 'patch-floor')) {
         Require ($errorText -like '*user-facing*') "Missing curated notes did not fail preparation: $mode / $errorText"

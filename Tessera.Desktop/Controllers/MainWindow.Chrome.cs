@@ -35,9 +35,12 @@ public partial class MainWindow
             }
         }
         rootLayout.Margin = padding;
-        var chrome = WindowChrome.GetWindowChrome(this);
-        if (chrome is not null && chrome.CaptionHeight != 40 + padding.Top)
-            chrome.CaptionHeight = 40 + padding.Top;
+        if (WindowChrome.GetWindowChrome(this) is { } chrome)
+        {
+            // The caption starts below the top resize border.
+            double captionHeight = titleBar.Height + padding.Top - chrome.ResizeBorderThickness.Top;
+            if (chrome.CaptionHeight != captionHeight) chrome.CaptionHeight = captionHeight;
+        }
     }
 
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
