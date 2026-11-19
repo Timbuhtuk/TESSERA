@@ -87,6 +87,8 @@
   " · результат предыдущих настроек": " · result from previous settings",
   " Увеличение без сглаживания.": " Upscale without smoothing.",
   " — копия": " — copy",
+  "Расширение файла": "File extension",
+  "Сведения": "Details",
   "#RRGGBB или #AARRGGBB": "#RRGGBB or #AARRGGBB",
   "#{0:X2}{1:X2}{2:X2} → #{3:X2}{4:X2}{5:X2}. Размер и прозрачность сохранены.": "#{0:X2}{1:X2}{2:X2} → #{3:X2}{4:X2}{5:X2}. Size and transparency preserved.",
   "0 — точное совпадение. Увеличьте допуск для близких оттенков.": "0 means an exact match. Increase tolerance for similar shades.",

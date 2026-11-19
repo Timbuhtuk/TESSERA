@@ -40,14 +40,39 @@ public sealed class WorkspaceAsset : INotifyPropertyChanged
         }
     }
     public event PropertyChangedEventHandler? PropertyChanged;
-    [JsonIgnore] public string KindLabel => Kind switch { EWorkspaceAssetKind.Animation => Localization.Text("Анимация"), EWorkspaceAssetKind.Board => Localization.Text("Доска"), EWorkspaceAssetKind.Tiles => Localization.Text("Коллекция тайлов"), _ => Localization.Text("Изображение") };
-    [JsonIgnore] public string Summary
+    internal string ImageExtension { get; set; } = "";
+    [JsonIgnore] public string FileExtension => Unreal is not null ? ".uasset" :
+        Kind == EWorkspaceAssetKind.Image ? ImageExtension : Path.GetExtension(ContentFile);
+    [JsonIgnore] public string DisplayName
     {
         get
         {
-            string summary = Width > 0 ? $"{KindLabel} · {Width} × {Height}" : KindLabel;
-            if (Unreal?.CreatePending == true) return summary + " · " + Localization.Text("Ожидает создания в Unreal");
-            return Unreal?.NeedsDestination == true ? summary + " · " + Localization.Text("Связь с Unreal потеряна") : summary;
+            string extension = FileExtension;
+            if (extension.Length == 0 || Unreal is not null) return Name;
+            const string russianCopySuffix = " — копия";
+            const string englishCopySuffix = " — copy";
+            int end = Name.Length;
+            while (true)
+            {
+                var stem = Name.AsSpan(0, end);
+                if (stem.EndsWith(russianCopySuffix, StringComparison.Ordinal)) end -= russianCopySuffix.Length;
+                else if (stem.EndsWith(englishCopySuffix, StringComparison.Ordinal)) end -= englishCopySuffix.Length;
+                else break;
+            }
+            return end > extension.Length && Name.AsSpan(0, end).EndsWith(extension, StringComparison.OrdinalIgnoreCase)
+                ? Name.Remove(end - extension.Length, extension.Length) : Name;
+        }
+    }
+    [JsonIgnore] public string KindLabel => Kind switch { EWorkspaceAssetKind.Animation => Localization.Text("Анимация"), EWorkspaceAssetKind.Board => Localization.Text("Доска"), EWorkspaceAssetKind.Tiles => Localization.Text("Коллекция тайлов"), _ => Localization.Text("Изображение") };
+    [JsonIgnore] public string MetadataLabel
+    {
+        get
+        {
+            string dimensions = Width > 0 && Height > 0 ? $"{Width} × {Height}" : "";
+            string status = Unreal?.CreatePending == true ? Localization.Text("Ожидает создания в Unreal") :
+                Unreal?.NeedsDestination == true ? Localization.Text("Связь с Unreal потеряна") : "";
+            if (dimensions.Length == 0) return status;
+            return status.Length == 0 ? dimensions : dimensions + " · " + status;
         }
     }
     [JsonIgnore] public string TagLabel => string.Join(" · ", Tags);
@@ -135,6 +160,7 @@ public sealed partial class WorkspaceCatalog
                 asset = new WorkspaceAsset { Id = source.Id, Name = source.Label, Width = source.Width, Height = source.Height };
                 State.Assets.Add(asset);
             }
+            asset.ImageExtension = Path.GetExtension(source.OriginalPath);
             asset.Thumbnail = source.SelectedGeneration?.Thumbnail ?? source.Thumbnail;
             var result = source.SelectedGeneration;
             asset.Width = result?.Width ?? source.Width;
@@ -246,6 +272,7 @@ public sealed partial class WorkspaceCatalog
             var source = images.Load().Single(s => s.Id == original.Id);
             source.SelectedGeneration = source.Generations.FirstOrDefault(g => g.Id == original.SelectedResult) ?? source.SelectedGeneration;
             var cloned = images.Clone(source, copy.Id, copy.Name);
+            copy.ImageExtension = Path.GetExtension(source.OriginalPath);
             copy.Thumbnail = cloned.SelectedGeneration?.Thumbnail ?? cloned.Thumbnail;
             copy.SelectedResult = cloned.SelectedGeneration?.Id;
         }
