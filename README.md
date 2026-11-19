@@ -2,34 +2,26 @@
 
 # Tessera
 
-**A local workspace for preparing and assembling 2D graphics.**
+**An offline Windows workspace for 2D game assets.**
 
-Organize standalone and shared assets in projects and nested folders, add tags, search and open connected processing tools from one top menu. See the [workspace guide](docs/WORKSPACE_PROTOTYPE.md) for navigation and storage.
+Organize project assets, clean up pixel art, turn Aseprite animations into sprite sheets, and edit textures linked to Unreal Engine 5. Tessera keeps your sources and processing history in a local library and lets you replay processing steps as macros in the app or from the command line.
 
-Tessera is a standalone Windows app for preparing pixel art and icons. It began with a specific problem: AI-generated pixel art often looks pixelated, but its grid is uneven and its “pixels” have different sizes. Tessera helps align those shapes to a consistent grid so you can keep working with the image.
+[**Download Tessera for Windows x64**](https://github.com/Timbuhtuk/TESSERA/releases/latest) · [User guide](docs/USAGE.md) · [CLI reference](docs/CLI.md)
 
-The name comes from a *tessera*, an individual piece of a mosaic.
+## What you can do
 
-Developers can start with the [project architecture](docs/ARCHITECTURE.md) and [development guide](docs/DEVELOPMENT.md).
+- **Organize assets.** Group images, moodboards and tile collections into projects and nested folders. Search by name or tag, filter by dimensions and transparency, and share an asset across projects.
+- **Prepare pixel art.** Align and reduce uneven pixel grids, resize with crisp previews, import custom palettes from images, replace colors, clean up contours, and remove solid backgrounds. Compare results side by side and explore alternatives in a branching history.
+- **Build assets for export.** Batch-export supported RGBA Aseprite files to PNG sprite sheets with optional JSON frame timings. Inspect repeating tiles and seams, compose layered moodboards, and generate multi-size Windows ICO files.
+- **Work with textures.** Generate and paint height, normal, and ambient occlusion maps with a lighting preview. Browse linked Unreal textures, save edits back to the existing assets, and publish maps through Tessera Sync. The integration targets Unreal Editor 5.3. [Unreal setup guide](docs/UNREAL_SYNC.md)
+- **Repeat a workflow.** Save a chain of edits as a macro and run it on another image in the desktop app or CLI. Apply a macro to every frame of a video with FFmpeg. [History and macros](docs/HISTORY_MACROS.md)
 
-Today, Tessera brings the rest of that workflow together:
+## Get started
 
-- Align a pixel grid and reduce each cell to a single pixel.
-- Enlarge pixels without blur, reduce image size and adjust colors independently, or combine size and palette processing.
-- Smooth local color noise using neighboring pixels, inspect image palettes and replace individual colors while keeping transparency.
-- Convert images to monochrome or ASCII art, with text export and black-and-white image rendering.
-- Keep source images and a history of results in a local library.
-- Follow branching result histories, navigate project folders in the source tray and replay saved processing macros. See the [history and macros guide](docs/HISTORY_MACROS.md).
-- Compare previews with crisp zoom, synchronized scrolling and transparency backgrounds.
-- Create Windows ICO files containing several icon sizes.
-- Arrange images on a layered moodboard, save an editable project and export the composition as PNG.
-- Inspect repeating tiles and directional seams, edit pixels and save portable asset collections.
-- Remove a solid background in its own workspace and save a transparent PNG, or apply it while creating an ICO. Adjust tolerance and remove matching colors globally or only from edge-connected regions.
-- Preserve transparency and export one result or all results for an image.
-- Drop several Aseprite animations to create PNG sprite sheets with JSON frame timings, then save individual results or the whole batch.
+Run `Tessera.exe` directly or unpack `Tessera-win-x64.zip` and launch the executable. The desktop app processes images offline and requires no .NET installation. When online, it can check GitHub for updates and install them with your confirmation. Keep `WorkspaceData` beside the executable when moving a portable installation with its library. The interface is available in English and Russian. [Workspace guide](docs/WORKSPACE_PROTOTYPE.md)
 
-Everything runs locally, without an internet connection. Download, unpack and launch.
+For scripting, unpack `Tessera-cli-win-x64.zip` into its own folder and run `.\tessera.exe --help`. The local Tessera plugin can also run the CLI from ChatGPT. [ChatGPT setup](docs/CHATGPT.md)
 
-When online, Tessera can check GitHub for newer releases and install an update after confirmation. Your image library stays in place.
+## Build from source
 
-[**Download Tessera for Windows x64**](https://github.com/Timbuhtuk/TESSERA/releases/latest)
+Build `Tessera.sln` on Windows with the .NET 8 SDK, or run `.\Build-Standalone.ps1` from the repository root to build, test and package the desktop app and CLI. [Development guide](docs/DEVELOPMENT.md) · [Architecture](docs/ARCHITECTURE.md)
