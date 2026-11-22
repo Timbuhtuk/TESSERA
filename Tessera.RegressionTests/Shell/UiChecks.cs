@@ -17,7 +17,7 @@ internal static class UiChecks
         Exception? failure = null;
         var thread = new Thread(() =>
         {
-            try { ProgressUiChecks.Run(); AppearanceChecks.Run(); LibraryLocationChecks.Run(); EditorRegressionChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); WorkspaceExportChecks.Run(); } catch (Exception e) { failure = e; }
+            try { ProgressUiChecks.Run(); AppearanceChecks.Run(); EditorRegressionChecks.Run(); UpscaleUiChecks.Run(); WindowChromeChecks.Run(); LibraryChecks.Run(); PixelWorkflowChecks.Run(); LibraryRemovalChecks.Run(); IconWorkspaceChecks.Run(); AsepriteUiChecks.Run(); BackgroundWorkspaceChecks.Run(); WorkspaceExportChecks.Run(); } catch (Exception e) { failure = e; }
         })
         { IsBackground = true };
         thread.SetApartmentState(ApartmentState.STA);
@@ -37,25 +37,22 @@ internal static class UiChecks
         {
             window.Show();
             Pump();
-            var storyDialog = new TesseraDialog("Проверка текста диалога.", "Проверка", MessageBoxButton.YesNo, MessageBoxImage.Question)
-            {
-                Owner = window,
-                WindowStartupLocation = WindowStartupLocation.Manual,
-                Left = -10000,
-                Top = -10000,
-                ShowActivated = false
-            };
+            var storyDialog = TesseraDialogs.Create("Проверка текста диалога.", "Проверка", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            storyDialog.Owner = window;
+            storyDialog.WindowStartupLocation = WindowStartupLocation.Manual;
+            storyDialog.Left = storyDialog.Top = -10000;
+            storyDialog.ShowActivated = false;
             storyDialog.Show(); Pump();
-            var storyFrame = (Border)storyDialog.FindName("dialogFrame");
-            var storyButtons = (StackPanel)storyDialog.FindName("dialogButtons");
+            var storyFrame = (Border)storyDialog.Content;
+            var storyButtons = (Panel)storyDialog.FindName("ActionButtons");
             var storyShadow = (System.Windows.Media.Effects.DropShadowEffect)storyFrame.Effect;
             Require(ReferenceEquals(storyFrame.Style, storyDialog.FindResource("Ts.DialogBorder")) &&
                 storyButtons.Children.OfType<Button>().Count() == 2 &&
-                ((Grid)storyDialog.FindName("dialogBackdrop")).Background == System.Windows.Media.Brushes.Transparent &&
+                storyDialog.Background == System.Windows.Media.Brushes.Transparent &&
                 Math.Abs(storyShadow.ShadowDepth - 14.142) < 0.01 && storyShadow.BlurRadius == 0,
                 "StoryBook dialog frame, actions or hard shadow were not applied");
             CaptureTool(storyDialog, "story-dialog.png");
-            var noButton = storyButtons.Children.OfType<Button>().Single(button => Equals(button.Tag, MessageBoxResult.No));
+            var noButton = storyButtons.Children.OfType<Button>().Single(button => Equals(button.Content, Tessera.Desktop.Localization.Text("No")));
             noButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(storyDialog.Result == MessageBoxResult.No && !storyDialog.IsVisible,
                 "StoryBook dialog did not return the selected action");
@@ -429,20 +426,20 @@ internal static class UiChecks
             }
             Require(Get<TextBlock>("infoSourceSummary").Text.Contains($"{source.Width} × {source.Height}") &&
                 Get<TextBlock>("infoSourceSummary").Text.Contains($"{ImageColorTools.CountColors(source):N0}") &&
-                Get<ColorTreemap>("infoColorTreemap").Areas.Count == ImageColorTools.CountColors(source),
+                Get<ColorTreemap>("infoColorTreemap").ItemsSource!.Count() == ImageColorTools.CountColors(source),
                 "Info did not count and map visible source colors");
             Require(Get<TextBlock>("infoResultSummary").Text == "Пока нет результата",
                 "Info retained an old result after switching source");
             Color oldColor = source.GetPixel(0, 0);
-            var colorEntry = Get<ColorTreemap>("infoColorTreemap").Areas
-                .Single(color => color.Color?.ToArgb() == Color.FromArgb(oldColor.R, oldColor.G, oldColor.B).ToArgb());
-            Get<ColorTreemap>("infoColorTreemap").SelectColor(colorEntry.Color!.Value);
+            var colorEntry = Get<ColorTreemap>("infoColorTreemap").ItemsSource!.ToArray()
+                .Single(color => color.Color == System.Windows.Media.Color.FromRgb(oldColor.R, oldColor.G, oldColor.B));
+            InfoWorkspaceChecks.SelectColor(Get<ColorTreemap>("infoColorTreemap"), colorEntry.Color!.Value);
             var replaceTool = infoTool!.OwnedWindows.OfType<ColorReplaceWindow>().Single(tool => tool.IsVisible);
             var replaceFrame = (Border)replaceTool.FindName("dialogFrame");
             Require(ReferenceEquals(replaceFrame.Style, replaceTool.FindResource("Ts.DialogBorder")),
                 "Color replacement did not use the StoryBook dialog frame");
             var selectedColor = (PaletteColorEntry)((ListBox)replaceTool.FindName("paletteList")).SelectedItem;
-            string selectedHex = PaletteColorEntry.FormatHex(colorEntry.Color!.Value);
+            string selectedHex = PaletteColorEntry.FormatHex(oldColor);
             Require(selectedColor.Hex == selectedHex &&
                 ((TextBox)replaceTool.FindName("newHexInput")).Text == selectedHex &&
                 ((TextBox)replaceTool.FindName("oldHexInput")).IsReadOnly,
@@ -498,10 +495,10 @@ internal static class UiChecks
             {
                 Pump(); Thread.Sleep(5);
             }
-            var manyAreas = Get<ColorTreemap>("infoColorTreemap").Areas;
+            var manyAreas = Get<ColorTreemap>("infoColorTreemap").ItemsSource!.ToArray();
             Require(Get<TextBlock>("infoPaletteStatus").Text.Contains("1024 самых частых") &&
-                manyAreas.Count == 1025 && manyAreas[^1].Color is null && manyAreas[^1].Pixels == 32 &&
-                manyAreas.Sum(area => area.Pixels) == 1056,
+                manyAreas.Length == 1025 && manyAreas[^1].Color is null && manyAreas[^1].Weight == 32 &&
+                manyAreas.Sum(area => area.Weight) == 1056,
                 "Info did not group the tail of a palette above its 1024-color limit");
             Require(Get<Button>("infoManualReplaceButton").Visibility == Visibility.Visible,
                 "Info did not offer HEX replacement for a large palette");

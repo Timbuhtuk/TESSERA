@@ -9,7 +9,7 @@ public partial class MainWindow
         iconWorkspace.ValidateExportPath = EnsureExportPathAllowed;
         iconWorkspace.BackRequested += (_, _) => ShowHome();
         iconWorkspace.MaterialRequested += UseEditorMaterialForIcon;
-        iconWorkspace.StatusChanged += message => statusLabel.Text = message;
+        iconWorkspace.StatusChanged += Notify;
         iconWorkspace.BusyChanged += (_, _) => UpdateBusyIndicator();
         Closed += (_, _) => iconWorkspace.Dispose();
     }
@@ -28,7 +28,7 @@ public partial class MainWindow
         SetVisible(iconWorkspace, true);
         iconWorkspace.SetEditorMaterials(GetEditorMaterials());
         HideWorkspaceBrowser();
-        statusLabel.Text = Localization.Text("Done");
+        Notify(Localization.Text("Done"), NotificationKind.Success);
     }
 
     private void UseEditorMaterialForIcon(EditorMaterial material)
@@ -39,7 +39,7 @@ public partial class MainWindow
             using var image = ImageLibrary.ReadBitmap(material.SnapshotPath);
             iconWorkspace.SetImage(image, material.FileLabel, material.OriginalPath ?? material.SnapshotPath);
         }
-        catch (Exception ex) { statusLabel.Text = Localization.Format("CouldNotOpenMaterialFormat", ex.Message); }
+        catch (Exception ex) { Notify(Localization.Format("CouldNotOpenMaterialFormat", ex.Message), NotificationKind.Error); }
     }
 
     private bool IsIconDropTarget(DependencyObject? target)
@@ -72,6 +72,6 @@ public partial class MainWindow
                 if (path is not null) await iconWorkspace.LoadFileAsync(path);
             }
         }
-        catch (Exception ex) { statusLabel.Text = Localization.Format("CouldNotOpenImageForICOFormat", ex.Message); }
+        catch (Exception ex) { Notify(Localization.Format("CouldNotOpenImageForICOFormat", ex.Message), NotificationKind.Error); }
     }
 }

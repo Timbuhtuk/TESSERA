@@ -121,32 +121,25 @@ internal static class CliApplication
             return CleanDarkContoursCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "align")
             return GridAlignmentCommand.Run(args[1..], output, error);
-        // TESSERA_LEGACY Retain compact-grid as a reduce-grid command alias.
-        if (args.Length > 0 && args[0] is "reduce-grid" or "compact-grid")
+        if (args.Length > 0 && args[0] == "reduce-grid")
             return GridReductionCommand.Run(args[1..], output, error);
-        // TESSERA_LEGACY Retain icon as an ico command alias.
-        if (args.Length > 0 && args[0] is "ico" or "icon")
+        if (args.Length > 0 && args[0] == "ico")
             return IconCommand.Run(args[1..], output, error);
-        // TESSERA_LEGACY Retain remove-bg as a remove-background command alias.
-        if (args.Length > 0 && args[0] is "remove-background" or "remove-bg")
+        if (args.Length > 0 && args[0] == "remove-background")
             return BackgroundCommand.Run(args[1..], output, error);
         if (args.Length > 0 && args[0] == "resize")
             return IndependentCommand.Run(args[1..], true, output, error);
         if (args.Length > 0 && args[0] == "colors")
             return IndependentCommand.Run(args[1..], false, output, error);
-        // TESSERA_LEGACY Retain smooth as a smooth-colors command alias.
-        if (args.Length > 0 && args[0] is "smooth-colors" or "smooth")
+        if (args.Length > 0 && args[0] == "smooth-colors")
             return ImageToolsCommand.RunSmooth(args[1..], output, error);
-        // TESSERA_LEGACY Retain trim-transparent as a trim command alias.
-        if (args.Length > 0 && args[0] is "trim" or "trim-transparent")
+        if (args.Length > 0 && args[0] == "trim")
             return ImageToolsCommand.RunTrim(args[1..], output, error);
         if (args.Length > 0 && args[0] == "sharpen")
             return ImageToolsCommand.RunSharpen(args[1..], output, error);
-        // TESSERA_LEGACY Retain channel as an adjust-channel command alias.
-        if (args.Length > 0 && args[0] is "adjust-channel" or "channel")
+        if (args.Length > 0 && args[0] == "adjust-channel")
             return ImageToolsCommand.RunChannel(args[1..], output, error);
-        // TESSERA_LEGACY Retain finalist-reduce as a tcr command alias.
-        if (args.Length > 0 && args[0] is "tcr" or "finalist-reduce")
+        if (args.Length > 0 && args[0] == "tcr")
             return ImageToolsCommand.RunTcr(args[1..], output, error);
         if (args.Length > 0 && args[0] == "contour-map")
             return ImageToolsCommand.RunContourMap(args[1..], output, error);
@@ -164,8 +157,7 @@ internal static class CliApplication
             return ImageToolsCommand.RunSliceTiles(args[1..], output, error);
         if (args.Length > 0 && args[0] == "tile-smooth")
             return ImageToolsCommand.RunTileSmooth(args[1..], output, error);
-        // TESSERA_LEGACY Retain mono as a monochrome command alias.
-        if (args.Length > 0 && args[0] is "monochrome" or "mono")
+        if (args.Length > 0 && args[0] == "monochrome")
             return ImageToolsCommand.RunMonochrome(args[1..], output, error);
         if (args.Length > 0 && args[0] == "ascii")
             return ImageToolsCommand.RunAscii(args[1..], output, error);

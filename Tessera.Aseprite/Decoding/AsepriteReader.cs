@@ -133,7 +133,6 @@ public static class AsepriteReader
                             var layer = ReadLayer(ref chunk, flags, visibleGroups);
                             layers.Add(layer);
                             document.WorkingBytes += layer.Name.Length * 2L + 128;
-                            if (layers.Count == 1) document.LayerName = layer.Name;
                             break;
                         case 0x2005:
                             var cel = ReadCel(ref chunk, document, layers, ref celBytes, token);
@@ -172,7 +171,7 @@ public static class AsepriteReader
             }
             frame.RequireEnd();
             if (layers.Count == 0) throw new InvalidDataException("Первый кадр не содержит слоёв.");
-            frames.Add(new AsepriteFrame(q, duration, cels.FirstOrDefault(c => layers[c!.LayerIndex].Visible)) { Cels = cels.AsReadOnly() });
+            frames.Add(new AsepriteFrame(q, duration) { Cels = cels.AsReadOnly() });
         }
         reader.RequireEnd();
         document.Frames = frames.AsReadOnly();

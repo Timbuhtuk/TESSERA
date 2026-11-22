@@ -6,7 +6,7 @@ Tessera is a local workspace for preparing and assembling 2D graphics for games,
 
 Run the published `Tessera.exe`. No .NET installation is needed. Manual update checks and installation are available in **Settings → Updates**; the application also checks automatically at startup.
 
-The default library is %LOCALAPPDATA%\Tessera\Library. Launching 3.0.0 beside an existing WorkspaceData/Library migrates a verified copy and preserves the original. An explicit --workspace-library <absolute-directory> selects a separate library for testing.
+The default library is `WorkspaceData/Library` beside the executable. On first launch, existing image snapshots and histories from `%LOCALAPPDATA%/Tessera/Library` are copied into it. The original library is never used for edits. Keep the `WorkspaceData` directory when moving the app. An explicit `--workspace-library <absolute-directory>` selects a separate library for testing.
 
 ## Organize materials
 
@@ -15,7 +15,7 @@ The gear icon in the title bar opens **Settings**: theme, interface language (Р
 - **Все ассеты** lists the whole library; **Без проекта** lists assets with no project memberships; **Недавние** lists previously opened materials.
 - Create projects using **+** beside **Проекты**. Right-click a project or folder to create a folder inside it, rename it or remove it. The same menu opens with Shift+F10 on the focused tree item.
 - Context menus use compact rows without an icon gutter. Mouse and keyboard highlighting invert the current theme's text and background colors.
-- Open or drop images, Aseprite files, `.tboard` boards and `.ttiles` collections. Imports made while a project is selected are linked into its selected folder. Other imports remain standalone.
+- Open or drop images, Aseprite files and `.tboard` boards. Imports made while a project is selected are linked into its selected folder. Other imports remain standalone.
 - Use Ctrl/Shift for multiple selection. Drag assets onto project/folder nodes, or use **Добавить в проект…** / **Переместить в папку…**. Folders can be dragged within their own project.
 - Select one asset and press **F2**, or choose **Переименовать…** from its context menu. The library name is shared across projects. For Unreal textures, F2 opens the Unreal rename and move dialog.
 - A project holds references. The same asset, edits, results and tags are shared by every project using it. Each project has its own folder placement.
@@ -24,7 +24,7 @@ The gear icon in the title bar opens **Settings**: theme, interface language (Р
 
 Tags belong to the shared asset. Enter comma-separated tags and apply them; for multiple selected assets this replaces each asset's tag list. The context menu provides the same actions when the details panel is hidden in a narrow window.
 
-Search matches asset names within the current view. In a project folder, it includes all subfolders. Multiple words must all match. Combine search with material type, exact width/height and transparency filters. Cards show project/folder paths. Collection dimensions describe the first tile.
+Search matches asset names within the current view. In a project folder, it includes all subfolders. Multiple words must all match. Combine search with material type, exact width/height and transparency filters. Cards show project/folder paths.
 
 ## Edit and export
 

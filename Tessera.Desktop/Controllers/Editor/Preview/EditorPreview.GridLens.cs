@@ -29,7 +29,7 @@ internal sealed partial class EditorPreview
         _gridLensGroup.Header = Localization.Text("LensGrid");
         var content = new StackPanel();
         _gridLensVisible.Content = Localization.Text("ShowGrid");
-        _gridLensVisible.Style = (Style)_editor.FindResource("Ts.SwitchBox");
+        _gridLensVisible.Style = (Style)_editor.FindResource("Ts.CompactSwitchBox");
         _gridLensVisible.ToolTip = Localization.Text("ShowsGridLinesOnlyRegularPreview");
         _gridLensVisible.Margin = new Thickness(0, 0, 0, 8);
         content.Children.Add(_gridLensVisible);
@@ -39,7 +39,7 @@ internal sealed partial class EditorPreview
         content.Children.Add(GridLensRow("GridColor", _gridLensColorButton));
         content.Children.Add(LensSlider("GridOpacity", "OpacityFormat", _gridLensOpacity));
         _gridLensDashed.Content = Localization.Text("DashedLines");
-        _gridLensDashed.Style = (Style)_editor.FindResource("Ts.SwitchBox");
+        _gridLensDashed.Style = (Style)_editor.FindResource("Ts.CompactSwitchBox");
         _gridLensDashed.ToolTip = Localization.Text("DashedLinesHint");
         content.Children.Add(_gridLensDashed);
         content.Children.Add(new TextBlock

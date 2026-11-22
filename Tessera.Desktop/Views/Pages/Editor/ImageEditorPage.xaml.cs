@@ -142,7 +142,7 @@ public partial class ImageEditorPage : Page
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("SaveError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("SaveError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -169,7 +169,8 @@ public partial class ImageEditorPage : Page
             };
             _downscaledResult.Save(temporaryPath, format);
             File.Move(temporaryPath, outputPath, overwrite: true);
-            Host.statusLabel.Text = Localization.Format("SavedFormat", outputPath) + (_resultStale ? Localization.Text("ResultFromPreviousSettings") : "");
+            Host.Notify(Localization.Format("SavedFormat", outputPath) + (_resultStale ? Localization.Text("ResultFromPreviousSettings") : ""),
+                _resultStale ? NotificationKind.Warning : NotificationKind.Success);
         }
         finally { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
     }

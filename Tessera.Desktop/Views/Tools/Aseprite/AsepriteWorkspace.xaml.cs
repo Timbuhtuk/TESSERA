@@ -51,7 +51,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
     private OperationProgressSession BeginProgress(string label, bool preview = false)
         => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
 
-    public event Action<string>? StatusChanged;
+    public event Action<string, NotificationKind>? StatusChanged;
 
     public AsepriteWorkspace()
     {
@@ -185,7 +185,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 }
                 var fileProgress = operation.Work.Slice(batchDone, batchTotal);
                 entry.Pending = true; entry.State = Localization.Text("ConvertingAction"); entry.Refresh();
-                StatusChanged?.Invoke(Localization.Format("ConvertingFormat", entry.Label, _pending.Count));
+                StatusChanged?.Invoke(Localization.Format("ConvertingFormat", entry.Label, _pending.Count), NotificationKind.Information);
                 string output = Path.Combine(entry.Directory, Guid.NewGuid().ToString("N"));
                 try
                 {
@@ -226,12 +226,13 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 UpdateControls();
             }
             if (batchFailures == 0) operation?.Complete();
-            StatusChanged?.Invoke(Localization.Format("AsepriteConversionSummary", converted, failed));
+            StatusChanged?.Invoke(Localization.Format("AsepriteConversionSummary", converted, failed),
+                MainWindow.BatchNotificationKind(converted, failed));
         }
         catch (OperationCanceledException)
         {
             while (_pending.TryDequeue(out var entry)) FinishUnsuccessfulConversion(entry, Localization.Text("Cancelled"), entry.Label + Localization.Text("ConversionCancelled"));
-            StatusChanged?.Invoke(Localization.Format("CancelledFormat", _entries.Count(e => e.Ready)));
+            StatusChanged?.Invoke(Localization.Format("CancelledFormat", _entries.Count(e => e.Ready)), NotificationKind.Information);
         }
         finally
         {
@@ -328,7 +329,7 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
             foreach (var item in entries)
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                StatusChanged?.Invoke(Localization.Format("SavingFormat", item.Label));
+                StatusChanged?.Invoke(Localization.Format("SavingFormat", item.Label), NotificationKind.Information);
                 try
                 {
                     bool includeMetadata = sheetIncludeMetadata.IsChecked == true;
@@ -340,10 +341,13 @@ public partial class AsepriteWorkspace : UserControl, IDisposable
                 catch (Exception ex) { results.Add(new SaveResult(item.InputPath, null, ex.Message)); item.State = Localization.Text("SaveError"); item.Detail = ex.Message; item.Refresh(); }
                 operation.Work.Report((double)results.Count / entries.Length);
             }
-            if (results.All(r => r.Error is null)) operation.Complete();
-            StatusChanged?.Invoke(Localization.Format("SaveCountWithErrorsAndFolder", results.Count(r => r.Error is null), results.Count(r => r.Error is not null), directory));
+            int saved = results.Count(r => r.Error is null);
+            int failed = results.Count - saved;
+            if (failed == 0) operation.Complete();
+            StatusChanged?.Invoke(Localization.Format("SaveCountWithErrorsAndFolder", saved, failed, directory),
+                MainWindow.BatchNotificationKind(saved, failed));
         }
-        catch (OperationCanceledException) { StatusChanged?.Invoke(Localization.Format("SavingCancelledFormat", results.Count(r => r.Error is null))); }
+        catch (OperationCanceledException) { StatusChanged?.Invoke(Localization.Format("SavingCancelledFormat", results.Count(r => r.Error is null)), NotificationKind.Information); }
         finally { _saving = false; _cancellation = null; if (_disposed) DeleteCache(_session); else { UpdateSelection(); UpdateControls(); } }
         return results;
     }

@@ -32,8 +32,6 @@ public partial class MainWindow
             try { await SelectUnrealProjectAsync(); }
             catch (Exception error) { WorkspaceError(error); }
         };
-        if (_unrealSync.ProjectPath is { } previous && File.Exists(previous))
-            _workspaceCatalog!.ConnectUnreal(previous);
         foreach (var project in _workspaceCatalog!.State.Projects.Where(p => p.IsUnreal))
             _workspaceCatalog.PruneUnrealFolders(project);
         _workspaceBrowser.RebuildTree();
@@ -52,7 +50,8 @@ public partial class MainWindow
         _workspaceBrowser.RebuildTree();
         PollUnrealProjects();
         if (InstalledUnrealPluginVersion(path) >= UnrealSyncBridge.PluginVersion) return;
-        if (TesseraDialog.Show(this, Localization.Text("InstallOrUpdateTesseraSyncPluginConfirmation"), "Unreal Engine", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+        if (TesseraDialogs.Show(this, Localization.Text("InstallOrUpdateTesseraSyncPluginConfirmation"), "Unreal Engine",
+            MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             InstallProjectPlugin(path);
     }
 
@@ -69,9 +68,8 @@ public partial class MainWindow
 
     private void InstallProjectPlugin(string path)
     {
-        _unrealSync.SelectProject(path);
-        _unrealSync.InstallPlugin();
-        TesseraDialog.Show(this, Localization.Text("TesserasyncWasCopied"),
+        UnrealSyncBridge.InstallPlugin(path);
+        TesseraDialogs.Show(this, Localization.Text("TesserasyncWasCopied"),
             "Tessera", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
@@ -109,8 +107,8 @@ public partial class MainWindow
                     }
                     else if (_unrealReportedJobs.Add(job.Directory) &&
                         (job.Request.Operation != "read" || _unrealOpenReads.Contains(asset.Id)))
-                        statusLabel.Text = job.Request.Operation == "read" ? UnrealJobError(job) :
-                            Localization.Format("LabelAndValue", asset.Name, UnrealJobError(job));
+                        Notify(job.Request.Operation == "read" ? UnrealJobError(job) :
+                            Localization.Format("LabelAndValue", asset.Name, UnrealJobError(job)), NotificationKind.Error);
                 }
                 long stamp = mailbox.CatalogStamp;
                 if (_unrealCatalogStamps.GetValueOrDefault(project.Id) != stamp && mailbox.ReadCatalog() is { } catalog)
@@ -161,7 +159,7 @@ public partial class MainWindow
                 _workspaceCatalog!.Save();
             }
             else _workspaceCatalog!.ForgetAsset(asset.Id);
-            statusLabel.Text = Localization.Format("DeletedFromUnreal", asset.Name);
+            Notify(Localization.Format("DeletedFromUnreal", asset.Name), NotificationKind.Success);
             job.Remove();
             return;
         }
@@ -182,7 +180,7 @@ public partial class MainWindow
             if (_sources.FirstOrDefault(s => s.Id == asset.Id) is { } source)
                 _library.RenameSource(source, asset.Name + ".png");
             _workspaceCatalog!.Save();
-            statusLabel.Text = Localization.Format("MovedInUnreal", destination);
+            Notify(Localization.Format("MovedInUnreal", destination), NotificationKind.Success);
             job.Remove();
             return;
         }
@@ -215,7 +213,7 @@ public partial class MainWindow
             if (job.Request.ResultId is { } resultId) binding.ResultRevisions[resultId] = revision;
             binding.Missing = false;
             _workspaceCatalog!.Save();
-            statusLabel.Text = Localization.Format("SavedInUnrealFormat", asset.Name);
+            Notify(Localization.Format("SavedInUnrealFormat", asset.Name), NotificationKind.Success);
         }
         job.Remove();
     }
@@ -270,7 +268,7 @@ public partial class MainWindow
                 var failed = mailbox.Jobs().FirstOrDefault(j => j.Request.AssetId == asset.Id && j.Request.Operation == "read" && j.Response is { Status: not "read" });
                 if (failed is not null) throw new IOException(UnrealJobError(failed));
             }
-            statusLabel.Text = Localization.Text("TheTextureHasNotLoadedYet");
+            Notify(Localization.Text("TheTextureHasNotLoadedYet"), NotificationKind.Warning);
             return false;
         }
         finally { _unrealOpenReads.Remove(asset.Id); }
@@ -295,7 +293,7 @@ public partial class MainWindow
             var existing = mailbox.Jobs().Where(j => j.Request.AssetId == asset.Id && j.Request.Operation != "read").ToArray();
             if (existing.Any(j => j.Response is null or { Status: "saved" }))
             {
-                statusLabel.Text = Localization.Text("ThisTextureAlreadyHasAQueued");
+                Notify(Localization.Text("ThisTextureAlreadyHasAQueued"), NotificationKind.Warning);
                 return;
             }
             string revision = resultId is { } id ? link.ResultRevisions.GetValueOrDefault(id, link.LoadedRevision) : link.LoadedRevision;
@@ -329,8 +327,8 @@ public partial class MainWindow
             }
             else if (existing.Any(j => j.Response?.Status is "error"))
             {
-                if (TesseraDialog.Show(this, UnrealJobError(existing[0]) + "\n" + Localization.Text("RetrySavingConfirmation"),
-                    "Unreal Engine", MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+                if (TesseraDialogs.Show(this, UnrealJobError(existing[0]) + "\n" + Localization.Text("RetrySavingConfirmation"),
+                    "Unreal Engine", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
             }
             string operation = link.CreatePending || link.Missing ? "create" : "save";
             mailbox.Queue(asset.Id, operation, link.Path, revision, operation == "create" ? link.MapKind ?? "color" : link.MapKind, png, resultId);
@@ -356,7 +354,8 @@ public partial class MainWindow
         {
             if (_sources.Any(s => s.Id == other.Id) || Mailbox(project).Jobs().Any(j => j.Request.AssetId == other.Id && j.Request.Operation != "read"))
                 throw new InvalidOperationException(Localization.Text("ThisAssetAlreadyLinkedAnotherTessera"));
-            if (TesseraDialog.Show(this, Localization.Text("LinkExistingTextureReplaceItWhenConfirmation"), "Unreal Engine", MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+            if (TesseraDialogs.Show(this, Localization.Text("LinkExistingTextureReplaceItWhenConfirmation"), "Unreal Engine",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
                 return false;
             link.Revision = link.LoadedRevision = other.Unreal!.Revision;
             _workspaceCatalog.ForgetAsset(other.Id);

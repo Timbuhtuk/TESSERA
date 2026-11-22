@@ -77,14 +77,14 @@ internal static class FinalistChecks
             try { using var invalid = FinalistReducer.Reduce(sample, FinalistMode.P5Off, factor); throw new InvalidDataException("Invalid factor accepted"); }
             catch (ArgumentOutOfRangeException) { }
         }
-        using (var sample = new Bitmap(9, 9))
+        var missingFactor = new ProcessingRecipe { Steps = [new ProcessingStep
+            { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = FinalistMode.P5Off }] };
+        try
         {
-            var oldRecipe = new ProcessingRecipe { Steps = [new ProcessingStep
-                { OperationId = ProcessingOperations.FinalistReduce, FinalistMode = FinalistMode.P5Off }] };
-            using var legacy = new WorkflowExecutor().Execute(sample, oldRecipe);
-            using var defaultResult = FinalistReducer.Reduce(sample, FinalistMode.P5Off);
-            Equal(defaultResult, legacy, "Old recipe defaults to 8×");
+            WorkflowExecutor.Validate(missingFactor);
+            throw new Exception("A finalist recipe without a factor was accepted.");
         }
+        catch (WorkflowStepException) { }
         Require(FinalistReducer.Blend((100, 50, 25, 0), (10, 20, 30, 255)) == (10, 20, 30, 128), "Transparent input contaminated mixture");
         Require(FinalistReducer.Blend((100, 50, 25, 0), (10, 20, 30, 0)) == (0, 0, 0, 0), "Zero alpha retained RGB");
         Console.WriteLine($"PASS finalists: {comparisons} exact RGBA comparisons, verified reference/input SHA-256, PNG reopen, general sizes and alpha cases. Exports: {outputRoot}");

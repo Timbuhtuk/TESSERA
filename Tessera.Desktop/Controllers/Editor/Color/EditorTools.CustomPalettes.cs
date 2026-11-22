@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Win32;
 using Tessera.Core.Imaging;
 using Bitmap = System.Drawing.Bitmap;
+using System.Windows.Media;
 
 namespace Tessera.Desktop;
 
@@ -25,7 +26,7 @@ internal sealed partial class EditorTools
                     .Where(palette => !string.IsNullOrWhiteSpace(palette.Name) && palette.Colors is { Length: > 0 } &&
                         palette.Colors.All(color => color is >= 0 and <= 0xFFFFFF)) ?? []);
         }
-        catch (Exception e) { Host.statusLabel.Text = Localization.Format("LoadPalettesFailed", e.Message); }
+        catch (Exception e) { Host.Notify(Localization.Format("LoadPalettesFailed", e.Message), NotificationKind.Warning); }
         foreach (var palette in _customPalettes) _editor.paletteInput.Items.Add(palette.Name);
         _editor.addPaletteButton.Click += AddCustomPalette;
         _editor.paletteInput.SelectionChanged += (_, _) =>
@@ -58,11 +59,11 @@ internal sealed partial class EditorTools
             _editor.paletteInput.Items.Add(palette.Name);
             _editor.paletteColorModeInput.IsChecked = true;
             _editor.paletteInput.SelectedIndex = 5 + _customPalettes.Count - 1;
-            Host.statusLabel.Text = Localization.Format("PaletteColorCountStatus", palette.Name, colors.Length);
+            Host.Notify(Localization.Format("PaletteColorCountStatus", palette.Name, colors.Length), NotificationKind.Success);
         }
         catch (Exception error)
         {
-            MessageBox.Show(Host, error.Message, Localization.Text("AddPaletteFailed"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(Host, error.Message, Localization.Text("AddPaletteFailed"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -72,7 +73,7 @@ internal sealed partial class EditorTools
         IReadOnlyList<int> colors = index >= 5 && index - 5 < _customPalettes.Count
             ? _customPalettes[index - 5].Colors
             : index is >= 0 and <= 3 ? Palettes.GetPalette((EPaletteKind)(index + 1)) : [];
-        _editor.paletteSwatches.SetColors(colors);
+        _editor.paletteSwatches.ItemsSource = colors.Select(rgb => Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb));
         _editor.paletteSwatches.Visibility = colors.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         _editor.paletteColorCount.Text = Localization.Format("PaletteColorCount", colors.Distinct().Count());
         _editor.paletteColorCount.Visibility = colors.Count == 0 ? Visibility.Collapsed : Visibility.Visible;

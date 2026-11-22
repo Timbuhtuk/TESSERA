@@ -175,8 +175,7 @@ public sealed class WorkflowExecutor
                 return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken, operationProgress), previousAlignmentCell);
             case ProcessingOperations.FinalistReduce:
                 return (FinalistReducer.Reduce(current, step.FinalistMode!.Value,
-                    // TESSERA_LEGACY Replay finalist recipes without finalistFactor at the former fixed 8× scale.
-                    step.FinalistFactor ?? FinalistReducer.DefaultFactor, operationProgress), previousAlignmentCell);
+                    step.FinalistFactor!.Value, operationProgress), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
         }
@@ -193,6 +192,8 @@ public sealed class WorkflowExecutor
             case ProcessingOperations.Cleanup:
                 RequireOnly(step, downscale: true);
                 if (step.Downscale is null) throw new InvalidDataException("Downscale parameters are required.");
+                if (step.OperationId == ProcessingOperations.Cleanup && step.Downscale.Cleanup is null)
+                    throw new InvalidDataException("Color cleanup parameters are required.");
                 ValidateOptions(step.Downscale);
                 break;
             case ProcessingOperations.Resize:
@@ -269,7 +270,7 @@ public sealed class WorkflowExecutor
                 RequireOnly(step, finalistMode: true, finalistFactor: true);
                 if (step.FinalistMode is null || !Enum.IsDefined(step.FinalistMode.Value))
                     throw new InvalidDataException("A finalist mode is required.");
-                if (step.FinalistFactor is < FinalistReducer.MinFactor or > FinalistReducer.MaxFactor)
+                if (step.FinalistFactor is null or < FinalistReducer.MinFactor or > FinalistReducer.MaxFactor)
                     throw new InvalidDataException("Finalist factor must be 2..64.");
                 break;
             default:
@@ -296,7 +297,6 @@ public sealed class WorkflowExecutor
         if (options.BlockMode == EBlockSelectionMode.Manual && options.ManualCriteria is null)
             throw new InvalidDataException("Manual criteria are required for manual block selection.");
         ValidateCriteria(options.ManualCriteria);
-        ValidateCriteria(options.LocalColorCriteria);
         if (options.Cleanup is { } cleanup && (!double.IsFinite(cleanup.ColorTolerance) || cleanup.ColorTolerance is < 0 or > 40 ||
             !double.IsFinite(cleanup.Strength) || cleanup.Strength is < 0 or > 1 ||
             !double.IsFinite(cleanup.DetailProtection) || cleanup.DetailProtection is < 0 or > 1 ||

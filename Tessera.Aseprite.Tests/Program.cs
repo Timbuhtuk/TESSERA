@@ -52,7 +52,7 @@ Check("All layouts, padding, incomplete rows, durations, UTF-8 tags and sRGB", (
     frames[0] = new Frame(0, Layer(uuid: true), Profile(), Tags(1, 4, 3, 0), frames[0].Chunks[0]);
     byte[] bytes = Fixtures.File(3, 2, frames, flags: 5, speed: 80, newCount: false, pixelWidth: 0, pixelHeight: 2);
     var document = AsepriteReader.Read(bytes, "прыжок.aseprite");
-    Require(document.TotalDurationMs == 180 && document.LayerName == "Слой 🦊", "Timing/UTF-8 changed");
+    Require(document.TotalDurationMs == 180 && document.Layers.Single().Name == "Слой 🦊", "Timing/UTF-8 changed");
     Require(document.Tags.Single() == new AsepriteTag("Бег 🦊", 1, 4, "pingpong_reverse", 0), "Tag changed");
     foreach (var layout in Enum.GetValues<SpriteSheetLayout>())
     {

@@ -22,7 +22,6 @@ internal static class BackgroundCommand
 
         global удаляет похожий цвет во всём изображении. edges начинает с четырёх
         краёв и сохраняет совпадающие участки, замкнутые внутри объекта.
-        Команда remove-bg является коротким псевдонимом.
         """;
 
     public static int Run(string[] args, TextWriter output, TextWriter error)
@@ -108,10 +107,9 @@ internal static class BackgroundCommand
         if (!Path.GetExtension(target).Equals(".png", StringComparison.OrdinalIgnoreCase))
             throw new CliUsageException("Результат удаления фона нужно сохранить в PNG.");
 
-        // TESSERA_LEGACY Accept global-color and edge-connected alongside the short background mode names.
         var mode = Choice("--mode", EBackgroundRemovalMode.GlobalColor,
-            ("global", EBackgroundRemovalMode.GlobalColor), ("global-color", EBackgroundRemovalMode.GlobalColor),
-            ("edges", EBackgroundRemovalMode.EdgeConnected), ("edge-connected", EBackgroundRemovalMode.EdgeConnected));
+            ("global", EBackgroundRemovalMode.GlobalColor),
+            ("edges", EBackgroundRemovalMode.EdgeConnected));
         int tolerance = Integer("--tolerance", 8, 0, 100);
         Color? color = values.TryGetValue("--background-color", out string? colorName) ? ParseColor(colorName) : null;
         return new BackgroundArguments(input, target, mode, tolerance, color,

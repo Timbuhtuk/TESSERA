@@ -20,7 +20,7 @@ internal sealed partial class EditorHistory
             try { _editor.SelectSource(source); }
             catch (Exception ex)
             {
-                Host.statusLabel.Text = Localization.Format("CouldNotOpenSavedSourceFormat", ex.Message);
+                Host.Notify(Localization.Format("CouldNotOpenSavedSourceFormat", ex.Message), NotificationKind.Error);
                 _restoringHistory = true; _editor.sourceStrip.SelectedItem = _editor._activeSource; _restoringHistory = false;
             }
         };
@@ -34,7 +34,7 @@ internal sealed partial class EditorHistory
             }
             catch (Exception ex)
             {
-                Host.statusLabel.Text = Localization.Format("CouldNotOpenResultFormat", ex.Message);
+                Host.Notify(Localization.Format("CouldNotOpenResultFormat", ex.Message), NotificationKind.Error);
                 _restoringHistory = true; _editor.generationStrip.SelectedItem = _editor.ProcessingBasis == 0 ? _historySourceRoot : _editor._activeSource?.SelectedGeneration; _restoringHistory = false;
             }
         };
@@ -53,7 +53,7 @@ internal sealed partial class EditorHistory
         {
             if (element.DataContext is SourceEntry source) _editor.RemoveSource(source);
         }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotRemoveEntryOrOpenFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotRemoveEntryOrOpenFormat", ex.Message), NotificationKind.Error); }
         finally { _editor.SetProcessingState(_editor._processing); }
     }
 
@@ -62,7 +62,7 @@ internal sealed partial class EditorHistory
         if (_editor._processing) return;
         _dragCandidate = null;
         try { RemoveGenerationWithUndo(generation, Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)); }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotRemoveEntryOrOpenFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotRemoveEntryOrOpenFormat", ex.Message), NotificationKind.Error); }
         finally { _editor.SetProcessingState(_editor._processing); }
     }
 
@@ -105,6 +105,6 @@ internal sealed partial class EditorHistory
                 _editor.Preview.UpdateSourcePreview(); _editor.Tools.UpdateSizeHint();
             }
         }
-        Host.statusLabel.Text = Localization.Text("ResultRemovedFromHistory");
+        Host.Notify(Localization.Text("ResultRemovedFromHistory"), NotificationKind.Success);
     }
 }

@@ -1,5 +1,7 @@
-"""Project catalog and request mailbox. The legacy bridge has its own queue."""
+"""Editor-only texture catalog and request mailbox."""
 
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -7,10 +9,9 @@ import tempfile
 import time
 
 import unreal
-import tessera_sync as legacy
 
 
-ROOT = os.path.join(legacy.ROOT, "v2")
+ROOT = os.path.join(unreal.Paths.project_saved_dir(), "TesseraSync", "v2")
 REQUESTS = os.path.join(ROOT, "requests")
 CONTENT = os.path.realpath(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_content_dir()))
 SYSTEM_FOLDERS = {"__externalactors__", "__externalobjects__"}
@@ -19,6 +20,47 @@ _last_catalog = None
 _last_scan = 0
 _last_heartbeat = 0
 _redirect_cache = {}
+_tick_handle = None
+_last_poll = 0.0
+
+
+def _hash(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest().upper()
+
+
+def _read_json(path, default):
+    try:
+        with open(path, "r", encoding="utf-8") as stream:
+            return json.load(stream)
+    except (OSError, ValueError):
+        return default
+
+
+def _write_json(path, value):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    handle, temporary = tempfile.mkstemp(prefix=".tessera-", suffix=".tmp", dir=os.path.dirname(path))
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            json.dump(value, stream, ensure_ascii=False, indent=2)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+
+
+def _export_texture(texture, path):
+    task = unreal.AssetExportTask()
+    task.set_editor_property("object", texture)
+    task.set_editor_property("filename", path)
+    task.set_editor_property("exporter", unreal.TextureExporterPNG())
+    task.set_editor_property("automated", True)
+    task.set_editor_property("prompt", False)
+    task.set_editor_property("replace_identical", True)
+    return bool(unreal.Exporter.run_asset_export_task(task)) and os.path.isfile(path)
 
 
 def _visible(path):
@@ -95,7 +137,7 @@ def publish_catalog():
     catalog = {"version": 2, "folders": sorted(folders), "textures": sorted(textures, key=lambda item: item["path"]),
                "redirects": redirects}
     if catalog != _last_catalog or not os.path.isfile(os.path.join(ROOT, "catalog.json")):
-        legacy._write_json(os.path.join(ROOT, "catalog.json"), catalog)
+        _write_json(os.path.join(ROOT, "catalog.json"), catalog)
         _last_catalog = catalog
 
 
@@ -103,9 +145,9 @@ def _export(texture, directory):
     final = os.path.join(directory, "unreal.png")
     temporary = os.path.join(directory, "export.png")
     try:
-        if not legacy._export_texture(texture, temporary):
+        if not _export_texture(texture, temporary):
             raise ValueError("Unreal cannot export this texture as PNG")
-        digest = legacy._hash(temporary)
+        digest = _hash(temporary)
         os.replace(temporary, final)
         return digest
     finally:
@@ -212,7 +254,7 @@ def _process(directory, request):
             raise ValueError("Unreal could not delete the texture")
         return {"status": "deleted"}
     payload = os.path.join(directory, "local.png")
-    if legacy._hash(payload) != request.get("sha256"):
+    if _hash(payload) != request.get("sha256"):
         raise ValueError("Tessera PNG checksum mismatch")
     texture = _import(package, payload, texture, request.get("kind"))
     digest = _export(texture, directory)
@@ -231,7 +273,7 @@ def process_requests(limit=1):
         response = os.path.join(directory, "response.json")
         if os.path.isfile(response):
             continue
-        request = legacy._read_json(os.path.join(directory, "request.json"), None)
+        request = _read_json(os.path.join(directory, "request.json"), None)
         if not isinstance(request, dict) or request.get("version") != 2:
             continue
         try:
@@ -242,7 +284,7 @@ def process_requests(limit=1):
         if result is not None:
             if result.get("status") in ("saved", "moved", "deleted"):
                 publish_catalog()
-            legacy._write_json(response, result)
+            _write_json(response, result)
             completed += 1
         if completed >= limit:
             break
@@ -252,9 +294,27 @@ def tick():
     global _last_scan, _last_heartbeat
     now = time.monotonic()
     if now - _last_heartbeat >= 2:
-        legacy._write_json(os.path.join(ROOT, "editor.json"), {"version": 2})
+        _write_json(os.path.join(ROOT, "editor.json"), {"version": 2})
         _last_heartbeat = now
     process_requests()
     if now - _last_scan >= 5:
         publish_catalog()
         _last_scan = now
+
+
+def _tick(delta_seconds):
+    global _last_poll
+    now = time.monotonic()
+    if now - _last_poll < 1:
+        return
+    _last_poll = now
+    try:
+        tick()
+    except Exception as error:
+        unreal.log_warning("Tessera project: " + str(error))
+
+
+def start():
+    global _tick_handle
+    if _tick_handle is None:
+        _tick_handle = unreal.register_slate_post_tick_callback(_tick)

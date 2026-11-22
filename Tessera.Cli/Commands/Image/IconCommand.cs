@@ -24,7 +24,6 @@ internal static class IconCommand
         contain сохраняет пропорции и добавляет прозрачные поля; cover обрезает
         центральный квадрат; stretch растягивает изображение. Для пиксельной
         графики обычно выбирайте --resize nearest-neighbor.
-        Команда icon является псевдонимом команды ico.
         """;
 
     public static int Run(string[] args, TextWriter output, TextWriter error)

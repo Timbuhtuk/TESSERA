@@ -69,13 +69,13 @@ internal sealed partial class EditorTools
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
             CloseContourTool();
-            Host.statusLabel.Text = Localization.Text("CandidateMapSavedHistoryResult");
+            Host.Notify(Localization.Text("CandidateMapSavedHistoryResult"), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Text("CouldNotCreateTheCandidateMap");
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("ContourMapError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            Host.Notify(Localization.Text("CouldNotCreateTheCandidateMap"), NotificationKind.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("ContourMapError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

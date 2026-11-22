@@ -61,12 +61,12 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Format("GridReductionSaved", generation.Width, generation.Height);
+            Host.Notify(Localization.Format("GridReductionSaved", generation.Width, generation.Height), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Format("CouldNotReduceGridFormat", ex.Message);
+            Host.Notify(Localization.Format("CouldNotReduceGridFormat", ex.Message), NotificationKind.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

@@ -26,7 +26,7 @@ public partial class MainWindow
         rebuild &= saved;
         if (rebuild && existing?.IsBusy == true)
             throw new InvalidOperationException(Localization.Text("WaitForTheMapsToFinish"));
-        if (rebuild && TesseraDialog.Show(this, Localization.Text("RebuildMapsFromTheCurrentVersion"),
+        if (rebuild && TesseraDialogs.Show(this, Localization.Text("RebuildMapsFromTheCurrentVersion"),
             Localization.Text("MaterialMaps"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         using var image = rebuild || (!saved && existing is null) ? (Bitmap)(result ? Editor._downscaledResult! : Editor._sourceImage!).Clone() : null;
 

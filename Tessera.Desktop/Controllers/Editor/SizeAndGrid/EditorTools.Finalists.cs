@@ -83,7 +83,7 @@ internal sealed partial class EditorTools
         if (_editor._processing || basis is null || _editor._activeSource is null) return;
         if (_finalistFactor.SelectedItem is not int factor || factor is < FinalistReducer.MinFactor or > FinalistReducer.MaxFactor)
         {
-            Host.statusLabel.Text = Localization.Text("EnterIntegerReductionFactor264");
+            Host.Notify(Localization.Text("EnterIntegerReductionFactor264"), NotificationKind.Warning);
             return;
         }
         var document = _editor._activeSource;
@@ -124,9 +124,9 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Format("DoneTCRFormat", modeName, factor, generation.Width, generation.Height);
+            Host.Notify(Localization.Format("DoneTCRFormat", modeName, factor, generation.Width, generation.Height), NotificationKind.Success);
         }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotReduceTheImageFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotReduceTheImageFormat", ex.Message), NotificationKind.Error); }
         finally { _editor.SetProcessingState(false); }
     }
 }

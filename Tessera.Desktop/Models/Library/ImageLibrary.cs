@@ -21,7 +21,6 @@ public sealed class EditorSettings
     public ChannelAdjustmentOptions ChannelAdjustment { get; set; } = new();
     public int CellSize { get; set; } = 8;
     public bool DetectGrid { get; set; }
-    // TESSERA_LEGACY History without alignment mode or snap settings uses the original global, unsnapped grid.
     public EGridAlignmentMode AlignmentMode { get; set; } = EGridAlignmentMode.Global;
     public bool SnapToGlobalGrid { get; set; }
     public int ContourWindowSize { get; set; } = 15;
@@ -157,20 +156,7 @@ public sealed class GenerationEntry : INotifyPropertyChanged
         {
             if (!string.IsNullOrWhiteSpace(OperationId)) return OperationId;
             if (AppliedRecipe?.Steps is [var step] && !string.IsNullOrWhiteSpace(step.OperationId)) return step.OperationId;
-            // TESSERA_LEGACY Choose result-card icons for history records that have settings or old labels instead of an operation ID.
-            if (IsAlignment && Settings.AlignmentMode == EGridAlignmentMode.Local)
-                return Settings.SnapToGlobalGrid ? ProcessingOperations.AlignLocalSnapped : ProcessingOperations.AlignLocal;
-            return HistoryRecipes.LegacyOperationId(this) ?? (Operation switch
-            {
-                "Замена цвета" or "Color replacement" => ProcessingOperations.ReplaceColor,
-                "Локальные цвета" or "Local colors" or "Сглаживание" or "Smoothing" => ProcessingOperations.Cleanup,
-                "Палитра · связный отбор" or "Palette · connected selection" => ProcessingOperations.Colors,
-                "Обрезка прозрачных краёв" or "Trim transparent edges" => ProcessingOperations.Trim,
-                "Удаление фона" or "Background removal" => ProcessingOperations.RemoveBackground,
-                "Резкость" or "Sharpen" => ProcessingOperations.Sharpen,
-                "ASCII" => ProcessingOperations.Ascii,
-                _ => null
-            });
+            return null;
         }
     }
     [JsonIgnore] public string Label => IsAlignment ? Localization.Format(Settings.AlignmentMode == EGridAlignmentMode.Local
@@ -219,6 +205,9 @@ public sealed partial class ImageLibrary(string directory)
         public override void Write(Utf8JsonWriter writer, ProcessingRecipe recipe, JsonSerializerOptions options)
             => JsonSerializer.Serialize(writer, recipe, WorkflowJson.Options);
     }
+    public static string DefaultDirectory => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tessera", "Library");
+
     public string DirectoryPath { get; } = Path.GetFullPath(directory);
     internal ImageResources Resources { get; } = new();
     public List<string> LoadWarnings { get; } = [];
@@ -298,8 +287,6 @@ public sealed partial class ImageLibrary(string directory)
         {
             var entry = Read<GenerationEntry>(record);
             if (entry.Id != id || entry.Settings?.Downscale is null) throw new InvalidDataException(Localization.Text("ResultSettingsAreCorrupted"));
-            // TESSERA_LEGACY Validate old generation records before allowing macro reconstruction.
-            HistoryRecipes.ValidateLegacyRecord(entry, record);
             if (!File.Exists(path)) throw new FileNotFoundException(null, path);
             if (entry.HasCrop && !File.Exists(CropPath(source, entry))) throw new InvalidDataException(Localization.Text("ProcessingAreaMissing"));
             entry.ThumbnailFile = new ThumbnailResource(Resources, path);
@@ -454,12 +441,6 @@ public sealed partial class ImageLibrary(string directory)
     public void RemoveGeneration(SourceEntry source, GenerationEntry generation)
     {
         if (!source.Generations.Contains(generation)) throw new ArgumentException(Localization.Text("ResultDoesNotBelongThisSource"));
-        // TESSERA_LEGACY Snapshot recoverable pre-recipe history while the ancestor records still exist.
-        foreach (var child in source.Generations.Where(g => g.ParentGenerationId == generation.Id && g != generation))
-        {
-            HistoryRecipes.Capture(source, child);
-            SaveGenerationRecord(source, child);
-        }
         DeleteGenerationFiles(source, generation);
     }
 

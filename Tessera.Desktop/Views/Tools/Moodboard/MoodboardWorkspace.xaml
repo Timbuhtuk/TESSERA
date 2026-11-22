@@ -1,7 +1,7 @@
 <UserControl x:Class="Tessera.Desktop.MoodboardWorkspace"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:Tessera.Desktop"
+    xmlns:local="clr-namespace:Tessera.Desktop" xmlns:ts="clr-namespace:Tessera.WpfStyles.Controls;assembly=Tessera.WpfStyles"
     Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -12,13 +12,13 @@
         <Grid x:Name="startPanel">
             <Border Width="520" MaxWidth="520" Padding="32" Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <StackPanel>
-                    <TextBlock Text="{local:Translate NEWBoardHeading}" Style="{StaticResource Caption}"/>
+                    <TextBlock Text="{local:Translate NEWBoardHeading}" Style="{StaticResource Ts.Caption}"/>
                     <TextBlock Text="{local:Translate ArrangeImagesOnASingleCanvas}" Style="{StaticResource DisplayTitle}" FontSize="29" TextWrapping="Wrap" Margin="0,10,0,12"/>
                     <TextBlock Text="{local:Translate EachImageBecomesASeparateLayer}" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" LineHeight="21" Margin="0,0,0,23"/>
                     <TextBlock Text="{local:Translate WidthPx}" Margin="0,0,0,6"/>
-                    <local:IntegerInput x:Name="widthInput" Minimum="128" Maximum="16384" Value="1200" AutomationProperties.Name="{local:Translate BoardWidth}" Margin="0,0,0,15"/>
+                    <ts:IntegerInput x:Name="widthInput" Minimum="128" Maximum="16384" Value="1200" AutomationProperties.Name="{local:Translate BoardWidth}" Margin="0,0,0,15"/>
                     <TextBlock Text="{local:Translate HeightPx}" Margin="0,0,0,6"/>
-                    <local:IntegerInput x:Name="heightInput" Minimum="128" Maximum="16384" Value="800" AutomationProperties.Name="{local:Translate BoardHeight}" Margin="0,0,0,23"/>
+                    <ts:IntegerInput x:Name="heightInput" Minimum="128" Maximum="16384" Value="800" AutomationProperties.Name="{local:Translate BoardHeight}" Margin="0,0,0,23"/>
                     <Button x:Name="createButton" Content="{local:Translate CreateCanvas}" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left" Padding="18,11"/>
                     <Button x:Name="openStartButton" Content="{local:Translate OpenSavedBoardAction}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
                 </StackPanel>
@@ -43,12 +43,12 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0">
-                            <TextBlock x:Name="boardSizeLabel" Style="{StaticResource Hint}"/>
-                            <TextBlock Text="{local:Translate CtrlOrShiftClickSelectMultiple}" Style="{StaticResource Hint}" TextWrapping="Wrap"/>
-                            <TextBlock Text="{local:Translate ImageViewportGestures}" Style="{StaticResource Hint}" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="boardSizeLabel" Style="{StaticResource Ts.Hint}"/>
+                            <TextBlock Text="{local:Translate CtrlOrShiftClickSelectMultiple}" Style="{StaticResource Ts.Hint}" TextWrapping="Wrap"/>
+                            <TextBlock Text="{local:Translate ImageViewportGestures}" Style="{StaticResource Ts.Hint}" TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel>
-                            <TextBlock Text="{local:Translate Layers}" Style="{StaticResource Caption}"/>
+                            <TextBlock Text="{local:Translate Layers}" Style="{StaticResource Ts.Caption}"/>
                             <TextBlock Text="{local:Translate BackgroundColor}" Margin="0,12,0,6"/>
                             <Button x:Name="backgroundColorButton" AutomationProperties.Name="{local:Translate ChooseBoardBackgroundColor}" HorizontalAlignment="Left" Margin="0,0,0,12">
                                 <StackPanel Orientation="Horizontal">

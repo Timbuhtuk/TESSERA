@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Новая иконка и уведомления",
+        "en": "New icon and notifications"
+      },
+      "notes": {
+        "ru": "- При обновлении старой переносимой версии сначала запустите 3.0.1 рядом с WorkspaceData и откройте библиотеку. В 3.1.0 убран перенос из WorkspaceData и старого профиля Pixelizator. Старые коллекции .ttiles можно разобрать на PNG в 3.0.1; старые JSON-доски v1 сохраните в актуальном формате до обновления.\n- У Tessera новая иконка в Windows и в интерфейсе. Обновлены палитра, диалоги и другие элементы интерфейса.\n- Успешные операции отмечаются как «Готово». Частичный сбой отображается предупреждением, полный сбой — ошибкой.\n- Для Unreal используется синхронизация через проект. Убраны старые ручные очереди. В CLI используйте полные имена команд, например reduce-grid, ico и remove-background.",
+        "en": "- To upgrade an old portable installation, first run 3.0.1 beside WorkspaceData and open the library. 3.1.0 removes migration from WorkspaceData and the old Pixelizator profile. Extract PNGs from old .ttiles collections in 3.0.1 and resave JSON v1 boards in the current format before upgrading.\n- Tessera has a new icon in Windows and in the app. Palette controls, dialogs, and other interface elements have been refreshed.\n- Successful operations show a success notification. Partial failures show a warning and complete failures show an error.\n- Unreal sync uses the linked project. The old manual queues have been removed. Use full CLI command names such as reduce-grid, ico, and remove-background."
+      }
+    },
+    {
+      "version": "3.0.1",
+      "title": {
         "ru": "Перенос библиотеки и проверка обновлений",
         "en": "Library migration and update checks"
       },

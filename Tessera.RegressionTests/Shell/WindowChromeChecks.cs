@@ -80,9 +80,10 @@ internal static class WindowChromeChecks
             SystemCommands.RestoreWindow(window); Pump();
             WaitFor(() => window.WindowState == WindowState.Normal, "Restore from minimized failed");
 
-            var dialog = new TesseraDialog("Проверка", "Tessera") { Owner = window };
+            var dialog = TesseraDialogs.Create("Проверка", "Tessera");
+            dialog.Owner = window;
             dialog.Show(); Pump();
-            ((Button)dialog.FindName("dialogCloseButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
+            ((Button)dialog.FindName("CloseButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(window.WindowState == WindowState.Normal && !IsIconic(handle) && window.IsVisible,
                 "Closing an owned dialog minimized the main window");
             WindowTestAccess.Invoke(window, "OpenAppearance", BindingFlags.Instance | BindingFlags.NonPublic, [window, new RoutedEventArgs()]);

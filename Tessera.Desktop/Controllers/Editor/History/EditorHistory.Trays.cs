@@ -111,7 +111,7 @@ internal sealed partial class EditorHistory
     {
         try { _trayState = _trayStore.Load(); }
         catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
-        { Host.statusLabel.Text = Localization.Text("CouldNotRestoreTrayLayoutPrefix") + ex.Message; }
+        { Host.Notify(Localization.Text("CouldNotRestoreTrayLayoutPrefix") + ex.Message, NotificationKind.Warning); }
         _trayState.Height = double.IsFinite(_trayState.Height) ? Math.Max(120, _trayState.Height) : 120;
         _trayState.ExpandedHeight = double.IsFinite(_trayState.ExpandedHeight) ? Math.Max(160, _trayState.ExpandedHeight) : 290;
         _editor.trayHeight.Height = new GridLength(_trayState.Height);
@@ -519,7 +519,7 @@ internal sealed partial class EditorHistory
         {
             try { position = _trayStore.ReadScroll(key); }
             catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
-            { Host.statusLabel.Text = Localization.Text("CouldNotRestoreTrayLayoutPrefix") + ex.Message; }
+            { Host.Notify(Localization.Text("CouldNotRestoreTrayLayoutPrefix") + ex.Message, NotificationKind.Warning); }
         }
         int revision = ++_trayRestoreRevision;
         _pendingTrayRestores[tray] = revision;
@@ -543,7 +543,7 @@ internal sealed partial class EditorHistory
             WriteTrayState();
         }
         catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
-        { Host.statusLabel.Text = Localization.Text("CouldNotSaveTrayLayoutPrefix") + ex.Message; }
+        { Host.Notify(Localization.Text("CouldNotSaveTrayLayoutPrefix") + ex.Message, NotificationKind.Error); }
     }
 
     private void WriteTrayState()

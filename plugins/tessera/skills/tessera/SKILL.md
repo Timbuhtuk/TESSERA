@@ -40,16 +40,16 @@ Read the installed command's help before choosing unfamiliar flags. The bundled 
 | --- | --- |
 | Combined size and palette processing | No subcommand; start with the image path |
 | Align an uneven pixel grid | `align` |
-| One pixel per already aligned cell | `reduce-grid` or `compact-grid` |
+| One pixel per already aligned cell | `reduce-grid` |
 | Change size independently | `resize` |
 | Quantize colors or apply a palette independently | `colors` |
-| Clean up nearby shades and protect details and edges | `smooth-colors` or `smooth` |
-| Convert visible pixels to grayscale | `monochrome` or `mono` |
+| Clean up nearby shades and protect details and edges | `smooth-colors` |
+| Convert visible pixels to grayscale | `monochrome` |
 | Export ASCII text or a rendered ASCII image | `ascii` |
 | Count and list visible colors | `palette-info` |
 | Replace one exact RGB color | `replace-color` |
-| Remove a solid background | `remove-background` or `remove-bg` |
-| Export a multi-size Windows icon | `ico` or `icon` |
+| Remove a solid background | `remove-background` |
+| Export a multi-size Windows icon | `ico` |
 | Export Aseprite animations to PNG and JSON | `aseprite` |
 | List saved processing macros in a library | `macro list --library PATH` |
 | Apply a saved macro to an image | `macro apply INPUT --macro FILE -o OUTPUT` |

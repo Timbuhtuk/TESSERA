@@ -31,26 +31,10 @@ To rename or move an existing texture, right-click it in Tessera's library and c
 
 To delete a texture, right-click it and choose **Delete texture from Unreal…**. Unreal's editor API force-deletes the asset even if other assets reference it, so review the confirmation before proceeding. If the texture was opened in Tessera, its local image and result history stay under **All assets** after Unreal confirms deletion. The link is marked unavailable; **Ctrl+S** can bind that history to another destination later. An unopened texture has no local image to keep and disappears from Tessera's catalog. A queued move or delete can be retried after a conflict or other failure. If the texture changed in Unreal, Tessera asks before retrying against its current revision.
 
-The rename, move, and delete actions require Tessera Sync plugin version 0.4.0. Reinstall the plugin from Tessera's Unreal menu and restart Unreal Editor after upgrading.
+This build installs Tessera Sync 0.4.1. Reinstall the plugin from Tessera's Unreal menu and restart Unreal Editor after upgrading.
 
 The editor plugin uses `<project>/Saved/TesseraSync` for its internal cache and queue. The integration has no dependency in the packaged game.
 
-## Legacy manual exchange from Tessera
-
-Open an image, choose the source or a result as the processing basis, then choose **Send selected texture**. Tessera writes a PNG and a SHA-256 manifest atomically. The Unreal plugin checks for new manifests once per second and imports the texture under `/Game/TesseraSync` while the editor is open. A project can receive transfers queued while the editor is closed.
-
-For maps, open the Height / Normal / AO editor for the selected image, then choose **Send material maps**. In a Tessera workspace, saved map sources can also be sent after closing the map editor. Newly imported map textures have sRGB disabled; Normal uses Unreal's normal-map compression. Unreal material graphs are not created or rewired automatically.
-
-If a managed Unreal texture has changed since the previous import, the plugin skips the next incoming replacement and logs a conflict in Unreal's Output Log. Export that texture back to Tessera and choose which version to send next. An unrelated pre-existing asset with the same name is never replaced.
-
-## Legacy manual exchange from Unreal
-
-In Unreal's Content Browser, select one or more `Texture2D` assets. Choose **Tools → Send selected textures to Tessera**. This writes PNGs with manifests under `<project>/Saved/TesseraSync/to_tessera`.
-
-In Tessera, choose **File → Unreal Engine 5 → Receive textures from Unreal**. Each changed PNG is added as an independent source, including maps. Existing Tessera sources and editable `.tmaps` documents are preserved; reconcile a returned map in the map editor if needed. The same PNG revision is received only once. The library retains earlier received versions.
-
-Only PNG pixels and the map kind cross the manual bridge. PNG export from a compressed Unreal texture can differ from Tessera's original pixels.
-
 ## Verification
 
-`dotnet run --project Tessera.RegressionTests -c Release --no-build -- --unreal-sync` checks the installer, manual transfer compatibility, project tree and icon, save resumed after restart, and queued move/delete responses. `python tests/UnrealProjectChecks.py` exercises revision conflicts, occupied destinations, move, and delete with a stand-in for Unreal's asset API. Actual Editor behavior for move/delete and material references still needs an in-editor check.
+`dotnet run --project Tessera.RegressionTests -c Release --no-build -- --unreal-sync` checks the installer, project tree and icon, save resumed after restart, and queued move/delete responses. `python tests/UnrealProjectChecks.py` exercises revision conflicts, occupied destinations, move, and delete with a stand-in for Unreal's asset API. Actual Editor behavior for move/delete and material references still needs an in-editor check.

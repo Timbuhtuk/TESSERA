@@ -18,7 +18,7 @@ public partial class MainWindow
 
     private MenuItem libraryFileMenu = null!, createMenu = null!, unrealMenu = null!;
 
-    private MenuItem unrealCreateTextureMenuItem = null!, unrealSendMenuItem = null!, unrealMapsMenuItem = null!;
+    private MenuItem unrealCreateTextureMenuItem = null!;
 
     private MenuItem sizeMenuItem = null!, colorMenuItem = null!, smoothingMenuItem = null!, gridMenuItem = null!, infoMenuItem = null!;
 
@@ -68,9 +68,6 @@ public partial class MainWindow
         AddNavigation(unrealMenu, "unrealProjectMenuItem", Localization.Text("ConnectUnrealProjectAction"), SelectUnrealProjectAsync);
         AddNavigation(unrealMenu, "unrealInstallMenuItem", Localization.Text("InstallPluginIntoProjectAction"), InstallUnrealPluginAsync);
         unrealCreateTextureMenuItem = AddNavigation(unrealMenu, "unrealCreateTextureMenuItem", Localization.Text("CreateTextureInUnrealAction"), CreateUnrealTextureAsync);
-        unrealSendMenuItem = AddNavigation(unrealMenu, "unrealSendMenuItem", Localization.Text("SendSelectedTexture"), SendTextureToUnrealAsync);
-        unrealMapsMenuItem = AddNavigation(unrealMenu, "unrealMapsMenuItem", Localization.Text("SendMaterialMaps"), SendMapsToUnrealAsync);
-        AddNavigation(unrealMenu, "unrealReceiveMenuItem", Localization.Text("ReceiveTexturesFromUnreal"), ReceiveFromUnrealAsync);
         checkUpdatesMenuItem = NavigationItem("checkUpdatesMenuItem", Localization.Text("CheckForUpdates"));
 
         sizeMenuItem = AddTool(sizeToolsMenu, "sizeMenuItem", Localization.Text("SizeAndFrameAction"), "size");
@@ -143,7 +140,7 @@ public partial class MainWindow
             e.Handled = true;
             CloseNavigationMenus();
             try { await action(); }
-            catch (Exception ex) { if (_workspaceReady) WorkspaceError(ex); else TesseraDialog.Show(this, ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning); }
+            catch (Exception ex) { if (_workspaceReady) WorkspaceError(ex); else TesseraDialogs.Show(this, ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
             finally { UpdateNavigationState(); }
         };
         parent.Items.Add(item); return item;
@@ -210,9 +207,7 @@ public partial class MainWindow
             UpdateNavigationLayout();
         }
         libraryMenu.Visibility = library ? Visibility.Visible : Visibility.Collapsed;
-        bool libraryTexture = _workspaceReady ? SelectedLibraryImage is not null : Editor._activeSource is not null;
-        unrealCreateTextureMenuItem.IsEnabled = library && _workspaceReady && libraryTexture && !busy;
-        unrealSendMenuItem.IsEnabled = unrealMapsMenuItem.IsEnabled = library && libraryTexture && !busy;
+        unrealCreateTextureMenuItem.IsEnabled = library && _workspaceReady && SelectedLibraryImage is not null && !busy;
         foreach (var item in _imageCommands) item.IsEnabled = image && !busy;
         ((MenuItem)FindName("rebuildMaterialMapsMenuItem")).Visibility = _workspaceReady ? Visibility.Visible : Visibility.Collapsed;
         viewMenu.IsEnabled = image;

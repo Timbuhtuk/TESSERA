@@ -1,6 +1,7 @@
 using System.Drawing.Imaging;
 using System.IO.Compression;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Tessera.Rendering;
 using DrawingBitmap = System.Drawing.Bitmap;
 using MediaColor = System.Windows.Media.Color;
@@ -30,9 +31,8 @@ internal static class BoardCommand
         public int Version { get; set; } = 2;
         public int Width { get; set; }
         public int Height { get; set; }
-        // TESSERA_LEGACY Default background and source paths when opening older v2 ZIP manifests.
-        public string BackgroundColor { get; set; } = "#FFFFFF";
-        public string[] SourcePaths { get; set; } = [];
+        public required string BackgroundColor { get; set; }
+        [JsonRequired] public string[] SourcePaths { get; set; } = [];
         public List<Layer> Layers { get; set; } = [];
     }
 
@@ -40,27 +40,6 @@ internal static class BoardCommand
     {
         public string Name { get; set; } = "";
         public string ImageEntry { get; set; } = "";
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Angle { get; set; }
-        public double Scale { get; set; } = 1;
-    }
-
-    // TESSERA_LEGACY Decode v1 JSON .tboard manifests with embedded PNG layers.
-    private sealed class LegacyBoard
-    {
-        public int Version { get; set; } = 1;
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public List<LegacyLayer> Layers { get; set; } = [];
-    }
-
-    private sealed class LegacyLayer
-    {
-        public string Name { get; set; } = "";
-        public byte[] Png { get; set; } = [];
         public double Width { get; set; }
         public double Height { get; set; }
         public double X { get; set; }
@@ -267,33 +246,13 @@ internal static class BoardCommand
     private static Board ReadBoard(string path)
     {
         using var file = File.OpenRead(path);
-        bool zipped = file.ReadByte() == 'P' && file.ReadByte() == 'K';
-        file.Position = 0;
-        // TESSERA_LEGACY Read v1 JSON boards and normalize them to the v2 in-memory model.
-        if (!zipped)
-        {
-            var legacy = JsonSerializer.Deserialize<LegacyBoard>(file) ?? throw new InvalidDataException("Пустая доска.");
-            if (legacy.Version != 1) throw new InvalidDataException("Неподдерживаемая версия доски.");
-            if (legacy.Layers is null) throw new InvalidDataException("В доске нет списка слоёв.");
-            var manifest = new Manifest { Width = legacy.Width, Height = legacy.Height };
-            ValidateBoardHeader(manifest, legacy.Layers.Count);
-            var images = new List<byte[]>(legacy.Layers.Count);
-            for (int q = 0; q < legacy.Layers.Count; q++)
-            {
-                LegacyLayer layer = legacy.Layers[q];
-                manifest.Layers.Add(new Layer { Name = layer.Name, ImageEntry = $"images/{q:D4}.bin",
-                    Width = layer.Width, Height = layer.Height, X = layer.X, Y = layer.Y,
-                    Angle = layer.Angle, Scale = layer.Scale });
-                images.Add(layer.Png);
-            }
-            ValidateBoard(manifest, images);
-            return new(manifest, images);
-        }
         using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
         Manifest board;
         using (var manifestStream = archive.GetEntry("board.json")?.Open() ?? throw new InvalidDataException("В доске нет board.json."))
             board = JsonSerializer.Deserialize<Manifest>(manifestStream) ?? throw new InvalidDataException("Пустая доска.");
         if (board.Version != 2) throw new InvalidDataException("Неподдерживаемая версия доски.");
+        if (board.SourcePaths is null || string.IsNullOrEmpty(board.BackgroundColor))
+            throw new InvalidDataException("В доске нет цвета фона или списка исходных файлов.");
         if (board.Layers is null) throw new InvalidDataException("В доске нет списка слоёв.");
         ValidateBoardHeader(board, board.Layers.Count);
         var data = new List<byte[]>(board.Layers.Count);

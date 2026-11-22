@@ -54,8 +54,7 @@ public sealed class AsepriteCel
     internal RgbaImage? Image { get; set; }
 }
 
-// TESSERA_LEGACY Keep the earlier single Cel accessor alongside the multilayer Cels list.
-public sealed record AsepriteFrame(int Index, int DurationMs, AsepriteCel? Cel)
+public sealed record AsepriteFrame(int Index, int DurationMs)
 {
     public IReadOnlyList<AsepriteCel?> Cels { get; internal init; } = Array.Empty<AsepriteCel?>();
 }
@@ -70,8 +69,6 @@ public sealed class AsepriteDocument
     public int Height { get; internal init; }
     public string Source { get; internal init; } = "";
     public string SourceSha256 { get; internal init; } = "";
-    // TESSERA_LEGACY Keep the earlier single LayerName property alongside the Layers list.
-    public string LayerName { get; internal set; } = "";
     public IReadOnlyList<AsepriteLayer> Layers { get; internal set; } = Array.Empty<AsepriteLayer>();
     public bool IsSrgb { get; internal set; }
     public IReadOnlyList<AsepriteFrame> Frames { get; internal set; } = Array.Empty<AsepriteFrame>();

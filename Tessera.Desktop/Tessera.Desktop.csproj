@@ -17,9 +17,13 @@
 
   <ItemGroup>
     <Using Include="Tessera.Models" />
+    <Using Include="Tessera.WpfStyles.Controls.IntegerInput" Alias="IntegerInput" />
+    <Using Include="Tessera.WpfStyles.Controls.NotificationKind" Alias="NotificationKind" />
+    <Using Include="Tessera.WpfStyles.Controls.NotificationPlacement" Alias="NotificationPlacement" />
+    <Using Include="Tessera.WpfStyles.Controls.ColorArea" Alias="ColorArea" />
     <Using Include="Tessera.Core.Workflows" />
     <InternalsVisibleTo Include="Tessera.RegressionTests" />
-    <PackageReference Include="Tessera.WpfStyles" Version="0.2.0" />
+    <PackageReference Include="Tessera.WpfStyles" Version="0.3.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Tessera.Models\Tessera.Models.csproj" />

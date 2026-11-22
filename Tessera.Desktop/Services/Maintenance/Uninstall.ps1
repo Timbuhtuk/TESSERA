@@ -48,13 +48,12 @@ try {
         throw $plan.ChangedExecutable
     }
     if ($exe.IsReadOnly) { throw $plan.ReadOnlyExecutable }
-    # TESSERA_LEGACY Recognize older Pixelizator executables by name or product during shared-profile cleanup.
-    $names = @('Tessera', 'Tessera.Desktop', 'Pixelizator', [IO.Path]::GetFileNameWithoutExtension($plan.Executable))
+    $names = @('Tessera', 'Tessera.Desktop', [IO.Path]::GetFileNameWithoutExtension($plan.Executable))
     foreach ($instance in Get-Process -Name $names -ErrorAction SilentlyContinue) {
         $module = $null
         try { $module = $instance.MainModule } catch [ComponentModel.Win32Exception] { }
         if ($module -and ($module.FileName -eq $plan.Executable -or
-                ($plan.CleansSharedProfile -and $module.FileVersionInfo.ProductName -in @('Tessera', 'Pixelizator')))) {
+                ($plan.CleansSharedProfile -and $module.FileVersionInfo.ProductName -eq 'Tessera'))) {
             throw $plan.CloseOtherInstances
         }
     }

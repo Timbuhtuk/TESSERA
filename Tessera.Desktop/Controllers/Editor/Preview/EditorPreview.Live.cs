@@ -107,7 +107,7 @@ internal sealed partial class EditorPreview
             MessageBoxResult answer;
             try
             {
-                answer = TesseraDialog.Show(owner,
+                answer = TesseraDialogs.Show(owner,
                     Localization.Format("ImageExceeds65536Pixels256Format", basis.Width, basis.Height),
                     Localization.Text("LargeImage"), MessageBoxButton.YesNo, MessageBoxImage.Warning);
             }
@@ -219,7 +219,7 @@ internal sealed partial class EditorPreview
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            if (revision == _livePreviewRevision) Host.statusLabel.Text = Localization.Format("PreviewUnavailableFormat", ex.Message);
+            if (revision == _livePreviewRevision) Host.Notify(Localization.Format("PreviewUnavailableFormat", ex.Message), NotificationKind.Warning);
         }
         finally
         {

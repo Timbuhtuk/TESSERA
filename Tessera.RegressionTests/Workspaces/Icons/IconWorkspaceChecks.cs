@@ -181,12 +181,12 @@ internal static class IconWorkspaceChecks
                 Require(Get<WrapPanel>("iconBackgroundSettings").Visibility == Visibility.Visible && icons.GetOptions().RemoveBackground,
                     "Background controls missing");
                 var sourcePixels = new byte[32 * 32 * 4];
-                ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
+                ((BitmapSource)Get<Tessera.WpfStyles.Controls.ImageViewport>("iconSourceImage").Source!).CopyPixels(sourcePixels, 32 * 4, 0);
                 Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 0 &&
                     icons.GetOptions().BackgroundRemovalMode == EBackgroundRemovalMode.GlobalColor, "Original removal mode changed");
                 Get<ComboBox>("iconBackgroundMode").SelectedIndex = 1;
                 WaitIdle();
-                ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
+                ((BitmapSource)Get<Tessera.WpfStyles.Controls.ImageViewport>("iconSourceImage").Source!).CopyPixels(sourcePixels, 32 * 4, 0);
                 Require(sourcePixels[3] == 0 && sourcePixels[(16 * 32 + 16) * 4 + 3] == 255 &&
                     icons.GetOptions().BackgroundRemovalMode == EBackgroundRemovalMode.EdgeConnected, "Edge mode did not preserve enclosed color in preview");
                 var backgroundOutput = Path.Combine(folder, "transparent.ico");
@@ -207,7 +207,7 @@ internal static class IconWorkspaceChecks
                 Get<ComboBox>("iconBackgroundMode").SelectedIndex = 0;
                 Get<ComboBox>("iconBackgroundColor").SelectedIndex = 0;
                 WaitIdle();
-                ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
+                ((BitmapSource)Get<Tessera.WpfStyles.Controls.ImageViewport>("iconSourceImage").Source!).CopyPixels(sourcePixels, 32 * 4, 0);
                 Require(sourcePixels[(16 * 32 + 16) * 4 + 3] == 0, "Switching back to global removal did not refresh preview");
                 Get<ComboBox>("iconBackgroundColor").SelectedIndex = 2;
                 Get<Slider>("iconBackgroundTolerance").Value = 12;
@@ -216,7 +216,7 @@ internal static class IconWorkspaceChecks
                     "Background color/tolerance controls ignored");
                 Get<CheckBox>("iconRemoveBackground").IsChecked = false;
                 Wait(icons.RefreshFramesAsync());
-                ((BitmapSource)Get<System.Windows.Controls.Image>("iconSourceImage").Source).CopyPixels(sourcePixels, 32 * 4, 0);
+                ((BitmapSource)Get<Tessera.WpfStyles.Controls.ImageViewport>("iconSourceImage").Source!).CopyPixels(sourcePixels, 32 * 4, 0);
                 Require(sourcePixels[3] == 255 && backgroundFixture.GetPixel(0, 0).A == 255, "Disabling removal did not restore original");
                 Get<ComboBox>("iconBackgroundColor").SelectedIndex = 0;
                 Get<Slider>("iconBackgroundTolerance").Value = 8;

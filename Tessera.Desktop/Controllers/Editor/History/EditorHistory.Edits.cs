@@ -51,7 +51,7 @@ internal sealed partial class EditorHistory
             var snapshot = _historyUndo.Undo();
             if (snapshot is null) return;
             RestoreHistorySource(snapshot);
-            Host.statusLabel.Text = Localization.Text("LastHistoryChangeUndone");
+            Host.Notify(Localization.Text("LastHistoryChangeUndone"), NotificationKind.Success);
         }
         catch (Exception ex) { ShowHistoryFailure(Localization.Text("UndoChange"), ex); }
     }
@@ -94,7 +94,7 @@ internal sealed partial class EditorHistory
         try { branch = _trayStore.ReadBranch(source.Id); }
         catch (Exception ex) when (ex is IOException or JsonException or InvalidDataException or UnauthorizedAccessException)
         {
-            Host.statusLabel.Text = Localization.Text("CouldNotRestoreTrayLayoutPrefix") + ex.Message;
+            Host.Notify(Localization.Text("CouldNotRestoreTrayLayoutPrefix") + ex.Message, NotificationKind.Warning);
             branch = new();
         }
         if (source == _trayHistorySource)
@@ -242,7 +242,7 @@ internal sealed partial class EditorHistory
             return;
         }
         Host.SynchronizeWorkspace(source);
-        Host.statusLabel.Text = Localization.Text("ResultBakedIntoTheSource");
+        Host.Notify(Localization.Text("ResultBakedIntoTheSource"), NotificationKind.Success);
     }
 
     private void RebaseBakedDescendants(SourceEntry source, GenerationEntry baked)
@@ -357,7 +357,7 @@ internal sealed partial class EditorHistory
                 }
                 if (staged.Count > 0 && source == _editor._activeSource) _editor.SelectGeneration(staged[^1].Entry);
                 transaction.Commit();
-                Host.statusLabel.Text = Localization.Format("BranchesMergedFormat", staged.Count);
+                Host.Notify(Localization.Format("BranchesMergedFormat", staged.Count), NotificationKind.Success);
             }
             catch
             {
@@ -419,7 +419,7 @@ internal sealed partial class EditorHistory
     private void ShowHistoryFailure(string action, Exception ex)
     {
         string message = $"{action}: {ex.Message}";
-        Host.statusLabel.Text = message;
-        TesseraDialog.Show(Host, message, Localization.Text("ResultHistory"), MessageBoxButton.OK, MessageBoxImage.Error);
+        Host.Notify(message, NotificationKind.Error);
+        TesseraDialogs.Show(Host, message, Localization.Text("ResultHistory"), MessageBoxButton.OK, MessageBoxImage.Error);
     }
 }

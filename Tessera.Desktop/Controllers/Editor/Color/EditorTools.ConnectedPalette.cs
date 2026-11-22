@@ -30,8 +30,8 @@ internal sealed partial class EditorTools
         var content = (StackPanel)_editor.colorToolGroup.Content;
         int position = content.Children.IndexOf(_editor.colorOnlyButton);
         connectedPaletteInput.Content = Localization.Text("UseColorConnectivity");
-        connectedPaletteInput.Style = (Style)_editor.FindResource("Ts.SwitchBox");
-        connectedTilesInput.Style = (Style)_editor.FindResource("Ts.SwitchBox");
+        connectedPaletteInput.Style = (Style)_editor.FindResource("Ts.CompactSwitchBox");
+        connectedTilesInput.Style = (Style)_editor.FindResource("Ts.CompactSwitchBox");
         connectedPaletteInput.ToolTip = Localization.Text("ConsiderConnectedColorAreasNeighboringPixels");
         connectedPaletteInput.Margin = new Thickness(0, 12, 0, 5);
         AutomationProperties.SetName(connectedPaletteInput, Localization.Text("UseColorConnectivity"));

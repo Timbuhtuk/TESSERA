@@ -20,7 +20,6 @@ internal static class GridReductionCommand
 
         Размер ячейки берите из отчёта tessera align. Цвета и альфа копируются
         без квантования; неоднородная сетка отклоняется.
-        Команда compact-grid является псевдонимом.
         """;
 
     public static int Run(string[] args, TextWriter output, TextWriter error)

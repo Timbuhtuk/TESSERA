@@ -7,7 +7,7 @@ public partial class MainWindow
     private void InitializeMoodboard()
     {
         moodboardWorkspace.ValidateExportPath = EnsureExportPathAllowed;
-        moodboardWorkspace.StatusChanged += message => statusLabel.Text = message;
+        moodboardWorkspace.StatusChanged += Notify;
         moodboardWorkspace.BusyChanged += (_, _) => UpdateBusyIndicator();
     }
 

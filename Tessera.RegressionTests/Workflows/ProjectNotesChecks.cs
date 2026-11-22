@@ -216,10 +216,10 @@ internal static class ProjectNotesChecks
                 timer.Stop(); seen = true;
                 try
                 {
-                    string text = ((TextBlock)dialog.FindName("dialogMessage")).Text;
+                    string text = (string)((ContentPresenter)dialog.FindName("DialogBody")).Content;
                     Require(text.Contains("65 536") || text.Contains("65,536"), "Large-input warning omitted the threshold");
-                    var buttons = (StackPanel)dialog.FindName("dialogButtons");
-                    buttons.Children.OfType<Button>().Single(button => Equals(button.Tag, decision)).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    var buttons = (Panel)dialog.FindName("ActionButtons");
+                    buttons.Children.OfType<Button>().ElementAt(decision == MessageBoxResult.Yes ? 0 : 1).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 }
                 catch (Exception ex) { problem = ex; dialog.Close(); }
             };

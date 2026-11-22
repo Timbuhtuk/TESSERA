@@ -45,10 +45,9 @@ public partial class MainWindow
                 return;
             }
             if (Editor.History.HistoryDrop(e, commit: false)) return;
-            // TESSERA_LEGACY Accept retired .ttiles archives dropped into the workspace for PNG extraction.
             bool supported = e.Data.GetDataPresent(EditorHistory.GenerationDragFormat)
                 ? Editor.History.TryGetDraggedGeneration(e.Data, out _, out _) && Editor.History.IsSourceDropTarget(e.OriginalSource as DependencyObject)
-                : DropPaths(e).Any(path => IsSupportedImage(path) || _workspaceReady && LegacyTileArchive.IsArchive(path));
+                : DropPaths(e).Any(IsSupportedImage);
             e.Effects = !Editor._processing && supported ? DragDropEffects.Copy : DragDropEffects.None;
             e.Handled = true;
         };
@@ -62,10 +61,8 @@ public partial class MainWindow
             if (_workspaceReady && !IsMoodboardDropTarget(e.OriginalSource as DependencyObject) && e.Data.GetData(DataFormats.FileDrop) is string[] workspacePaths)
             {
                 await ImportWorkspaceFilesAsync(workspacePaths);
-                // TESSERA_LEGACY Skip automatic asset opening after a drop that only extracts .ttiles archives.
-                if (workspacePaths.Any(path => !LegacyTileArchive.IsArchive(path)) &&
-                    _workspaceCatalog?.State.SelectedAsset is { } selectedId &&
-                    _workspaceCatalog.State.Assets.FirstOrDefault(a => a.Id == selectedId) is { IsLegacyTileArchive: false } selectedAsset)
+                if (_workspaceCatalog?.State.SelectedAsset is { } selectedId &&
+                    _workspaceCatalog.State.Assets.FirstOrDefault(a => a.Id == selectedId) is { } selectedAsset)
                     await OpenWorkspaceAssetAsync(selectedAsset);
                 return;
             }
@@ -92,9 +89,9 @@ public partial class MainWindow
             foreach (var source in _library.LoadHeaders()) _sources.Add(source);
             if (selectLatest && _sources.Count > 0) Editor.SelectSource(_sources[^1]);
             if (_library.LoadWarnings.Count > 0)
-                statusLabel.Text = Localization.Format("HistoryOpenedFormat", _library.LoadWarnings.Count);
+                Notify(Localization.Format("HistoryOpenedFormat", _library.LoadWarnings.Count), NotificationKind.Warning);
         }
-        catch (Exception ex) { statusLabel.Text = Localization.Format("CouldNotLoadHistoryFormat", ex.Message); }
+        catch (Exception ex) { Notify(Localization.Format("CouldNotLoadHistoryFormat", ex.Message), NotificationKind.Error); }
     }
 
     private static string[] DropPaths(DragEventArgs e) => e.Data.GetDataPresent(DataFormats.FileDrop) && e.Data.GetData(DataFormats.FileDrop) is string[] paths ? paths : [];
@@ -106,8 +103,7 @@ public partial class MainWindow
         if (_workspaceReady)
         {
             await ImportWorkspaceFilesAsync(paths.ToArray());
-            // TESSERA_LEGACY Reopen ordinary workspace assets without activating the old .ttiles extraction prompt.
-            if (_workspaceCatalog?.State.Assets.FirstOrDefault(a => a.Id == _workspaceCatalog.State.SelectedAsset) is { IsLegacyTileArchive: false } asset)
+            if (_workspaceCatalog?.State.Assets.FirstOrDefault(a => a.Id == _workspaceCatalog.State.SelectedAsset) is { } asset)
                 await OpenWorkspaceAssetAsync(asset);
             return;
         }
@@ -135,9 +131,10 @@ public partial class MainWindow
             }
             if (selected is not null) Editor.SelectSource(selected);
             if (failures.Count == 0) CompleteProcessingProgress();
-            statusLabel.Text = failures.Count == 0
+            string summary = failures.Count == 0
                 ? Localization.Format("SourceImportSummary", added, _sources.Count)
                 : Localization.Format("PartialImportSummary", added, failures.Count, failures[0]);
+            Notify(summary, BatchNotificationKind(progressFiles.Length - failures.Count, failures.Count));
             statusLabel.ToolTip = failures.Count == 0 ? null : string.Join(Environment.NewLine, failures);
         }
         finally { Editor.SetProcessingState(false); }

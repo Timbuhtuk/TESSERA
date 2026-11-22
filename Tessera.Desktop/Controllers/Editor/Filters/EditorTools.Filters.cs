@@ -139,12 +139,12 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Text("MonochromeSavedToHistory");
+            Host.Notify(Localization.Text("MonochromeSavedToHistory"), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Format("CouldNotApplyMonochromeFormat", ex.Message);
+            Host.Notify(Localization.Format("CouldNotApplyMonochromeFormat", ex.Message), NotificationKind.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }
@@ -184,12 +184,12 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Text("SharpenedResultSavedToHistory");
+            Host.Notify(Localization.Text("SharpenedResultSavedToHistory"), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Format("CouldNotSharpenTheImageFormat", ex.Message);
+            Host.Notify(Localization.Format("CouldNotSharpenTheImageFormat", ex.Message), NotificationKind.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }
@@ -210,7 +210,7 @@ internal sealed partial class EditorTools
         if (dialog.ShowDialog(Window.GetWindow(_editor.asciiSaveTextButton) ?? Host) != true) return;
 
         try { await SaveAsciiTextAsync(dialog.FileName); }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotSaveAsciiTextFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotSaveAsciiTextFormat", ex.Message), NotificationKind.Error); }
     }
 
     private async Task SaveAsciiTextAsync(string path)
@@ -245,7 +245,7 @@ internal sealed partial class EditorTools
             }
             finally { if (File.Exists(temporary)) File.Delete(temporary); }
             Host.CompleteProcessingProgress();
-            Host.statusLabel.Text = Localization.Format("AsciiTextSavedFormat", output);
+            Host.Notify(Localization.Format("AsciiTextSavedFormat", output), NotificationKind.Success);
         }
         finally { _editor.SetProcessingState(false); }
     }
@@ -307,12 +307,12 @@ internal sealed partial class EditorTools
                 return generation;
             });
             if (!_editor.History.CommitGeneration(document, created)) return;
-            Host.statusLabel.Text = Localization.Text("AsciiImageSavedToHistory");
+            Host.Notify(Localization.Text("AsciiImageSavedToHistory"), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Format("CouldNotRenderAsciiFormat", ex.Message);
+            Host.Notify(Localization.Format("CouldNotRenderAsciiFormat", ex.Message), NotificationKind.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

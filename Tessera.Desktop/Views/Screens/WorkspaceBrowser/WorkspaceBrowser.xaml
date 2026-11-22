@@ -79,7 +79,7 @@
   <DataTemplate x:Key="AssetToolTipTemplate">
    <StackPanel MinWidth="180" MaxWidth="340">
     <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap"/>
-    <ItemsControl ItemsSource="{Binding ToolTipFields}" ItemTemplate="{StaticResource ToolTipFieldTemplate}"
+    <ItemsControl ItemsSource="{Binding ToolTipFields}" ItemTemplate="{StaticResource Ts.ToolTipFieldTemplate}"
                   Grid.IsSharedSizeScope="True" HorizontalContentAlignment="Stretch" Margin="0,4,0,0"/>
    </StackPanel>
   </DataTemplate>

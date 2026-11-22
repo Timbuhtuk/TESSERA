@@ -259,11 +259,12 @@ internal static class GridLensChecks
 
             void RequireLensWarning()
             {
-                var card = notifications.Cards.Single();
+                var card = ProgressUiChecks.Cards(notifications).Last();
                 var icon = (System.Windows.Shapes.Path)card.FindName("kindIcon");
-                Require(card.IsVisible && ((TextBlock)card.FindName("heading")).Text == "Предупреждение" &&
+                Require(card.IsVisible && card.Kind == NotificationKind.Warning &&
+                    ((TextBlock)card.FindName("heading")).Text == "Предупреждение" &&
                     icon.Stroke is SolidColorBrush brush && brush.Color == MediaColor.FromRgb(196, 111, 28) &&
-                    card.Message.Text.Contains("альтернативном просмотре") && !editor.OwnedWindows.OfType<TesseraDialog>().Any(),
+                    card.Message!.Contains("альтернативном просмотре") && !editor.OwnedWindows.OfType<TesseraDialog>().Any(),
                     "A blocked lens did not show a non-modal warning");
             }
         }

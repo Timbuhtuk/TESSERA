@@ -73,10 +73,10 @@ try
 
         string defaultInput = Path.Combine(directory, "default-icon.png");
         File.Copy(input, defaultInput);
-        Require(Run(["icon", defaultInput]).Code == 0, "Default ICO export or alias failed");
+        Require(Run(["ico", defaultInput]).Code == 0, "Default ICO export failed");
         Require(ReadIcoSizes(Path.ChangeExtension(defaultInput, ".ico")).SequenceEqual(
             new[] { 16, 24, 32, 48, 64, 128, 256 }), "Default ICO sizes changed");
-        Require(Run(["ico", "--help"]).Code == 0 && Run(["icon", "--help"]).Code == 0, "ICO help failed");
+        Require(Run(["ico", "--help"]).Code == 0 && Run(["icon", "--help"]).Code != 0, "ICO help failed");
     });
 
     Check("ICO command rejects invalid parameters and reports file failures", () =>
@@ -136,7 +136,7 @@ try
         }
 
         string globalOutput = Path.Combine(directory, "background-global.png");
-        ExpectSuccess(["remove-bg", sourcePath, "-o", globalOutput, "--mode", "global",
+        ExpectSuccess(["remove-background", sourcePath, "-o", globalOutput, "--mode", "global",
             "--background-color", "white", "--tolerance", "0"]);
         using (var result = new Bitmap(globalOutput))
             Require(result.GetPixel(0, 0).A == 0 && result.GetPixel(3, 3).A == 0, "Global mode retained matching colors");
@@ -150,7 +150,7 @@ try
 
         Require(Run(["remove-background", sourcePath, "-o", edgeOutput]).Code == 1, "Existing transparent PNG accepted");
         Require(Run(["remove-background", sourcePath, "-o", edgeOutput, "--overwrite"]).Code == 0, "Background overwrite failed");
-        Require(Run(["remove-background", "--help"]).Code == 0 && Run(["remove-bg", "--help"]).Code == 0,
+        Require(Run(["remove-background", "--help"]).Code == 0 && Run(["remove-bg", "--help"]).Code != 0,
             "Background command help failed");
     });
 
@@ -241,7 +241,7 @@ try
             EqualPixels(expected, actual);
 
         string smoothPath = Path.Combine(directory, "current-smooth.png");
-        ExpectSuccess(["smooth", sourcePath, "-o", smoothPath, "--passes", "2", "--color-tolerance", "18.5",
+        ExpectSuccess(["smooth-colors", sourcePath, "-o", smoothPath, "--passes", "2", "--color-tolerance", "18.5",
             "--strength", "70", "--detail-protection", "60", "--edge-protection", "50", "--json"]);
         using (var source = new Bitmap(sourcePath))
         using (var expected = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
@@ -289,7 +289,7 @@ try
         using (var rendered = new Bitmap(perPixelPath))
             EqualPixels(expected, rendered);
 
-        foreach (string command in new[] { "monochrome", "mono", "smooth-colors", "smooth", "replace-color", "palette-info", "ascii" })
+        foreach (string command in new[] { "monochrome", "smooth-colors", "replace-color", "palette-info", "ascii" })
             Require(Run([command, "--help"]).Code == 0, $"Help missing for {command}");
         Require(Run(["replace-color", sourcePath, "--from", "red", "--to", "#FFFFFF"]).Code == 2,
             "Invalid replacement color accepted");
@@ -631,16 +631,16 @@ try
             fixture.Save(sourcePath, ImageFormat.Png);
         }
         string cleanedPath = Path.Combine(directory, "cleanup-controls-result.png");
-        ExpectSuccess(["smooth", sourcePath, "-o", cleanedPath, "--strength", "100", "--detail-protection", "0", "--edge-protection", "0"]);
+        ExpectSuccess(["smooth-colors", sourcePath, "-o", cleanedPath, "--strength", "100", "--detail-protection", "0", "--edge-protection", "0"]);
         using (var cleaned = new Bitmap(cleanedPath))
             Require(cleaned.GetPixel(4, 4).ToArgb() == Color.FromArgb(128, 100, 100, 100).ToArgb(), "Cleanup controls did not merge the shade while retaining alpha");
         string unchangedPath = Path.Combine(directory, "cleanup-controls-zero.png");
-        ExpectSuccess(["smooth", sourcePath, "-o", unchangedPath, "--strength", "0"]);
+        ExpectSuccess(["smooth-colors", sourcePath, "-o", unchangedPath, "--strength", "0"]);
         using (var source = new Bitmap(sourcePath))
         using (var unchanged = new Bitmap(unchangedPath)) EqualPixels(source, unchanged);
         foreach (string value in new[] { "NaN", "Infinity", "-1", "41" })
-            Require(Run(["smooth", sourcePath, "--color-tolerance", value]).Code == 2, "Invalid tolerance accepted: " + value);
-        Require(Run(["smooth", sourcePath, "--strength", "101"]).Code == 2, "Invalid cleanup strength accepted");
+            Require(Run(["smooth-colors", sourcePath, "--color-tolerance", value]).Code == 2, "Invalid tolerance accepted: " + value);
+        Require(Run(["smooth-colors", sourcePath, "--strength", "101"]).Code == 2, "Invalid cleanup strength accepted");
     });
 
     Check("Colors command exposes current quantization and palette modes", () =>
@@ -809,8 +809,8 @@ try
         using (var expected = Tessera.Core.Alignment.PixelGridReducer.Reduce(source, 4))
         using (var actual = new Bitmap(target))
             EqualPixels(expected, actual);
-        Require(Run(["compact-grid", aligned, "--cell-size", "4", "-o", target]).Code == 1, "Existing reduced file accepted");
-        Require(Run(["compact-grid", aligned, "--cell-size", "4", "-o", target, "--overwrite"]).Code == 0,
+        Require(Run(["reduce-grid", aligned, "--cell-size", "4", "-o", target]).Code == 1, "Existing reduced file accepted");
+        Require(Run(["reduce-grid", aligned, "--cell-size", "4", "-o", target, "--overwrite"]).Code == 0,
             "Reduction overwrite failed");
 
         string irregular = Path.Combine(directory, "reduction-irregular.png");
@@ -835,7 +835,7 @@ try
             "Reduction overwrote source");
         Require(Run(["reduce-grid", aligned, "--cell-size", "4", "-o", Path.Combine(directory, "lossy.jpg")]).Code == 2,
             "Lossy reduction output accepted");
-        Require(Run(["reduce-grid", "--help"]).Code == 0 && Run(["compact-grid", "--help"]).Code == 0,
+        Require(Run(["reduce-grid", "--help"]).Code == 0 && Run(["compact-grid", "--help"]).Code != 0,
             "Reduction help missing");
     });
     Check("Sprite mode keeps odd-sized canvas edges, transparency and preview pixels", () =>

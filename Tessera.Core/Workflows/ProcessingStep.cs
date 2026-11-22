@@ -79,8 +79,8 @@ public sealed class ResizeFactorSettings
 
 public sealed class AsciiSettings
 {
-    // TESSERA_LEGACY Replay older ASCII recipes without fontSize using 10 px glyphs.
-    public int FontSize { get; init; } = 10;
+    [System.Text.Json.Serialization.JsonRequired]
+    public int FontSize { get; init; } = ImageFilters.DefaultAsciiFontSize;
     public string Characters { get; init; } = ImageFilters.DefaultAsciiRamp;
     public bool KeepSourceSize { get; init; } = true;
     public bool InvertSource { get; init; }

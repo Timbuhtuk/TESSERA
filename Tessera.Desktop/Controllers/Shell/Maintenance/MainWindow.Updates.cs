@@ -56,14 +56,15 @@ public partial class MainWindow
             if (_updatesClosed) return;
             updateButton.Content = UpdateButtonText();
             if (showResult && _availableRelease is null)
-                TesseraDialog.Show(this, Localization.Format("TheCurrentVersionIsUpToFormat", GitHubUpdater.CurrentVersion.ToString(3)), "Tessera");
+                TesseraDialogs.Show(this, Localization.Format("TheCurrentVersionIsUpToFormat", GitHubUpdater.CurrentVersion.ToString(3)),
+                    "Tessera", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             _mainProgress?.Dispose();
             if (_updatesClosed) return;
             updateButton.Content = UpdateButtonText();
-            if (showResult) TesseraDialog.Show(this, Localization.Format("CouldNotCheckForUpdatesFormat", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (showResult) TesseraDialogs.Show(this, Localization.Format("CouldNotCheckForUpdatesFormat", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
         }
         finally
@@ -91,7 +92,8 @@ public partial class MainWindow
         if (_installingUpdate || _uninstalling || _updatesClosed || _availableRelease is not { } release) return;
         if (WorkspaceBusy)
         {
-            TesseraDialog.Show(this, Localization.Text("WaitForProcessingToFinishBefore"), "Tessera");
+            TesseraDialogs.Show(this, Localization.Text("WaitForProcessingToFinishBefore"), "Tessera",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         _installingUpdate = true;
@@ -101,7 +103,7 @@ public partial class MainWindow
             string message = GitHubUpdater.CanInstall
                 ? Localization.Format("DownloadUpdateConfirmation", release.Tag)
                 : Localization.Format("OpenReleaseConfirmation", release.Tag);
-            var choice = TesseraDialog.Show(this, message, Localization.Text("TesseraUpdate"), MessageBoxButton.YesNo, MessageBoxImage.Question,
+            var choice = TesseraDialogs.Show(this, message, Localization.Text("TesseraUpdate"), MessageBoxButton.YesNo, MessageBoxImage.Question,
                 Localization.Text(GitHubUpdater.CanInstall ? "Update" : "OpenRelease"), Localization.Text("Later"));
             if (choice != MessageBoxResult.Yes || _updatesClosed) return;
             if (!GitHubUpdater.CanInstall)
@@ -121,7 +123,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             _mainProgress?.Dispose();
-            if (!_updatesClosed) TesseraDialog.Show(this, Localization.Format("CouldNotUpdateTesseraFormat", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
+            if (!_updatesClosed) TesseraDialogs.Show(this, Localization.Format("CouldNotUpdateTesseraFormat", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {

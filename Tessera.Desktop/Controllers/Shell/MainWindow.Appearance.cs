@@ -38,13 +38,13 @@ public partial class MainWindow
         try { settings.Save(_appearancePath); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveTheNotificationPosition") + ex.Message,
-                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            TesseraDialogs.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveTheNotificationPosition") + ex.Message,
+                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
 
         _appearanceSettings = settings;
-        notificationDisplay.Place(position);
+        notificationDisplay.Placement = position;
         return true;
     }
 
@@ -58,8 +58,8 @@ public partial class MainWindow
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            TesseraDialog.Show(_appearanceWindow ?? (Window)this,
-                Localization.Text("CouldNotSaveTheme") + e.Message, Localization.Text("Appearance"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            TesseraDialogs.Show(_appearanceWindow ?? (Window)this,
+                Localization.Text("CouldNotSaveTheme") + e.Message, Localization.Text("Appearance"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
 
@@ -75,7 +75,7 @@ public partial class MainWindow
         try { settings.Save(_appearancePath); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveLanguage") + e.Message, Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            TesseraDialogs.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveLanguage") + e.Message, Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         _appearanceSettings = settings;
@@ -89,8 +89,8 @@ public partial class MainWindow
         try { settings.Save(_appearancePath); Editor.History.SetUndoCapacity(depth); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("UndoBufferSizeSaveFailed") + ex.Message,
-                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            TesseraDialogs.Show(_appearanceWindow ?? (Window)this, Localization.Text("UndoBufferSizeSaveFailed") + ex.Message,
+                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         _appearanceSettings = settings;
@@ -104,8 +104,8 @@ public partial class MainWindow
         try { settings.Save(_appearancePath); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveTheAlternativePreview") + ex.Message,
-                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            TesseraDialogs.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveTheAlternativePreview") + ex.Message,
+                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         Editor.Preview.ResetComparisonKey();
@@ -125,8 +125,8 @@ public partial class MainWindow
         try { settings.Save(_appearancePath); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            TesseraDialog.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveTheLensShortcut") + ex.Message,
-                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Warning);
+            TesseraDialogs.Show(_appearanceWindow ?? (Window)this, Localization.Text("CouldNotSaveTheLensShortcut") + ex.Message,
+                Localization.Text("Settings"), MessageBoxButton.OK, MessageBoxImage.Error);
             return null;
         }
         _appearanceSettings = settings;

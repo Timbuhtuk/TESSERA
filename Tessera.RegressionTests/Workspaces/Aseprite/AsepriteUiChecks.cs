@@ -82,9 +82,9 @@ internal static class AsepriteUiChecks
             Require(canceledSave.Result.Count == 3 && canceledSave.Result.All(r => r.Error is null), "Previous results cannot be exported after canceling a rebuild");
             Get<IntegerInput>("sheetPadding").Value = 2; Wait(screen.RebuildAsync());
 
-            void CancelRebuild(string status)
+            void CancelRebuild(string status, NotificationKind kind)
             {
-                if (status.StartsWith("Конвертация:", StringComparison.Ordinal))
+                if (kind == NotificationKind.Information && status.StartsWith("Конвертация:", StringComparison.Ordinal))
                     Get<Button>("sheetCancelButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             }
             Get<ListBox>("sheetStrip").SelectedItem = items.Single(e => e.InputPath == second);

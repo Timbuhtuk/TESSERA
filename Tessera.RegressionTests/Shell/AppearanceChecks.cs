@@ -74,11 +74,11 @@ internal static class AppearanceChecks
             var picker = new ColorReplaceWindow(System.Drawing.Color.Coral) { Owner = window, Left = -10000, Top = -10000,
                 WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false };
             picker.Show();
-            var dialog = new TesseraDialog("Текст диалога должен оставаться читаемым при переключении темы.", "Проверка темы", MessageBoxButton.OK, MessageBoxImage.Information)
-            {
-                Owner = window, Left = -10000, Top = -10000,
-                WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false
-            };
+            var dialog = TesseraDialogs.Create("Текст диалога должен оставаться читаемым при переключении темы.", "Проверка темы", MessageBoxButton.OK, MessageBoxImage.Information);
+            dialog.Owner = window;
+            dialog.Left = dialog.Top = -10000;
+            dialog.WindowStartupLocation = WindowStartupLocation.Manual;
+            dialog.ShowActivated = false;
             dialog.Show(); Pump();
             var preview = Get<PixelPreview>(window, "sourcePreview");
             var source = preview.Image;
@@ -101,7 +101,7 @@ internal static class AppearanceChecks
                 CheckChrome(picker, theme);
                 Require(ColorOf(Get<Border>(picker, "oldPreview").Background) == MediaColor.FromRgb(255, 127, 80),
                     "Appearance theme changed the user's selected color");
-                var frame = Get<Border>(dialog, "dialogFrame");
+                var frame = (Border)dialog.Content;
                 Require(ColorOf(frame.Background) == ColorOf((Brush)dialog.FindResource("Ts.Panel")),
                     "An already open dialog retained the previous theme");
                 Require(ReferenceEquals(preview.Image, source) && source.GetPixel(60, 40) == originalPixel,

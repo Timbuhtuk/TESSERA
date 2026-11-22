@@ -11,7 +11,7 @@ internal static class ImageFilterChecks
         check("Monochrome preserves dimensions, alpha and source", Monochrome);
         check("ASCII maps darkness, light and transparency to characters", AsciiText);
         check("ASCII render creates a black and white image", AsciiRender);
-        check("ASCII uses 16 px glyphs while old recipes keep 10 px", AsciiFontCompatibility);
+        check("ASCII defaults to 16 px and requires a saved font size", AsciiFontSize);
         check("ASCII colors, background and explicit columns", AsciiColors);
         check("ASCII uses rectangular glyph cells for text and image output", AsciiAspect);
         check("ASCII retains vertical and horizontal glyph features", AsciiGlyphShape);
@@ -108,7 +108,7 @@ internal static class ImageFilterChecks
             throw new Exception("One-pixel-per-symbol render did not increase the resolution.");
     }
 
-    private static void AsciiFontCompatibility()
+    private static void AsciiFontSize()
     {
         using var previous = ImageFilters.RenderAscii("@MW", 10);
         using var current = ImageFilters.RenderAscii("@MW");
@@ -117,13 +117,9 @@ internal static class ImageFilterChecks
 
         using var source = new Bitmap(48, 24);
         using (var graphics = Graphics.FromImage(source)) graphics.Clear(Color.White);
-        const string legacy = "{\"steps\":[{\"operationId\":\"filter.ascii\",\"ascii\":{\"characters\":\"@ \"}}]}";
-        var oldRecipe = System.Text.Json.JsonSerializer.Deserialize<ProcessingRecipe>(legacy, WorkflowJson.Options)!;
-        if (oldRecipe.Steps.Single().Ascii?.FontSize != 10)
-            throw new Exception("An old ASCII recipe lost its original font size.");
-        using var oldResult = new WorkflowExecutor().Execute(source, oldRecipe);
-        using var oldExpected = ImageFilters.RenderAscii(source, characters: "@ ", fontSize: 10);
-        Equal(oldExpected, oldResult);
+        const string missingFontSize = "{\"steps\":[{\"operationId\":\"filter.ascii\",\"ascii\":{\"characters\":\"@ \"}}]}";
+        Throws<System.Text.Json.JsonException>(() =>
+            System.Text.Json.JsonSerializer.Deserialize<ProcessingRecipe>(missingFontSize, WorkflowJson.Options));
 
         var newRecipe = WorkflowJson.Snapshot(new ProcessingRecipe { Steps = [new ProcessingStep
         {

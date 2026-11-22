@@ -18,11 +18,9 @@ public sealed class AppearanceSettings
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Tessera", "appearance.json");
 
     public TesseraTheme Theme { get; set; } = TesseraTheme.Dark;
-    // TESSERA_LEGACY Older appearance.json files without Language use Russian.
     public string Language { get; set; } = "ru";
     public int HistoryUndoDepth { get; set; } = 5;
     public string NotificationPosition { get; set; } = nameof(NotificationPlacement.TopRight);
-    // TESSERA_LEGACY Settings saved before shortcut customization use Space and the built-in lens keys.
     public string ComparisonKey { get; set; } = nameof(Key.Space);
     public Dictionary<string, string> LensKeys { get; set; } = new();
 

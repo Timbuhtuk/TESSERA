@@ -26,7 +26,7 @@ public partial class WorkspaceBrowser : UserControl
     public event Action<IReadOnlyList<string>>? ImportRequested;
     public event Action<WorkspaceAsset>? OpenRequested;
     public event Action<string, WorkspaceAsset?>? ActionRequested;
-    public event Action<string>? StatusChanged;
+    public event Action<string, NotificationKind>? StatusChanged;
     public event Action? ConnectUnrealRequested;
     public IReadOnlyList<WorkspaceAsset> Selection => assetList.SelectedItems.Cast<WorkspaceAsset>().ToArray();
 
@@ -347,7 +347,8 @@ public partial class WorkspaceBrowser : UserControl
     }
     private void DeleteSection(Guid project, Guid? folder)
     {
-        if (TesseraDialog.Show(Window.GetWindow(this), Localization.Text("DeleteTheSelectedSection"), Localization.Text("ProjectStructure"), MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        if (TesseraDialogs.Show(Window.GetWindow(this), Localization.Text("DeleteTheSelectedSection"), Localization.Text("ProjectStructure"),
+            MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         if (folder is { } id)
         {
             var parent = _catalog!.State.Folders.Single(f => f.Id == id).ParentId;
@@ -370,15 +371,12 @@ public partial class WorkspaceBrowser : UserControl
             {
                 "open" => Visibility.Visible,
                 "rename" => count == 1 && asset?.Unreal is null ? Visibility.Visible : Visibility.Collapsed,
-                // TESSERA_LEGACY Hide image tools for retired .ttiles catalog entries.
-                "material-maps" => count == 1 && asset?.Kind == EWorkspaceAssetKind.Image && !asset.IsLegacyTileArchive
+                "material-maps" => count == 1 && asset?.Kind == EWorkspaceAssetKind.Image
                     ? Visibility.Visible : Visibility.Collapsed,
                 "create-unreal" => count == 1 && asset?.Kind == EWorkspaceAssetKind.Image &&
                     _catalog.State.Projects.Any(p => p.IsUnreal) ? Visibility.Visible : Visibility.Collapsed,
                 "move-unreal" or "delete-unreal" => count == 1 && asset?.Unreal is { Missing: false, CreatePending: false }
                     ? Visibility.Visible : Visibility.Collapsed,
-                // TESSERA_LEGACY Hide copying for the retired .ttiles catalog entries.
-                "copy" when Selection.Any(item => item.IsLegacyTileArchive) => Visibility.Collapsed,
                 _ => managementVisibility
             };
         if (asset is not null) _catalog.State.SelectedAsset = asset.Id;
@@ -412,33 +410,33 @@ public partial class WorkspaceBrowser : UserControl
     {
         if (Selection.Count == 0) return;
         var state = _catalog!.State;
-        if (currentProject && state.ProjectId is null) { Tell(Localization.Text("SelectAProjectFirst")); return; }
+        if (currentProject && state.ProjectId is null) { Tell(Localization.Text("SelectAProjectFirst"), NotificationKind.Warning); return; }
         var choices = new List<(string Name, Guid Project, Guid? Folder)>();
         foreach (var project in state.Projects.Where(p => !p.IsUnreal && (!currentProject || p.Id == state.ProjectId)))
         {
             choices.Add((project.Name, project.Id, null));
             foreach (var folder in state.Folders.Where(f => f.ProjectId == project.Id)) choices.Add((_catalog.Location(new WorkspaceLink { ProjectId = project.Id, FolderId = folder.Id }), project.Id, folder.Id));
         }
-        if (choices.Count == 0) { Tell(Localization.Text("CreateProjectUsingButtonLeft")); return; }
+        if (choices.Count == 0) { Tell(Localization.Text("CreateProjectUsingButtonLeft"), NotificationKind.Warning); return; }
         int choice = Choose(Localization.Text("ChooseAProjectFolder"), choices.Select(c => c.Name).ToArray()); if (choice < 0) return;
         var target = choices[choice]; foreach (var asset in Selection) _catalog.Link(asset.Id, target.Project, target.Folder);
-        Refresh(); Tell(Localization.Text("MaterialsAddedPrefix") + target.Name);
+        Refresh(); Tell(Localization.Text("MaterialsAddedPrefix") + target.Name, NotificationKind.Success);
     }
     private void UnlinkSelection()
     {
-        if (_catalog!.State.ProjectId is not { } project) { Tell(Localization.Text("SelectAProjectFirst")); return; }
+        if (_catalog!.State.ProjectId is not { } project) { Tell(Localization.Text("SelectAProjectFirst"), NotificationKind.Warning); return; }
         if (_catalog.IsUnrealProject(project)) return;
         foreach (var asset in Selection) _catalog.Unlink(asset.Id, project); Refresh();
     }
     private void CopySelection()
     {
-        if (_catalog!.State.ProjectId is null) { Tell(Localization.Text("SelectProjectThatNeedsIndependentCopy")); return; }
+        if (_catalog!.State.ProjectId is null) { Tell(Localization.Text("SelectProjectThatNeedsIndependentCopy"), NotificationKind.Warning); return; }
         foreach (var asset in Selection.ToArray()) ActionRequested?.Invoke("copy", asset); Refresh();
     }
     private void DeleteSelection()
     {
         var assets = Selection.ToArray(); if (assets.Length == 0) return;
-        if (TesseraDialog.Show(Window.GetWindow(this), Localization.Format("DeleteAssetsFromTheLibraryFormat", assets.Length) + string.Join("\n", assets.Select(a => a.Name + " · " + a.LocationLabel)), Localization.Text("DeleteAssets"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        if (TesseraDialogs.Show(Window.GetWindow(this), Localization.Format("DeleteAssetsFromTheLibraryFormat", assets.Length) + string.Join("\n", assets.Select(a => a.Name + " · " + a.LocationLabel)), Localization.Text("DeleteAssets"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         foreach (var asset in assets) ActionRequested?.Invoke("delete", asset); Refresh();
     }
     private void RunMenuAction(string action)
@@ -448,8 +446,7 @@ public partial class WorkspaceBrowser : UserControl
         {
             case "rename": case "move-unreal": RenameSelectedAsset(); break;
             case "material-maps":
-                // TESSERA_LEGACY Exclude old .ttiles items from the image-specific material command.
-                if (Selection is [var image] && image.Kind == EWorkspaceAssetKind.Image && !image.IsLegacyTileArchive)
+                if (Selection is [var image] && image.Kind == EWorkspaceAssetKind.Image)
                     ActionRequested?.Invoke(action, image);
                 break;
             case "create-unreal":
@@ -517,8 +514,17 @@ public partial class WorkspaceBrowser : UserControl
         return item as TreeViewItem;
     }
 
-    private void Safe(Action action) { try { action(); } catch (Exception ex) { Tell(ex.Message); TesseraDialog.Show(Window.GetWindow(this), ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning); } }
-    private void Tell(string text) => StatusChanged?.Invoke(text);
+    private void Safe(Action action)
+    {
+        try { action(); }
+        catch (Exception ex)
+        {
+            Tell(ex.Message, NotificationKind.Error);
+            TesseraDialogs.Show(Window.GetWindow(this), ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void Tell(string text, NotificationKind kind) => StatusChanged?.Invoke(text, kind);
 
     public string? Prompt(string title, string label, string value = "")
     {

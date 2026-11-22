@@ -18,7 +18,7 @@ internal sealed class MacroNameDialog : Window
         ShowInTaskbar = false;
         ResizeMode = ResizeMode.NoResize; WindowStartupLocation = WindowStartupLocation.CenterOwner;
         Resources.MergedDictionaries.Add(new AppearanceResources());
-        SetResourceReference(FontFamilyProperty, "UiFont"); SetResourceReference(ForegroundProperty, "Ts.Text");
+        SetResourceReference(FontFamilyProperty, "Ts.UiFont"); SetResourceReference(ForegroundProperty, "Ts.Text");
         var panel = new StackPanel();
         var heading = new TextBlock { Text = title, FontSize = 20, Margin = new Thickness(0, 0, 0, 14) };
         heading.MouseLeftButtonDown += (_, e) => { if (e.ButtonState == MouseButtonState.Pressed) DragMove(); };

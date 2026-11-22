@@ -62,14 +62,17 @@ public static class GitHubUpdaterChecks
             var release = GitHubUpdater.CheckAsync(http, new Version(1, 0, 42, 0)).GetAwaiter().GetResult();
             Require(release is null, "Installed version was offered again");
         });
-        check("GitHub release uses checksum file when asset digest is unavailable", () =>
+        check("GitHub release requires the asset digest in the API response", () =>
         {
-            string digest = new string('a', 64);
-            using var http = new HttpClient(new ReplyHandler(uri => uri.AbsolutePath.EndsWith("/releases/latest", StringComparison.Ordinal)
+            using var http = new HttpClient(new ReplyHandler(uri => uri.Host == "api.github.com"
                 ? Json("""{"tag_name":"v1.0.42","html_url":"https://github.com/Timbuhtuk/TESSERA/releases/tag/v1.0.42","assets":[{"name":"Tessera.exe","browser_download_url":"https://github.com/Timbuhtuk/TESSERA/releases/download/v1.0.42/Tessera.exe","digest":null},{"name":"SHA256SUMS.txt","browser_download_url":"https://github.com/Timbuhtuk/TESSERA/releases/download/v1.0.42/SHA256SUMS.txt"}]}""")
-                : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(digest + "  Tessera.exe\n") }));
-            var release = GitHubUpdater.CheckAsync(http, new Version(1, 0, 41, 0)).GetAwaiter().GetResult();
-            Require(release?.Sha256 == digest, "Fallback checksum was not read");
+                : throw new Exception("Unexpected checksum request")));
+            try
+            {
+                GitHubUpdater.CheckAsync(http, new Version(1, 0, 41, 0)).GetAwaiter().GetResult();
+                throw new Exception("A release without an asset digest was accepted.");
+            }
+            catch (InvalidDataException) { }
         });
         check("GitHub API rate limits fall back to the public release and its versioned checksum", () =>
         {

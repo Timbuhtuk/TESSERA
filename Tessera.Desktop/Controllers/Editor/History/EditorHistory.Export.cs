@@ -28,17 +28,19 @@ internal sealed partial class EditorHistory
             string message = errors.Count == 0
                 ? Localization.Format("ResultsSavedFormat", saved, folderDialog.FolderName)
                 : Localization.Format("SaveCountWithErrors", saved, errors.Count);
-            Host.Notify(message, errors.Count == 0 ? NotificationKind.Success : NotificationKind.Warning);
+            var kind = MainWindow.BatchNotificationKind(saved, errors.Count);
+            Host.Notify(message, kind);
             if (errors.Count == 0) Host.CompleteProcessingProgress();
             if (errors.Count > 0)
-                TesseraDialog.Show(Host, string.Join(Environment.NewLine, errors), Localization.Text("SomeResultsWereNotSaved"),
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                TesseraDialogs.Show(Host, string.Join(Environment.NewLine, errors),
+                    Localization.Text(saved == 0 ? "CouldNotSaveResults" : "SomeResultsWereNotSaved"),
+                    MessageBoxButton.OK, saved == 0 ? MessageBoxImage.Error : MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
             Host.Notify(Localization.Text("CouldNotSaveResults"), NotificationKind.Error);
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("SaveError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("SaveError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

@@ -320,24 +320,11 @@ internal static class MaterialMapChecks
             var library = new ImageLibrary(libraryPath);
             Require(File.ReadAllBytes(path).SequenceEqual(original) && catalog.State.Assets.Count == 1 && library.Load().Count == 1,
                 "Autosave changed the original or generated standalone PNGs");
-            var legacy = new WorkspaceMaterialSession { SourceId = source.Id, GenerationId = Guid.NewGuid() };
-            string legacyPath = catalog.MaterialSessionPath(legacy);
-            Directory.CreateDirectory(Path.GetDirectoryName(legacyPath)!);
-            MaterialMapFile.Save(reloaded, legacyPath);
-            File.SetLastWriteTimeUtc(legacyPath, DateTime.UtcNow.AddDays(-1));
-            var legacyMap = library.StoreMaterialMap(new SourceEntry { Id = legacy.NormalId, DisplayName = "legacy_normal.png" },
-                MaterialMapsWindow.ToImage(reloaded.MapPixels(EMaterialMapKind.Normal), reloaded.Width, reloaded.Height));
-            catalog.State.MaterialSessions.Add(legacy);
-            catalog.SyncImages([legacyMap]); catalog.Link(legacyMap.Id, project.Id, leaf.Id);
             main.Close(); Pump();
             main = new MainWindow(libraryPath) { ShowActivated = false }; main.EnableWorkspacePrototype(); main.Show(); Pump();
             catalog = main.Workspace!; session = catalog.FindMaterialSession(source.Id)!;
-            Require(catalog.State.MaterialSessions.Single(item => item.Id == legacy.Id).Archived && File.Exists(legacyPath) &&
-                catalog.Query("all", null, null, "", 0, "", "", 0).Single().Id == source.Id, "Legacy maps were visible or their document was lost");
             source = catalog.State.Assets.Single(a => a.Id == session.SourceId);
             Wait(main.OpenWorkspaceAssetAsync(source)); NavigationTest.Click(main, "materialMapsMenuItem");
-            Require(((ListBox)main.FindControl("sourceStrip")).Items.OfType<SourceEntry>().All(item => item.Id != legacyMap.Id),
-                "A generated map was visible in the editor's source library");
             Until(() => main.OwnedWindows.OfType<MaterialMapsWindow>().Any(w => !w.IsBusy && w.Document is not null));
             maps = main.OwnedWindows.OfType<MaterialMapsWindow>().Single();
             Require(maps.Document!.NormalMask.SequenceEqual(normals) && maps.Document.AoMask.SequenceEqual(ao) && maps.Document.NormalStrength == 6,
@@ -374,7 +361,7 @@ internal static class MaterialMapChecks
             Until(() => !maps.IsBusy && maps.Document?.Width == 32);
             var persisted = new WorkspaceCatalog(libraryPath);
             Require(session.GenerationId == result.Id && persisted.FindMaterialSession(source.Id)?.GenerationId == result.Id &&
-                catalog.State.MaterialSessions.Count == 2 && catalog.State.MaterialSessions.Count(item => !item.Archived) == 1 &&
+                catalog.State.MaterialSessions.Count == 1 &&
                 MaterialMapFile.Load(stored).AoMask.SequenceEqual(ao), "Rebuild did not switch one active set or overwrote the previous recovery file");
             maps.Close(); Pump(); maps = null;
             main.ProcessingBasis = 0;
@@ -390,7 +377,7 @@ internal static class MaterialMapChecks
                 Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
                 {
                     var dialog = main.OwnedWindows.OfType<TesseraDialog>().Single();
-                    ((StackPanel)dialog.FindName("dialogButtons")).Children.OfType<Button>().Single(button => Equals(button.Tag, answer))
+                    ((Panel)dialog.FindName("ActionButtons")).Children.OfType<Button>().ElementAt(answer == MessageBoxResult.Yes ? 0 : 1)
                         .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 }));
                 NavigationTest.Click(main, "rebuildMaterialMapsMenuItem");

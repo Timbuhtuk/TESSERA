@@ -14,8 +14,7 @@ internal static class IndependentImageProcessorChecks
         check("Color reduction modes apply quantization or palette exclusively", ColorModesAreExclusive);
         check("Neighbor colors merge local shades without palette or scaling", NeighborColorsKeepSourcePaletteAndAlpha);
         check("Neighbor color passes denoise speckles and retain coherent patch boundaries", NeighborColorPasses);
-        check("Neighbor color brightness setting changes transition direction", NeighborColorBrightness);
-        check("Neighbor colors use their own criteria independently of size settings", NeighborColorsUseOwnCriteria);
+        check("Neighbor colors are independent of size settings", NeighborColorsUseOwnCriteria);
         check("Neighbor colors do not exchange equal-support pixels", NeighborColorsDoNotSwap);
         check("Neighbor color passes reject values outside range", NeighborColorPassRange);
     }
@@ -174,22 +173,6 @@ internal static class IndependentImageProcessorChecks
         three.Save(Path.Combine(ToolImprovementsChecks.ArtifactRoot, "cleanup-protected-patch-pass3.png"));
     }
 
-    private static void NeighborColorBrightness()
-    {
-        using var source = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
-        for (int y = 0; y < 3; y++)
-            for (int x = 0; x < 3; x++) source.SetPixel(x, y, Color.FromArgb(180, 180, 180));
-        source.SetPixel(1, 1, Color.FromArgb(200, 200, 200));
-
-        using var automatic = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions());
-        using var bright = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
-        {
-            LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 1, BrightnessImportance = 1 }
-        });
-        if (automatic.GetPixel(1, 1).R != 180 || bright.GetPixel(1, 1).R != 200)
-            throw new Exception("High brightness preference did not resist a darker transition.");
-    }
-
     private static void NeighborColorsUseOwnCriteria()
     {
         using var source = new Bitmap(3, 3, PixelFormat.Format32bppArgb);
@@ -202,19 +185,8 @@ internal static class IndependentImageProcessorChecks
             BlockMode = EBlockSelectionMode.Manual,
             ManualCriteria = new ManualBlockCriteria { TargetBrightness = 1 }
         });
-        using var localBright = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
-        {
-            LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 1 }
-        });
-        using var localDark = IndependentImageProcessor.ApplyNeighborColors(source, new DownscaleOptions
-        {
-            BlockMode = EBlockSelectionMode.Manual,
-            ManualCriteria = new ManualBlockCriteria { TargetBrightness = 1 },
-            LocalColorCriteria = new ManualBlockCriteria { TargetBrightness = 0 }
-        });
-        if (sizeOnly.GetPixel(1, 1).R != 180 ||
-            localBright.GetPixel(1, 1).R != 200 || localDark.GetPixel(1, 1).R != 180)
-            throw new Exception("Local 3×3 criteria were ignored or inherited size-tool preferences.");
+        if (sizeOnly.GetPixel(1, 1).R != 180)
+            throw new Exception("Local cleanup inherited size-tool preferences.");
     }
 
     private static void NeighborColorPassRange()

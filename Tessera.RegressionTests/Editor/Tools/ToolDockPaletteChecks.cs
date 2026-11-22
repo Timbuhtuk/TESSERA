@@ -121,6 +121,10 @@ internal static class ToolDockPaletteChecks
             Get<IntegerInput>(window, "quantizationColorsInput").Value = 2;
             Get<RadioButton>(window, "paletteColorModeInput").IsChecked = true;
             Get<ComboBox>(window, "paletteInput").SelectedIndex = 0;
+            var swatches = Get<Tessera.WpfStyles.Controls.PaletteSwatches>(window, "paletteSwatches");
+            Require(swatches.Visibility == Visibility.Visible && swatches.ItemsSource is { } colors &&
+                colors.Select(color => (color.R << 16) | (color.G << 8) | color.B).SequenceEqual(Palettes.GetPalette(EPaletteKind.DB16)),
+                "Selected palette did not populate the library swatches in order");
             Get<CheckBox>(window, "connectedPaletteInput").IsChecked = true;
             Get<Button>(window, "colorOnlyButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Until(() => !Get<bool>(window, "_processing") && Get<SourceEntry>(window, "_activeSource").Generations.Count > 0);
@@ -163,7 +167,7 @@ internal static class ToolDockPaletteChecks
                 items[2].TranslatePoint(new Point(), tabs).Y > items[0].TranslatePoint(new Point(), tabs).Y,
                 "Dock tabs did not form aligned rows within the panel");
             var tip = new ToolTip { Content = new string('A', 300), Style = (Style)window.FindResource(typeof(ToolTip)) };
-            var selector = tip.ContentTemplateSelector as WrappedToolTipSelector;
+            var selector = tip.ContentTemplateSelector as Tessera.WpfStyles.Controls.WrappedToolTipSelector;
             var wrapped = selector?.SelectTemplate(tip.Content, tip)?.LoadContent() as TextBlock;
             Require(tip.MaxWidth == 400 && wrapped?.TextWrapping == TextWrapping.Wrap && wrapped.MaxWidth == 380 &&
                 selector?.SelectTemplate(new Border(), tip) is null,

@@ -143,8 +143,8 @@ public partial class ImageEditorPage
         });
         if (selected && next is not null) SelectSource(next);
         else if (selected && Host._workspaceReady) { Host._workspaceActive = null; Host.ShowHome(); }
-        Host.statusLabel.Text = Host._sources.Count == 0
+        Host.Notify(Host._sources.Count == 0
             ? Localization.Text("AllSourcesRemovedFromTheApp")
-            : Localization.Text("SourceItsResultsRemovedApp");
+            : Localization.Text("SourceItsResultsRemovedApp"), NotificationKind.Success);
     }
 }

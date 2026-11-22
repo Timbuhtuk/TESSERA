@@ -95,9 +95,9 @@ Both commands take one image file, including a result saved by an earlier CLI or
 
 `tessera colors` additionally accepts `--color-mode combined|quantization|palette`. `combined` preserves the earlier CLI pipeline; `quantization` and `palette` run only the corresponding editor stage. Palette-only mode rejects quantization settings, and quantization-only mode rejects palette and dithering settings.
 
-`tessera smooth-colors` (alias `smooth`) runs the editor's local 3×3 color cleanup without changing dimensions or alpha. `--passes` accepts 1–100. `--color-tolerance` accepts 0–40 (default 12); `--strength`, `--detail-protection` and `--edge-protection` accept 0–100 (defaults 65, 80 and 80). `--no-detail-protection` matches the editor switch. These match the current editor controls and accept decimal values with a dot. Zero tolerance or strength leaves the image unchanged.
+`tessera smooth-colors` runs the editor's local 3×3 color cleanup without changing dimensions or alpha. `--passes` accepts 1–100. `--color-tolerance` accepts 0–40 (default 12); `--strength`, `--detail-protection` and `--edge-protection` accept 0–100 (defaults 65, 80 and 80). `--no-detail-protection` matches the editor switch. These match the current editor controls and accept decimal values with a dot. Zero tolerance or strength leaves the image unchanged.
 
-`tessera monochrome` (alias `mono`) converts visible pixels to grayscale while preserving size and alpha. `tessera replace-color` replaces one exact visible RGB color with another using `--from #RRGGBB` and `--to #RRGGBB`; source alpha is retained. `tessera palette-info` reports dimensions, working format, DPI, file size, alpha categories, grayscale status and visible RGB colors. JSON includes the 1024 most frequent color counts; the simple color list appears when the image has at most 1024 colors.
+`tessera monochrome` converts visible pixels to grayscale while preserving size and alpha. `tessera replace-color` replaces one exact visible RGB color with another using `--from #RRGGBB` and `--to #RRGGBB`; source alpha is retained. `tessera palette-info` reports dimensions, working format, DPI, file size, alpha categories, grayscale status and visible RGB colors. JSON includes the 1024 most frequent color counts; the simple color list appears when the image has at most 1024 colors.
 
 `tessera ascii` saves text, a rendered PNG, or both. Rendered glyphs use a 16 px font. `--mode fit` chooses a character grid for the source dimensions and keeps those dimensions in rendered PNG; `--mode per-pixel` creates one character per source pixel. Choose `--preset standard|detailed|minimal|blocks` or supply `--characters`. `--invert-source` reverses brightness mapping and `--invert-render` draws black text on white.
 
@@ -174,7 +174,7 @@ Video processing requires `ffmpeg` and `ffprobe` on PATH, or explicit `--ffmpeg 
 
 ## Boards
 
-`board` manages editable `.tboard` files. `create` sets canvas size (128–16384 pixels per side) and optional background. `add` inserts a raster layer with a name, position, angle and scale (0.1–3). `transform`, `remove` and `reorder` edit existing layers using one-based indices. `background` changes the canvas color. `info` lists the layers. `export` writes a PNG using the same banded renderer as the desktop workspace. Write commands require `-o`; use the source board as `-o` together with `--overwrite` to update it in place. The CLI reads both current zipped boards and legacy JSON boards; writes use the current format.
+`board` manages editable `.tboard` files. `create` sets canvas size (128–16384 pixels per side) and optional background. `add` inserts a raster layer with a name, position, angle and scale (0.1–3). `transform`, `remove` and `reorder` edit existing layers using one-based indices. `background` changes the canvas color. `info` lists the layers. `export` writes a PNG using the same banded renderer as the desktop workspace. Write commands require `-o`; use the source board as `-o` together with `--overwrite` to update it in place. The CLI reads and writes version 2 ZIP boards with background color and source paths in the manifest.
 
 ```powershell
 tessera board create -o board.tboard --width 1024 --height 768 --background "#FFFFFF"
@@ -202,7 +202,7 @@ Omit `--cell-size` for automatic detection. Set it explicitly for ambiguous grid
 
 ## Reduce an aligned grid
 
-`tessera reduce-grid` (alias `compact-grid`) applies the editor's “one pixel per grid cell” operation to a previously aligned image. `--cell-size` is required because CLI files do not carry the editor's history metadata; use the size reported by `tessera align` (or its JSON `cellSize`). Each uniform cell contributes one original ARGB pixel, including partial cells on the right and bottom edges. A nonuniform grid is rejected; no palette or quantization is applied.
+`tessera reduce-grid` applies the editor's “one pixel per grid cell” operation to a previously aligned image. `--cell-size` is required because CLI files do not carry the editor's history metadata; use the size reported by `tessera align` (or its JSON `cellSize`). Each uniform cell contributes one original ARGB pixel, including partial cells on the right and bottom edges. A nonuniform grid is rejected; no palette or quantization is applied.
 
 ```powershell
 .\artifacts\cli\tessera.exe align input.png -o aligned.png --cell-size 4
@@ -213,7 +213,7 @@ The output is PNG, defaulting to `<name>_pixels.png`. `--overwrite` and `--json`
 
 ## Background removal
 
-`remove-background` (alias `remove-bg`) saves a full-size PNG with a solid background made transparent. It uses the same algorithm as the ICO workspace.
+`remove-background` saves a full-size PNG with a solid background made transparent. It uses the same algorithm as the ICO workspace.
 
 ```powershell
 .\artifacts\cli\tessera.exe remove-background input.png -o transparent.png --mode edges --background-color auto --tolerance 8
@@ -225,7 +225,7 @@ The output is PNG, defaulting to `<name>_pixels.png`. `--overwrite` and `--json`
 
 ## ICO export
 
-The `ico` command (alias `icon`) creates a multi-size icon directly from an image, without reapplying a palette or quantization.
+The `ico` command creates a multi-size icon directly from an image, without reapplying a palette or quantization.
 
 ```powershell
 .\artifacts\cli\tessera.exe ico result.png -o application.ico --sizes 16,24,32,48,64,128,256 --resize nearest-neighbor --fit contain
