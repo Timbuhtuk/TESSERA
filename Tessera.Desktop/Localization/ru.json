@@ -86,6 +86,7 @@
   "TesseraCouldNotPrepareTheLibraryFormat": "Не удалось подготовить библиотеку Tessera. Исходные файлы сохранены.\n\n{0}",
   "TheLibraryMigrationFoldersOverlap": "Папки переноса библиотеки пересекаются.",
   "CouldNotVerifyTheStagedLibraryFormat": "Не удалось подтвердить готовность копии библиотеки: {0}",
+  "ConfirmPortableLibraryReplacementFormat": "Найдена переносимая библиотека:\n{0}\n\nСделать её активной? Tessera проверит копию, сохранит оригинал и поместит текущую библиотеку AppData в отдельную резервную папку. Выберите «Нет», чтобы продолжить работу с текущей библиотекой.",
   "TheFolderContentsChangedDuringMigrationFormat": "Содержимое папки изменилось во время переноса: {0}",
   "TheLibraryFileChecksumDidNotFormat": "Контрольная сумма файла библиотеки не совпала: {0}",
   "LibraryMigrationStoppedBecausePathRedirectedFormat": "Перенос библиотеки остановлен: путь перенаправлен ({0}).",

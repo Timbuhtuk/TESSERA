@@ -86,6 +86,7 @@
   "TesseraCouldNotPrepareTheLibraryFormat": "Tessera could not prepare the library. The original files have been kept.\n\n{0}",
   "TheLibraryMigrationFoldersOverlap": "The library migration folders overlap.",
   "CouldNotVerifyTheStagedLibraryFormat": "Could not verify the staged library: {0}",
+  "ConfirmPortableLibraryReplacementFormat": "Tessera found a portable library at:\n{0}\n\nUse it as your active library? Tessera will verify the copy, keep the original, and save your current AppData library in a separate backup folder. Choose No to keep using the current library.",
   "TheFolderContentsChangedDuringMigrationFormat": "The folder contents changed during migration: {0}",
   "TheLibraryFileChecksumDidNotFormat": "The library file checksum did not match: {0}",
   "LibraryMigrationStoppedBecausePathRedirectedFormat": "Library migration stopped because a path is redirected ({0}).",
