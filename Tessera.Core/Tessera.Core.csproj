@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="Tessera.Models" />
     <ProjectReference Include="..\Tessera.Models\Tessera.Models.csproj" />
   </ItemGroup>
 </Project>

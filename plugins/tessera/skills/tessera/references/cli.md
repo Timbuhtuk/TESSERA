@@ -99,7 +99,7 @@ Both commands take one image file, including a result saved by an earlier CLI or
 
 `tessera monochrome` (alias `mono`) converts visible pixels to grayscale while preserving size and alpha. `tessera replace-color` replaces one exact visible RGB color with another using `--from #RRGGBB` and `--to #RRGGBB`; source alpha is retained. `tessera palette-info` reports dimensions, working format, DPI, file size, alpha categories, grayscale status and visible RGB colors. JSON includes the 1024 most frequent color counts; the simple color list appears when the image has at most 1024 colors.
 
-`tessera ascii` saves text, a rendered PNG, or both. Its glyphs use a 16 px font, comparable to the default Windows Terminal character scale at 96 DPI. `--mode fit` chooses a character grid for the source dimensions and keeps those dimensions in rendered PNG; `--mode per-pixel` creates one character per source pixel. Choose `--preset standard|detailed|minimal|blocks` or supply `--characters`. `--invert-source` reverses brightness mapping and `--invert-render` draws black text on white.
+`tessera ascii` saves text, a rendered PNG, or both. Rendered glyphs use a 16 px font. `--mode fit` chooses a character grid for the source dimensions and keeps those dimensions in rendered PNG; `--mode per-pixel` creates one character per source pixel. Choose `--preset standard|detailed|minimal|blocks` or supply `--characters`. `--invert-source` reverses brightness mapping and `--invert-render` draws black text on white.
 
 The ASCII command also accepts `--columns 1..512` (0 chooses automatically), `--natural-size` for a glyph-sized PNG, `--color-mode monochrome|source|custom`, `--foreground #RRGGBB` for custom glyphs, `--background #RRGGBB` for source/custom backgrounds, `--dither` and `--font-size 1..256` for PNG rendering. The column and natural-size options apply to `fit` mode. Text output follows the column and dithering settings.
 
@@ -170,7 +170,7 @@ tessera macro apply input.png --macro WorkspaceData/Library/macros/MACRO_ID.json
 tessera macro apply-video input.mp4 --macro WorkspaceData/Library/macros/MACRO_ID.json -o result.mp4
 ```
 
-Video processing requires FFmpeg 5.1 or later with H.264 (libx264), AAC and FFV1 support. Put `ffmpeg` and `ffprobe` on PATH, or pass `--ffmpeg PATH` and `--ffprobe PATH` in the CLI. MP4 uses H.264/AAC and pads odd output dimensions to even sizes; MKV uses FFV1 video and copies audio. Each frame is processed independently in memory. The output uses the source's average frame rate, so variable frame timing is normalized. All frames must produce the same dimensions. Only a completed video replaces an existing output; failures and cancellation remove the temporary file. The desktop Macros panel offers **Apply to video…** with frame progress and cancellation.
+Video processing requires `ffmpeg` and `ffprobe` on PATH, or explicit `--ffmpeg PATH` and `--ffprobe PATH`. MP4 uses H.264/AAC and pads odd output dimensions to even sizes; MKV uses FFV1 video and copies audio. Each frame is processed independently in memory. The output uses the source's average frame rate, so variable frame timing is normalized. All frames must produce the same dimensions. Only a completed video replaces an existing output; failures and cancellation remove the temporary file. The desktop Macros panel offers **Apply to video…** with frame progress and cancellation.
 
 ## Boards
 
@@ -237,11 +237,10 @@ The `ico` command (alias `icon`) creates a multi-size icon directly from an imag
 
 ## Aseprite sprite sheets
 
-`tessera aseprite` converts one or more `.ase`/`.aseprite` files with the offline decoder used by the desktop workspace. By default, each input produces `<name>.png` and `<name>.json` in `--output-dir`; `--png-only` saves only the PNG. `--inspection` adds `<name>.inspection.json` and cannot be combined with `--png-only`. The default directory is `aseprite-export` beside the first input. Layout choices are `horizontal` (default), `vertical` and `grid`; `--columns` applies only to grid and accepts 1–256 (default 4). `--padding` accepts 0–128 pixels (default 0). You can pass multiple input paths positionally or repeat `-i` / `--input`.
+`tessera aseprite` converts one or more `.ase`/`.aseprite` files with the offline decoder used by the desktop workspace. Each input produces `<name>.png` and `<name>.json` in `--output-dir`; `--inspection` adds `<name>.inspection.json`. The default directory is `aseprite-export` beside the first input. Layout choices are `horizontal` (default), `vertical` and `grid`; `--columns` applies only to grid and accepts 1–256 (default 4). `--padding` accepts 0–128 pixels (default 0).
 
 ```powershell
 .\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/sheets --layout grid --columns 4 --padding 2 --inspection --json
-.\artifacts\cli\tessera.exe aseprite walk.aseprite idle.aseprite --output-dir artifacts/png-only --png-only
 ```
 
 Files are processed in order. A failure in one file does not stop the rest, but the command exits with code 1 if any failed. Existing outputs and same-name collisions are reported as errors; the converter does not overwrite them. With `--json`, the report contains a success or error entry for every input. The decoder composites visible RGBA32 image layers and excludes hidden layers; see [Aseprite conversion details](https://github.com/Timbuhtuk/TESSERA/blob/main/Tessera.Aseprite/README.md) for the remaining format limits.
@@ -291,48 +290,6 @@ For downscaling, the report includes absolute paths, source/crop/result dimensio
 ```powershell
 tessera clean-contours input.png -o result.png --window-size 3 --similar-color-distance 24 --min-pixel-gradient 120 --min-neighbor-gradient 80 --min-similar-neighbors 2 --min-agreement 35 --min-opposition 10 --candidates-output candidates.png --json
 ```
-
-## Sharpen through a macro
-
-Tessera 2.13+ replays the editor's Sharpen filter through `macro apply`. Save a Sharpen result as a macro in the editor, then run:
-
-```powershell
-tessera macro apply input.png --macro sharpen.json -o sharpened.png
-```
-
-The step is `{"operationId":"filter.sharpen","sharpen":{"strength":100,"threshold":4}}`. Strength accepts 0–200 percent and threshold 0–64. Dimensions, every alpha value and fully transparent RGB remain unchanged. It increases local color contrast; it does not reconstruct lost detail.
-
-## Experimental connected palette
-
-`connected-palette` reduces the visible RGB palette before grid downscaling, using connected color areas, spatial concentration and color difference to estimate the cost of removing a color. The result uses only colors from its input palette. It keeps width, height, pixel positions and every alpha value, and does not add dithering. A preliminary Median Cut or K-means pass is recommended for rich source images; this first implementation accepts up to 4096 visible RGB colors.
-
-```powershell
-tessera colors input.png -o intermediate.png --color-mode quantization --quantization median-cut --quantization-colors 1024
-tessera connected-palette intermediate.png -o palette128.png --colors 128 --connectivity 70 --tile-size 32 --local-weight 40 --detail-weight 50 --context-weight 30 --space oklab --json
-```
-
-`--colors` accepts 1–4096 (default 128). `--connectivity`, `--local-weight`, `--detail-weight`, and `--context-weight` accept 0–100 percent (defaults 70, 40, 50, 30). `--tile-size` accepts 0 to disable local analysis, or 4–256 pixels (default 32). `--space` selects `oklab` (default) or `lab`. Each exact RGB color is analyzed in eight-connected components. The removal cost combines pixel count, component concentration, local tile concentration, and the distance to the nearest remaining color. Removed components can choose different retained colors according to their four-neighbor boundary. This is a test tool: a rare eye, speckle and highlight can remain ambiguous; inspect the result before grid compression. In the desktop editor, connected selection is an option in **Tools → Color → Palette…**.
-
-## Experimental structure probe
-
-`structure-probe` finds small connected areas of similar colors and tests whether one neighboring color dominates their boundary. It can save a proposed cleaned image, a red candidate map, or both. It keeps the source dimensions and every alpha value. This is an experiment for already reduced images; it does not reconstruct a pixel grid or guarantee that a marked detail is noise.
-
-```powershell
-tessera structure-probe input.png -o structure.png --map-output candidates.png --json
-tessera structure-probe input.png -o candidates.png --map-only --max-component 16 --minimum-confidence 80
-```
-
-Eight-neighbor connectivity and LAB similarity form areas. Four-neighbor boundary votes select an existing replacement color. `--similar-color` (0–100, default 12) and `--max-component` (1–4096, default 8) control area formation. `--neighbor-agreement` (0–100%, default 70), `--max-replacement-distance` (1–150, default 60), and `--minimum-confidence` (0–100%, default 65) control replacement. `--detail-distance` (0–100, default 25) protects high-contrast areas of one or two pixels. Transparent boundaries and thin lines are protected by default; `--allow-alpha-edge` and `--allow-lines` disable those guards. Red on the map means a candidate, including candidates retained by the guards or confidence threshold. `--overwrite` is required for existing files; input and output paths must differ. The equivalent desktop tool is **Tools → Color → Structure probe…** and previews either the proposed image or candidate map.
-
-## Experimental pixel-art finish
-
-`finish-pixel-art` prepares nearby colors, aligns one grid, reduces each cell to one pixel, and optionally limits the palette. It saves a separate PNG and does not modify the source. The same experimental pipeline is available in **Tools → Size and grid → Build pixel art…**. Its result is a candidate for visual review; the shape experiments in `experiments/ContourCleanup/BRANCH_REVIEW.md` did not establish a general improvement over the existing reduction workflow.
-
-```powershell
-tessera finish-pixel-art input.png -o finished.png --cell-size 8 --smooth-passes 1 --colors 128 --json
-```
-
-`--cell-size` accepts 2–65535 and must fit the shorter image side. `--smooth-passes` accepts 0–100; `--colors` accepts 0–4096, with zero disabling palette reduction. `--rigid` disables adaptive grid alignment. Existing output requires `--overwrite`; input and output paths must differ.
 
 ## Dark contour and grid speckle cleanup (2.9+)
 

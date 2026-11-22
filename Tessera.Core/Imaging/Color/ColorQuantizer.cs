@@ -409,24 +409,6 @@ public static class ColorQuantizer
         return centroids.Distinct().ToList();
     }
 
-    private static int FindNearestCentroidIndex(int packed, IReadOnlyList<(int Color, (double L, double A, double B) Lab)> centroids)
-    {
-        int nearest = 0;
-        double bestDistance = double.MaxValue;
-
-        for (int i = 0; i < centroids.Count; i++)
-        {
-            double distance = ColorSpace.LabDistance(packed, centroids[i].Color);
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                nearest = i;
-            }
-        }
-
-        return nearest;
-    }
-
     private static int SnapToLabAverage(IReadOnlyList<int> bucket, IReadOnlyDictionary<int, int>? weights)
     {
         if (bucket.Count == 0)

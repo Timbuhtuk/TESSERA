@@ -9,6 +9,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="Tessera.Models" />
     <Using Include="System.IO" />
     <ProjectReference Include="..\Tessera.Cli\Tessera.Cli.csproj" />
   </ItemGroup>

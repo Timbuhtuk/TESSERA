@@ -79,6 +79,7 @@ def _texture_hash(texture):
             os.remove(path)
 
 
+# TESSERA_LEGACY Decode and validate the original queue's paired PNG and transfer JSON.
 def _transfer_files(directory, transfer):
     name = transfer.get("AssetName", "")
     if not isinstance(name, str) or not NAME_PATTERN.fullmatch(name):
@@ -145,6 +146,7 @@ def _import_one(transfer, png, state):
     return True
 
 
+# TESSERA_LEGACY Poll the original to_unreal queue alongside the v2 project mailbox.
 def sync_from_tessera():
     if not os.path.isdir(INCOMING):
         return 0
@@ -156,7 +158,7 @@ def sync_from_tessera():
         if not filename.endswith(".json"):
             continue
         transfer = _read_json(os.path.join(INCOMING, filename), {})
-        if not isinstance(transfer, dict) or transfer.get("AssetName") != filename[:-5]:
+        if not isinstance(transfer, dict) or filename != transfer.get("AssetName", "") + ".json":
             continue
         png = _transfer_files(INCOMING, transfer)
         if png is None:
@@ -171,6 +173,7 @@ def sync_from_tessera():
     return imported
 
 
+# TESSERA_LEGACY Keep the original manual Unreal menu command and to_tessera queue.
 def send_selected_to_tessera():
     os.makedirs(OUTGOING, exist_ok=True)
     state = _read_json(STATE_PATH, {})
@@ -204,12 +207,6 @@ def send_selected_to_tessera():
                 "Sha256": digest,
             })
             if owned:
-                if owned.get("baseline") != digest:
-                    pending = _read_json(os.path.join(INCOMING, texture.get_name() + ".json"), {})
-                    if isinstance(pending, dict) and pending.get("AssetName") == texture.get_name():
-                        revision = pending.get("Revision") or pending.get("Sha256")
-                        if isinstance(revision, str):
-                            owned["revision"] = revision
                 owned["baseline"] = digest
             sent += 1
         finally:

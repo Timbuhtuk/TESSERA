@@ -1,0 +1,130 @@
+<Window x:Class="Tessera.Desktop.MaterialMapsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Tessera.Desktop"
+        Title="Height · Normal · AO — TESSERA" Icon="pack://application:,,,/Tessera.Desktop;component/Assets/Brand/app.ico"
+        Width="1460" Height="900" MinWidth="860" MinHeight="620" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
+        FontFamily="{DynamicResource Ts.UiFont}" FontSize="13" UseLayoutRounding="True"
+        PreviewKeyDown="WindowKeyDown" Closing="WindowClosing">
+    <Window.Resources><ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries><local:MaterialMapsResources/></ResourceDictionary.MergedDictionaries>
+        <Style x:Key="MapPanel" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Ts.Panel}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource Ts.Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+        </Style>
+        <Style x:Key="MapLabel" TargetType="TextBlock">
+            <Setter Property="Margin" Value="0,13,0,5"/>
+            <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}"/>
+        </Style>
+    </ResourceDictionary></Window.Resources>
+    <Grid Margin="16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition/></Grid.RowDefinitions>
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="HEIGHT / NORMAL / AO" FontSize="22" FontWeight="SemiBold"/>
+                <TextBlock x:Name="sourceLabel" Foreground="{DynamicResource Ts.TextSecondary}" TextTrimming="CharacterEllipsis" Margin="0,4,16,0"/>
+                <TextBlock x:Name="basisLabel" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,4,16,0" Visibility="Collapsed"/>
+                <TextBlock x:Name="statusLabel" Margin="0,4,16,0" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}"/>
+            </StackPanel>
+            <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                <Button x:Name="returnButton" Content="{local:Translate ReturnToAsset}" Click="ReturnClicked" Visibility="Collapsed" Margin="0,0,6,0"/>
+                <Button x:Name="openProjectButton" Content="{local:Translate OpenProjectAction}" Click="OpenProjectClicked" Margin="0,0,6,0"/>
+                <Button x:Name="saveProjectButton" Content="{local:Translate SaveProjectAction}" Click="SaveProjectClicked" Margin="0,0,6,0"/>
+                <Button x:Name="exportButton" Content="{local:Translate ExportMapsAction}" Click="ExportClicked"/>
+            </WrapPanel>
+        </Grid>
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition x:Name="settingsColumn" Width="255"/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Border Style="{StaticResource MapPanel}" Margin="0">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="14">
+                    <StackPanel x:Name="settingsPanel">
+                        <TextBlock Text="{local:Translate Brush}" FontWeight="SemiBold"/>
+                        <ComboBox x:Name="brushInput" SelectedIndex="0" Margin="0,9,0,0" AutomationProperties.Name="{local:Translate DrawingTool}">
+                            <ComboBoxItem Content="{local:Translate BrushLabel}"/><ComboBoxItem Content="{local:Translate Eraser}"/><ComboBoxItem Content="{local:Translate Eyedropper}"/>
+                        </ComboBox>
+                        <TextBlock Text="{local:Translate SizePx}" Style="{StaticResource MapLabel}"/>
+                        <local:IntegerInput x:Name="brushSizeInput" Minimum="1" Maximum="256" Value="1" AutomationProperties.Name="{local:Translate BrushSize}"/>
+                        <TextBlock Text="{local:Translate BrushStrength}" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="brushStrengthInput" Minimum="0.01" Maximum="1" Value="1" AutomationProperties.Name="{local:Translate BrushStrength}"/>
+                        <TextBlock Text="{local:Translate Softness0PixelBrush}" Style="{StaticResource MapLabel}" TextWrapping="Wrap"/>
+                        <Slider x:Name="softnessInput" Minimum="0" Maximum="1" Value="0" AutomationProperties.Name="{local:Translate BrushSoftness}"/>
+                        <TextBlock Text="{local:Translate HeightAOValue01}" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="valueInput" Minimum="0" Maximum="1" Value="0.5" AutomationProperties.Name="{local:Translate HeightOrAOValue}"/>
+                        <TextBlock Text="{local:Translate NormalDirection}" Style="{StaticResource MapLabel}"/>
+                        <local:NormalDirectionPicker x:Name="directionPicker" HorizontalAlignment="Center" AutomationProperties.Name="{local:Translate NormalDirectionAndTilt}" ToolTip="{local:Translate PickADirectionOnTheHemisphere}"/>
+                        <TextBlock x:Name="directionLabel" HorizontalAlignment="Center" Margin="0,5,0,0" Foreground="{DynamicResource Ts.TextSecondary}"/>
+                        <WrapPanel Margin="0,14,0,0">
+                            <Button x:Name="undoButton" Content="↶" Click="UndoClicked" ToolTip="{local:Translate UndoShortcutHint}" AutomationProperties.Name="{local:Translate CancelLabel}" Margin="0,0,6,0"/>
+                            <Button x:Name="redoButton" Content="↷" Click="RedoClicked" ToolTip="{local:Translate RedoShortcutHint}" AutomationProperties.Name="{local:Translate Redo}"/>
+                        </WrapPanel>
+                        <Separator Margin="0,15,0,0"/>
+                        <TextBlock Text="{local:Translate GenerateFROMHeightHeading}" FontWeight="SemiBold" Margin="0,12,0,0"/>
+                        <TextBlock Text="{local:Translate NormalReliefStrength}" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="normalStrengthInput" Minimum="0" Maximum="16" Value="4" ValueChanged="GenerationChanged" AutomationProperties.Name="{local:Translate NormalReliefStrength}"/>
+                        <TextBlock Text="{local:Translate AOStrength}" Style="{StaticResource MapLabel}"/>
+                        <Slider x:Name="aoStrengthInput" Minimum="0" Maximum="8" Value="2" ValueChanged="GenerationChanged" AutomationProperties.Name="{local:Translate AOStrength}"/>
+                        <TextBlock Text="{local:Translate AORadiusPx}" Style="{StaticResource MapLabel}"/>
+                        <local:IntegerInput x:Name="aoRadiusInput" Minimum="1" Maximum="64" Value="8" AutomationProperties.Name="{local:Translate AORadius}"/>
+                        <ComboBox x:Name="conventionInput" SelectedIndex="0" Margin="0,12,0,0" SelectionChanged="ConventionChanged" AutomationProperties.Name="{local:Translate NormalConvention}">
+                            <ComboBoxItem Content="DirectX · −Y"/><ComboBoxItem Content="OpenGL · +Y"/>
+                        </ComboBox>
+                        <Button x:Name="resetNormalButton" Content="{local:Translate ResetNormalEdits}" Click="ResetNormalClicked" Margin="0,14,0,6"/>
+                        <Button x:Name="resetAoButton" Content="{local:Translate ResetAOEdits}" Click="ResetAoClicked"/>
+                        <TextBlock Text="{local:Translate InitialHeightComesFromImageLuminance}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,12,0,0"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                <WrapPanel x:Name="viewSettings" Margin="0,0,0,10">
+                    <TextBlock Text="{local:Translate Scale}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <ComboBox x:Name="zoomInput" Width="100" SelectedIndex="0" SelectionChanged="ViewChanged" AutomationProperties.Name="{local:Translate MapZoom}">
+                        <ComboBoxItem Content="{local:Translate Fit}"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/>
+                    </ComboBox>
+                    <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="gridInput" Content="{local:Translate Grid}" IsChecked="True" Checked="ViewChanged" Unchecked="ViewChanged" Margin="12,0" VerticalAlignment="Center" ToolTip="{local:Translate ShowPixelGrid600ZoomOr}"/>
+                    <TextBlock Text="{local:Translate SourceOverlay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <Slider x:Name="overlayInput" Width="110" Minimum="0" Maximum="0.8" Value="0" ValueChanged="ViewChanged" AutomationProperties.Name="{local:Translate SourceOverlayOpacity}"/>
+                </WrapPanel>
+                <Grid x:Name="mapGrid" Grid.Row="1" Grid.IsSharedSizeScope="True">
+                    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="8"/><ColumnDefinition/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions><RowDefinition/><RowDefinition Height="8"/><RowDefinition/></Grid.RowDefinitions>
+                    <Border x:Name="heightBorder" Style="{StaticResource MapPanel}" Margin="0"><Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" SharedSizeGroup="MapHeader"/><RowDefinition/></Grid.RowDefinitions>
+                        <Grid Margin="10,6"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="HEIGHT" VerticalAlignment="Center" FontWeight="SemiBold"/><Button Content="PNG" Tag="Height" Click="ExportMapClicked" Grid.Column="1" AutomationProperties.Name="{local:Translate ExportHeightPNG}"/>
+                        </Grid>
+                        <local:MaterialMapView x:Name="heightView" Grid.Row="1" AutomationProperties.Name="{local:Translate HeightCanvas}"/>
+                    </Grid></Border>
+                    <Border x:Name="normalBorder" Grid.Column="2" Style="{StaticResource MapPanel}" Margin="0"><Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" SharedSizeGroup="MapHeader"/><RowDefinition/></Grid.RowDefinitions>
+                        <Grid Margin="10,6"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="NORMAL" VerticalAlignment="Center" FontWeight="SemiBold"/><Button Content="PNG" Tag="Normal" Click="ExportMapClicked" Grid.Column="1" AutomationProperties.Name="{local:Translate ExportNormalPNG}"/>
+                        </Grid>
+                        <local:MaterialMapView x:Name="normalView" Grid.Row="1" AutomationProperties.Name="{local:Translate NormalCanvas}"/>
+                    </Grid></Border>
+                    <Border x:Name="aoBorder" Grid.Row="2" Style="{StaticResource MapPanel}" Margin="0"><Grid>
+                        <Grid.RowDefinitions><RowDefinition Height="Auto" SharedSizeGroup="MapHeader"/><RowDefinition/></Grid.RowDefinitions>
+                        <Grid Margin="10,6"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Text="AO" VerticalAlignment="Center" FontWeight="SemiBold"/><Button Content="PNG" Tag="AO" Click="ExportMapClicked" Grid.Column="1" AutomationProperties.Name="{local:Translate ExportAOPNG}"/>
+                        </Grid>
+                        <local:MaterialMapView x:Name="aoView" Grid.Row="1" AutomationProperties.Name="{local:Translate AOCanvas}"/>
+                    </Grid></Border>
+                <Border Grid.Row="2" Grid.Column="2" Style="{StaticResource MapPanel}" Margin="0"><Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" SharedSizeGroup="MapHeader"/><RowDefinition/></Grid.RowDefinitions>
+                    <WrapPanel Margin="10,6">
+                        <TextBlock Text="{local:Translate Preview}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="useNormalInput" Content="Normal" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="{local:Translate UseNormalsInTheLightingPreview}"/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="useAoInput" Content="AO" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="{local:Translate UseAOInThePreviewAmbient}"/>
+                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="compareInput" Content="{local:Translate SourceLabel}" Checked="LightingChanged" Unchecked="LightingChanged" ToolTip="{local:Translate ShowOriginalImageWithoutLightingComparison}"/>
+                    </WrapPanel>
+                    <local:MaterialMapView x:Name="litView" Grid.Row="1" DrawingEnabled="False" AutomationProperties.Name="{local:Translate LightingPreview}" ToolTip="{local:Translate MoveMouseOverImageMoveLight}"/>
+                </Grid></Border>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

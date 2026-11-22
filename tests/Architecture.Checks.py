@@ -55,9 +55,9 @@ for file in (root / "Tessera.Models").rglob("*.cs"):
         errors.append(f"model contract has another namespace: {file.relative_to(root)}")
 
 for file in (root / "Tessera.Desktop").glob("*.xaml"):
-    if file.name not in {"App.xaml", "Theme.xaml"}:
+    if file.name != "App.xaml":
         errors.append(f"WPF view outside Views: {file.name}")
-for file in (root / "Tessera.Desktop" / "Views").glob("*.xaml"):
+for file in (root / "Tessera.Desktop" / "Views").rglob("*.xaml"):
     if '="Assets/' in file.read_text(encoding="utf-8-sig"):
         errors.append(f"relative asset URI in moved view: {file.name}")
 

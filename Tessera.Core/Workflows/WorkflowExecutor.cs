@@ -4,7 +4,7 @@ using Tessera.Core.Imaging;
 
 namespace Tessera.Core.Workflows;
 
-public sealed record WorkflowProgress(int Index, int Count, string OperationId, int? CellSize = null);
+public sealed record WorkflowProgress(int Index, int Count, string OperationId);
 
 public sealed class WorkflowStepException : Exception
 {
@@ -34,10 +34,8 @@ public sealed class WorkflowCanceledException : OperationCanceledException
 
 public sealed class WorkflowExecutor
 {
-    // The step callback runs synchronously while its bitmap is alive. Callers must copy or save it before returning.
     public Bitmap Execute(Bitmap input, ProcessingRecipe recipe, CancellationToken cancellationToken = default,
-        IProgress<WorkflowProgress>? progress = null, Action<WorkflowProgress, Bitmap>? stepCompleted = null,
-        IProgress<double>? operationProgress = null)
+        IProgress<WorkflowProgress>? progress = null, IProgress<double>? operationProgress = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(recipe);
@@ -58,13 +56,6 @@ public sealed class WorkflowExecutor
                     cancellationToken.ThrowIfCancellationRequested();
                     (next, nextAlignmentCell) = ExecuteStep(current, step, previousAlignmentCell, cancellationToken, tracking.Slice(q, recipe.Steps.Count));
                     cancellationToken.ThrowIfCancellationRequested();
-                    int? cellSize = step.OperationId switch
-                    {
-                        ProcessingOperations.Align or ProcessingOperations.AlignLocal or ProcessingOperations.AlignLocalSnapped => nextAlignmentCell,
-                        ProcessingOperations.Reduce => step.UsePreviousAlignment ? previousAlignmentCell : step.CellSize,
-                        _ => null
-                    };
-                    stepCompleted?.Invoke(new WorkflowProgress(q + 1, recipe.Steps.Count, step.OperationId, cellSize), next);
                 }
                 catch (OperationCanceledException ex)
                 {
@@ -127,12 +118,12 @@ public sealed class WorkflowExecutor
         switch (step.OperationId)
         {
             case ProcessingOperations.Profile:
-            {
-                DownscaleOptions options = LocalOptions(step.Downscale!);
-                var result = new PixelArtDownscaler().Process(current, options, operationProgress);
-                result.CroppedSource.Dispose();
-                return (result.Downscaled, previousAlignmentCell);
-            }
+                {
+                    DownscaleOptions options = LocalOptions(step.Downscale!);
+                    var result = new PixelArtDownscaler().Process(current, options, operationProgress);
+                    result.CroppedSource.Dispose();
+                    return (result.Downscaled, previousAlignmentCell);
+                }
             case ProcessingOperations.Resize:
                 return (IndependentImageProcessor.Scale(current, step.ResizeFactor is { } factor
                     ? factor.Resolve(current.Width, current.Height) : LocalOptions(step.Downscale!), operationProgress), previousAlignmentCell);
@@ -145,55 +136,46 @@ public sealed class WorkflowExecutor
             case ProcessingOperations.Align:
             case ProcessingOperations.AlignLocal:
             case ProcessingOperations.AlignLocalSnapped:
-            {
-                var mode = step.OperationId == ProcessingOperations.Align ? EGridAlignmentMode.Global : EGridAlignmentMode.Local;
-                bool snap = step.OperationId == ProcessingOperations.AlignLocalSnapped;
-                var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap }, operationProgress);
-                return (alignment.Aligned, alignment.CellSize);
-            }
+                {
+                    var mode = step.OperationId == ProcessingOperations.Align ? EGridAlignmentMode.Global : EGridAlignmentMode.Local;
+                    bool snap = step.OperationId == ProcessingOperations.AlignLocalSnapped;
+                    var alignment = new PixelGridAligner().Align(current, new GridAlignmentOptions { CellSize = step.CellSize, Mode = mode, SnapToGlobalGrid = snap }, operationProgress);
+                    return (alignment.Aligned, mode == EGridAlignmentMode.Global || snap ? alignment.CellSize : null);
+                }
             case ProcessingOperations.Reduce:
-            {
-                int cellSize = step.UsePreviousAlignment ? previousAlignmentCell!.Value : step.CellSize!.Value;
-                return (PixelGridReducer.Reduce(current, cellSize, operationProgress), previousAlignmentCell);
-            }
+                {
+                    int cellSize = step.UsePreviousAlignment ? previousAlignmentCell!.Value : step.CellSize!.Value;
+                    return (PixelGridReducer.Reduce(current, cellSize, operationProgress), previousAlignmentCell);
+                }
             case ProcessingOperations.Monochrome:
                 return (ImageFilters.Monochrome(current, operationProgress), previousAlignmentCell);
             case ProcessingOperations.Sharpen:
                 return (ImageFilters.Sharpen(current, step.Sharpen!.Strength, step.Sharpen.Threshold, cancellationToken, operationProgress), previousAlignmentCell);
             case ProcessingOperations.Ascii:
-            {
-                AsciiSettings settings = step.Ascii!;
-                return (ImageFilters.RenderAscii(current, settings.KeepSourceSize, settings.Characters,
-                    settings.InvertSource, settings.InvertColors, settings.ColorMode,
-                    settings.ForegroundArgb, settings.BackgroundArgb, settings.Columns, settings.Dither, settings.FontSize, operationProgress), previousAlignmentCell);
-            }
+                {
+                    AsciiSettings settings = step.Ascii!;
+                    return (ImageFilters.RenderAscii(current, settings.KeepSourceSize, settings.Characters,
+                        settings.InvertSource, settings.InvertColors, settings.ColorMode,
+                        settings.ForegroundArgb, settings.BackgroundArgb, settings.Columns, settings.Dither, operationProgress, settings.FontSize), previousAlignmentCell);
+                }
             case ProcessingOperations.ReplaceColor:
-            {
-                ColorReplacementSettings settings = step.ColorReplacement!;
-                return (ImageColorTools.ReplaceColor(current, Color.FromArgb(settings.FromArgb),
-                    Color.FromArgb(settings.ToArgb), operationProgress), previousAlignmentCell);
-            }
+                {
+                    ColorReplacementSettings settings = step.ColorReplacement!;
+                    return (ImageColorTools.ReplaceColor(current, Color.FromArgb(settings.FromArgb),
+                        Color.FromArgb(settings.ToArgb), operationProgress), previousAlignmentCell);
+                }
             case ProcessingOperations.RemoveBackground:
-            {
-                BackgroundSettings settings = step.Background!;
-                Color? color = settings.ColorArgb is null ? null : Color.FromArgb(settings.ColorArgb.Value);
-                return (BackgroundRemover.Remove(current, settings.Mode, settings.Tolerance, color, cancellationToken, operationProgress),
-                    previousAlignmentCell);
-            }
+                {
+                    BackgroundSettings settings = step.Background!;
+                    Color? color = settings.ColorArgb is null ? null : Color.FromArgb(settings.ColorArgb.Value);
+                    return (BackgroundRemover.Remove(current, settings.Mode, settings.Tolerance, color, cancellationToken, operationProgress),
+                        previousAlignmentCell);
+                }
             case ProcessingOperations.AdjustChannel:
                 return (ChannelAdjustment.Apply(current, step.ChannelAdjustment!, cancellationToken, operationProgress), previousAlignmentCell);
-            case ProcessingOperations.ContourHeatmap:
-                return (ContourNoiseCleaner.Analyze(current, step.Contours!, operationProgress).Heatmap, previousAlignmentCell);
-            case ProcessingOperations.ConnectedPalette:
-                return (ConnectivityPaletteReducer.Process(current, step.ConnectedPalette!, operationProgress).Image, previousAlignmentCell);
-            case ProcessingOperations.CleanContours:
-            {
-                ContourCleanResult result = ContourNoiseCleaner.Process(current, step.Contours!, operationProgress);
-                result.CandidateMap.Dispose();
-                return (result.Image, previousAlignmentCell);
-            }
             case ProcessingOperations.FinalistReduce:
                 return (FinalistReducer.Reduce(current, step.FinalistMode!.Value,
+                    // TESSERA_LEGACY Replay finalist recipes without finalistFactor at the former fixed 8× scale.
                     step.FinalistFactor ?? FinalistReducer.DefaultFactor, operationProgress), previousAlignmentCell);
             default:
                 throw new InvalidDataException($"Unsupported operation: {step.OperationId}.");
@@ -283,23 +265,6 @@ public sealed class WorkflowExecutor
                 if (step.Background.Tolerance is < 0 or > 100)
                     throw new InvalidDataException("Background tolerance must be 0..100.");
                 break;
-            case ProcessingOperations.ContourHeatmap:
-            case ProcessingOperations.CleanContours:
-                RequireOnly(step, contours: true);
-                if (step.Contours is null) throw new InvalidDataException("Contour parameters are required.");
-                ValidateContours(step.Contours);
-                break;
-            case ProcessingOperations.ConnectedPalette:
-                RequireOnly(step, connectedPalette: true);
-                if (step.ConnectedPalette is not { } palette) throw new InvalidDataException("Connected palette parameters are required.");
-                if (palette.TargetColors is < 1 or > 4096 || palette.TileSize != 0 && palette.TileSize is < 4 or > 256 ||
-                    !Enum.IsDefined(palette.DistanceSpace) ||
-                    !double.IsFinite(palette.ConnectivityWeight) || palette.ConnectivityWeight is < 0 or > 1 ||
-                    !double.IsFinite(palette.LocalWeight) || palette.LocalWeight is < 0 or > 1 ||
-                    !double.IsFinite(palette.DetailWeight) || palette.DetailWeight is < 0 or > 1 ||
-                    !double.IsFinite(palette.ContextWeight) || palette.ContextWeight is < 0 or > 1)
-                    throw new InvalidDataException("Invalid connected palette parameters.");
-                break;
             case ProcessingOperations.FinalistReduce:
                 RequireOnly(step, finalistMode: true, finalistFactor: true);
                 if (step.FinalistMode is null || !Enum.IsDefined(step.FinalistMode.Value))
@@ -359,28 +324,17 @@ public sealed class WorkflowExecutor
         if (cellSize is < 2 or > 65535) throw new InvalidDataException("CellSize must be 2..65535.");
     }
 
-    private static void ValidateContours(ContourCleanOptions options)
-    {
-        if (options.WindowSize is < 3 or > 15 || options.WindowSize % 2 == 0 ||
-            !Enum.IsDefined(options.Strictness) ||
-            !double.IsFinite(options.SimilarColorDistance) || options.SimilarColorDistance is < 0 or > 100 ||
-            !double.IsFinite(options.MinimumPixelGradient) || options.MinimumPixelGradient is < 0 or > 20000 ||
-            !double.IsFinite(options.MinimumNeighborGradient) || options.MinimumNeighborGradient is < 0 or > 20000 ||
-            options.MinimumSimilarNeighbors is < 1 or > 224 ||
-            !double.IsFinite(options.MinimumAgreement) || options.MinimumAgreement is < 0 or > 1 ||
-            !double.IsFinite(options.MinimumOpposition) || options.MinimumOpposition is < 0 or > 1)
-            throw new InvalidDataException("Invalid contour parameters.");
-    }
-
     private static void RequireOnly(ProcessingStep step, bool downscale = false, bool cellSize = false,
-        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false,
-        bool channelAdjustment = false, bool contours = false, bool connectedPalette = false, bool finalistMode = false, bool finalistFactor = false, bool sharpen = false, bool resizeFactor = false)
+        bool previousAlignment = false, bool ascii = false, bool replacement = false, bool background = false, bool channelAdjustment = false,
+        bool finalistMode = false, bool finalistFactor = false, bool connectedPalette = false, bool sharpen = false,
+        bool resizeFactor = false)
     {
         if (!downscale && step.Downscale is not null || !cellSize && step.CellSize is not null ||
             !previousAlignment && step.UsePreviousAlignment || !ascii && step.Ascii is not null ||
             !replacement && step.ColorReplacement is not null || !background && step.Background is not null ||
-            !channelAdjustment && step.ChannelAdjustment is not null || !contours && step.Contours is not null ||
-            !connectedPalette && step.ConnectedPalette is not null || !finalistMode && step.FinalistMode is not null || !finalistFactor && step.FinalistFactor is not null || !sharpen && step.Sharpen is not null || !resizeFactor && step.ResizeFactor is not null)
+            !channelAdjustment && step.ChannelAdjustment is not null || !finalistMode && step.FinalistMode is not null ||
+            !finalistFactor && step.FinalistFactor is not null || !connectedPalette && step.ConnectedPalette is not null ||
+            !sharpen && step.Sharpen is not null || !resizeFactor && step.ResizeFactor is not null)
             throw new InvalidDataException($"Operation {step.OperationId} contains unsupported parameters.");
     }
 }

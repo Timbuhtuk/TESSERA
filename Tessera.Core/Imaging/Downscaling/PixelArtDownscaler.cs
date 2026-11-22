@@ -182,7 +182,6 @@ public sealed class PixelArtDownscaler
             return ApplyStepRounding(source, options, tracking);
 
         var palette = Palettes.GetPalette(options);
-        var paletteIndex = options.Palette == EPaletteKind.Custom && palette.Count > 0 ? new LabPaletteIndex(palette) : null;
         var result = BitmapFactory.CreateLike(source, source.Width, source.Height);
 
         using var readBuffer = BitmapBuffer.FromBitmap(source);
@@ -195,7 +194,7 @@ public sealed class PixelArtDownscaler
                 for (int x = 0; x < readBuffer.Width; x++)
                 {
                     int packed = readBuffer.GetPackedColor(x, y);
-                    writeBuffer.SetPackedColor(x, y, paletteIndex is null ? ColorSpace.NearestPacked(palette, packed) : palette[paletteIndex.Nearest(packed)]);
+                    writeBuffer.SetPackedColor(x, y, ColorSpace.NearestPacked(palette, packed));
                     writeBuffer.SetAlpha(x, y, readBuffer.GetAlpha(x, y));
                 }
 

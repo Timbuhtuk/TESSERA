@@ -122,8 +122,7 @@ public static class IndependentImageProcessor
             var weights = options.UseColorWeights ? ColorQuantizer.CountColors(visible) : null;
             lookup = ColorQuantizer.BuildLookup(unique, options.QuantizationColors, options.Quantization, weights, tracking.Slice(0, 2));
         }
-        var palette = usePalette ? Palettes.GetPalette(options) : Array.Empty<int>();
-        var paletteIndex = options.Palette == EPaletteKind.Custom && palette.Count > 0 ? new LabPaletteIndex(palette) : null;
+        var palette = Palettes.GetPalette(options);
         bool dither = usePalette && options.EnableDithering && palette.Count > 1;
         if (dither)
         {
@@ -148,7 +147,7 @@ public static class IndependentImageProcessor
                     {
                         EPaletteKind.None => rgb,
                         EPaletteKind.Step => ColorSpace.RoundToStep(rgb, options.PaletteStep),
-                        _ => paletteIndex is null ? ColorSpace.NearestPacked(palette, rgb) : palette[paletteIndex.Nearest(rgb)]
+                        _ => ColorSpace.NearestPacked(palette, rgb)
                     };
                 output[q] = (argb & unchecked((int)0xFF000000)) | rgb;
             }

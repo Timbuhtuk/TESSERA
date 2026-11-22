@@ -13,7 +13,8 @@ public sealed record TileSetLayout(int TileWidth, int TileHeight, int Columns, i
         long usableWidth = width - 2L * marginX, usableHeight = height - 2L * marginY;
         long stepX = (long)tileWidth + spacingX, stepY = (long)tileHeight + spacingY;
         if (usableWidth <= 0 || usableHeight <= 0 || (usableWidth + spacingX) % stepX != 0 || (usableHeight + spacingY) % stepY != 0)
-            throw new ArgumentException("Сетка не покрывает изображение целиком. Проверьте размер тайла, отступы и промежутки.");
+            throw new TileSetLayoutException(ETileSetLayoutError.GridDoesNotCoverImage,
+                "Сетка не покрывает изображение целиком. Проверьте размер тайла, отступы и промежутки.");
         int columns = checked((int)((usableWidth + spacingX) / stepX));
         int rows = checked((int)((usableHeight + spacingY) / stepY));
         return ValidateCount(new(tileWidth, tileHeight, columns, rows, marginX, marginY, spacingX, spacingY));
@@ -26,7 +27,7 @@ public sealed record TileSetLayout(int TileWidth, int TileHeight, int Columns, i
         long contentWidth = width - 2L * marginX - (columns - 1L) * spacingX;
         long contentHeight = height - 2L * marginY - (rows - 1L) * spacingY;
         if (contentWidth <= 0 || contentHeight <= 0 || contentWidth % columns != 0 || contentHeight % rows != 0)
-            throw new ArgumentException("Нельзя разделить на целые пиксельные тайлы с такой сеткой.");
+            throw new TileSetLayoutException(ETileSetLayoutError.PartialTiles, "Нельзя разделить на целые пиксельные тайлы с такой сеткой.");
         return ValidateCount(new((int)(contentWidth / columns), (int)(contentHeight / rows), columns, rows,
             marginX, marginY, spacingX, spacingY));
     }
@@ -34,15 +35,29 @@ public sealed record TileSetLayout(int TileWidth, int TileHeight, int Columns, i
     private static TileSetLayout ValidateCount(TileSetLayout layout)
     {
         if (layout.Columns < 1 || layout.Rows < 1 || (long)layout.Columns * layout.Rows > MaxTiles)
-            throw new ArgumentException($"За один импорт можно добавить от 1 до {MaxTiles} тайлов.");
+            throw new TileSetLayoutException(ETileSetLayoutError.TileCountOutOfRange, $"За один импорт можно добавить от 1 до {MaxTiles} тайлов.");
         return layout;
     }
 
     private static void ValidateInputs(int width, int height, int first, int second, int marginX, int marginY, int spacingX, int spacingY)
     {
         if (width <= 0 || height <= 0 || first <= 0 || second <= 0 || marginX < 0 || marginY < 0 || spacingX < 0 || spacingY < 0)
-            throw new ArgumentException("Размеры и количество ячеек должны быть положительными, отступы и промежутки — неотрицательными.");
+            throw new TileSetLayoutException(ETileSetLayoutError.InvalidDimensions,
+                "Размеры и количество ячеек должны быть положительными, отступы и промежутки — неотрицательными.");
     }
+}
+
+public enum ETileSetLayoutError
+{
+    GridDoesNotCoverImage,
+    PartialTiles,
+    TileCountOutOfRange,
+    InvalidDimensions
+}
+
+public sealed class TileSetLayoutException(ETileSetLayoutError error, string message) : ArgumentException(message)
+{
+    public ETileSetLayoutError Error { get; } = error;
 }
 
 public sealed record TileSetSuggestion(TileSetLayout Layout, double Score, string Reason)

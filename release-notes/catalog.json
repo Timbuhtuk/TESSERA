@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Редактор тайлов и настройки предпросмотра",
+        "en": "Tile editor and preview controls"
+      },
+      "notes": {
+        "ru": "- Тайлы: инструменты редактирования собраны на панели у холста. Первый тайл или атлас задаёт размеры для всей коллекции; размер сохраняется в файле .ttiles.\n- Сетка предпросмотра: можно менять непрозрачность линий и включать пунктир. Отдельная линза границ тайлов убрана, тепловая карта по-прежнему открывается клавишей 4.\n- Редактор: пустая панель инструментов сворачивается, а у закреплённых инструментов заголовок виден один раз.\n- Библиотека: теперь хранится в %LOCALAPPDATA%\\Tessera\\Library. При обновлении запусти новый EXE рядом со старой папкой WorkspaceData, чтобы перенести её содержимое. Исходные файлы сохраняются, прежняя библиотека AppData переносится в резервную папку.\n- Экспериментальные команды CLI structure-probe, finish-pixel-art и connected-palette удалены. Связное сокращение палитры доступно через colors --connected.",
+        "en": "- Tiles: edit with the tools beside the canvas. The first tile or atlas sets the dimensions for the collection, and the .ttiles file preserves them.\n- Preview grid: adjust line opacity or use dashed lines. The separate tile-boundary lens was removed; press 4 to open the heatmap.\n- Editor: the tools panel closes when empty, and docked tools show their heading once.\n- Library: Tessera now uses %LOCALAPPDATA%\\Tessera\\Library. When upgrading, run the new EXE beside the old WorkspaceData folder to migrate its contents. The source files are kept, and any existing AppData library is backed up.\n- The experimental structure-probe, finish-pixel-art and connected-palette CLI commands have been removed. Use colors --connected for connected palette reduction."
+      }
+    },
+    {
+      "version": "2.34.1",
+      "title": {
         "ru": "Карточки библиотеки и перетаскивание окна",
         "en": "Library cards and window dragging"
       },

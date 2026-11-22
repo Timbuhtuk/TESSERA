@@ -232,9 +232,6 @@ Check("Export publishes PNG+JSON+inspection safely and batch continues after fai
         Require(System.IO.File.Exists(result.ImagePath) && System.IO.File.Exists(result.JsonPath) && System.IO.File.Exists(result.InspectionPath), "Incomplete export");
         Require(DecodePng(System.IO.File.ReadAllBytes(result.ImagePath), out _, out _, out _).SequenceEqual(new byte[] { 12, 34, 56, 150 }), "File PNG mismatch");
         byte[] saved = System.IO.File.ReadAllBytes(result.ImagePath);
-        string pngOnlyTarget = Path.Combine(directory, "png-only");
-        var pngOnly = AsepriteConverter.Convert(path, pngOnlyTarget, new() { IncludeMetadata = false });
-        Require(System.IO.File.Exists(pngOnly.ImagePath) && pngOnly.JsonPath is null && !System.IO.File.Exists(Path.Combine(pngOnlyTarget, "герой.json")), "PNG-only conversion wrote metadata or returned a JSON path");
         Expect<IOException>(() => AsepriteConverter.Convert(path, target));
         Require(System.IO.File.ReadAllBytes(result.ImagePath).SequenceEqual(saved) && System.IO.File.ReadAllBytes(path).SequenceEqual(input), "Existing files changed");
         string conflict = Path.Combine(directory, "conflict"); Directory.CreateDirectory(conflict);

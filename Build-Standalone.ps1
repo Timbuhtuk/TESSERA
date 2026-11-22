@@ -33,7 +33,8 @@ try {
         & (Join-Path $projectRoot 'tests/ReleaseVersion.Checks.ps1')
         & (Join-Path $projectRoot 'tests/ReleaseNotes.Checks.ps1')
         Invoke-Dotnet run --project Tessera.Aseprite.Tests -c Release --no-build
-        Invoke-Dotnet run --project Tessera.RegressionTests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants --unreal-sync
+        Invoke-Dotnet run --project Tessera.RegressionTests -c Release --no-build -- --release-notes --tool-improvements --history-macros --navigation --workspace --localization --ui --invariants
+        Invoke-Dotnet run --project Tessera.RegressionTests -c Release --no-build -- --unreal-sync
         Invoke-Dotnet run --project Tessera.Cli.Tests -c Release --no-build
         & $python (Join-Path $projectRoot 'tests/UnrealProjectChecks.py')
         if ($LASTEXITCODE -ne 0) { throw 'Unreal project mutation checks failed' }
@@ -71,18 +72,13 @@ map. Create map result adds an exportable PNG result; the 3x3-15x15 window and
 individual similarity, gradient, neighbor and direction thresholds are saved with it. The CLI clean-contours command instead
 performs an experimental cleanup pass with an optional candidate mask.
 View > Lenses > Preview grid overlays a movable grid on the original and result.
-Only one lens can be open. Alternative Alt preview turns lenses off; opening a
-lens there shows an explanation. Spacing, offsets, color and visibility are
-adjustable; the grid never changes saved image pixels.
+Adjust spacing, offsets, color and opacity, or use dashed lines. The grid
+does not change saved pixels. Hold the alternative-preview key to temporarily
+invert a lens' visibility; release the key to restore the previous state.
 Info shows dimensions, color counts and palette
 colors as a clickable list. Replacement opens with that color selected.
 Choose any new color with the hue strip and color field, an image swatch,
 or HEX. Animated black-and-white outlines mark replaceable regions; the original stays intact.
-Tools > Color > Structure probe previews experimental small-region replacements
-or a candidate map, preserving dimensions and alpha. Review the output visually.
-Tools > Size and grid > Build pixel art combines color preparation, alignment and
-cell reduction with optional palette limits. It is experimental; color, alpha
-and fine details can change, and improved shapes are not guaranteed.
 Zoom and preview background affect viewing only.
 File > Save exports one result; Save all results exports the current history.
 
@@ -95,7 +91,7 @@ Tools opens multiple docked tabs; drag a tab out to float it and use its
 dock button to return it. TCR offers reduction factors from 2 to 64.
 
 Right-click a result and choose Create macro to save its supported steps.
-Tools > Macros lists saved macros, shows their steps and applies them to
+File > Macros lists saved macros, shows their steps and applies them to
 the selected source or result. Every completed step becomes a separate history
 result linked to the previous step. Cancel or a processing error preserves the
 completed prefix; the current unfinished step is not saved. Right-click a macro
@@ -155,10 +151,11 @@ lighting by moving the preview light. Height edits update Normal and AO
 while retaining their manual edits. Save editable .tmaps projects or export
 the maps as transparent PNGs; Normal supports DirectX and OpenGL.
 
-Your library is in WorkspaceData/Library beside Tessera.exe.
-On first launch, images and histories from %LOCALAPPDATA%\Tessera\Library
-are copied there. The original library stays intact. Keep WorkspaceData
-when moving the app to another folder or computer.
+Your library is in %LOCALAPPDATA%\Tessera\Library.
+When upgrading from portable storage, launch Tessera.exe from the same folder
+as WorkspaceData. Tessera copies and verifies the old library, leaving those
+source files in place. An existing AppData library is saved separately in
+%LOCALAPPDATA%\Tessera\Library.before-portable-migration.
 
 Tessera checks GitHub Releases at startup and every six hours. A newer version
 offers Update or Later after processing and other dialogs finish. Later hides

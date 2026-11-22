@@ -1,0 +1,100 @@
+<UserControl x:Class="Tessera.Desktop.AsepriteWorkspace"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:Tessera.Desktop"
+    Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries><local:AppearanceResources/></ResourceDictionary.MergedDictionaries>
+            <Style x:Key="SheetItemStyle" TargetType="ListBoxItem">
+                <Setter Property="Margin" Value="0,0,8,0"/><Setter Property="Padding" Value="5"/>
+                <Setter Property="Foreground" Value="{DynamicResource Ts.Text}"/>
+                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Frame" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsSelected" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Text}"/><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Hover}"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.TextMuted}"/></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value></Setter>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Border Background="{DynamicResource Ts.Panel}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,0,1" Padding="10">
+            <DockPanel LastChildFill="True">
+                <StackPanel x:Name="sheetHeaderActions" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="sheetOpenButton" Content="{local:Translate OpenFilesAction}" Margin="0,0,7,0" ToolTip="{local:Translate OpenMultipleAsepriteOrAseFiles}"/>
+                    <Button x:Name="sheetSaveButton" Content="{local:Translate SaveSelectedAction}" Margin="0,0,7,0" IsEnabled="False"/>
+                    <Button x:Name="sheetSaveAllButton" Content="{local:Translate SaveAllAction}" Style="{StaticResource PrimaryButton}" Margin="0,0,7,0" IsEnabled="False"/>
+                    <Button x:Name="sheetCancelButton" Content="{local:Translate CancelLabel}" Visibility="Collapsed"/>
+                </StackPanel>
+                <Button x:Name="sheetBackButton" Content="←" Width="34" Margin="0,0,10,0" DockPanel.Dock="Left" ToolTip="{local:Translate Home}" AutomationProperties.Name="{local:Translate Home}"/>
+                <TextBlock Text="{local:Translate AnimationExport}" ToolTip="{local:Translate AnimationExport}" Style="{StaticResource SectionTitle}" TextTrimming="CharacterEllipsis" TextWrapping="NoWrap"/>
+            </DockPanel>
+        </Border>
+        <Grid x:Name="sheetWorkspaceGrid" Grid.Row="1">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="260"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="0"/></Grid.RowDefinitions>
+            <Border x:Name="sheetSettingsPanel" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,0" Padding="16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="sheetOptions">
+                        <TextBlock Text="{local:Translate Settings}" Style="{StaticResource CardTitle}" Margin="0,0,0,14"/>
+                        <TextBlock Text="{local:Translate Layout}" Margin="0,0,0,6"/>
+                        <ComboBox x:Name="sheetLayout" SelectedIndex="0" Margin="0,0,0,14">
+                            <ComboBoxItem Content="{local:Translate Horizontal}"/><ComboBoxItem Content="{local:Translate Vertical}"/><ComboBoxItem Content="{local:Translate Grid}"/>
+                        </ComboBox>
+                        <StackPanel x:Name="sheetColumnsPanel" Visibility="Collapsed">
+                            <TextBlock Text="{local:Translate ColumnsLabel}" Margin="0,0,0,6"/>
+                            <local:IntegerInput x:Name="sheetColumns" Value="4" Minimum="1" Maximum="256" Margin="0,0,0,14"/>
+                        </StackPanel>
+                        <TextBlock Text="{local:Translate SpacingPx}" Margin="0,0,0,6"/>
+                        <local:IntegerInput x:Name="sheetPadding" Value="0" Minimum="0" Maximum="128" Margin="0,0,0,14"/>
+                        <TextBlock Text="{local:Translate PreviewZoom}" Margin="0,0,0,6"/>
+                        <ComboBox x:Name="sheetZoom" SelectedIndex="0" Margin="0,0,0,14">
+                            <ComboBoxItem Content="{local:Translate Fit}"/><ComboBoxItem Content="50%"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/>
+                        </ComboBox>
+                        <TextBlock Text="{local:Translate PreviewBackground}" Margin="0,0,0,6"/>
+                        <ComboBox x:Name="sheetBackground" SelectedIndex="0" Margin="0,0,0,16">
+                            <ComboBoxItem Content="{local:Translate Checkered}"/><ComboBoxItem Content="{local:Translate DarkBackground}"/><ComboBoxItem Content="{local:Translate LightBackground}"/>
+                        </ComboBox>
+                        <CheckBox x:Name="sheetIncludeMetadata" Content="{local:Translate SaveJSONMetadata}"
+                                  ToolTip="{local:Translate SaveJSONMetadataHint}" IsChecked="False" Margin="0,0,0,12"/>
+                        <Button x:Name="sheetClearButton" Content="{local:Translate ClearResults}" IsEnabled="False"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+            <Grid x:Name="sheetContentPanel" Grid.Column="1" Margin="12">
+                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="230"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                <TextBlock Text="{local:Translate Preview}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                <Border x:Name="sheetDropPanel" Grid.Row="1" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Thumbnail}">
+                    <local:PixelPreview x:Name="sheetPreview" EmptyText="{local:Translate DropAsepriteOrAseFilesHere}"/>
+                </Border>
+                <TextBlock x:Name="sheetDetail" Grid.Row="2" Margin="0,8,0,8" Foreground="{DynamicResource Ts.TextMuted}" TextWrapping="Wrap" MaxHeight="52"/>
+                <StackPanel Grid.Row="3">
+                    <TextBlock x:Name="sheetCount" Text="{local:Translate Results}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                    <ListBox x:Name="sheetStrip" Height="124" Background="Transparent" BorderThickness="0" Padding="0"
+                             ItemContainerStyle="{StaticResource SheetItemStyle}" ScrollViewer.HorizontalScrollBarVisibility="Auto" ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                             ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="{local:Translate AnimationExportResults}">
+                        <ListBox.Template><ControlTemplate TargetType="ListBox">
+                            <Border Background="{TemplateBinding Background}" BorderThickness="0" Padding="{TemplateBinding Padding}">
+                                <ScrollViewer x:Name="PART_ScrollViewer" Focusable="False" CanContentScroll="True" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><ItemsPresenter/></ScrollViewer>
+                            </Border>
+                        </ControlTemplate></ListBox.Template>
+                        <ListBox.ItemsPanel><ItemsPanelTemplate><VirtualizingStackPanel Orientation="Horizontal"/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate><DataTemplate>
+                            <Grid Width="132" ToolTip="{Binding Detail}">
+                                <StackPanel>
+                                    <Border Height="46" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/></Border>
+                                    <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" FontSize="12" Margin="0,5,0,0"/>
+                                    <TextBlock Text="{Binding State}" TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,3,0,0"/>
+                                </StackPanel>
+                                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Click="RemoveSheet" ToolTip="{local:Translate RemoveFromList}" AutomationProperties.Name="{local:Translate RemoveFromList}"/>
+                            </Grid>
+                        </DataTemplate></ListBox.ItemTemplate>
+                    </ListBox>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

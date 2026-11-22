@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <Using Include="Tessera.Models" />
     <Compile Include="..\Tessera.Aseprite.Tests\Fixtures.cs" Link="AsepriteFixtures.cs" />
     <Using Include="System.Drawing" />
     <Using Include="System.IO" />
