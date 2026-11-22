@@ -71,6 +71,56 @@ public static class GitHubUpdaterChecks
             var release = GitHubUpdater.CheckAsync(http, new Version(1, 0, 41, 0)).GetAwaiter().GetResult();
             Require(release?.Sha256 == digest, "Fallback checksum was not read");
         });
+        check("GitHub API rate limits fall back to the public release and its versioned checksum", () =>
+        {
+            const string tag = "v2.0.42";
+            string digest = new string('a', 64);
+            var rateLimits = new[]
+            {
+                new HttpResponseMessage(HttpStatusCode.Forbidden) { ReasonPhrase = "rate limit exceeded" },
+                new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("You have exceeded a secondary rate limit.") },
+                new HttpResponseMessage(HttpStatusCode.TooManyRequests)
+            };
+            rateLimits[2].Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(TimeSpan.FromMinutes(1));
+            foreach (var rateLimit in rateLimits)
+            {
+                int apiCalls = 0, pageCalls = 0, checksumCalls = 0;
+                using var http = new HttpClient(new ReplyHandler(uri =>
+                {
+                    if (uri.Host == "api.github.com") { apiCalls++; return rateLimit; }
+                    if (uri.AbsoluteUri == "https://github.com/Timbuhtuk/TESSERA/releases/latest")
+                    { pageCalls++; return ReleasePage(tag); }
+                    if (uri.AbsoluteUri == $"https://github.com/Timbuhtuk/TESSERA/releases/download/{tag}/SHA256SUMS.txt")
+                    { checksumCalls++; return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(digest + "  Tessera.exe\n") }; }
+                    throw new Exception($"Unexpected request: {uri}");
+                }));
+                var release = GitHubUpdater.CheckAsync(http, new Version(2, 0, 41, 0)).GetAwaiter().GetResult();
+                Require(release?.Tag == tag && release.Sha256 == digest &&
+                    release.Download.AbsoluteUri == $"https://github.com/Timbuhtuk/TESSERA/releases/download/{tag}/Tessera.exe", "Fallback release details are incorrect");
+                Require(apiCalls == 1 && pageCalls == 1 && checksumCalls == 1, "Fallback made unexpected requests");
+            }
+        });
+        check("The public release fallback skips installed versions and rejects invalid checksums", () =>
+        {
+            using var http = new HttpClient(new ReplyHandler(uri =>
+            {
+                if (uri.Host == "api.github.com")
+                {
+                    var response = new HttpResponseMessage(HttpStatusCode.Forbidden);
+                    response.Headers.Add("x-ratelimit-remaining", "0");
+                    return response;
+                }
+                if (uri.AbsolutePath.EndsWith("/releases/latest", StringComparison.Ordinal)) return ReleasePage("v2.0.42");
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("invalid  Tessera.exe\n") };
+            }));
+            Require(GitHubUpdater.CheckAsync(http, new Version(2, 0, 42, 0)).GetAwaiter().GetResult() is null, "Installed version was offered again");
+            try
+            {
+                GitHubUpdater.CheckAsync(http, new Version(2, 0, 41, 0)).GetAwaiter().GetResult();
+                throw new Exception("Invalid public release checksum was accepted");
+            }
+            catch (InvalidDataException) { }
+        });
         check("GitHub release rejects download links outside the expected repository", () =>
         {
             using var http = new HttpClient(new ReplyHandler(_ =>
@@ -86,6 +136,10 @@ public static class GitHubUpdaterChecks
 
     private static HttpResponseMessage Json(string value) => new(HttpStatusCode.OK) { Content = new StringContent(value, Encoding.UTF8, "application/json") };
     private static HttpResponseMessage Bytes(byte[] value) => new(HttpStatusCode.OK) { Content = new ByteArrayContent(value) };
+    private static HttpResponseMessage ReleasePage(string tag) => new(HttpStatusCode.OK)
+    {
+        RequestMessage = new HttpRequestMessage(HttpMethod.Get, $"https://github.com/Timbuhtuk/TESSERA/releases/tag/{tag}")
+    };
     private static void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
 
     private sealed class ReplyHandler(Func<Uri, HttpResponseMessage> reply) : HttpMessageHandler

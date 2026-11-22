@@ -3,6 +3,17 @@
     {
       "version": "next",
       "title": {
+        "ru": "Перенос библиотеки и проверка обновлений",
+        "en": "Library migration and update checks"
+      },
+      "notes": {
+        "ru": "- Библиотека: если прежний перенос помешал загрузить данные из WorkspaceData рядом с Tessera.exe, приложение предложит сделать эту библиотеку активной. Tessera проверит копию, сохранит оригинал и поместит текущую библиотеку AppData в отдельную резервную папку.\n- Обновления: при ответе GitHub API 403 из-за лимита запросов или 429 Tessera проверяет публичную страницу релизов. Перед установкой скачанный EXE по-прежнему проверяется по SHA-256.",
+        "en": "- Library: if an earlier migration blocked the portable library in WorkspaceData beside Tessera.exe, the app offers to make that library active. Tessera verifies the copy, keeps the original, and backs up the current AppData library separately.\n- Updates: when the GitHub API returns a rate-limit 403 or 429, Tessera checks the public releases page. The downloaded executable is still verified with SHA-256 before installation."
+      }
+    },
+    {
+      "version": "3.0.0",
+      "title": {
         "ru": "Редактор тайлов и настройки предпросмотра",
         "en": "Tile editor and preview controls"
       },
