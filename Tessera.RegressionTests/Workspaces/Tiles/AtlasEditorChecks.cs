@@ -45,7 +45,7 @@ internal static class AtlasEditorChecks
         bitmap.SetPixel(10, 10, Color.DeepPink);
         var parent = library.SaveGeneration(source, bitmap, null, new GenerationEntry { Caption = "Parent", Operation = "Parent" });
         source.Generations.Add(parent);
-        var window = new MainWindow(libraryPath) { Width = 1400, Height = 920, ShowActivated = false, ShowInTaskbar = false };
+        var window = new MainWindow(libraryPath) { MinWidth = 1400, Width = 1400, Height = 920, ShowActivated = false, ShowInTaskbar = false };
         try
         {
             window.EnableWorkspacePrototype();
@@ -100,12 +100,14 @@ internal static class AtlasEditorChecks
             var reset = (Button)window.FindControl("atlasRepeatResetButton");
             Require(paintRail.Orientation == Orientation.Vertical &&
                 paintTools.Items.Cast<ListBoxItem>().Select(item => item.Tag).SequenceEqual(new[] { "V", "B", "E", "I", "G", "Shift+G" }),
-                "The tile editing tool rail lost the previous tools or their shortcuts");
+                $"The tile editing tool rail lost the previous tools or their shortcuts (window {window.ActualWidth:F1}, rail {paintRail.Orientation})");
             Require(paintRail.Children.IndexOf(reset) == paintRail.Children.IndexOf((Button)window.FindControl("atlasColorButton")) + 1,
                 "The repeat reset must follow the color button");
+            window.MinWidth = 560;
             window.Width = 900;
             Pump();
             Require(paintRail.Orientation == Orientation.Horizontal && paintTools.IsVisible, "The tool rail did not fit the narrow viewport");
+            window.MinWidth = 1400;
             window.Width = 1400;
             Pump();
 
