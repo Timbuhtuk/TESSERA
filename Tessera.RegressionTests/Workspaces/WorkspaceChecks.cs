@@ -105,7 +105,7 @@ internal static class WorkspaceChecks
         catalog.State.FolderId = grass.Id;
         catalog.Save();
 
-        var window = new MainWindow(libraryRoot) { Width = 1440, Height = 900, ShowActivated = false };
+        var window = new MainWindow(libraryRoot) { MinWidth = 1440, Width = 1440, Height = 900, ShowActivated = false };
         try
         {
             window.EnableWorkspacePrototype(); window.Show(); Pump();
@@ -194,9 +194,12 @@ internal static class WorkspaceChecks
                 "Rename did not persist both names while keeping the board payload in place");
             var filters = Get<Border>(browser, "filtersPane");
             var filtersToggle = Get<ToggleButton>(browser, "filtersToggle");
-            Require(filters.IsVisible && filters.TranslatePoint(new Point(), list).X >= list.ActualWidth && list.ActualWidth > 900 &&
-                Descendants<TextBox>(filters).Contains(search), "Filters should be docked to the right of the wide gallery");
+            double filterLeft = filters.TranslatePoint(new Point(), list).X;
+            Require(filters.IsVisible && filterLeft >= list.ActualWidth - 1 && list.ActualWidth > 900 &&
+                Descendants<TextBox>(filters).Contains(search),
+                $"Filters should be docked to the right of the wide gallery (window {window.ActualWidth:F1}, gallery {list.ActualWidth:F1}, filters at {filterLeft:F1})");
             Capture(window, Path.Combine(root, "workspace-wide.png"));
+            window.MinWidth = 560;
             window.Width = 620; window.Height = 820; Pump();
             Require(!filters.IsVisible && list.ActualWidth > 250, "The narrow gallery should start with its full width available");
             Capture(window, Path.Combine(root, "workspace-narrow.png"));

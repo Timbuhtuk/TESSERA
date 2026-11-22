@@ -249,20 +249,22 @@ internal static class AtlasEditorChecks
         var scroll = (ScrollViewer)window.FindControl("atlasRepeatScroll");
         Pump();
         double fit = preview.PixelScale;
-        var atlasPoint = new System.Windows.Point(48, 46);
+        var atlasPoint = new System.Windows.Point(preview.ActualWidth / (2 * fit), preview.ActualHeight / (2 * fit));
         var pointer = preview.TranslatePoint(new System.Windows.Point(atlasPoint.X * fit, atlasPoint.Y * fit), scroll);
-        Call(window, "ZoomAtlasRepeat", 480, pointer, ModifierKeys.None);
+        const int zoomDelta = 960;
+        Call(window, "ZoomAtlasRepeat", zoomDelta, pointer, ModifierKeys.None);
         Pump();
         var projected = preview.TranslatePoint(new System.Windows.Point(atlasPoint.X * preview.PixelScale, atlasPoint.Y * preview.PixelScale), scroll);
         Require(preview.PixelScale > fit && scroll.ScrollableWidth > 0 && scroll.ScrollableHeight > 0 &&
-            (projected - pointer).Length < 2, "Repeat zoom did not keep the point under the pointer");
+            (projected - pointer).Length < 2,
+            $"Repeat zoom did not keep the point under the pointer (fit {fit:F2}, scale {preview.PixelScale:F2}, scrollable {scroll.ScrollableWidth:F1}×{scroll.ScrollableHeight:F1}, drift {(projected - pointer).Length:F2})");
         var middleDown = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Middle) { RoutedEvent = Mouse.PreviewMouseDownEvent };
         preview.RaiseEvent(middleDown);
         Require(middleDown.Handled && scroll.IsMouseCaptured, "The zoomed repeat view did not start middle-button panning");
         var middleUp = new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Middle) { RoutedEvent = Mouse.PreviewMouseUpEvent };
         scroll.RaiseEvent(middleUp);
         Require(middleUp.Handled && !scroll.IsMouseCaptured, "The repeat view kept capturing the mouse after panning");
-        var wheel = new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -480) { RoutedEvent = Mouse.PreviewMouseWheelEvent };
+        var wheel = new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -zoomDelta) { RoutedEvent = Mouse.PreviewMouseWheelEvent };
         preview.RaiseEvent(wheel);
         Pump();
         Require(wheel.Handled && Math.Abs(preview.PixelScale - fit) < .001, "The repeat view did not zoom back out with the mouse wheel");
