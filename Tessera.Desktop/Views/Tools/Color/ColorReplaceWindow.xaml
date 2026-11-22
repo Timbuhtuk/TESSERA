@@ -1,0 +1,167 @@
+<Window x:Class="Tessera.Desktop.ColorReplaceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Tessera.Desktop"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="{local:Translate ColorReplacementTessera}" Icon="pack://application:,,,/Tessera.Desktop;component/Assets/Brand/app.ico"
+        Width="460" Height="740" MinWidth="390" MinHeight="540"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False" Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
+        FontFamily="{DynamicResource UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="0"
+                            GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <local:AppearanceResources/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="ColorChoiceItem" TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="2"/>
+                <Setter Property="Margin" Value="0,0,5,5"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="SelectionBorder" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1"
+                                    Padding="{TemplateBinding Padding}" Background="{DynamicResource Ts.Panel}">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="{DynamicResource Ts.Focus}"/>
+                                    <Setter TargetName="SelectionBorder" Property="Background" Value="{DynamicResource Ts.Border}"/>
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="{DynamicResource Ts.Text}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid Height="38" Background="{DynamicResource Ts.Raised}">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock x:Name="dialogTitle" Text="{local:Translate ColorReplacement}" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
+                    Style="{StaticResource CloseCaptionButton}" ToolTip="{local:Translate Close}"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
+        </Grid>
+        <Grid Grid.Row="1" Background="{DynamicResource Ts.Canvas}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Background="Transparent">
+                <Border x:Name="dialogFrame" Style="{StaticResource Ts.DialogBorder}"
+                        Margin="14" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <StackPanel>
+                        <TextBlock x:Name="oldColorLabel" Text="{local:Translate ColorInImage}" FontWeight="SemiBold" Margin="0,0,0,7"/>
+                        <DockPanel x:Name="oldColorPanel">
+                            <Border x:Name="oldPreview" Width="30" Height="30" BorderBrush="{DynamicResource Ts.BorderStrong}"
+                                    BorderThickness="1" Margin="0,0,8,0"/>
+                            <TextBox x:Name="oldHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate ReplacementColorHEX}"/>
+                        </DockPanel>
+                        <Button x:Name="sourcePickerButton" Margin="0,8,0,0" Click="PickSourceColor"
+                                HorizontalContentAlignment="Left" />
+                        <TextBlock x:Name="newColorLabel" Text="{local:Translate NewColor}" FontWeight="SemiBold" Margin="0,18,0,10"/>
+                        <Grid x:Name="colorField" Width="320" Height="290" HorizontalAlignment="Center"
+                              ClipToBounds="True" Cursor="Cross"
+                              MouseLeftButtonDown="ColorFieldMouseDown" MouseMove="ColorFieldMouseMove"
+                              MouseLeftButtonUp="ColorFieldMouseUp" LostMouseCapture="PickerLostCapture"
+                              AutomationProperties.Name="{local:Translate SaturationAndBrightnessPicker}">
+                            <Border x:Name="hueSurface"/>
+                            <Rectangle IsHitTestVisible="False">
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                        <GradientStop Color="White" Offset="0"/>
+                                        <GradientStop Color="#00FFFFFF" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
+                            <Rectangle IsHitTestVisible="False">
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                                        <GradientStop Color="#00000000" Offset="0"/>
+                                        <GradientStop Color="Black" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+                            </Rectangle>
+                            <Canvas IsHitTestVisible="False">
+                                <Ellipse x:Name="fieldMarker" Width="18" Height="18" Stroke="White"
+                                         StrokeThickness="2" Fill="Transparent">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="0" Opacity="1"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Canvas>
+                        </Grid>
+                        <Grid x:Name="hueStrip" Width="320" Height="18" Margin="0,14,0,0" HorizontalAlignment="Center"
+                              ClipToBounds="False" Cursor="Hand"
+                              MouseLeftButtonDown="HueStripMouseDown" MouseMove="HueStripMouseMove"
+                              MouseLeftButtonUp="HueStripMouseUp" LostMouseCapture="PickerLostCapture"
+                              AutomationProperties.Name="{local:Translate ChooseHue}">
+                            <Border>
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                        <GradientStop Color="Red" Offset="0"/>
+                                        <GradientStop Color="Yellow" Offset="0.166667"/>
+                                        <GradientStop Color="Lime" Offset="0.333333"/>
+                                        <GradientStop Color="Cyan" Offset="0.5"/>
+                                        <GradientStop Color="Blue" Offset="0.666667"/>
+                                        <GradientStop Color="Magenta" Offset="0.833333"/>
+                                        <GradientStop Color="Red" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                            </Border>
+                            <Canvas IsHitTestVisible="False">
+                                <Border x:Name="hueMarker" Width="10" Height="24" BorderBrush="White"
+                                        BorderThickness="2" CornerRadius="5" Background="Transparent">
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="Black" BlurRadius="2" ShadowDepth="0" Opacity="1"/>
+                                    </Border.Effect>
+                                </Border>
+                            </Canvas>
+                        </Grid>
+                        <DockPanel Margin="0,15,0,0">
+                            <Border x:Name="newPreview" Width="30" Height="30" BorderBrush="{DynamicResource Ts.BorderStrong}"
+                                    BorderThickness="1" Margin="0,0,8,0"/>
+                            <TextBox x:Name="newHexInput" MaxLength="7" AutomationProperties.Name="{local:Translate NewColorHEX}"/>
+                        </DockPanel>
+                        <DockPanel x:Name="paintAlphaPanel" Margin="0,12,0,0" Visibility="Collapsed">
+                            <TextBlock x:Name="paintAlphaLabel" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <Slider x:Name="paintAlphaInput" Minimum="0" Maximum="255" Value="255" TickFrequency="1"
+                                    IsSnapToTickEnabled="True" VerticalAlignment="Center" />
+                        </DockPanel>
+                        <StackPanel x:Name="paletteSection" Margin="0,18,0,0">
+                            <TextBlock Text="{local:Translate ImagePalette}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <ListBox x:Name="paletteList" Height="205" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}"
+                                     BorderThickness="1" Padding="8" ItemContainerStyle="{StaticResource ColorChoiceItem}"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     AutomationProperties.Name="{local:Translate ColorPickerPalette}">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Width="24" Height="24" Background="{Binding Brush}"
+                                                ToolTip="{Binding Hex}"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                        <TextBlock x:Name="validationText" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap"
+                                   Margin="0,12,0,0"/>
+                        <DockPanel Margin="0,14,0,0">
+                            <Button Content="{local:Translate Cancel}" Width="95" DockPanel.Dock="Right" Margin="8,0,0,0"
+                                    IsCancel="True" Click="CloseWindow"/>
+                            <Button x:Name="replaceButton" Content="{local:Translate ReplaceColor}" IsEnabled="False"
+                                    IsDefault="True" Style="{StaticResource PrimaryButton}" Click="ApplyColor"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</Window>

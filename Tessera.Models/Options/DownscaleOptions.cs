@@ -31,6 +31,7 @@ public sealed class DownscaleOptions
     public int QuantizationColors { get; init; } = 64;
     public EIndependentColorMode IndependentColorMode { get; init; } = EIndependentColorMode.Combined;
     public int LocalColorPasses { get; init; } = 1;
+    // TESSERA_LEGACY Preserve the pre-Cleanup option field in old recipes and public callers.
     public ManualBlockCriteria? LocalColorCriteria { get; init; }
     public ColorCleanupOptions? Cleanup { get; init; }
     public bool UseColorWeights { get; init; }

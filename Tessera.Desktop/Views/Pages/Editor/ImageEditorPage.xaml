@@ -1,0 +1,357 @@
+<Page x:Class="Tessera.Desktop.ImageEditorPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:Tessera.Desktop" Focusable="False">
+    <Page.Resources><ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries><local:AppearanceResources /></ResourceDictionary.MergedDictionaries>
+        <DataTemplate x:Key="TrayCardTemplate">
+                <Grid Width="112" ToolTip="{Binding Description}">
+                    <StackPanel>
+                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
+                    <TextBlock Text="{Binding Label}" FontSize="11" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
+                </Grid>
+            </DataTemplate>
+        <DataTemplate x:Key="ResultTreeToolTipTemplate">
+            <ScrollViewer Width="350" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Width="330">
+                    <TextBlock Text="{Binding ToolTipOperation}" Foreground="{DynamicResource Ts.Text}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ToolTipSize}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,7,0,0" />
+                    <TextBlock Text="{Binding ToolTipCreated}" Foreground="{DynamicResource Ts.TextSecondary}" />
+                    <TextBlock Text="{Binding PresentationHint}" Foreground="{DynamicResource Ts.Text}" TextWrapping="Wrap" Margin="0,7,0,0">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding PresentationHint}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Text="{Binding ToolTipDetails}" Foreground="{DynamicResource Ts.Text}" TextWrapping="Wrap" Margin="0,7,0,0">
+                        <TextBlock.Style><Style TargetType="TextBlock"><Style.Triggers><DataTrigger Binding="{Binding ToolTipDetails}" Value=""><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </ScrollViewer>
+        </DataTemplate>
+        <DataTemplate x:Key="GenerationCardTemplate">
+            <Grid Width="112" Height="58" ClipToBounds="True" AutomationProperties.Name="{Binding Label}">
+                <Grid.ToolTip><ToolTip Content="{Binding}" ContentTemplate="{StaticResource ResultTreeToolTipTemplate}" /></Grid.ToolTip>
+                <Border Background="{DynamicResource Ts.Thumbnail}" />
+                <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+                <Polygon Points="0,0 0,58 112,58" Fill="{DynamicResource Ts.Raised}" />
+                <Line X1="0" Y1="0" X2="112" Y2="58" Stroke="{DynamicResource Ts.Border}" StrokeThickness="1" />
+                <local:ResultIcon OperationId="{Binding IconOperationId}" Foreground="{DynamicResource Ts.Text}" Width="32" Height="32" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,0,0,5" IsHitTestVisible="False" />
+                <Button Style="{StaticResource RemoveThumbnailButton}" HorizontalAlignment="Right" VerticalAlignment="Top" ToolTip="{Binding RemoveDescription}" AutomationProperties.Name="{Binding RemoveDescription}" Click="RemoveLibraryItem" />
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="HistorySourceTemplate">
+            <Grid Width="112" ToolTip="{Binding Description}">
+                <StackPanel>
+                    <Border Height="40" Background="{DynamicResource Ts.Thumbnail}"><Image Source="{Binding Thumbnail}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" /></Border>
+                    <TextBlock Text="{Binding Label}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,3,0,0" />
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="TrayFolderTemplate"><Button Content="{Binding Label}" Tag="{Binding}" Click="TrayFolderClicked" HorizontalContentAlignment="Left" Background="Transparent" BorderThickness="0" Padding="4,2" FontSize="12" /></DataTemplate>
+        <Style x:Key="FilmstripItem" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="0" /><Setter Property="Padding" Value="5" />
+            <Setter Property="Foreground" Value="{DynamicResource Ts.Text}" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem">
+                <Border x:Name="Frame" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" CornerRadius="0" Background="{DynamicResource Ts.Panel}" Padding="{TemplateBinding Padding}"><ContentPresenter /></Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsSelected" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}" /><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Pressed}" /></Trigger>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}" /></Trigger>
+                    <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Focus}" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHeader}" Value="True">
+                    <Setter Property="Padding" Value="0" /><Setter Property="Focusable" Value="False" />
+                    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="Filmstrip" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" />
+            <Setter Property="MinHeight" Value="78" /><Setter Property="Padding" Value="0" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBox">
+                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                    <ScrollViewer x:Name="PART_ScrollViewer" Focusable="False" CanContentScroll="{TemplateBinding ScrollViewer.CanContentScroll}" HorizontalScrollBarVisibility="{TemplateBinding ScrollViewer.HorizontalScrollBarVisibility}" VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}">
+                        <ItemsPresenter />
+                    </ScrollViewer>
+                </Border>
+            </ControlTemplate></Setter.Value></Setter>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto" /><Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" /><Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource FilmstripItem}" />
+            <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><local:TrayPanel /></ItemsPanelTemplate></Setter.Value></Setter>
+            <Setter Property="ItemTemplateSelector"><Setter.Value><local:TrayTemplateSelector /></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="ToolDockTab" TargetType="TabItem">
+            <Setter Property="Foreground" Value="{DynamicResource Ts.TextSecondary}" />
+            <Setter Property="Width" Value="146" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem">
+                <Border x:Name="Frame" Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,0,1,2" Padding="{TemplateBinding Padding}">
+                    <ContentPresenter ContentSource="Header" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                </Border>
+                <ControlTemplate.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Hover}" /></Trigger>
+                    <Trigger Property="IsSelected" Value="True"><Setter Property="Foreground" Value="{DynamicResource Ts.Text}" /><Setter TargetName="Frame" Property="Background" Value="{DynamicResource Ts.Panel}" /><Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Ts.Accent}" /></Trigger>
+                </ControlTemplate.Triggers>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+        <Style x:Key="ToolDockTabs" TargetType="TabControl">
+            <Setter Property="ItemContainerStyle" Value="{StaticResource ToolDockTab}" />
+            <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabControl">
+                <Grid KeyboardNavigation.TabNavigation="Local">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <WrapPanel Orientation="Horizontal" IsItemsHost="True" KeyboardNavigation.TabIndex="1" />
+                    <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Row="1" ContentSource="SelectedContent" />
+                </Grid>
+            </ControlTemplate></Setter.Value></Setter>
+        </Style>
+    </ResourceDictionary></Page.Resources>
+    <Grid>
+        <ScrollViewer x:Name="workspaceHost" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <Grid x:Name="workspaceGrid">
+            <Grid x:Name="previewArea" Margin="0,0,0,12">
+                <Grid.RowDefinitions><RowDefinition x:Name="trayHeight" Height="120" MinHeight="120" /><RowDefinition Height="6" /><RowDefinition Height="*" MinHeight="240" /><RowDefinition Height="Auto" /><RowDefinition x:Name="sourceLibraryHeight" Height="0" /></Grid.RowDefinitions>
+                <Grid x:Name="historyRow" Grid.Row="0" Margin="18,0">
+                    <DockPanel x:Name="resultTray">
+                        <Grid DockPanel.Dock="Top" Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <TextBlock x:Name="resultCaption" Grid.Column="0" Text="{local:Translate Result}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" Margin="0,3,12,0" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="insertHistoryInput" Grid.Column="1" Content="{local:Translate InsertAndRecalculate}" ToolTip="{local:Translate InsertAndRecalculateHint}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,6,0" />
+                        </Grid>
+                        <local:VirtualizingTray x:Name="generationStrip" AutomationProperties.Name="{local:Translate ResultHistory}">
+                            <local:VirtualizingTray.Style><Style TargetType="ListBox" BasedOn="{StaticResource Filmstrip}">
+                                <Style.Triggers><Trigger Property="HasItems" Value="False"><Setter Property="Visibility" Value="Collapsed" /></Trigger></Style.Triggers>
+                            </Style></local:VirtualizingTray.Style>
+                        </local:VirtualizingTray>
+                    </DockPanel>
+                </Grid>
+                <GridSplitter x:Name="trayHeightSplitter" Grid.Row="1" Height="6" Width="Auto" ResizeDirection="Rows" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" />
+                <Grid x:Name="previewPair" Grid.Row="2">
+                    <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="0" /><ColumnDefinition Width="0" /></Grid.ColumnDefinitions>
+                    <Grid x:Name="resultPreviewHost" ClipToBounds="True">
+                        <local:PixelPreview x:Name="resultPreview" EmptyText="{local:Translate TheResultWillAppearHere}" />
+                        <Border x:Name="livePreviewFrame" BorderBrush="{DynamicResource Ts.Text}" BorderThickness="3" Visibility="Collapsed" IsHitTestVisible="False" />
+                        <Border x:Name="livePreviewBadge" Background="{DynamicResource Ts.Text}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="3" Padding="9,5" Visibility="Collapsed" IsHitTestVisible="False">
+                            <TextBlock x:Name="livePreviewBadgeText" Text="{local:Translate Preview}" Foreground="{DynamicResource Ts.Canvas}" FontWeight="SemiBold" FontSize="12" />
+                        </Border>
+                    </Grid>
+                    <GridSplitter x:Name="previewSplitter" Grid.Row="1" Height="6" HorizontalAlignment="Stretch" Background="{DynamicResource Ts.Hover}" />
+                    <DockPanel x:Name="sourcePane" Grid.Row="2" Background="Transparent">
+                        <local:PixelPreview x:Name="sourcePreview" EmptyText="{local:Translate OpenASourceImage}" />
+                    </DockPanel>
+                </Grid>
+                <Frame x:Name="atlasFrame" Grid.Row="2" NavigationUIVisibility="Hidden" Focusable="False" />
+                <Button x:Name="sourceLibraryToggle" Grid.Row="3" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Margin="18,8,18,0" Padding="8,5" Click="ToggleSourceLibrary" AutomationProperties.Name="{local:Translate AddedSources}" />
+                <Border x:Name="sourceTray" Grid.Row="4" Margin="18,0" Background="Transparent" Visibility="Collapsed">
+                    <DockPanel>
+                        <TextBlock x:Name="sourceCaption" DockPanel.Dock="Top" Text="{local:Translate Source}" Style="{StaticResource Caption}" TextTrimming="CharacterEllipsis" />
+                        <local:VirtualizingTray x:Name="sourceStrip" Style="{StaticResource Filmstrip}" AutomationProperties.Name="{local:Translate AddedSources}" />
+                    </DockPanel>
+                </Border>
+            </Grid>
+        </Grid>
+        </ScrollViewer>
+                <StackPanel x:Name="settingsPanel" Visibility="Collapsed">
+                    <GroupBox x:Name="monochromeToolGroup" Header="{local:Translate Monochrome}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Translate ConvertsImageGrayscalePreservingSizeTransparency}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,7" />
+                            <Button x:Name="monochromeButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate ApplyMonochrome}" IsEnabled="False" />
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="sharpenToolGroup" Header="{local:Translate Sharpen}">
+                        <StackPanel>
+                            <TextBlock x:Name="sharpenDescription" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,7" />
+                            <DockPanel Margin="0,5,0,3"><TextBlock x:Name="sharpenStrengthLabel" Width="150" VerticalAlignment="Center" /><local:IntegerInput x:Name="sharpenStrengthInput" Minimum="0" Maximum="200" Value="100" /></DockPanel>
+                            <DockPanel Margin="0,3,0,5"><TextBlock x:Name="sharpenThresholdLabel" Width="150" VerticalAlignment="Center" /><local:IntegerInput x:Name="sharpenThresholdInput" Minimum="0" Maximum="64" Value="4" /></DockPanel>
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="sharpenLivePreviewInput" ToolTip="{local:Translate ShowChangesWithoutSavingResultHistory}" />
+                            <Button x:Name="sharpenButton" Style="{StaticResource PrimaryButton}" IsEnabled="False" Margin="0,7,0,0" />
+
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="asciiToolGroup" Header="ASCII">
+                        <StackPanel>
+                            <TextBlock x:Name="asciiDescription" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,0,0,7" />
+                            <DockPanel Margin="0,7,0,3"><TextBlock Text="{local:Translate RampPalette}" Width="150" /><ComboBox x:Name="asciiRampPresetInput" SelectedIndex="0" AutomationProperties.Name="{local:Translate AsciiRampPalette}"><ComboBoxItem Content="Standard" /><ComboBoxItem Content="Detailed" /><ComboBoxItem Content="Minimal" /><ComboBoxItem Content="Blocks" /><ComboBoxItem Content="{local:Translate Custom}" /></ComboBox></DockPanel>
+                            <TextBlock Text="{local:Translate CharactersFromDarkToLight}" Margin="0,5,0,4" />
+                            <TextBox x:Name="asciiCharactersInput" Text="@#S08Xx+=-;:, ." FontFamily="{StaticResource UiFont}" Padding="7,5" AutomationProperties.Name="{local:Translate AsciiCharacters}" />
+                            <DockPanel Margin="0,8,0,4"><TextBlock x:Name="asciiColumnsLabel" Width="150" VerticalAlignment="Center" /><local:IntegerInput x:Name="asciiColumnsInput" Minimum="0" Maximum="512" Value="0" /></DockPanel>
+                            <DockPanel Margin="0,4,0,4"><TextBlock x:Name="asciiColorModeLabel" Width="150" VerticalAlignment="Center" /><ComboBox x:Name="asciiColorModeInput" SelectedIndex="0"><ComboBoxItem /><ComboBoxItem /><ComboBoxItem /></ComboBox></DockPanel>
+                            <Button x:Name="asciiForegroundButton" Margin="0,3,0,3" HorizontalContentAlignment="Left" />
+                            <Button x:Name="asciiBackgroundButton" Margin="0,3,0,7" HorizontalContentAlignment="Left" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="asciiKeepSourceSizeInput" Content="{local:Translate PreserveSourceSize}" IsChecked="True" ToolTip="{local:Translate WhenDisabledEachPixelBecomesSeparate}" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="asciiInvertSourceInput" Content="{local:Translate InvertSourceColors}" ToolTip="{local:Translate InvertBrightnessBeforeSelectingAsciiCharacters}" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="asciiInvertRenderInput" Content="{local:Translate InvertRenderColors}" ToolTip="{local:Translate DrawBlackCharactersOnAWhite}" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="asciiDitherInput" Content="{local:Translate OrderedDithering}" ToolTip="{local:Translate MixesNeighboringGlyphDensitiesForSmoother}" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="asciiLivePreviewInput" Content="{local:Translate LivePreview}" ToolTip="{local:Translate AsciiLivePreviewHint}" Margin="0,10,0,5" />
+                            <UniformGrid Columns="2" Margin="0,8,0,0">
+                                <Button x:Name="asciiSaveTextButton" Content="{local:Translate SaveTXTAction}" IsEnabled="False" Margin="0,0,4,0" />
+                                <Button x:Name="asciiRenderButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate RenderImage}" IsEnabled="False" Margin="4,0,0,0" />
+                            </UniformGrid>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="infoToolGroup" Header="{local:Translate Images}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Translate SourceLabel}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="infoSourceSummary" Text="{local:Translate NoImage}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,4" TextWrapping="Wrap" />
+                            <TextBlock x:Name="infoSourceDetails" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,11" />
+                            <TextBlock Text="{local:Translate ResultLabel}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="infoResultSummary" Text="{local:Translate NoResultYet}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,3,0,4" TextWrapping="Wrap" />
+                            <TextBlock x:Name="infoResultDetails" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" LineHeight="18" TextWrapping="Wrap" Margin="0,0,0,12" />
+                            <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,3,0,12" />
+                            <TextBlock x:Name="infoBasisLabel" Text="{local:Translate SourceColors}" FontWeight="SemiBold" />
+                            <TextBlock x:Name="infoPaletteStatus" Text="{local:Translate OpenAnImage}" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,4,0,10" TextWrapping="Wrap" />
+                            <local:ColorTreemap x:Name="infoColorTreemap" Height="260" AutomationProperties.Name="{local:Translate ImageColorMap}" />
+                            <Button x:Name="infoManualReplaceButton" Content="{local:Translate ReplaceByHEXAction}" Margin="0,10,0,0" Visibility="Collapsed" />
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="gridToolGroup" Header="{local:Translate GridAlignment}">
+                        <StackPanel>
+                            <WrapPanel Margin="0,0,0,10">
+                                <RadioButton x:Name="globalGridModeInput" GroupName="GridAlignmentMode" Content="{local:Translate Global}" AutomationProperties.Name="{local:Translate Global}" IsChecked="True" Margin="0,0,18,0" />
+                                <RadioButton x:Name="localGridModeInput" GroupName="GridAlignmentMode" Content="{local:Translate Local}" AutomationProperties.Name="{local:Translate Local}" />
+                            </WrapPanel>
+                            <TextBlock x:Name="globalGridHint" Text="{local:Translate OneSharedGridForTheEntire}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" />
+                            <TextBlock x:Name="localGridHint" Text="{local:Translate SeparateGridsForFigures}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" Visibility="Collapsed" />
+                            <TextBlock x:Name="snappedGridHint" Text="{local:Translate RestoresShapesMovesFiguresOntoOne}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="12" Margin="0,0,0,8" Visibility="Collapsed" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="snapLocalGridInput" Content="{local:Translate SnapToSharedGrid}" AutomationProperties.Name="{local:Translate SnapToSharedGrid}" ToolTip="{local:Translate AllowFiguresMoveOntoCanvasGrid}" Visibility="Collapsed" Margin="0,0,0,8" />
+
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate CellPx}" Width="132" /><local:IntegerInput x:Name="gridCellInput" Minimum="2" Maximum="256" Value="8" AutomationProperties.Name="{local:Translate CellSize}" /></DockPanel>
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="detectGridInput" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{local:Translate DetectSizeAutomatically}" ToolTip="{local:Translate DetectThePixelGridSizeAutomatically}">
+                                <TextBlock Text="{local:Translate DetectSizeAutomatically}" TextWrapping="Wrap" MaxWidth="230" />
+                            </CheckBox>
+                            <Button x:Name="alignButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate AlignGrid}" IsEnabled="False" Margin="0,4,0,0" />
+                            <Button x:Name="compactGridButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate ReduceCellsTo1Pixel}" IsEnabled="False" Margin="0,6,0,0" ToolTip="{local:Translate SelectAnAlignedResultFirst}" />
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="profileToolGroup" Header="{local:Translate ChooseAMode}">
+                        <StackPanel>
+                            <UniformGrid Columns="3">
+                                <RadioButton x:Name="backgroundMode" Content="{local:Translate Background}" Style="{StaticResource ModeButton}" />
+                                <RadioButton x:Name="sceneMode" Content="{local:Translate Scene}" Style="{StaticResource ModeButton}" />
+                                <RadioButton x:Name="detailsMode" Content="{local:Translate Details}" Style="{StaticResource ModeButton}" />
+                            </UniformGrid>
+                            <TextBlock x:Name="modeDescription" Margin="0,0,0,5" />
+                            <TextBlock x:Name="profileState" Visibility="Collapsed" />
+                            <Button x:Name="processButton" Content="{local:Translate Process}" Style="{StaticResource PrimaryButton}" IsDefault="True" IsEnabled="False" Visibility="Collapsed" Margin="0,4,0,0" ToolTip="{local:Translate ProcessSelectedInputSelectedMode}" />
+                        </StackPanel>
+                    </GroupBox>
+
+                    <GroupBox x:Name="sizeToolGroup" Header="{local:Translate OutputSize}">
+                        <StackPanel>
+                            <WrapPanel Margin="0,0,0,5">
+                                <RadioButton x:Name="pixelSizeModeInput" GroupName="SizeInputMode" IsChecked="True" Margin="0,0,16,0" />
+                                <RadioButton x:Name="scaleFactorModeInput" GroupName="SizeInputMode" />
+                            </WrapPanel>
+                            <StackPanel x:Name="pixelSizeControls">
+                                <DockPanel Margin="0,3"><TextBlock Text="{local:Translate WidthPx}" Width="132" /><local:IntegerInput x:Name="widthInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate OutputWidth}" /></DockPanel>
+                                <DockPanel Margin="0,3"><TextBlock Text="{local:Translate HeightPx}" Width="132" /><local:IntegerInput x:Name="heightInput" Minimum="1" Maximum="2147483647" Value="48" AutomationProperties.Name="{local:Translate OutputHeight}" /></DockPanel>
+                                <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="aspectLock" Content="{local:Translate PreserveSourceAspectRatio}" ToolTip="{local:Translate KeepSourceAspectRatioChangingWidth}" />
+                            </StackPanel>
+                            <DockPanel x:Name="scaleFactorControls" Margin="0,3" Visibility="Collapsed">
+                                <TextBlock x:Name="scaleFactorLabel" Width="132" VerticalAlignment="Center" />
+                                <TextBox x:Name="scaleFactorInput" Text="1" MinHeight="30" VerticalContentAlignment="Center" TextAlignment="Right" AutomationProperties.Name="{local:Translate ScaleFactor}" />
+                            </DockPanel>
+                            <TextBlock x:Name="sizeHint" Visibility="Collapsed" TextWrapping="Wrap" Margin="0,5,0,0" Foreground="{DynamicResource Ts.TextSecondary}" />
+                            <Button x:Name="scaleOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate Resize}" IsEnabled="False" Margin="0,7,0,0" ToolTip="{local:Translate ResizeWithoutChangingColorsUpscalingUses}" />
+                            <Button x:Name="trimTransparentButton" Content="{local:Translate TrimTransparentEdges}" IsEnabled="False" Margin="0,7,0,0" />
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="colorToolGroup" Header="{local:Translate PaletteTruncation}">
+                        <StackPanel>
+                            <WrapPanel Margin="0,0,0,10">
+                                <RadioButton x:Name="quantizationColorModeInput" GroupName="IndependentColorMode" Content="{local:Translate ByColorCount}" Margin="0,0,18,0" IsChecked="True" ToolTip="{local:Translate ApplyOnlyTheColorCountLimit}" />
+                                <RadioButton x:Name="paletteColorModeInput" GroupName="IndependentColorMode" Content="{local:Translate ByPalette}" ToolTip="{local:Translate ApplyOnlyTheSelectedPalette}" />
+                            </WrapPanel>
+                            <DockPanel x:Name="paletteCountRow" Margin="0,3"><TextBlock Text="{local:Translate ColorCount}" Width="132" /><local:IntegerInput x:Name="quantizationColorsInput" Minimum="1" Maximum="4096" Value="64" AutomationProperties.Name="{local:Translate ColorCount}" /></DockPanel>
+                            <StackPanel x:Name="quantizationColorControls">
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Method}" Width="132" /><ComboBox x:Name="quantizationInput" SelectedIndex="1"><ComboBoxItem Content="Median Cut" /><ComboBoxItem Content="K-Means LAB" /><ComboBoxItem Content="K-Means Linear" /></ComboBox></DockPanel>
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="colorWeightsInput" Content="{local:Translate WeightByColorFrequency}" ToolTip="{local:Translate WeightColorsByTheirFrequencyWhen}" />
+
+                            </StackPanel>
+                            <StackPanel x:Name="paletteColorControls" Margin="0,10,0,0">
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Palette}" Width="132" /><ComboBox x:Name="paletteInput" SelectedIndex="4"><ComboBoxItem Content="DB16" /><ComboBoxItem Content="DB32" /><ComboBoxItem Content="NES" /><ComboBoxItem Content="GameBoy" /><ComboBoxItem Content="{local:Translate RGBStep}" /></ComboBox></DockPanel>
+                            <Button x:Name="addPaletteButton" Content="{local:Translate AddPaletteFromImageMenu}" Margin="0,5,0,5" AutomationProperties.Name="{local:Translate AddPaletteFromImageAccessibleName}" />
+                            <TextBlock x:Name="paletteColorCount" Foreground="{DynamicResource Ts.TextSecondary}" FontSize="11" Margin="0,4,0,4" />
+                            <Border Background="{DynamicResource Ts.Raised}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Padding="8" CornerRadius="5">
+                                <ScrollViewer MaxHeight="180" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                    <local:PaletteSwatches x:Name="paletteSwatches" AutomationProperties.Name="{local:Translate SelectedPaletteColors}" />
+                                </ScrollViewer>
+                            </Border>
+                            <DockPanel x:Name="stepControls" Margin="0,3"><TextBlock Text="{local:Translate RGBStep}" Width="132" /><local:IntegerInput x:Name="paletteStepInput" Minimum="1" Maximum="255" Value="16" AutomationProperties.Name="{local:Translate RGBStep}" /></DockPanel>
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="ditheringInput" ToolTip="{local:Translate MixPixelsNearbyPaletteShadesPreserve}"><TextBlock Text="{local:Translate DitheringForFixedPalettes}" TextWrapping="Wrap" MaxWidth="220" /></CheckBox>
+                            </StackPanel>
+
+                            <Button x:Name="colorOnlyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate TruncatePalette}" IsEnabled="False" Margin="0,7,0,0" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="colorLivePreviewInput" Content="{local:Translate LivePreview}" ToolTip="{local:Translate ShowChangesWithoutSavingResultHistory}" Margin="0,10,0,5" />
+
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="channelToolGroup" />
+                    <GroupBox x:Name="smoothingToolGroup" Header="{local:Translate At33Processing}">
+                        <StackPanel>
+                            <TextBlock x:Name="cleanupDescription" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,7" />
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Passes}" Width="132" /><local:IntegerInput x:Name="localColorPassesInput" Minimum="1" Maximum="100" Value="1" AutomationProperties.Name="{local:Translate LocalProcessingPasses}" /></DockPanel>
+                            <TextBlock x:Name="localBrightnessLabel" /><Slider x:Name="localBrightnessInput" AutomationProperties.Name="{local:Translate LocalProcessingBrightness}" />
+                            <TextBlock x:Name="localContrastLabel" /><Slider x:Name="localContrastInput" AutomationProperties.Name="{local:Translate LocalProcessingContrast}" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="localDetailGuardInput" Content="{local:Translate DetailProtection}" IsChecked="True" Margin="0,10,0,4" AutomationProperties.Name="{local:Translate DetailProtection}" />
+                            <TextBlock x:Name="localEdgeLabel" /><Slider x:Name="localEdgeInput" AutomationProperties.Name="{local:Translate LocalProcessingOutline}" />
+                            <Button x:Name="neighborColorsButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate SmoothColors}" IsEnabled="False" Margin="0,7,0,0" ToolTip="{local:Translate SmoothLocalColorsWithoutPaletteQuantization}" />
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="smoothingLivePreviewInput" Content="{local:Translate LivePreview}" ToolTip="{local:Translate ShowChangesWithoutSavingResultHistory}" Margin="0,10,0,5" />
+                        </StackPanel>
+                    </GroupBox>
+                        <GroupBox x:Name="contourToolGroup" Header="{local:Translate CandidateMap}">
+                        <StackPanel>
+                            <TextBlock Text="{local:Translate CandidateAndColorGradientMap}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="contourWindowLabel" Text="{local:Translate AnalysisWindow1515}"/>
+                            <Slider x:Name="contourWindowInput" Minimum="3" Maximum="15" Value="15" TickFrequency="2" IsSnapToTickEnabled="True" TickPlacement="BottomRight" AutomationProperties.Name="{local:Translate ContourAnalysisWindow}" ToolTip="{local:Translate OddWindow331515}"/>
+                            <TextBlock Text="{local:Translate SelectionThresholds}" FontWeight="SemiBold" Margin="0,12,0,5"/>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate ColorSimilarityE}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="contourSimilarityInput" Minimum="0" Maximum="100" Value="24" AutomationProperties.Name="{local:Translate SimilarColorLABTolerance}" ToolTip="{local:Translate MaximumLABDistanceBetweenPixelNeighboring}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate PixelGradientE}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="contourPixelGradientInput" Minimum="0" Maximum="20000" Value="120" AutomationProperties.Name="{local:Translate MinimumPixelGradient}" ToolTip="{local:Translate MinimumMagnitudeOfThePixelGradient}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate NeighborGradientE}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="contourNeighborGradientInput" Minimum="0" Maximum="20000" Value="80" AutomationProperties.Name="{local:Translate MinimumNeighborGradient}" ToolTip="{local:Translate NeighborsBelowThisGradientThresholdDo}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate SimilarNeighbors}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="contourNeighborCountInput" Minimum="1" Maximum="224" Value="2" AutomationProperties.Name="{local:Translate MinimumSimilarNeighbors}" ToolTip="{local:Translate MinimumNumberSimilarColorNeighborsSufficient}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate NeighborAgreement}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="contourAgreementInput" Minimum="0" Maximum="100" Value="35" AutomationProperties.Name="{local:Translate NeighborGradientAgreement}" ToolTip="{local:Translate RequiredAgreementBetweenDirectionsSimilarNeighbors}"/></DockPanel>
+                            <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Opposition}" Width="150" TextWrapping="Wrap" VerticalAlignment="Center"/><local:IntegerInput x:Name="contourOppositionInput" Minimum="0" Maximum="100" Value="10" AutomationProperties.Name="{local:Translate GradientOpposition}" ToolTip="{local:Translate GradientOppositionScaleHint}"/></DockPanel>
+                            <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="contourDetailGuardInput" Content="{local:Translate ProtectFineDetails}" Margin="0,8,0,0" ToolTip="{local:Translate ProtectThinLinesConnectingPixelsCandidate}"/>
+                            <TextBlock Text="{local:Translate RedCandidateStrongGradientOpposingSimilar}" TextWrapping="Wrap" Foreground="{DynamicResource Ts.TextSecondary}" Margin="0,12,0,8"/>
+                            <TextBlock x:Name="contourPreviewStatus" Text="{local:Translate OpenAnImage}" Foreground="{DynamicResource Ts.TextSecondary}" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <Button x:Name="contourPreviewButton" Content="{local:Translate RefreshPreview}" Margin="0,10,0,0" ToolTip="{local:Translate RefreshThePreviewManuallyForLarge}"/>
+                            <Button x:Name="contourApplyButton" Style="{StaticResource PrimaryButton}" Content="{local:Translate CreateMapResult}" IsEnabled="False" Margin="0,8,0,0" ToolTip="{local:Translate SaveMapHistoryRegularResult}"/>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox x:Name="frameToolGroup" Header="{local:Translate FrameAndTransparency}">
+                            <StackPanel>
+                                <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="spriteInput" Content="{local:Translate FullFrameAndTransparency}" ToolTip="{local:Translate ProcessEntireTransparentFrameSpritePreserve}" />
+                                <StackPanel x:Name="alphaControls">
+                                    <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Fill}" Width="132" /><local:IntegerInput x:Name="alphaInput" Minimum="1" Maximum="100" Value="50" AutomationProperties.Name="{local:Translate FillThreshold}" /></DockPanel>
+
+                                </StackPanel>
+                                <StackPanel x:Name="cropControls">
+                                    <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Horizontally}" Width="132" /><ComboBox x:Name="cropHorizontalInput" SelectedIndex="0"><ComboBoxItem Content="{local:Translate Center}" /><ComboBoxItem Content="{local:Translate Left}" /><ComboBoxItem Content="{local:Translate Right}" /></ComboBox></DockPanel>
+                                    <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Vertically}" Width="132" /><ComboBox x:Name="cropVerticalInput" SelectedIndex="0"><ComboBoxItem Content="{local:Translate Center}" /><ComboBoxItem Content="{local:Translate Top}" /><ComboBoxItem Content="{local:Translate Bottom}" /></ComboBox></DockPanel>
+
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox x:Name="pixelToolGroup" Header="{local:Translate PixelSelection}">
+                            <StackPanel>
+                                <WrapPanel><RadioButton x:Name="automaticInput" Content="{local:Translate Automatic}" IsChecked="True" /><RadioButton x:Name="manualInput" Content="{local:Translate Manual}" /></WrapPanel>
+                                <StackPanel x:Name="manualControls" ToolTip="{local:Translate SlidersAffectColorSelectionWithoutRecoloring}">
+                                    <TextBlock Text="{local:Translate PreferredColor}" FontWeight="SemiBold" Margin="0,8,0,7" />
+                                    <TextBlock x:Name="brightnessLabel" /><Slider x:Name="brightnessInput" AutomationProperties.Name="{local:Translate Brightness}" />
+                                    <TextBlock x:Name="contrastLabel" /><Slider x:Name="contrastInput" AutomationProperties.Name="{local:Translate Contrast}" />
+                                    <TextBlock x:Name="saturationLabel" /><Slider x:Name="saturationInput" AutomationProperties.Name="{local:Translate Saturation}" />
+                                    <TextBlock x:Name="edgeLabel" /><Slider x:Name="edgeInput" AutomationProperties.Name="{local:Translate Outline}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>
+                        <GroupBox x:Name="executionToolGroup" Header="{local:Translate Progress}">
+                            <StackPanel>
+                                <DockPanel Margin="0,3"><TextBlock Text="{local:Translate Threads}" Width="132" /><local:IntegerInput x:Name="threadsInput" Minimum="1" AutomationProperties.Name="{local:Translate ThreadCount}" /></DockPanel>
+                                <TextBox x:Name="processingLog" Height="125" Margin="0,8,0,0" IsReadOnly="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" Padding="6" />
+                            </StackPanel>
+                        </GroupBox>
+                </StackPanel>
+    </Grid>
+</Page>

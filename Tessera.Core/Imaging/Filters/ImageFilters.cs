@@ -47,28 +47,27 @@ public static class ImageFilters
         return WriteArgb(pixels, source.Width, source.Height);
     }
 
-    /// <summary>Alpha-aware 3×3 unsharp mask. Each change follows a nearby color transition to avoid isolated color outliers.</summary>
+    /// <summary>Alpha-aware 3×3 unsharp mask, constrained to local channel extrema to avoid overshoot halos.</summary>
     public static Bitmap Sharpen(Bitmap source, int strength = 100, int threshold = 4, CancellationToken cancellationToken = default, IProgress<double>? progress = null)
     {
         var tracking = new ProcessingProgress(progress);
-        var output = SharpenWithProgress(source, strength, threshold, cancellationToken, tracking);
+        var result = SharpenWithProgress(source, strength, threshold, cancellationToken, tracking);
         tracking.Report(1);
-        return output;
+        return result;
     }
 
     private static Bitmap SharpenWithProgress(Bitmap source, int strength, int threshold, CancellationToken cancellationToken, ProcessingProgress tracking)
     {
+        int progressRows0 = 0;
         ArgumentNullException.ThrowIfNull(source);
         if (strength is < 0 or > 200) throw new ArgumentOutOfRangeException(nameof(strength));
         if (threshold is < 0 or > 64) throw new ArgumentOutOfRangeException(nameof(threshold));
-        cancellationToken.ThrowIfCancellationRequested();
         int width = source.Width, height = source.Height;
         int[] pixels = ReadArgb(source);
         if (strength == 0) return WriteArgb(pixels, width, height);
         int[] result = new int[pixels.Length];
         int[] kernel = [1, 2, 1, 2, 4, 2, 1, 2, 1];
         double amount = strength / 100.0;
-        const double minimumAlignmentSquared = 0.64;
         for (int y = 0; y < height; y++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -78,56 +77,36 @@ public static class ImageFilters
                 int alpha = (int)((uint)center >> 24);
                 if (alpha == 0) { result[index] = center; continue; }
                 long sumR = 0, sumG = 0, sumB = 0;
-                int weightSum = 0;
+                int weightSum = 0, minR = 255, minG = 255, minB = 255, maxR = 0, maxG = 0, maxB = 0;
                 for (int e = -1; e <= 1; e++)
-                for (int f = -1; f <= 1; f++)
-                {
-                    int px = pixels[Math.Clamp(y + e, 0, height - 1) * width + Math.Clamp(x + f, 0, width - 1)];
-                    int neighborAlpha = (int)((uint)px >> 24);
-                    if (neighborAlpha == 0) continue;
-                    int weight = kernel[(e + 1) * 3 + f + 1] * neighborAlpha;
-                    int r = px >> 16 & 255, g = px >> 8 & 255, b = px & 255;
-                    sumR += (long)r * weight; sumG += (long)g * weight; sumB += (long)b * weight;
-                    weightSum += weight;
-                }
+                    for (int f = -1; f <= 1; f++)
+                    {
+                        int px = pixels[Math.Clamp(y + e, 0, height - 1) * width + Math.Clamp(x + f, 0, width - 1)];
+                        int neighborAlpha = (int)((uint)px >> 24);
+                        if (neighborAlpha == 0) continue;
+                        int weight = kernel[(e + 1) * 3 + f + 1] * neighborAlpha;
+                        int r = px >> 16 & 255, g = px >> 8 & 255, b = px & 255;
+                        sumR += (long)r * weight; sumG += (long)g * weight; sumB += (long)b * weight;
+                        weightSum += weight;
+                        minR = Math.Min(minR, r); minG = Math.Min(minG, g); minB = Math.Min(minB, b);
+                        maxR = Math.Max(maxR, r); maxG = Math.Max(maxG, g); maxB = Math.Max(maxB, b);
+                    }
                 double blurR = sumR / (double)weightSum, blurG = sumG / (double)weightSum, blurB = sumB / (double)weightSum;
                 int oldR = center >> 16 & 255, oldG = center >> 8 & 255, oldB = center & 255;
                 if (Math.Max(Math.Abs(oldR - blurR), Math.Max(Math.Abs(oldG - blurG), Math.Abs(oldB - blurB))) <= threshold)
                 { result[index] = center; continue; }
-                double wantedR = (oldR - blurR) * amount;
-                double wantedG = (oldG - blurG) * amount;
-                double wantedB = (oldB - blurB) * amount;
-                double wantedLength = wantedR * wantedR + wantedG * wantedG + wantedB * wantedB;
-                double bestDistance = double.PositiveInfinity;
-                int bestR = oldR, bestG = oldG, bestB = oldB;
-                for (int e = -1; e <= 1; e++)
-                for (int f = -1; f <= 1; f++)
-                {
-                    int px = pixels[Math.Clamp(y + e, 0, height - 1) * width + Math.Clamp(x + f, 0, width - 1)];
-                    int neighborAlpha = (int)((uint)px >> 24);
-                    if (neighborAlpha * 2 < alpha) continue;
-                    int dr = (px >> 16 & 255) - oldR;
-                    int dg = (px >> 8 & 255) - oldG;
-                    int db = (px & 255) - oldB;
-                    int length = dr * dr + dg * dg + db * db;
-                    if (length == 0) continue;
-                    double dot = wantedR * dr + wantedG * dg + wantedB * db;
-                    // A channel-wise range can combine unrelated neighbors into a new outlier color.
-                    // Keep only transitions pointing mostly in the requested sharpening direction.
-                    if (dot <= 0 || dot * dot < minimumAlignmentSquared * wantedLength * length) continue;
-                    double part = Math.Min(1, dot / length);
-                    double red = oldR + part * dr, green = oldG + part * dg, blue = oldB + part * db;
-                    double remainderR = wantedR - part * dr, remainderG = wantedG - part * dg, remainderB = wantedB - part * db;
-                    double distance = remainderR * remainderR + remainderG * remainderG + remainderB * remainderB;
-                    if (distance >= bestDistance) continue;
-                    bestDistance = distance;
-                    bestR = (int)Math.Round(red); bestG = (int)Math.Round(green); bestB = (int)Math.Round(blue);
-                }
-                result[index] = alpha << 24 | bestR << 16 | bestG << 8 | bestB;
+                int red = SharpenChannel(oldR, blurR, minR, maxR, amount);
+                int green = SharpenChannel(oldG, blurG, minG, maxG, amount);
+                int blue = SharpenChannel(oldB, blurB, minB, maxB, amount);
+                result[index] = alpha << 24 | red << 16 | green << 8 | blue;
             }
-            tracking.Report((y + 1.0) / height);
+
+            tracking.Report((0 + Interlocked.Increment(ref progressRows0) / (double)height) / 1.0);
         }
         return WriteArgb(result, width, height);
+
+        static int SharpenChannel(int value, double blur, int minimum, int maximum, double amount)
+            => Math.Clamp((int)Math.Round(value + (value - blur) * amount), minimum, maximum);
     }
 
     public static string ToAscii(Bitmap source, int columns, string characters = DefaultAsciiRamp,
@@ -211,7 +190,7 @@ public static class ImageFilters
     public static Bitmap RenderAscii(Bitmap source, bool keepSourceSize = true, string characters = DefaultAsciiRamp,
         bool invertSource = false, bool invertColors = false, AsciiColorMode colorMode = AsciiColorMode.Monochrome,
         int foregroundArgb = -1, int backgroundArgb = unchecked((int)0xFF000000), int columns = 0,
-        bool dither = false, int fontSize = DefaultAsciiFontSize, IProgress<double>? progress = null)
+        bool dither = false, IProgress<double>? progress = null, int fontSize = DefaultAsciiFontSize)
     {
         var tracking = new ProcessingProgress(progress);
         var result = RenderAsciiWithProgress(source, keepSourceSize, characters, invertSource, invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither, fontSize, tracking);
@@ -228,7 +207,7 @@ public static class ImageFilters
         if (columns is < 0 or > 512) throw new ArgumentOutOfRangeException(nameof(columns));
         if (fontSize is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(fontSize));
         return AsciiRenderer.Render(source, ReadArgb(source), keepSourceSize, characters, invertSource,
-            invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither, fontSize, tracking);
+            invertColors, colorMode, foregroundArgb, backgroundArgb, columns, dither, tracking, fontSize);
     }
 
     public static Bitmap RenderAscii(string text, int fontSize = DefaultAsciiFontSize, bool invertColors = false)

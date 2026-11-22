@@ -13,9 +13,6 @@ int failed = 0;
 try
 {
     DarkContourChecks.Run(directory, Check);
-    ConnectedPaletteChecks.Run(directory, Check);
-    MacroToolsChecks.Run(directory, Check);
-    StructureProbeChecks.Run(directory, Check);
     string input = Path.Combine(directory, "исходное изображение.png");
     using (var fixture = new Bitmap(67, 61, PixelFormat.Format32bppArgb))
     {
@@ -385,19 +382,10 @@ try
                 new ProcessingStep { OperationId = ProcessingOperations.Reduce, UsePreviousAlignment = true }
             ]
         };
-        var completed = new List<WorkflowProgress>();
-        using var actual = new WorkflowExecutor().Execute(source, recipe,
-            stepCompleted: (update, image) =>
-            {
-                Require(image.Width > 0 && image.Height > 0, "Step callback received an invalid bitmap");
-                completed.Add(update);
-            });
+        using var actual = new WorkflowExecutor().Execute(source, recipe);
         using var aligned = new PixelGridAligner().Align(source, new GridAlignmentOptions());
         using var expected = PixelGridReducer.Reduce(aligned.Aligned, aligned.CellSize);
         EqualPixels(expected, actual);
-        Require(completed.Select(item => item.Index).SequenceEqual(new[] { 1, 2 }) &&
-            completed.All(item => item.CellSize == aligned.CellSize),
-            "Step callback lost order or resolved alignment cell size");
 
         var invalid = new ProcessingRecipe
         {
@@ -577,42 +565,6 @@ try
             "Video macro replaced an existing output without --overwrite");
     });
 
-    Check("CLI replays a custom palette macro with exact colors and alpha", () =>
-    {
-        string sourcePath = Path.Combine(directory, "custom-palette-source.png");
-        string macroPath = Path.Combine(directory, "custom-palette.json");
-        string outputPath = Path.Combine(directory, "custom-palette-output.png");
-        using var source = new Bitmap(2, 1, PixelFormat.Format32bppArgb);
-        source.SetPixel(0, 0, Color.FromArgb(255, 20, 40, 60));
-        source.SetPixel(1, 0, Color.FromArgb(85, 230, 230, 230));
-        source.Save(sourcePath, ImageFormat.Png);
-        foreach (bool dithering in new[] { false, true })
-        {
-            var macro = new MacroDefinition
-            {
-                Name = "Custom palette",
-                Steps = [new ProcessingStep
-                {
-                    OperationId = ProcessingOperations.Colors,
-                    Downscale = new DownscaleOptions
-                    {
-                        Palette = EPaletteKind.Custom,
-                        CustomPalette = [0x162C42, 0xFFFFFF],
-                        IndependentColorMode = EIndependentColorMode.Palette,
-                        EnableDithering = dithering
-                    }
-                }]
-            };
-            File.WriteAllText(macroPath, JsonSerializer.Serialize(macro, WorkflowJson.Options));
-            var result = Run(["macro", "apply", sourcePath, "--macro", macroPath, "-o", outputPath, "--overwrite"]);
-            Require(result.Code == 0, result.Error);
-            using var output = new Bitmap(outputPath);
-            Require(output.GetPixel(0, 0).ToArgb() == Color.FromArgb(255, 22, 44, 66).ToArgb() &&
-                output.GetPixel(1, 0).ToArgb() == Color.FromArgb(85, 255, 255, 255).ToArgb(),
-                "Custom palette replay changed alpha or produced unexpected RGB");
-        }
-    });
-
     Check("RGBA channel macros preserve PNG channels and support value/percent add/subtract", () =>
     {
         string sourcePath = Path.Combine(directory, "channels-source.png");
@@ -667,46 +619,6 @@ try
         using var actual = new Bitmap(outputPath);
         EqualPixels(expected, actual);
         Require(File.ReadAllBytes(sourcePath).SequenceEqual(original), "Trim macro overwrote its source");
-    });
-
-    Check("Contour cleanup and heatmap replay through saved macros", () =>
-    {
-        string sourcePath = Path.Combine(directory, "contour-macro-source.png");
-        using var source = new Bitmap(9, 9, PixelFormat.Format32bppArgb);
-        for (int y = 0; y < source.Height; y++)
-            for (int x = 0; x < source.Width; x++)
-                source.SetPixel(x, y, Color.FromArgb(255, x < 4 ? 20 : 230, x < 4 ? 30 : 220, x < 4 ? 40 : 210));
-        source.SetPixel(3, 4, Color.Magenta);
-        source.Save(sourcePath, ImageFormat.Png);
-        byte[] original = File.ReadAllBytes(sourcePath);
-        var options = new ContourCleanOptions { WindowSize = 5, Strictness = ContourCleanStrictness.Strong,
-            SimilarColorDistance = 20, MinimumAgreement = 0.4, MinimumOpposition = 0.2 };
-        var store = new MacroStore(Path.Combine(directory, "contour-macro-library"));
-        var saved = store.Save(new MacroDefinition { Name = "Contour map after cleanup", Steps =
-        [
-            new ProcessingStep { OperationId = ProcessingOperations.CleanContours, Contours = options },
-            new ProcessingStep { OperationId = ProcessingOperations.ContourHeatmap, Contours = options }
-        ] });
-        string outputPath = Path.Combine(directory, "contour-macro-output.png");
-        var apply = Run(["macro", "apply", sourcePath, "--macro", store.PathFor(saved.Id), "-o", outputPath]);
-        Require(apply.Code == 0 && apply.Error.Length == 0, apply.Error);
-        var cleaned = ContourNoiseCleaner.Process(source, options);
-        using var cleanedImage = cleaned.Image;
-        using var candidates = cleaned.CandidateMap;
-        using var expected = ContourNoiseCleaner.Analyze(cleaned.Image, options).Heatmap;
-        using var actual = new Bitmap(outputPath);
-        EqualPixels(expected, actual);
-        Require(File.ReadAllBytes(sourcePath).SequenceEqual(original), "Contour macro modified its source");
-
-        RequireWorkflowStep(1, ProcessingOperations.ContourHeatmap, () => WorkflowExecutor.Validate(new ProcessingRecipe
-        {
-            Steps = [new ProcessingStep { OperationId = ProcessingOperations.ContourHeatmap }]
-        }));
-        RequireWorkflowStep(1, ProcessingOperations.CleanContours, () => WorkflowExecutor.Validate(new ProcessingRecipe
-        {
-            Steps = [new ProcessingStep { OperationId = ProcessingOperations.CleanContours,
-                Contours = new ContourCleanOptions { WindowSize = 4 } }]
-        }));
     });
 
     Check("Color cleanup controls merge close shades and preserve pixels at zero strength", () =>
@@ -815,14 +727,6 @@ try
             Require(metadata.RootElement.GetProperty("schema").GetString() == "aseprite-offline/v1", "Aseprite JSON schema");
             Require(metadata.RootElement.GetProperty("frameCount").GetInt32() == 1, "Aseprite frame count");
         }
-        string secondSource = Path.Combine(directory, "sample-2.aseprite"); File.Copy(source, secondSource);
-        string pngOnlyDestination = Path.Combine(directory, "aseprite-png-only");
-        var pngOnly = Run(["aseprite", source, secondSource, "--output-dir", pngOnlyDestination, "--png-only"]);
-        Require(pngOnly.Code == 0 && pngOnly.Error.Length == 0, pngOnly.Error);
-        Require(Directory.GetFiles(pngOnlyDestination, "*.png").Length == 2 && Directory.GetFiles(pngOnlyDestination, "*.json").Length == 0, "Aseprite --png-only did not export two PNG files without metadata");
-        Require(!pngOnly.Output.Contains(".json", StringComparison.OrdinalIgnoreCase), "Aseprite --png-only console output advertised a JSON file");
-        string incompatibleDestination = Path.Combine(directory, "aseprite-png-only-inspection");
-        Require(Run(["aseprite", source, "--output-dir", incompatibleDestination, "--png-only", "--inspection"]).Code == 2 && !Directory.Exists(incompatibleDestination), "Aseprite accepted --inspection with --png-only");
         Require(Run(["aseprite", source, "--output-dir", destination]).Code == 1, "Existing Aseprite output overwritten");
         Require(Run(["aseprite", source, "--columns", "2"]).Code == 2, "Columns accepted outside grid");
         Require(Run(["aseprite", source, "--layout", "wrong"]).Code == 2, "Invalid layout accepted");
@@ -933,21 +837,6 @@ try
             "Lossy reduction output accepted");
         Require(Run(["reduce-grid", "--help"]).Code == 0 && Run(["compact-grid", "--help"]).Code == 0,
             "Reduction help missing");
-    });
-    Check("Pixel-art finish creates a compact PNG and protects the input", () =>
-    {
-        string target = Path.Combine(directory, "finished.png");
-        var run = Run(["finish-pixel-art", input, "-o", target, "--cell-size", "8", "--colors", "8", "--json"]);
-        Require(run.Code == 0 && run.Error.Length == 0, run.Error);
-        using var report = JsonDocument.Parse(run.Output);
-        Require(report.RootElement.GetProperty("process").GetString() == "finish-pixel-art", "Wrong finish report");
-        Require(report.RootElement.GetProperty("outputSize").GetProperty("width").GetInt32() == 9, "Wrong finish width");
-        using var actual = new Bitmap(target);
-        Require(actual.Size == new Size(9, 8), "Wrong compact dimensions");
-        Require(Run(["finish-pixel-art", input, "-o", target]).Code == 1, "Existing finish result accepted");
-        Require(Run(["finish-pixel-art", input, "-o", input, "--overwrite"]).Code == 2, "Finish overwrote source");
-        Require(Run(["finish-pixel-art", input, "--cell-size", "1"]).Code == 2, "Invalid finish cell accepted");
-        Require(Run(["finish-pixel-art", "--help"]).Code == 0, "Finish help missing");
     });
     Check("Sprite mode keeps odd-sized canvas edges, transparency and preview pixels", () =>
     {
@@ -1345,7 +1234,12 @@ try
     });
 
     int variant = 0;
-    foreach (var palette in new[] { EPaletteKind.None, EPaletteKind.DB16, EPaletteKind.DB32, EPaletteKind.NES, EPaletteKind.GameBoy, EPaletteKind.Step })
+    EPaletteKind[] builtInPalettes =
+    [
+        EPaletteKind.None, EPaletteKind.DB16, EPaletteKind.DB32,
+        EPaletteKind.NES, EPaletteKind.GameBoy, EPaletteKind.Step
+    ];
+    foreach (var palette in builtInPalettes)
     foreach (var method in Enum.GetValues<EQuantizationMethod>())
     foreach (var mode in Enum.GetValues<EBlockSelectionMode>())
     {
@@ -1447,7 +1341,7 @@ try
             ["--width", "0"], ["--height", "-1"],
             ["--threads", "0"], ["--threads", (Environment.ProcessorCount + 1).ToString()],
             ["--width", "no"], ["--width", "999999999999"], ["--width", "10.5"],
-            ["--palette", "unknown"], ["--palette", "1"], ["--quantization", "unknown"],
+            ["--palette", "unknown"], ["--palette", "custom"], ["--palette", "1"], ["--quantization", "unknown"],
             ["--quantization-colors", "0"], ["--quantization-colors", "4097"], ["--quantization-colors", "2.5"],
             ["--quantization-colors"], ["--color-weights=true"], ["--color-weights", "--color-weights"],
             ["--crop-horizontal", "top"], ["--crop-vertical", "left"], ["--block-mode", "auto"],

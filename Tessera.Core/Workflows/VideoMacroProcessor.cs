@@ -35,8 +35,7 @@ public sealed class VideoMacroProcessor
         try
         {
             decoder = Start(ffmpeg, ["-hide_banner", "-loglevel", "error", "-nostdin",
-                "-i", input, "-map", "0:v:0", "-an", "-sn", "-dn", "-fps_mode", "passthrough",
-                "-f", "rawvideo", "-pix_fmt", "bgra", "pipe:1"], read: true);
+                "-i", input, "-map", "0:v:0", "-an", "-sn", "-dn", "-f", "rawvideo", "-pix_fmt", "bgra", "pipe:1"], read: true);
             Task<string> decoderError = decoder.StandardError.ReadToEndAsync(cancellationToken);
             byte[] sourceBytes = new byte[frameBytes];
             int frames = 0, width = 0, height = 0;
@@ -77,11 +76,6 @@ public sealed class VideoMacroProcessor
             if (encoder.ExitCode != 0) throw new IOException($"FFmpeg не записал видео: {encoderError!.GetAwaiter().GetResult()}");
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporary, output, overwrite);
-            if (extension == ".mp4")
-            {
-                width += width % 2;
-                height += height % 2;
-            }
             return new VideoMacroResult(frames, width, height, info.FrameRate);
         }
         finally

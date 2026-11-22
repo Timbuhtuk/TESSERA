@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 
 namespace Tessera.Desktop;
@@ -7,38 +8,47 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        var startupSettings = AppearanceSettings.Load(System.IO.Path.Combine(AppContext.BaseDirectory, "WorkspaceData", "Library", "appearance.json"));
-        Localization.Initialize(startupSettings.Language);
         if (e.Args is ["--apply-update", var target, var processId, var digest] && int.TryParse(processId, out int pid))
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            Localization.Initialize(AppearanceSettings.Load(AppearanceSettings.DefaultPath).Language);
             _ = ApplyUpdateAsync(target, pid, digest);
             return;
         }
 
-        if (e.Args.Length >= 1 && e.Args[0] == "--tiles")
+        string library;
+        try
         {
-            var inspector = new TileInspectorWindow();
-            ReleaseNotesStartup.Attach(inspector, new ReleaseNotesState(System.IO.Path.Combine(AppContext.BaseDirectory,
-                "WorkspaceData", "Library", "release-notes-state.json")));
-            MainWindow = inspector;
-            inspector.Show();
-            if (e.Args.Length >= 2) _ = inspector.LoadFileAsync(e.Args[1]);
+            library = e.Args is ["--workspace-library", var requestedLibrary]
+                ? Path.GetFullPath(requestedLibrary)
+                : PortableLibraryMigration.Prepare();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var settings = AppearanceSettings.Load(Path.Combine(AppContext.BaseDirectory, "WorkspaceData", "Library", "appearance.json"));
+            Localization.Initialize(settings.Language);
+            TesseraDialog.Show(Localization.Format("TesseraCouldNotPrepareTheLibraryFormat", ex.Message),
+                "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown(1);
             return;
         }
 
-        string prototypeLibrary = e.Args is ["--workspace-library", var requestedLibrary] ? System.IO.Path.GetFullPath(requestedLibrary) : WorkspacePrototypeLocation.Prepare();
-        var prototype = new MainWindow(prototypeLibrary);
+        Localization.Initialize(AppearanceSettings.Load(Path.Combine(library, "appearance.json")).Language);
+        var prototype = new MainWindow(library, startInWorkspace: true);
         prototype.EnableWorkspacePrototype(enableUpdates: true);
         prototype.EnableReleaseNotes();
         MainWindow = prototype;
         MainWindow.Show();
+        // TESSERA_LEGACY Retain the standalone tile inspector's --tiles startup option for the atlas and archive extraction.
+        if (e.Args.Length >= 2 && e.Args[0] == "--tiles")
+            _ = prototype.OpenAtlasFromCommandLineAsync(e.Args[1]);
     }
 
     private async Task ApplyUpdateAsync(string target, int processId, string digest)
     {
         try { await Task.Run(() => GitHubUpdater.ApplyUpdate(target, processId, digest)); }
-        catch (Exception ex) { TesseraDialog.Show(Localization.Format("Не удалось установить обновление: {0}", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
+        catch (Exception ex) { TesseraDialog.Show(Localization.Format("CouldNotInstallUpdateFormat", ex.Message), "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
         finally { Shutdown(); }
     }
 }

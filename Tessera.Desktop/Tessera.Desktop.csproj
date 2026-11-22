@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\Brand\app.ico</ApplicationIcon>
     <Product>Tessera</Product>
     <AssemblyTitle>Tessera</AssemblyTitle>
     <Description>Tessera — 2D graphics workspace</Description>
@@ -16,6 +16,9 @@
 
 
   <ItemGroup>
+    <Using Include="Tessera.Models" />
+    <Using Include="Tessera.Core.Workflows" />
+    <InternalsVisibleTo Include="Tessera.RegressionTests" />
     <PackageReference Include="Tessera.WpfStyles" Version="0.2.0" />
   </ItemGroup>
   <ItemGroup>
@@ -26,21 +29,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\app.ico" />
-    <Resource Include="Assets\settings.svg" />
-    <Resource Include="Assets\unreal-mark.svg" />
-    <Resource Include="Assets\ResultIcons\*.svg" />
-    <Resource Include="Assets\WorkspaceAssetIcons\*.svg" />
-    <EmbeddedResource Include="Localization\en.json" LogicalName="Tessera.Localization.en.json" />
+    <Resource Include="Assets\Brand\app.ico" />
+    <Resource Include="Assets\Icons\settings.svg" />
+    <Resource Include="Assets\Icons\unreal-mark.svg" />
+    <Resource Include="Assets\Icons\Results\*.svg" />
+    <Resource Include="Assets\Icons\Workspace\*.svg" />
+    <EmbeddedResource Include="Localization\*.json" LogicalName="Tessera.Localization.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Services\Maintenance\Uninstall.ps1" LogicalName="Tessera.Uninstall.ps1" />
     <EmbeddedResource Include="$(ReleaseNotesFile)" LogicalName="Tessera.ReleaseNotes.json" />
+    <Resource Include="Assets\Brand\app-icon.png" />
     <EmbeddedResource Include="..\Unreal\TesseraSync\TesseraSync.uplugin" LogicalName="Tessera.Unreal.TesseraSync.uplugin" />
-    <EmbeddedResource Include="..\Unreal\TesseraSync\Content\Python\init_unreal.py" LogicalName="Tessera.Unreal.Content/Python/init_unreal.py" />
-    <EmbeddedResource Include="..\Unreal\TesseraSync\Content\Python\tessera_sync.py" LogicalName="Tessera.Unreal.Content/Python/tessera_sync.py" />
-    <EmbeddedResource Include="..\Unreal\TesseraSync\Content\Python\tessera_project.py" LogicalName="Tessera.Unreal.Content/Python/tessera_project.py" />
-    <Resource Include="Assets\app-icon.png" />
-    <Resource Include="Assets\landscape.png" />
-    <Resource Include="Assets\palette-preview-photo.png" />
-    <Resource Include="Assets\animation-banner.png" />
+    <EmbeddedResource Include="..\Unreal\TesseraSync\Content\Python\*.py" LogicalName="Tessera.Unreal.%(Filename)%(Extension)" />
+    <Resource Include="Assets\Previews\palette-preview-photo.png" />
     <Resource Include="Assets\Fonts\Cascadia-Code-OFL.txt" />
     <Resource Include="Assets\Fonts\Science-Gothic-OFL.txt" />
     <None Include="Assets\Fonts\Cascadia-Code-OFL.txt" CopyToOutputDirectory="PreserveNewest" />

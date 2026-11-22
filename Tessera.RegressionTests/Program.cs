@@ -1,5 +1,11 @@
 using Tessera.RegressionTests;
 
+if (args is ["--uninstall"])
+{
+    try { UninstallChecks.Run(); Console.WriteLine("PASS Tessera uninstall"); return 0; }
+    catch (Exception ex) { Console.Error.WriteLine(ex); return 1; }
+}
+
 if (args is ["--progress"])
 {
     int errors = 0;
@@ -17,11 +23,9 @@ if (args is ["--progress"])
     return errors == 0 ? 0 : 1;
 }
 
-
 if (args is ["--help"] or ["-h"])
 {
-    Console.WriteLine("Tessera.RegressionTests: --progress, --window-chrome, --unreal-sync, --compact-switch, --relative-resize, --ascii, --connected-palette, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --ascii-preview, --clipboard, --size-factor, --history-edits, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --invariants, --ui, --ui-core, --aseprite-ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
-    Console.WriteLine("Programmatic editor regression checks without native input: --editor-regressions");
+    Console.WriteLine("Tessera.RegressionTests: --progress, --window-chrome, --unreal-sync, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --ascii-preview, --clipboard, --size-factor, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --history-edits, --invariants, --ui, --ui-core, --aseprite-ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;
@@ -40,17 +44,12 @@ if (args is ["--finalists", var labRoot])
     FinalistChecks.Run(labRoot);
     return 0;
 }
-if (args is ["--finalists-ui"])
-{
-    FinalistUiChecks.Run();
-    return 0;
-}
 if (args is ["--finalists-ui", var uiLabRoot])
 {
     FinalistUiChecks.Run(uiLabRoot);
     return 0;
 }
-if (args.Any(a => a is not ("--window-chrome" or "--unreal-sync" or "--compact-switch" or "--relative-resize" or "--ascii" or "--editor-regressions" or "--connected-palette" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--result-icons" or "--ascii-preview" or "--clipboard" or "--size-factor" or "--history-edits" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--invariants" or "--ui" or "--ui-core" or "--aseprite-ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
+if (args.Any(a => a is not ("--window-chrome" or "--unreal-sync" or "--contours" or "--lenses" or "--sharpen" or "--channels" or "--palette-dock" or "--result-icons" or "--ascii-preview" or "--clipboard" or "--size-factor" or "--project-notes" or "--detail-protection" or "--local-grid" or "--updates" or "--history-macros" or "--history-edits" or "--invariants" or "--ui" or "--ui-core" or "--aseprite-ui" or "--alpha" or "--material-maps" or "--release-notes" or "--tool-improvements" or "--moodboard" or "--tiles" or "--info" or "--workspace" or "--localization" or "--navigation" or "--benchmark" or "--holdout" or "--fresh")) ||
     ((args.Contains("--holdout") || args.Contains("--fresh")) && !args.Contains("--benchmark")) ||
     (args.Contains("--holdout") && args.Contains("--fresh")))
 {
@@ -61,10 +60,10 @@ if (args.Length == 0) args = ["--invariants", "--benchmark"];
 // Written before the alignment implementation. Scores are 0..100, with a fixed 90 gate.
 // Color recall is macro-averaged: large backgrounds cannot hide missing small colors.
 int failed = 0;
-if (args.Contains("--editor-regressions")) Check("Selected-history editor tools and export protection", EditorRegressionChecks.RunStandalone);
 if (args.Contains("--project-notes") || args.Contains("--ui")) Check("Project notes: live previews, modal decisions, comparison wheel and aspect ratios", ProjectNotesChecks.Run);
 if (args.Contains("--detail-protection") || args.Contains("--ui")) DetailProtectionChecks.Run(Check);
 if (args.Contains("--local-grid") || args.Contains("--ui")) LocalGridModeChecks.Run(Check);
+if (args.Contains("--material-maps") || args.Contains("--ui")) MaterialMapChecks.Run(Check);
 if (args.Contains("--unreal-sync")) UnrealSyncChecks.Run(Check);
 if (args.Contains("--window-chrome")) Check("Window chrome and child window lifecycle", () =>
 {
@@ -74,7 +73,6 @@ if (args.Contains("--window-chrome")) Check("Window chrome and child window life
     if (!ui.Join(TimeSpan.FromSeconds(60))) throw new TimeoutException("Window chrome check timed out");
     if (error is not null) throw error;
 });
-if (args.Contains("--material-maps") || args.Contains("--ui")) MaterialMapChecks.Run(Check);
 Check("Perfect grid and intact artwork score 100", () =>
 {
     using var logical = Fixtures.Logical(0, 101);
@@ -125,8 +123,6 @@ Check("Local drift and unequal widths fail the 90 gate before repair", () =>
     }
 });
 if (args.Contains("--invariants")) Check("Canvas, source colors, alpha, idempotence, errors and detection", Invariants.Run);
-if (args.Contains("--invariants")) FinalistInvariantChecks.Run(Check);
-if (args.Contains("--ui")) Check("TCR modes, history, macro recipes and PNG in WPF", FinalistUiChecks.Run);
 if (args.Contains("--invariants")) IconExportChecks.Run(Check);
 if (args.Contains("--invariants")) ProgressChecks.Run(Check);
 if (args.Contains("--invariants")) IndependentImageProcessorChecks.Run(Check);
@@ -138,20 +134,17 @@ if (args.Contains("--invariants")) GitHubUpdaterChecks.Run(Check);
 if (args.Contains("--release-notes")) Check("Bundled patch notes, first launch and settings history", ReleaseNotesChecks.Run);
 if (args.Contains("--tool-improvements")) ToolImprovementsChecks.Run(Check);
 if (args.Contains("--history-macros")) HistoryMacroChecks.Run(Check);
-if (args.Contains("--history-edits") || args.Contains("--ui")) Check("History insert, merge, subtree deletion and persistent undo", HistoryEditChecks.Run);
-if (args.Contains("--compact-switch") || args.Contains("--ui")) Check("Compact switches in three themes, RU/EN, enabled and checked states", CompactSwitchChecks.Run);
-if (args.Contains("--relative-resize") || args.Contains("--ui")) Check("Relative resize validation and legacy fixed dimensions", RelativeResizeChecks.Run);
-if (args.Contains("--ascii") || args.Contains("--ui")) Check("ASCII workspace colors, text, history, undo and macro replay", AsciiWorkspaceChecks.Run);
-if (args.Contains("--size-factor") || args.Contains("--ui")) Check("Size and frame fractional scale factor", SizeFactorUiChecks.Run);
+if (args.Contains("--history-edits")) Check("History insertion, merge, bake, persistent undo and macro deletion", HistoryEditChecks.Run);
 if (args.Contains("--navigation")) Check("Top navigation, menus, state and responsive layouts", NavigationChecks.Run);
-if (args.Contains("--sharpen") || args.Contains("--ui")) SharpenChecks.Run(Check);
+if (args.Contains("--size-factor")) Check("Size and frame fractional scale factor", SizeFactorUiChecks.Run);
 if (args.Contains("--lenses") || args.Contains("--ui")) Check("Grid lens rendering, movement, color, zoom and export isolation", GridLensChecks.Run);
+if (args.Contains("--sharpen") || args.Contains("--ui")) SharpenChecks.Run(Check);
 if (args.Contains("--palette-dock") || args.Contains("--ui")) Check("Combined palette and movable tool dock", ToolDockPaletteChecks.Run);
 if (args.Contains("--result-icons") || args.Contains("--ui")) Check("Result tree SVG icons and generic fallback", ResultIconChecks.Run);
 if (args.Contains("--ascii-preview") || args.Contains("--ui")) Check("ASCII live preview and diagonal result card", AsciiPreviewChecks.Run);
 if (args.Contains("--clipboard") || args.Contains("--ui")) Check("Result PNG clipboard and independent history branch", ResultClipboardChecks.Run);
 if (args.Contains("--workspace")) Check("Workspace catalog, projects, shared assets, copies and WPF", WorkspaceChecks.Run);
-if (args.Contains("--aseprite-ui") || args.Contains("--ui")) Check("Aseprite batch workspace and PNG exports", () =>
+if (args.Contains("--aseprite-ui")) Check("Aseprite batch workspace and PNG exports", () =>
 {
     Exception? error = null;
     var ui = new Thread(() =>
@@ -163,8 +156,7 @@ if (args.Contains("--aseprite-ui") || args.Contains("--ui")) Check("Aseprite bat
     if (!ui.Join(TimeSpan.FromSeconds(60))) throw new TimeoutException("Aseprite UI verification timed out");
     if (error is not null) throw error;
 });
-if (args.Contains("--localization")) Check("English localization, SVG settings and language persistence", LocalizationChecks.Run);
-if (args.Contains("--connected-palette") || args.Contains("--ui")) Check("Connected palette preview, controls, history, PNG and restart", ConnectedPaletteUiChecks.Run);
+if (args.Contains("--localization")) Check("English and Russian catalogs, SVG settings and language persistence", LocalizationChecks.Run);
 if (args.Contains("--contours") || args.Contains("--ui")) Check("Contour map preview, settings, history, export and tool isolation", ContourUiChecks.Run);
 if (args.Contains("--ui") || args.Contains("--ui-core")) Check("Editor WPF themes, tools, workflows and workspaces", UiChecks.Run);
 if (args.Contains("--ui") || args.Contains("--channels")) Check("RGBA channel editor, history, PNG, recipes and both hosts", ChannelAdjustmentUiChecks.Run);

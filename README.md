@@ -1,4 +1,4 @@
-<img src="Tessera.Desktop/Assets/tessera-mark.svg" width="88" height="88" alt="Tessera mosaic T">
+<img src="Tessera.Desktop/Assets/Brand/tessera-mark.svg" width="88" height="88" alt="Tessera mosaic T">
 
 # Tessera
 
@@ -18,7 +18,7 @@ Organize project assets, clean up pixel art, turn Aseprite animations into sprit
 
 ## Get started
 
-Run `Tessera.exe` directly or unpack `Tessera-win-x64.zip` and launch the executable. The desktop app processes images offline and requires no .NET installation. When online, it can check GitHub for updates and install them with your confirmation. Keep `WorkspaceData` beside the executable when moving a portable installation with its library. The interface is available in English and Russian. [Workspace guide](docs/WORKSPACE_PROTOTYPE.md)
+Run `Tessera.exe` directly or unpack `Tessera-win-x64.zip` and launch the executable. The desktop app processes images offline and requires no .NET installation. When online, it can check GitHub for updates and install them with your confirmation. Tessera 3 uses `%LOCALAPPDATA%\Tessera\Library`. To migrate a portable library from Tessera 2, launch Tessera 3 beside the existing `WorkspaceData` folder. The interface is available in English and Russian. [Workspace guide](docs/WORKSPACE_PROTOTYPE.md)
 
 For scripting, unpack `Tessera-cli-win-x64.zip` into its own folder and run `.\tessera.exe --help`. The local Tessera plugin can also run the CLI from ChatGPT. [ChatGPT setup](docs/CHATGPT.md)
 

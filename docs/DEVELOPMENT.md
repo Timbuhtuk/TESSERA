@@ -46,7 +46,7 @@ The [architecture guide](ARCHITECTURE.md) defines ownership and dependency direc
 - `Tessera.Desktop`: WPF views, UI controllers and workspace state. `Views`, `Controllers` and `Models` separate rendering, action orchestration and stored state.
 - `Tessera.Cli`: [command-line interface](CLI.md) to the same core services.
 - `Tessera.Aseprite.Tests`, `Tessera.RegressionTests` and `Tessera.Cli.Tests`: format, algorithm, desktop and CLI checks.
-- `Tessera.WpfStyles` 0.2.0: restored from the checked-in `.nuget/local-packages` feed using `NuGet.Config`. Font licenses remain in `Tessera.Desktop/Assets/Fonts`.
+- `Tessera.WpfStyles` 0.2.0: restored from NuGet.org. If your cache contains the older local build with the same version, restore into a fresh package cache. Font licenses remain in `Tessera.Desktop/Assets/Fonts`.
 - `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md); `.agents/plugins/marketplace.json` registers the repository marketplace.
 - `artifacts`: ignored local builds, test output and archives.
 
@@ -58,7 +58,7 @@ The editable Tessera mark and its generation script are documented in the [asset
 
 The paired source/result previews use the image with the greater pixel area as a shared display reference. Each image fits into that reference's visible bounds with its own aspect ratio.
 
-The alternative comparison preview uses the shared zoom choices. Its ordinary wheel changes zoom and Ctrl+wheel scrolls the image. Palette and color cleanup render temporary results through their normal processors after a 350 ms debounce. Up to 65,536 source pixels enable preview automatically when opening the tool; larger inputs require confirmation. Stale renders are discarded and never saved to history.
+The alternative comparison preview uses the shared zoom choices. The wheel changes zoom, middle-button dragging pans, Ctrl+wheel scrolls vertically, and Alt+wheel scrolls horizontally. Holding the comparison key shows the source. The key defaults to Space and is stored in `appearance.json`. Palette and color cleanup render temporary results through their normal processors after a 350 ms debounce. Up to 65,536 source pixels enable preview automatically when opening the tool; larger inputs require confirmation. Stale renders are discarded and never saved to history.
 
 `BitmapFactory.CropTransparentEdges` scans alpha values and clones inclusive bounds for every pixel with alpha above zero. It preserves translucent edge pixels and returns a transparent 1 × 1 bitmap for a fully transparent input. The operation is available in history and recipes. The possible use of vectorization in [project notes](PROJECT_NOTES.md) remains an open fallback; no vectorization is used by these operations.
 
@@ -70,11 +70,11 @@ The local ScrollViewer template fills the corner between simultaneous horizontal
 
 Library PNG writes use .NET file streams rather than GDI+ filename APIs, which fail at legacy MAX_PATH lengths. The UI suite includes source/result/crop pixel and alpha round trips plus history reopening in a library whose root exceeds 270 characters. Editor regression tests fail on unexpected owned error dialogs instead of waiting invisibly for user input.
 
-`TileInspectorWindow.Zoom.cs` handles Ctrl+wheel with the main editor's 6.25–6400% scale steps, using the current fitted scale for the first wheel step. The deferred scroll adjustment retains the source point under the cursor and ignores stale zoom requests. Unmodified wheel input remains available for scrolling. Collection settings use an optional `ZoomScale` value and retain the original `Zoom` index for compatibility; old projects keep their original Fit/100–3200% zoom. WPF checks cover cursor anchoring, limits, multi-notch/small deltas, Fit transitions and old/new project zoom round trips.
+`TileInspectorWindow.Zoom.cs` handles unmodified wheel input with the main editor's 6.25–6400% scale steps, using the current fitted scale for the first wheel step. The deferred scroll adjustment retains the source point under the cursor and ignores stale zoom requests. `ImageViewportInput` handles modified wheel scrolling and middle-button panning. Collection settings use an optional `ZoomScale` value and retain the original `Zoom` index for compatibility; old projects keep their original Fit/100–3200% zoom. WPF checks cover cursor anchoring, limits, multi-notch/small deltas, Fit transitions and old/new project zoom round trips.
 
 Holding either Alt key temporarily enables the heatmap without changing the saved checkbox state or marking the project dirty. Preview key-up and window deactivation restore the selected mode; only the preview is invalidated, so holding Alt does not rerun edge analysis. Seam statistics are below the preview, while drawing/smoothing stays above it. The WPF checks exercise rendered press/release behavior, repeated keydown, both Alt keys, focus loss, persistent visibility, project settings and panel order at normal/minimum sizes.
 
-`Tessera.Desktop/Views/TileInspectorWindow.xaml(.cs)` owns the independent inspector view. Its `Controllers/TileInspectorWindow.Collection.cs` and `Controllers/TileInspectorWindow.Painting.cs` partials handle projects, export, edits and smoothing. `Controllers/MainWindow.Tiles.cs` opens one inspector per main window; `--tiles [image-path]` starts it directly. `Views/TilePreview.cs` draws repeated A/B images and direction-specific heat strips without allocating a full repeated bitmap. Image decoding and smoothing run in the background; edge analysis updates synchronously in O(width + height) after edits. Stale loads and external saves cannot overwrite local edits.
+`Tessera.Desktop/Views/Tools/Tiles/TilePreview.cs` draws repeated tiles and heat strips without allocating a full repeated bitmap. `TileAtlasPage` owns atlas editing. Its layout and code-behind are in `Tessera.Desktop/Views/Pages/Atlas`, and pointer and repeat behavior is in `Tessera.Desktop/Controllers/Tools/Tiles`. The `--tiles image-or-collection` startup option opens images in the atlas editor and offers PNG extraction for collections created by the retired standalone inspector.
 
 `Tessera.Core/Imaging/Tiles/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
 
@@ -96,7 +96,7 @@ Painting and both fills use straight-alpha source-over, with color alpha multipl
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository is `Timbuhtuk/TESSERA`; the solution and code namespaces now use Tessera names. Startup prepares the portable `WorkspaceData/Library` beside the executable. It copies existing GUID image/history directories from `%LOCALAPPDATA%\Tessera\Library` once. `LibraryLocation` first handles older `%LOCALAPPDATA%\Pixelizator\Library` entries without deleting their originals. Migration markers prevent later launches from overwriting workspace edits.
+Tessera was previously named Pixelizator. The repository is Timbuhtuk/TESSERA. Startup uses %LOCALAPPDATA%\Tessera\Library. PortableLibraryMigration verifies a copy from WorkspaceData/Library beside the executable before making it active. It keeps the source library and backs up an existing profile library.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 
@@ -114,7 +114,7 @@ The Windows job sets up .NET 8 and Python 3.13, builds and tests the solution, p
 - `Tessera-chatgpt-plugin.zip` (local plugin)
 - `Tessera-skill.zip` (standalone skill)
 
-The release series starts at `2.0.0` in `release-version.txt`. `Get-ReleaseVersion.ps1` selects the next patch after the highest tag in that major/minor series merged into the current commit; a rerun of a tagged commit keeps its version. PR builds do not consume version numbers. Change the version floor to start a new major/minor series. The workflow passes one resolved version to both the build and publication jobs, so tags, executable versions and embedded notes agree. `tests/ReleaseVersion.Checks.ps1` covers numbering with real isolated Git histories. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
+The current release series starts at `3.0.0` in `release-version.txt`. `Get-ReleaseVersion.ps1` selects the next patch after the highest tag in that major/minor series merged into the current commit; a rerun of a tagged commit keeps its version. PR builds do not consume version numbers. Change the version floor to start a new major/minor series. The workflow passes one resolved version to both the build and publication jobs, so tags, executable versions and embedded notes agree. `tests/ReleaseVersion.Checks.ps1` covers numbering with real isolated Git histories. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
 
 ### Patch notes for every release
 
@@ -137,7 +137,7 @@ The desktop app checks the latest public GitHub release on startup and on demand
 See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 # Workspace experiment
 
-`WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
+`WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with profile storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
 
 The tool-improvement checks run with `Tessera.RegressionTests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
 

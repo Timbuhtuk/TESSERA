@@ -22,7 +22,12 @@ internal static class AsciiRenderer
 
     public static Bitmap Render(Bitmap source, int[] pixels, bool keepSourceSize, string characters,
         bool invertSource, bool invertColors, AsciiColorMode colorMode, int foregroundArgb,
-        int backgroundArgb, int requestedColumns, bool dither, int fontSize, IProgress<double>? progress = null)
+        int backgroundArgb, int requestedColumns, bool dither)
+        => Render(source, pixels, keepSourceSize, characters, invertSource, invertColors, colorMode, foregroundArgb, backgroundArgb, requestedColumns, dither, progress: null);
+
+    public static Bitmap Render(Bitmap source, int[] pixels, bool keepSourceSize, string characters,
+        bool invertSource, bool invertColors, AsciiColorMode colorMode, int foregroundArgb,
+        int backgroundArgb, int requestedColumns, bool dither, IProgress<double>? progress = null, int fontSize = ImageFilters.DefaultAsciiFontSize)
     {
         var tracking = new ProcessingProgress(progress);
         var result = RenderWithProgress(source, pixels, keepSourceSize, characters, invertSource, invertColors, colorMode, foregroundArgb, backgroundArgb, requestedColumns, dither, fontSize, tracking);

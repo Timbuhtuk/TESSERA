@@ -22,9 +22,6 @@ public static class ProcessingOperations
     public const string ReplaceColor = "color.replace";
     public const string AdjustChannel = "color.channel.adjust";
     public const string RemoveBackground = "background.remove";
-    public const string ContourHeatmap = "contours.heatmap";
-    public const string CleanContours = "contours.clean";
-    public const string ConnectedPalette = "connected-palette";
     public const string FinalistReduce = "image.finalist.reduce";
     public const string Macro = "macro.apply";
 }
@@ -35,6 +32,7 @@ public sealed class ProcessingStep
     public string OperationId { get; init; } = "";
     public DownscaleOptions? Downscale { get; init; }
     public ResizeFactorSettings? ResizeFactor { get; init; }
+    public ConnectivityPaletteOptions? ConnectedPalette { get; init; }
     public int? CellSize { get; init; }
     public bool UsePreviousAlignment { get; init; }
     public AsciiSettings? Ascii { get; init; }
@@ -42,8 +40,6 @@ public sealed class ProcessingStep
     public ColorReplacementSettings? ColorReplacement { get; init; }
     public ChannelAdjustmentOptions? ChannelAdjustment { get; init; }
     public BackgroundSettings? Background { get; init; }
-    public ContourCleanOptions? Contours { get; init; }
-    public ConnectivityPaletteOptions? ConnectedPalette { get; init; }
     public FinalistMode? FinalistMode { get; init; }
     public int? FinalistFactor { get; init; }
 }
@@ -71,15 +67,9 @@ public sealed class ResizeFactorSettings
         double width = Math.Round(sourceWidth * Factor, MidpointRounding.AwayFromZero);
         double height = Math.Round(sourceHeight * Factor, MidpointRounding.AwayFromZero);
         if (width > int.MaxValue || height > int.MaxValue) throw new InvalidDataException("Scaled dimensions exceed the supported range.");
-        return ToOptions(Math.Max(1, (int)width), Math.Max(1, (int)height));
-    }
-
-    public DownscaleOptions ToOptions(int targetWidth, int targetHeight)
-    {
-        if (targetWidth < 1 || targetHeight < 1) throw new ArgumentOutOfRangeException(nameof(targetWidth));
         return new DownscaleOptions
         {
-            TargetWidth = targetWidth, TargetHeight = targetHeight,
+            TargetWidth = Math.Max(1, (int)width), TargetHeight = Math.Max(1, (int)height),
             SpriteMode = SpriteMode, AlphaThreshold = AlphaThreshold,
             CropHorizontal = CropHorizontal, CropVertical = CropVertical,
             BlockMode = BlockMode, ManualCriteria = ManualCriteria
@@ -89,7 +79,7 @@ public sealed class ResizeFactorSettings
 
 public sealed class AsciiSettings
 {
-    // A missing value in existing saved recipes must retain the original 10 px glyphs.
+    // TESSERA_LEGACY Replay older ASCII recipes without fontSize using 10 px glyphs.
     public int FontSize { get; init; } = 10;
     public string Characters { get; init; } = ImageFilters.DefaultAsciiRamp;
     public bool KeepSourceSize { get; init; } = true;

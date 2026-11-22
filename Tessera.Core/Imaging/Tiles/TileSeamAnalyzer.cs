@@ -25,17 +25,20 @@ public static class TileSeamAnalyzer
     // Only the four edge strips are needed, so analysis is O(width + height).
     public static TileSeamAnalysis AnalyzeEdges(ReadOnlySpan<byte> left, ReadOnlySpan<byte> right,
         ReadOnlySpan<byte> top, ReadOnlySpan<byte> bottom)
+        => new(CompareEdges(left, right), CompareEdges(top, bottom));
+
+    public static double[] CompareEdges(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
     {
-        if (left.Length == 0 || top.Length == 0 || left.Length % 4 != 0 || top.Length % 4 != 0 ||
-            left.Length != right.Length || top.Length != bottom.Length)
+        if (first.Length == 0 || first.Length % 4 != 0 || first.Length != second.Length)
             throw new ArgumentException("Edges must contain matching, nonempty BGRA32 pixel pairs.");
-        var horizontal = new double[left.Length / 4];
-        var vertical = new double[top.Length / 4];
-        for (int q = 0; q < horizontal.Length; q++)
-            horizontal[q] = ColorDistance(left.Slice(q * 4, 4), right.Slice(q * 4, 4));
-        for (int q = 0; q < vertical.Length; q++)
-            vertical[q] = ColorDistance(top.Slice(q * 4, 4), bottom.Slice(q * 4, 4));
-        return new(horizontal, vertical);
+        var differences = new double[first.Length / 4];
+        for (int q = 0; q < differences.Length; q++)
+        {
+            var a = first.Slice(q * 4, 4);
+            var b = second.Slice(q * 4, 4);
+            if (!a.SequenceEqual(b)) differences[q] = ColorDistance(a, b);
+        }
+        return differences;
     }
 
     // 100 * Euclidean distance in OKLab. Black/white is approximately 100.

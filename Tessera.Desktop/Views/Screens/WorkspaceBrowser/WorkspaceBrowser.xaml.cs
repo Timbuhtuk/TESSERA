@@ -1,0 +1,560 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Data;
+using System.Windows.Automation;
+using System.Xml.Linq;
+
+namespace Tessera.Desktop;
+
+public partial class WorkspaceBrowser : UserControl
+{
+    private WorkspaceCatalog? _catalog;
+    private bool _ready, _building, _filtersManuallyToggled;
+    private readonly ContextMenu _assetMenu;
+    private Point _dragStart;
+    private object? _treeDrag;
+    private WorkspaceAsset? _deferredClick;
+    private WorkspaceAsset? _contextAsset;
+    private static readonly Brush UnrealOnlineBrush = new SolidColorBrush(Color.FromRgb(53, 190, 105));
+    private static readonly Brush UnrealOfflineBrush = new SolidColorBrush(Color.FromRgb(235, 157, 47));
+    public const string AssetDragFormat = "Tessera.WorkspaceAssets";
+    private const string FolderDragFormat = "Tessera.WorkspaceFolder";
+    public event Action<IReadOnlyList<string>>? ImportRequested;
+    public event Action<WorkspaceAsset>? OpenRequested;
+    public event Action<string, WorkspaceAsset?>? ActionRequested;
+    public event Action<string>? StatusChanged;
+    public event Action? ConnectUnrealRequested;
+    public IReadOnlyList<WorkspaceAsset> Selection => assetList.SelectedItems.Cast<WorkspaceAsset>().ToArray();
+
+    static WorkspaceBrowser()
+    {
+        UnrealOnlineBrush.Freeze();
+        UnrealOfflineBrush.Freeze();
+    }
+
+    public WorkspaceBrowser()
+    {
+        InitializeComponent();
+        localProjectMenuItem.Header = Localization.Text("LocalProjectAction");
+        unrealProjectMenuItem.Header = Localization.Text("FromUnrealAction");
+        assetViewLabel.Text = Localization.Text("AssetView");
+        foreach (var (button, label) in new[]
+        {
+            (assetViewTiles, Localization.Text("Tiles")),
+            (assetViewSmallTiles, Localization.Text("SmallTiles")),
+            (assetViewList, Localization.Text("List"))
+        })
+        {
+            button.ToolTip = label;
+            AutomationProperties.SetName(button, label);
+        }
+        PreviewDragOver += (_, e) =>
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) { e.Effects = DragDropEffects.Copy; e.Handled = true; }
+        };
+        Drop += (_, e) =>
+        {
+            if (e.Data.GetData(DataFormats.FileDrop) is string[] files) { ImportRequested?.Invoke(files); e.Handled = true; }
+        };
+        _assetMenu = (ContextMenu)Resources["WorkspaceAssetContextMenu"];
+        foreach (var (label, action) in new[]
+        {
+            ("Open", "open"),
+            ("RenameAction", "rename"),
+            ("MaterialMapsAction", "material-maps"),
+            ("CreateTextureInUnrealAction", "create-unreal"),
+            ("UnrealMoveTextureMenu", "move-unreal"),
+            ("UnrealDeleteTextureMenu", "delete-unreal"),
+            ("AddToProjectAction", "link"),
+            ("MoveToFolderAction", "move"),
+            ("IndependentCopy", "copy"),
+            ("RemoveFromProject", "unlink"),
+            ("DeleteFromLibraryAction", "delete")
+        })
+        {
+            var item = new MenuItem { Header = Localization.Text(label), Tag = action };
+            if (action is "rename" or "move-unreal") item.InputGestureText = "F2";
+            item.Click += (_, _) => RunMenuAction(action);
+            _assetMenu.Items.Add(item);
+        }
+        var backgroundMenu = new ContextMenu();
+        foreach (var (label, action) in new[]
+        {
+            ("CreateBoardAction", "new-board"),
+            ("ImportFilesAction", "import")
+        })
+        {
+            var item = new MenuItem { Header = Localization.Text(label), Tag = action };
+            item.Click += (_, _) => ActionRequested?.Invoke(action, null);
+            backgroundMenu.Items.Add(item);
+        }
+        assetList.ContextMenu = backgroundMenu;
+        assetList.ContextMenuOpening += (_, e) =>
+        {
+            if (ItemsControl.ContainerFromElement(assetList, e.OriginalSource as DependencyObject) is ListBoxItem { Content: WorkspaceAsset asset } item)
+            {
+                _contextAsset = asset;
+                if (!item.IsSelected) assetList.SelectedItem = asset;
+            }
+        };
+        assetList.PreviewMouseLeftButtonUp += (_, _) =>
+        {
+            if (_deferredClick is not { } asset) return;
+            _deferredClick = null; assetList.ReleaseMouseCapture(); assetList.SelectedItems.Clear(); assetList.SelectedItem = asset;
+        };
+    }
+
+    public void CreateProject() => NewProjectClicked(this, new());
+
+    public void Bind(WorkspaceCatalog catalog)
+    {
+        _catalog = catalog;
+        var state = catalog.State;
+        searchInput.Text = state.Search;
+        kindInput.SelectedIndex = state.Kind >= 0 && state.Kind < kindInput.Items.Count ? state.Kind : 0;
+        filterWidth.Text = state.Width; filterHeight.Text = state.Height; alphaInput.SelectedIndex = state.Transparency;
+        state.AssetView = Math.Clamp(state.AssetView, 0, 2);
+        if (state.AssetView == 0) assetViewTiles.IsChecked = true;
+        else if (state.AssetView == 1) assetViewList.IsChecked = true;
+        else assetViewSmallTiles.IsChecked = true;
+        _ready = true; RebuildTree(); Refresh();
+    }
+
+    internal Func<string, Guid?, bool>? ScopeChanging { get; set; }
+    internal Action? ScopeChanged { get; set; }
+
+    public void Navigate(string view, Guid? project = null, Guid? folder = null)
+    {
+        if (_catalog is null) return;
+        var state = _catalog.State;
+        bool scopeChanged = state.View != view || state.ProjectId != project;
+        if (scopeChanged && ScopeChanging?.Invoke(view, project) == false)
+        {
+            RebuildTree();
+            return;
+        }
+        state.View = view; state.ProjectId = project; state.FolderId = folder;
+        if (scopeChanged) ScopeChanged?.Invoke();
+        if (view != "project") { _building = true; foreach (var item in projectTree.Items.OfType<TreeViewItem>()) item.IsSelected = false; _building = false; }
+        Refresh();
+    }
+
+    internal void ReleaseCards() => assetList.ItemsSource = null;
+
+    public void Refresh(Guid? select = null)
+    {
+        if (!_ready || _catalog is null) return;
+        var state = _catalog.State;
+        if (state.ProjectId is { } id && !_catalog.State.Projects.Any(p => p.Id == id)) { state.View = "all"; state.ProjectId = state.FolderId = null; }
+        var selected = Selection.Select(a => a.Id).ToHashSet();
+        var assets = _catalog.Query(state.View, state.ProjectId, state.FolderId, searchInput.Text, kindInput.SelectedIndex, filterWidth.Text, filterHeight.Text, alphaInput.SelectedIndex);
+        int view = Math.Clamp(state.AssetView, 0, 2);
+        string[] panels = ["TileItemsPanel", "ListItemsPanel", "SmallTileItemsPanel"];
+        string[] templates = ["AssetTileTemplate", "AssetListTemplate", "AssetSmallTileTemplate"];
+        string[] styles = ["TileAssetItem", "ListAssetItem", "SmallTileAssetItem"];
+        var panel = (ItemsPanelTemplate)Resources[panels[view]];
+        if (assetList.ItemsPanel != panel) assetList.ItemsPanel = panel;
+        assetList.ItemTemplate = (DataTemplate)Resources[templates[view]];
+        assetList.ItemContainerStyle = (Style)Resources[styles[view]];
+        assetList.ItemsSource = assets;
+        foreach (var asset in assets.Where(a => select == a.Id || select is null && selected.Contains(a.Id))) assetList.SelectedItems.Add(asset);
+        if (assetList.SelectedItem is null && state.SelectedAsset is { } last) assetList.SelectedItem = assets.FirstOrDefault(a => a.Id == last);
+        viewTitle.Text = state.View switch { "unassigned" => Localization.Text("Unassigned"), "recent" => Localization.Text("Recent"), "project" => state.ProjectId is { } project ? _catalog.Location(new WorkspaceLink { ProjectId = project, FolderId = state.FolderId }) : Localization.Text("Project"), _ => Localization.Text("AllAssets") };
+        emptyHint.Visibility = assets.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        SaveFilters(); UpdateSelection();
+    }
+
+    public void RebuildTree()
+    {
+        if (_catalog is null) return;
+        _building = true; projectTree.Items.Clear();
+        foreach (var project in _catalog.State.Projects)
+        {
+            var node = MakeNode(project.Name, project, project.Id == _catalog.State.ProjectId && _catalog.State.FolderId is null);
+            var folders = _catalog.State.Folders.Where(f => f.ProjectId == project.Id).ToLookup(f => f.ParentId);
+            AddFolders(node, folders, null, []); projectTree.Items.Add(node);
+        }
+        _building = false;
+    }
+    private TreeViewItem MakeNode(string name, object tag, bool selected)
+    {
+        var node = new TreeViewItem
+        {
+            Header = new TextBlock { Text = name, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis },
+            Tag = tag, IsExpanded = true, IsSelected = selected, ToolTip = name, Padding = new Thickness(2, 0, 2, 0)
+        };
+        AutomationProperties.SetName(node, name);
+        Guid project = tag is WorkspaceProject p ? p.Id : ((WorkspaceFolder)tag).ProjectId;
+        Guid? folder = (tag as WorkspaceFolder)?.Id;
+        if (_catalog!.IsUnrealProject(project))
+        {
+            if (tag is WorkspaceProject)
+            {
+                var header = new Grid();
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                header.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                var icon = new System.Windows.Shapes.Path
+                {
+                    Data = UnrealLogo.Value, Width = 18, Height = 18, Stretch = Stretch.Uniform,
+                    Margin = new Thickness(0, 0, 6, 0), ToolTip = Localization.Text("UnrealEngineProject")
+                };
+                icon.SetBinding(System.Windows.Shapes.Path.FillProperty, new Binding(nameof(Foreground)) { Source = node });
+                header.Children.Add(icon);
+                var title = new TextBlock { Text = name, TextWrapping = TextWrapping.NoWrap, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center };
+                Grid.SetColumn(title, 1);
+                header.Children.Add(title);
+                node.Header = header;
+            }
+            return node;
+        }
+        var menu = new ContextMenu();
+        var create = new MenuItem { Header = Localization.Text("CreateFolderAction") };
+        create.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => CreateFolder(project, folder))));
+        var rename = new MenuItem { Header = Localization.Text("RenameAction") };
+        rename.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => RenameSection(tag))));
+        var delete = new MenuItem { Header = folder is null ? Localization.Text("DeleteProjectAction") : Localization.Text("DeleteFolderAction") };
+        delete.Click += (_, _) => Dispatcher.BeginInvoke(new Action(() => Safe(() => DeleteSection(project, folder))));
+        menu.Items.Add(create); menu.Items.Add(rename); menu.Items.Add(new Separator()); menu.Items.Add(delete);
+        menu.Opened += (_, _) => node.IsSelected = true;
+        node.ContextMenu = menu;
+        node.PreviewMouseRightButtonDown += (_, e) =>
+        {
+            // A nested folder also routes through its ancestors. Select only the actual target.
+            if (FindTreeItem(e.OriginalSource as DependencyObject) != node) return;
+            node.IsSelected = true; node.Focus();
+        };
+        return node;
+    }
+    private void AddFolders(TreeViewItem parent, ILookup<Guid?, WorkspaceFolder> folders, Guid? parentId, HashSet<Guid> visited)
+    {
+        foreach (var folder in folders[parentId].OrderBy(f => f.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            if (!visited.Add(folder.Id)) continue;
+            var item = MakeNode(folder.Name, folder, folder.Id == _catalog!.State.FolderId);
+            parent.Items.Add(item); AddFolders(item, folders, folder.Id, visited);
+        }
+    }
+
+    private static readonly Lazy<Geometry> UnrealLogo = new(() =>
+    {
+        var resource = Application.GetResourceStream(new Uri("pack://application:,,,/Tessera.Desktop;component/Assets/Icons/unreal-mark.svg"))!;
+        using var stream = resource.Stream;
+        var svg = XDocument.Load(stream);
+        var geometry = new GeometryGroup { FillRule = FillRule.EvenOdd };
+        foreach (var path in svg.Descendants().Where(e => e.Name.LocalName == "path"))
+            geometry.Children.Add(Geometry.Parse("F0 " + path.Attribute("d")!.Value));
+        geometry.Freeze();
+        return geometry;
+    });
+
+    private void ConnectUnrealClicked(object sender, RoutedEventArgs e) => ConnectUnrealRequested?.Invoke();
+
+    private void OpenProjectMenuClicked(object sender, RoutedEventArgs e)
+    {
+        var menu = addProjectButton.ContextMenu!;
+        menu.PlacementTarget = projectHeader;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
+    internal void ShowUnrealStatus(string? status, bool connected)
+    {
+        unrealStatus.Text = status ?? "";
+        unrealStatusDot.Fill = connected ? UnrealOnlineBrush : Brushes.Transparent;
+        unrealStatusDot.Stroke = connected ? UnrealOnlineBrush : UnrealOfflineBrush;
+        unrealStatusPanel.Visibility = status is null ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    internal IEnumerable<WorkspaceAsset> VisibleUnrealAssets()
+    {
+        if (!IsVisible) yield break;
+        var queue = new Queue<DependencyObject>();
+        queue.Enqueue(assetList);
+        while (queue.TryDequeue(out var element))
+        {
+            if (element is ListBoxItem item)
+            {
+                if (item.Content is WorkspaceAsset { Unreal: not null } asset && item.IsVisible &&
+                    item.TransformToAncestor(assetList).TransformBounds(new Rect(item.RenderSize))
+                        .IntersectsWith(new Rect(assetList.RenderSize))) yield return asset;
+                continue;
+            }
+            for (int q = 0; q < VisualTreeHelper.GetChildrenCount(element); q++)
+                queue.Enqueue(VisualTreeHelper.GetChild(element, q));
+        }
+    }
+
+    private void SaveFilters()
+    {
+        if (_catalog is null) return;
+        var state = _catalog.State; state.Search = searchInput.Text; state.Kind = kindInput.SelectedIndex;
+        state.Width = filterWidth.Text; state.Height = filterHeight.Text; state.Transparency = alphaInput.SelectedIndex;
+        _catalog.Save();
+    }
+    private void FiltersChanged(object sender, RoutedEventArgs e) { if (_ready) Safe(() => Refresh()); }
+    private void GallerySizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (!e.WidthChanged) return;
+        bool docked = e.NewSize.Width >= 720;
+        Grid.SetColumn(filtersPane, docked ? 1 : 0);
+        if (!_filtersManuallyToggled) filtersToggle.IsChecked = docked;
+    }
+    private void FiltersToggled(object sender, RoutedEventArgs e) => _filtersManuallyToggled = true;
+
+    private void AssetViewChanged(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _catalog is null) return;
+        int view;
+        if (ReferenceEquals(sender, assetViewTiles)) view = 0;
+        else if (ReferenceEquals(sender, assetViewList)) view = 1;
+        else if (ReferenceEquals(sender, assetViewSmallTiles)) view = 2;
+        else return;
+        _catalog.State.AssetView = view;
+        Safe(() => Refresh());
+    }
+    private void ResetFilters(object sender, RoutedEventArgs e)
+    {
+        _ready = false; searchInput.Clear(); filterWidth.Clear(); filterHeight.Clear(); kindInput.SelectedIndex = alphaInput.SelectedIndex = 0; _ready = true; Refresh();
+    }
+    private void AllClicked(object sender, RoutedEventArgs e) => Safe(() => Navigate("all"));
+    private void UnassignedClicked(object sender, RoutedEventArgs e) => Safe(() => Navigate("unassigned"));
+    private void RecentClicked(object sender, RoutedEventArgs e) => Safe(() => Navigate("recent"));
+    private void TreeSelected(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (!_ready || _building || e.NewValue is not TreeViewItem node) return;
+        Safe(() => { if (node.Tag is WorkspaceProject project) Navigate("project", project.Id); else if (node.Tag is WorkspaceFolder folder) Navigate("project", folder.ProjectId, folder.Id); });
+    }
+    private void NewProjectClicked(object sender, RoutedEventArgs e) => Safe(() =>
+    {
+        string? name = Prompt(Localization.Text("CreateProject"), Localization.Text("ProjectName")); if (name is null) return;
+        var project = _catalog!.CreateProject(name); Navigate("project", project.Id); RebuildTree();
+    });
+    private void CreateFolder(Guid project, Guid? parent)
+    {
+        string? name = Prompt(Localization.Text("CreateFolder"), Localization.Text("FolderName")); if (name is null) return;
+        var folder = _catalog!.CreateFolder(project, parent, name); Navigate("project", project, folder.Id); RebuildTree();
+    }
+    private void RenameSection(object section)
+    {
+        Guid id = section is WorkspaceProject project ? project.Id : ((WorkspaceFolder)section).Id;
+        string currentName = section is WorkspaceProject p ? p.Name : ((WorkspaceFolder)section).Name;
+        string? name = Prompt(Localization.Text("Rename"), Localization.Text("Name"), currentName); if (name is null) return;
+        _catalog!.Rename(id, name); RebuildTree(); Refresh();
+    }
+    private void DeleteSection(Guid project, Guid? folder)
+    {
+        if (TesseraDialog.Show(Window.GetWindow(this), Localization.Text("DeleteTheSelectedSection"), Localization.Text("ProjectStructure"), MessageBoxButton.YesNo) != MessageBoxResult.Yes) return;
+        if (folder is { } id)
+        {
+            var parent = _catalog!.State.Folders.Single(f => f.Id == id).ParentId;
+            _catalog.RemoveFolder(id); Navigate("project", project, parent);
+        }
+        else { _catalog!.RemoveProject(project); Navigate("all"); }
+        RebuildTree();
+    }
+
+    private void AssetSelected(object sender, SelectionChangedEventArgs e) { if (_ready) UpdateSelection(); }
+    private bool CanManageSelection => _catalog?.IsUnrealProject(_catalog.State.ProjectId) != true && Selection.All(a => a.Unreal is null);
+    private void UpdateSelection()
+    {
+        if (_catalog is null) return;
+        int count = assetList.SelectedItems.Count;
+        var asset = assetList.SelectedItem as WorkspaceAsset;
+        var managementVisibility = CanManageSelection ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var item in _assetMenu.Items.OfType<MenuItem>())
+            item.Visibility = item.Tag switch
+            {
+                "open" => Visibility.Visible,
+                "rename" => count == 1 && asset?.Unreal is null ? Visibility.Visible : Visibility.Collapsed,
+                // TESSERA_LEGACY Hide image tools for retired .ttiles catalog entries.
+                "material-maps" => count == 1 && asset?.Kind == EWorkspaceAssetKind.Image && !asset.IsLegacyTileArchive
+                    ? Visibility.Visible : Visibility.Collapsed,
+                "create-unreal" => count == 1 && asset?.Kind == EWorkspaceAssetKind.Image &&
+                    _catalog.State.Projects.Any(p => p.IsUnreal) ? Visibility.Visible : Visibility.Collapsed,
+                "move-unreal" or "delete-unreal" => count == 1 && asset?.Unreal is { Missing: false, CreatePending: false }
+                    ? Visibility.Visible : Visibility.Collapsed,
+                // TESSERA_LEGACY Hide copying for the retired .ttiles catalog entries.
+                "copy" when Selection.Any(item => item.IsLegacyTileArchive) => Visibility.Collapsed,
+                _ => managementVisibility
+            };
+        if (asset is not null) _catalog.State.SelectedAsset = asset.Id;
+        countLabel.Text = Localization.Format("MaterialsSelectedCtrlShiftMultipleEnterFormat", assetList.Items.Count, count);
+    }
+
+    private void OpenSelectedAsset() { if (assetList.SelectedItem is WorkspaceAsset asset) OpenRequested?.Invoke(asset); }
+    private void OpenDoubleClick(object sender, MouseButtonEventArgs e) { if (ItemsControl.ContainerFromElement(assetList, e.OriginalSource as DependencyObject) is ListBoxItem) OpenSelectedAsset(); }
+    private void AssetKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) { OpenSelectedAsset(); e.Handled = true; }
+        else if (e.Key == Key.F2 && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            if (!e.IsRepeat) RenameSelectedAsset();
+            e.Handled = true;
+        }
+    }
+
+    private void RenameSelectedAsset()
+    {
+        if (assetList.SelectedItems.Count != 1 || assetList.SelectedItem is not WorkspaceAsset asset ||
+            asset.Unreal is { Missing: true } or { CreatePending: true }) return;
+        string action = asset.Unreal is null ? "rename" : "move-unreal";
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            ActionRequested?.Invoke(action, asset);
+            if (assetList.IsVisible) assetList.Focus();
+        }));
+    }
+    private void ChooseDestination(bool currentProject)
+    {
+        if (Selection.Count == 0) return;
+        var state = _catalog!.State;
+        if (currentProject && state.ProjectId is null) { Tell(Localization.Text("SelectAProjectFirst")); return; }
+        var choices = new List<(string Name, Guid Project, Guid? Folder)>();
+        foreach (var project in state.Projects.Where(p => !p.IsUnreal && (!currentProject || p.Id == state.ProjectId)))
+        {
+            choices.Add((project.Name, project.Id, null));
+            foreach (var folder in state.Folders.Where(f => f.ProjectId == project.Id)) choices.Add((_catalog.Location(new WorkspaceLink { ProjectId = project.Id, FolderId = folder.Id }), project.Id, folder.Id));
+        }
+        if (choices.Count == 0) { Tell(Localization.Text("CreateProjectUsingButtonLeft")); return; }
+        int choice = Choose(Localization.Text("ChooseAProjectFolder"), choices.Select(c => c.Name).ToArray()); if (choice < 0) return;
+        var target = choices[choice]; foreach (var asset in Selection) _catalog.Link(asset.Id, target.Project, target.Folder);
+        Refresh(); Tell(Localization.Text("MaterialsAddedPrefix") + target.Name);
+    }
+    private void UnlinkSelection()
+    {
+        if (_catalog!.State.ProjectId is not { } project) { Tell(Localization.Text("SelectAProjectFirst")); return; }
+        if (_catalog.IsUnrealProject(project)) return;
+        foreach (var asset in Selection) _catalog.Unlink(asset.Id, project); Refresh();
+    }
+    private void CopySelection()
+    {
+        if (_catalog!.State.ProjectId is null) { Tell(Localization.Text("SelectProjectThatNeedsIndependentCopy")); return; }
+        foreach (var asset in Selection.ToArray()) ActionRequested?.Invoke("copy", asset); Refresh();
+    }
+    private void DeleteSelection()
+    {
+        var assets = Selection.ToArray(); if (assets.Length == 0) return;
+        if (TesseraDialog.Show(Window.GetWindow(this), Localization.Format("DeleteAssetsFromTheLibraryFormat", assets.Length) + string.Join("\n", assets.Select(a => a.Name + " · " + a.LocationLabel)), Localization.Text("DeleteAssets"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        foreach (var asset in assets) ActionRequested?.Invoke("delete", asset); Refresh();
+    }
+    private void RunMenuAction(string action)
+    {
+        if (action is not ("open" or "rename" or "material-maps" or "create-unreal" or "move-unreal" or "delete-unreal") && !CanManageSelection) return;
+        switch (action)
+        {
+            case "rename": case "move-unreal": RenameSelectedAsset(); break;
+            case "material-maps":
+                // TESSERA_LEGACY Exclude old .ttiles items from the image-specific material command.
+                if (Selection is [var image] && image.Kind == EWorkspaceAssetKind.Image && !image.IsLegacyTileArchive)
+                    ActionRequested?.Invoke(action, image);
+                break;
+            case "create-unreal":
+                if (Selection is [var asset] && asset.Kind == EWorkspaceAssetKind.Image)
+                    ActionRequested?.Invoke(action, asset);
+                break;
+            case "delete-unreal":
+                if (Selection is [var linked] && linked.Unreal is { Missing: false, CreatePending: false })
+                    ActionRequested?.Invoke(action, linked);
+                break;
+            case "open":
+                if (_contextAsset is { } target) OpenRequested?.Invoke(target);
+                break;
+            case "link": Safe(() => ChooseDestination(false)); break;
+            case "move": Safe(() => ChooseDestination(true)); break;
+            case "copy": Safe(CopySelection); break;
+            case "unlink": Safe(UnlinkSelection); break;
+            case "delete": Safe(DeleteSelection); break;
+        }
+    }
+
+    private void AssetMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _dragStart = e.GetPosition(this); _deferredClick = null;
+        if (e.ClickCount > 1 || Keyboard.Modifiers != ModifierKeys.None || Selection.Count <= 1) return;
+        if (ItemsControl.ContainerFromElement(assetList, e.OriginalSource as DependencyObject) is ListBoxItem { IsSelected: true, Content: WorkspaceAsset asset })
+        {
+            // Keep the group while a drag starts. A plain click collapses it on mouse-up.
+            _deferredClick = asset; assetList.Focus(); Mouse.Capture(assetList, CaptureMode.SubTree); e.Handled = true;
+        }
+    }
+    private void AssetMouseMove(object sender, MouseEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        if (e.LeftButton != MouseButtonState.Pressed || Selection.Count == 0 || Math.Abs(position.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _deferredClick = null;
+        assetList.ReleaseMouseCapture();
+        DragDrop.DoDragDrop(assetList, new DataObject(AssetDragFormat, Selection.Select(a => a.Id).ToArray()), DragDropEffects.Copy | DragDropEffects.Move);
+    }
+    private void TreeMouseDown(object sender, MouseButtonEventArgs e) { _dragStart = e.GetPosition(this); _treeDrag = FindTreeItem(e.OriginalSource as DependencyObject)?.Tag; }
+    private void TreeMouseMove(object sender, MouseEventArgs e)
+    {
+        var position = e.GetPosition(this);
+        if (_treeDrag is not WorkspaceFolder { UnrealPath: null } folder || e.LeftButton != MouseButtonState.Pressed || Math.Abs(position.X - _dragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(position.Y - _dragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        _treeDrag = null; DragDrop.DoDragDrop(projectTree, new DataObject(FolderDragFormat, folder.Id), DragDropEffects.Move);
+    }
+    private void TreeDragOver(object sender, DragEventArgs e) { e.Effects = e.Data.GetDataPresent(AssetDragFormat) || e.Data.GetDataPresent(FolderDragFormat) ? DragDropEffects.Move : DragDropEffects.None; e.Handled = true; }
+    private void TreeDrop(object sender, DragEventArgs e) => Safe(() =>
+    {
+        var target = FindTreeItem(e.OriginalSource as DependencyObject)?.Tag;
+        Guid? project = target is WorkspaceProject p ? p.Id : (target as WorkspaceFolder)?.ProjectId;
+        Guid? folder = (target as WorkspaceFolder)?.Id; if (project is null) return;
+        if (_catalog!.IsUnrealProject(project)) { e.Handled = true; return; }
+        if (e.Data.GetData(AssetDragFormat) is Guid[] assets) foreach (Guid asset in assets) _catalog!.Link(asset, project.Value, folder);
+        if (e.Data.GetData(FolderDragFormat) is Guid moved)
+        {
+            if (_catalog!.State.Folders.Single(f => f.Id == moved).ProjectId != project) throw new ArgumentException(Localization.Text("FoldersCanOnlyMovedWithinTheir"));
+            _catalog.MoveFolder(moved, folder);
+        }
+        e.Handled = true; RebuildTree(); Refresh();
+    });
+    private static TreeViewItem? FindTreeItem(DependencyObject? item)
+    {
+        while (item is not null && item is not TreeViewItem) item = item is FrameworkContentElement content ? content.Parent : System.Windows.Media.VisualTreeHelper.GetParent(item);
+        return item as TreeViewItem;
+    }
+
+    private void Safe(Action action) { try { action(); } catch (Exception ex) { Tell(ex.Message); TesseraDialog.Show(Window.GetWindow(this), ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning); } }
+    private void Tell(string text) => StatusChanged?.Invoke(text);
+
+    public string? Prompt(string title, string label, string value = "")
+    {
+        var text = new TextBox { Text = value, Margin = new Thickness(0, 8, 0, 16), MinWidth = 300 };
+        var panel = new StackPanel(); panel.Children.Add(new TextBlock { Text = label, TextWrapping = TextWrapping.Wrap }); panel.Children.Add(text);
+        return InlineDialog(title, panel, text, Localization.Text("Done")) ? text.Text : null;
+    }
+    internal int Choose(string title, string[] choices)
+    {
+        var panel = new StackPanel(); var combo = new ComboBox { ItemsSource = choices, SelectedIndex = 0, Margin = new Thickness(0, 0, 0, 16), MinWidth = 300 }; panel.Children.Add(combo);
+        return InlineDialog(title, panel, combo, Localization.Text("AddHere")) ? combo.SelectedIndex : -1;
+    }
+    private bool InlineDialog(string title, StackPanel content, Control input, string action)
+    {
+        var previous = browserGrid.Children.Cast<UIElement>().Select(e => (Element: e, Enabled: e.IsEnabled)).ToArray();
+        foreach (var item in previous) item.Element.IsEnabled = false;
+        var overlay = new Grid { Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(180, 0, 0, 0)) };
+        Grid.SetColumnSpan(overlay, 3); Panel.SetZIndex(overlay, 20);
+        var panel = new StackPanel { Margin = new Thickness(24) };
+        panel.Children.Add(new TextBlock { Text = title, FontSize = 20, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 20), TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(content);
+        var buttons = new WrapPanel { HorizontalAlignment = HorizontalAlignment.Right };
+        var cancel = new Button { Content = Localization.Text("Cancel"), Margin = new Thickness(0, 0, 8, 0) };
+        var okay = new Button { Content = action };
+        buttons.Children.Add(cancel); buttons.Children.Add(okay); panel.Children.Add(buttons);
+        var border = new Border { Child = panel, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center, MaxWidth = 540, BorderThickness = new Thickness(1), Margin = new Thickness(16) };
+        border.SetResourceReference(Border.BackgroundProperty, "Ts.Panel"); border.SetResourceReference(Border.BorderBrushProperty, "Ts.Border");
+        overlay.Children.Add(border); KeyboardNavigation.SetTabNavigation(overlay, KeyboardNavigationMode.Cycle);
+        var frame = new System.Windows.Threading.DispatcherFrame(); bool accepted = false;
+        void Finish(bool success) { accepted = success; frame.Continue = false; }
+        okay.Click += (_, _) => Finish(true); cancel.Click += (_, _) => Finish(false);
+        overlay.PreviewKeyDown += (_, e) => { if (e.Key is Key.Enter or Key.Escape) { Finish(e.Key == Key.Enter); e.Handled = true; } };
+        overlay.Loaded += (_, _) => { input.Focus(); if (input is TextBox text) text.SelectAll(); };
+        browserGrid.Children.Add(overlay);
+        try { System.Windows.Threading.Dispatcher.PushFrame(frame); }
+        finally { browserGrid.Children.Remove(overlay); foreach (var item in previous) item.Element.IsEnabled = item.Enabled; }
+        return accepted;
+    }
+}

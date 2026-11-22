@@ -37,7 +37,7 @@ public static class ColorCleanup
         Span<Features> labs = stackalloc Features[9];
         double toleranceSquared = cleanup.ColorTolerance * cleanup.ColorTolerance;
         double anchor = 1 + (1 - cleanup.Strength) * 8;
-        // Legacy callers can still specify directional color preferences. New controls are independent.
+        // TESSERA_LEGACY Apply directional LocalColorCriteria when callers or saved recipes predate Cleanup options.
         ManualBlockCriteria? legacy = options.Cleanup is null ? options.LocalColorCriteria : null;
         for (int pass = 0; pass < options.LocalColorPasses; pass++)
         {
@@ -154,6 +154,7 @@ public static class ColorCleanup
         }
     }
 
+    // TESSERA_LEGACY Convert pre-Cleanup directional preferences to the local color cost.
     private static double LegacyPreference(int candidate, int current, ManualBlockCriteria criteria)
         => 4 * criteria.BrightnessImportance * (Math.Abs(ColorWeights.GetNormalizedBrightness(candidate) - criteria.TargetBrightness) -
                 Math.Abs(ColorWeights.GetNormalizedBrightness(current) - criteria.TargetBrightness)) +

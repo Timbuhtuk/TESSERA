@@ -1,6 +1,6 @@
 # Operation progress
 
-Tessera uses the 20-cell `Ts.ProgressCells` style from the local `Tessera.WpfStyles` 0.2.0 package. The package is checked in under `.nuget/local-packages`; the root `NuGet.Config` maps that package ID to this feed. Other packages restore from NuGet.org. Normal restore/build does not require the source style-library directory.
+Tessera uses the 20-cell `Ts.ProgressCells` style from `Tessera.WpfStyles` 0.2.0 on NuGet.org. Restoring and building the solution requires no separate style-library checkout.
 
 ## Reporting
 
@@ -8,13 +8,13 @@ Image operations accept an optional `IProgress<double>` with fractions between 0
 
 `WorkflowExecutor` keeps its completed-step notifications and additionally accepts `operationProgress` for fractional work inside steps. Files within a batch receive equal ranges. Aseprite files dropped during a running conversion become the next progress batch, preserving queue order.
 
-## Footer lifecycle
+## Progress and status display
 
-`OperationProgressSession` associates each stream with its initiating action. Worker updates are limited to one dispatcher post every 50 ms; completion and disposal are immediate notifications. Superseded callbacks cannot change a later action. Explicit commands take precedence over automatic previews, and hidden workspace previews do not claim the footer. This reporting does not change the existing navigation/processing locks.
+`OperationProgressSession` associates each stream with its initiating action. Worker updates are limited to one dispatcher post every 50 ms; completion and disposal are immediate notifications. Superseded callbacks cannot change a later action. Explicit commands take precedence over automatic previews, and hidden workspace previews do not claim the progress display. This reporting does not change the existing navigation/processing locks.
 
 The processing range ends at 95%; only successful publication of the file, preview or history result completes the UI at 100%. Success stays visible for 350 ms. Cancellation, failure and stale previews dispose their stream without showing success. Opaque system decoders/encoders retain the last confirmed fraction; progress is not an estimate of elapsed or remaining time.
 
-The footer uses a 240 DIP by 14 DIP Cells bar without a numeric percentage. Below 760 DIP window width the bar shrinks to 180 DIP. Stage/file status stays on the left. Styles and foreground/background colors follow the selected application theme.
+The title bar uses a 14 DIP high Cells bar without a numeric percentage. Its width adapts between 84 and 240 DIP. Status text appears briefly at the upper right of the workspace as an overlay. Styles and foreground/background colors follow the selected application theme.
 
 ## Verification
 
@@ -39,15 +39,3 @@ The focused progress checks cover pixel/alpha parity, intermediate callbacks, pa
 - The additional workspace check fails at `WorkspaceChecks.cs:188`: an independent UI copy does not preserve an older selected result. The same failure is reproduced in an isolated copy of the sources from before this progress change, using styles 0.1.0. It remains a separate existing issue. Evidence is in `artifacts/progress-implementation/workflow-workspace-checks.log` and `baseline-workspace.log`.
 
 Rendered progress captures are under `artifacts/wpf/progress`; test logs and the isolated before-change comparison are under `artifacts/progress-implementation`.
-
-## Integration on the published 2.19.0 baseline
-
-The observations above describe the older primary worktree. Integration retains the published history transactions, selected-result copy fix, relative-resize metadata and guarded Sharpen behavior. The older workspace-copy failure is not a known failure of that published baseline.
-
-The integrated editor keeps one history card and undo action per macro step. Its progress reaches success only after every step has been saved; canceled and failed runs retain their completed prefix without displaying success. Focused programmatic WPF checks cover this lifecycle in both languages and tool hosts.
-
-An independent comparison against the downloaded 2.19.0 CLI verified 43 exact RGBA results across 22 operation cases and the same rejection of an unaligned grid reduction. Original inputs stayed unchanged. Release acceptance evidence is kept under `artifacts/release-2.20`; the interactive audit in `VISUAL_AUDIT.md` remains a separate record of the primary worktree.
-
-## Integration on 2.19.1 with ASCII resolution
-
-The release preserves the published SVG result icons and tool layout. ASCII rendering reports progress for both the new 16 px glyphs and older saved recipes at 10 px; the saved font size is applied before measuring cells. Programmatic checks compare pixel/alpha output with and without callbacks and reject invalid font sizes without reporting completion. The earlier 2.19.0 parity evidence above remains historical. Current acceptance and comparisons against 2.19.1 are recorded in `artifacts/release-2.20`. Native input checks run only in the unchanged Windows CI.
