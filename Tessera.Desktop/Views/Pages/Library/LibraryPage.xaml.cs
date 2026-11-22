@@ -72,7 +72,7 @@ public partial class LibraryPage : Page
             Host.Editor.SelectSource(source);
             Host.ShowEditor();
         }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotOpenImageFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotOpenImageFormat", ex.Message), NotificationKind.Error); }
     }
 
     private void UpdateCardWidth()

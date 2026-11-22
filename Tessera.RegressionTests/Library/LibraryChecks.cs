@@ -57,11 +57,16 @@ internal static class LibraryChecks
             window.RaiseEvent(drop); Wait();
             Require(Get<ListBox>("sourceStrip").Items.Count == 2, "Drop did not add both valid images");
             Require(Get<TextBlock>("statusLabel").Text.Contains("Не удалось открыть: 1"), "Mixed drop failure was not reported");
+            var notifications = Get<NotificationDisplay>("notificationDisplay");
+            Require(ProgressUiChecks.Cards(notifications).Last().Kind == NotificationKind.Warning, "Partial import was not a warning");
+            Invoke("AddImagesAsync", (object)new[] { invalid }); Wait();
+            Require(ProgressUiChecks.Cards(notifications).Last().Kind == NotificationKind.Error, "Failed import was not an error");
             var sources = Get<ListBox>("sourceStrip").Items.Cast<SourceEntry>().ToArray();
             Get<ListBox>("sourceStrip").SelectedItem = sources[0]; Pump();
             Require(Get<Bitmap>("_sourceImage").Size == first.Size, "Source strip did not switch image");
             Get<IntegerInput>("gridCellInput").Value = 16;
             Click("alignButton"); Wait();
+            Require(ProgressUiChecks.Cards(notifications).Last().Kind == NotificationKind.Success, "Saved alignment was not a success");
             Get<IntegerInput>("widthInput").Value = 160;
             Get<IntegerInput>("heightInput").Value = 120;
             Get<ComboBox>("paletteInput").SelectedIndex = 0;

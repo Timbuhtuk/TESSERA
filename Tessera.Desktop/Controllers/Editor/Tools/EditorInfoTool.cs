@@ -8,6 +8,7 @@ using System.Windows.Input;
 using Tessera.Core.Imaging;
 using Bitmap = System.Drawing.Bitmap;
 using DrawingColor = System.Drawing.Color;
+using MediaColor = System.Windows.Media.Color;
 
 namespace Tessera.Desktop;
 
@@ -53,7 +54,10 @@ internal sealed class EditorInfoTool
     {
         _editor.infoToolGroup.Header = Localization.Text("Info");
         System.Windows.Automation.AutomationProperties.SetName(_editor.infoColorTreemap, Localization.Text("ImageColorMap"));
-        _editor.infoColorTreemap.ColorSelected += color => OpenColorReplace(color, false);
+        _editor.infoColorTreemap.FormatToolTip = (area, fraction) => area.Color is { } color
+            ? Localization.Format("PixelsFormat", $"#{color.R:X2}{color.G:X2}{color.B:X2}", area.Weight, fraction)
+            : Localization.Format("OtherColorsPixelsFormat", area.Weight, fraction);
+        _editor.infoColorTreemap.ColorSelected += color => OpenColorReplace(DrawingColor.FromArgb(color.R, color.G, color.B), false);
         _editor.infoManualReplaceButton.Click += (_, _) => OpenColorReplace(DrawingColor.Black, true);
         _infoEyedropperButton = new Button
         {
@@ -102,7 +106,7 @@ internal sealed class EditorInfoTool
         _infoSourceShown = _infoResultShown = _infoBasisShown = null;
         _infoPalette.Clear();
         _infoColorCount = 0;
-        _editor.infoColorTreemap.SetAreas([]);
+        _editor.infoColorTreemap.ItemsSource = [];
         _infoEyedropperButton.IsEnabled = false;
     }
 
@@ -131,7 +135,7 @@ internal sealed class EditorInfoTool
         _editor.infoPaletteStatus.Text = basis is null ? Localization.Text("OpenAnImage") : Localization.Text("CountingVisibleColorsAction");
         _infoPalette.Clear();
         _infoColorCount = 0;
-        _editor.infoColorTreemap.SetAreas([]);
+        _editor.infoColorTreemap.ItemsSource = [];
         _editor.infoSourceDetails.Text = _editor.infoResultDetails.Text = "";
         _editor.infoManualReplaceButton.Visibility = Visibility.Collapsed;
         _infoEyedropperButton.IsEnabled = false;
@@ -168,9 +172,9 @@ internal sealed class EditorInfoTool
             _editor.infoManualReplaceButton.Visibility = summary.count > ImageColorTools.MaxPaletteColors
                 ? Visibility.Visible : Visibility.Collapsed;
             _infoColorCount = summary.count;
-            _editor.infoColorTreemap.SetAreas(summary.palette);
+            _editor.infoColorTreemap.ItemsSource = summary.palette;
             foreach (var area in summary.palette)
-                if (area.Color is { } color) _infoPalette.Add(new PaletteColorEntry(color));
+                if (area.Color is { } color) _infoPalette.Add(new PaletteColorEntry(DrawingColor.FromArgb(color.R, color.G, color.B)));
             _infoEyedropperButton.IsEnabled = true;
         }
         catch (Exception ex)
@@ -215,9 +219,9 @@ internal sealed class EditorInfoTool
         finally { pixels.UnlockBits(bits); }
         var palette = colors.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key)
             .Take(ImageColorTools.MaxPaletteColors)
-            .Select(pair => new ColorArea(DrawingColor.FromArgb(255, (pair.Key >> 16) & 255, (pair.Key >> 8) & 255, pair.Key & 255), pair.Value))
+            .Select(pair => new ColorArea(MediaColor.FromRgb((byte)(pair.Key >> 16), (byte)(pair.Key >> 8), (byte)pair.Key), pair.Value))
             .ToList();
-        long grouped = opaque + partial - palette.Sum(area => area.Pixels);
+        long grouped = opaque + partial - palette.Sum(area => area.Weight);
         if (grouped > 0) palette.Add(new ColorArea(null, grouped));
         return new(image.Width, image.Height, System.Drawing.Image.GetPixelFormatSize(image.PixelFormat), image.PixelFormat.ToString(),
             image.HorizontalResolution, image.VerticalResolution, colors.Count, transparent, partial, opaque, grayscale, palette);
@@ -371,12 +375,12 @@ internal sealed class EditorInfoTool
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Text("ColorReplaced");
+            Host.Notify(Localization.Text("ColorReplaced"), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Format("CouldNotReplaceColorFormat", ex.Message);
+            Host.Notify(Localization.Format("CouldNotReplaceColorFormat", ex.Message), NotificationKind.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

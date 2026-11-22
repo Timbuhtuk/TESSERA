@@ -1,7 +1,7 @@
 <UserControl x:Class="Tessera.Desktop.IconWorkspace"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="clr-namespace:Tessera.Desktop"
+    xmlns:local="clr-namespace:Tessera.Desktop" xmlns:ts="clr-namespace:Tessera.WpfStyles.Controls;assembly=Tessera.WpfStyles"
     Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -34,13 +34,11 @@
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="iconControls">
                             <StackPanel x:Name="iconImagePanel">
-                                <TextBlock Text="{local:Translate Input}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                                <TextBlock Text="{local:Translate Input}" Style="{StaticResource Ts.Caption}" Margin="0,0,0,8"/>
                                 <Border Height="156" Background="{StaticResource IconChecker}" BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1">
                                     <Grid>
-                                        <ScrollViewer x:Name="iconSourceScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
-                                                      Background="Transparent" CanContentScroll="False">
-                                            <Image x:Name="iconSourceImage" Margin="12" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor"/>
-                                        </ScrollViewer>
+                                        <ts:ImageViewport x:Name="iconSourceImage" Background="Transparent" Padding="12"
+                                                          ToolTip="{local:Translate ImageViewportGestures}"/>
                                         <TextBlock x:Name="iconEmptyHint" Text="{local:Translate DropAnImage}" TextAlignment="Center" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource Ts.TextMuted}"/>
                                     </Grid>
                                 </Border>
@@ -50,8 +48,8 @@
                             <TextBlock Text="{local:Translate ICOSizes}" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
                             <WrapPanel x:Name="iconSizes" Margin="0,0,0,2"/>
                             <DockPanel Margin="0,0,0,16">
-                                <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="iconCustomCheck" Content="{local:Translate CustomSize}" VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="{local:Translate AddICOFrameManuallySpecifiedSize}" />
-                                <local:IntegerInput x:Name="iconCustomSize" Minimum="1" Maximum="256" Value="96" Width="78" IsEnabled="False" AutomationProperties.Name="{local:Translate IconSideLengthInPixels}"/>
+                                <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="iconCustomCheck" Content="{local:Translate CustomSize}" VerticalAlignment="Center" Margin="0,0,10,0" ToolTip="{local:Translate AddICOFrameManuallySpecifiedSize}" />
+                                <ts:IntegerInput x:Name="iconCustomSize" Minimum="1" Maximum="256" Value="96" Width="78" IsEnabled="False" AutomationProperties.Name="{local:Translate IconSideLengthInPixels}"/>
                             </DockPanel>
                             <TextBlock Text="{local:Translate Scaling}" Margin="0,0,0,6"/>
                             <ComboBox x:Name="iconResizeMode" SelectedIndex="0" Margin="0,0,0,12">
@@ -61,7 +59,7 @@
                             <ComboBox x:Name="iconFitMode" SelectedIndex="0" Margin="0,0,0,12">
                                 <ComboBoxItem Content="{local:Translate FitIntoSquare}"/><ComboBoxItem Content="{local:Translate CenterCrop}"/><ComboBoxItem Content="{local:Translate Stretch}"/>
                             </ComboBox>
-                            <CheckBox Style="{StaticResource Ts.SwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="iconRemoveBackground" Content="{local:Translate RemoveBackground}" ToolTip="{local:Translate MakesSelectedSolidBackgroundTransparentWhen}"/>
+                            <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" ToolTipService.ShowOnDisabled="True" x:Name="iconRemoveBackground" Content="{local:Translate RemoveBackground}" ToolTip="{local:Translate MakesSelectedSolidBackgroundTransparentWhen}"/>
                             <WrapPanel x:Name="iconBackgroundSettings" Visibility="Collapsed" Margin="0,8,0,0">
                                 <StackPanel Width="220">
                                     <TextBlock Text="{local:Translate RemovalMethod}" Margin="0,0,0,6"/>
@@ -82,7 +80,7 @@
                 <ScrollViewer x:Name="iconScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" CanContentScroll="False">
                     <Border Width="{Binding ViewportWidth, ElementName=iconScroll}" MinWidth="312" Padding="16">
                     <StackPanel>
-                        <TextBlock Text="{local:Translate Results}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{local:Translate Results}" Style="{StaticResource Ts.Caption}" Margin="0,0,0,8"/>
                         <TextBlock x:Name="iconPreviewHint" Text="{local:Translate SelectSizesIncludeSingleICOFile}" Foreground="{DynamicResource Ts.TextMuted}" Margin="0,0,0,16"/>
                         <ItemsControl x:Name="iconFrames">
                             <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel VerticalAlignment="Bottom"/></ItemsPanelTemplate></ItemsControl.ItemsPanel>

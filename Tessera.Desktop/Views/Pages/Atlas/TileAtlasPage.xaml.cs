@@ -133,7 +133,7 @@ public partial class TileAtlasPage : Page
         _atlasGridSettings.Children.Add(detect);
         panel.Children.Add(_atlasLayoutStatus);
         _atlasHeatmap.Content = Localization.Text("SeamHeatmap");
-        _atlasHeatmap.Style = (Style)FindResource("Ts.SwitchBox");
+        _atlasHeatmap.Style = (Style)FindResource("Ts.CompactSwitchBox");
         _atlasHeatmap.Checked += (_, _) => UpdateAtlasHeatmap();
         _atlasHeatmap.Unchecked += (_, _) => UpdateAtlasHeatmap();
         panel.Children.Add(_atlasHeatmap);
@@ -281,7 +281,7 @@ public partial class TileAtlasPage : Page
                 _atlasDrafts.Remove(_atlasBasis);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            { Host.statusLabel.Text = ex.Message; }
+            { Host.Notify(ex.Message, NotificationKind.Error); }
         }
         _atlasBasis = basis;
         atlasImagePreview.Image = image;
@@ -299,7 +299,7 @@ public partial class TileAtlasPage : Page
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException)
-                { Host.statusLabel.Text = ex.Message; }
+                { Host.Notify(ex.Message, NotificationKind.Error); }
             }
             if (_atlasDrafts.TryGetValue(basis, out var draft)) SetAtlasLayoutInputs(draft.Layout);
             else if (!TryAtlasLayout(image.Width, image.Height, out _, out _))
@@ -567,7 +567,7 @@ public partial class TileAtlasPage : Page
     internal bool CanCloseAtlas()
     {
         FinishAtlasStroke();
-        return (_atlasDrafts.Count == 0 && !_atlasDraftStore.HasDrafts) || TesseraDialog.Show(Host,
+        return (_atlasDrafts.Count == 0 && !_atlasDraftStore.HasDrafts) || TesseraDialogs.Show(Host,
             Localization.Text("SomeAtlasesHaveUnsavedChangesConfirmation"),
             Localization.Text("TileAtlas"), MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }

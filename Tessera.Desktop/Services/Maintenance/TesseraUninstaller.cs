@@ -39,8 +39,6 @@ internal static class TesseraUninstaller
         var directories = new HashSet<string>(PathComparer);
         var files = new HashSet<string>(PathComparer);
         AddDirectory(Path.Combine(localData, "Tessera"));
-        // TESSERA_LEGACY Include the old Pixelizator profile in the shared-profile uninstall plan.
-        AddDirectory(Path.Combine(localData, "Pixelizator"));
         AddDirectory(Path.Combine(temp, "Tessera"));
 
         string defaultBundleBase = Path.GetFullPath(Path.Combine(temp, ".net"));
@@ -96,10 +94,9 @@ internal static class TesseraUninstaller
         }
     }
 
-    // TESSERA_LEGACY Recognize portable library copies created with the former .copied-library marker.
-    private static bool IsTesseraLibrary(string path) => File.Exists(Path.Combine(path, ".copied-library")) ||
+    private static bool IsTesseraLibrary(string path) =>
         File.Exists(Path.Combine(path, "workspace.json")) && (File.Exists(Path.Combine(path, "release-notes-state.json")) ||
-            File.Exists(Path.Combine(path, "appearance.json")) || File.Exists(Path.Combine(path, "unreal-sync.json"))) ||
+            File.Exists(Path.Combine(path, "appearance.json"))) ||
         Directory.EnumerateDirectories(path).Any(directory => Guid.TryParseExact(Path.GetFileName(directory), "N", out _) &&
             (File.GetAttributes(directory) & FileAttributes.ReparsePoint) == 0 &&
             File.Exists(Path.Combine(directory, "source.json")) && File.Exists(Path.Combine(directory, "source.png")));

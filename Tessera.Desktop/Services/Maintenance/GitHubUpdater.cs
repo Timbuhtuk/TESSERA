@@ -63,22 +63,14 @@ public static class GitHubUpdater
             throw new InvalidDataException(Localization.Text("InvalidGithubReleaseURL"));
 
         JsonElement? exe = null;
-        JsonElement? checksums = null;
         foreach (var asset in root.GetProperty("assets").EnumerateArray())
         {
             string? name = asset.GetProperty("name").GetString();
             if (name == "Tessera.exe") exe = asset;
-            if (name == "SHA256SUMS.txt") checksums = asset;
         }
         if (exe is null) throw new InvalidDataException(Localization.Text("TheReleaseHasNoTesseraExe"));
         var download = AssetUri(exe.Value, tag, "Tessera.exe");
         string? digest = exe.Value.TryGetProperty("digest", out var value) ? value.GetString() : null;
-        // TESSERA_LEGACY Verify releases without a GitHub asset digest using the published SHA256SUMS.txt.
-        if (digest is null && checksums is not null)
-        {
-            var checksumUri = AssetUri(checksums.Value, tag, "SHA256SUMS.txt");
-            digest = await ReadExecutableChecksumAsync(http, checksumUri, timeout.Token);
-        }
         return new TesseraRelease(version, tag, page, download, ValidateChecksum(digest));
     }
 

@@ -82,13 +82,9 @@ internal static class ResultIconChecks
             var template = (DataTemplate)window.Editor.FindResource("GenerationCardTemplate");
             foreach (var (record, expected) in new (string Record, string? Icon)[]
             {
-                ("""{"Operation":"Замена цвета"}""", ProcessingOperations.ReplaceColor),
-                ("""{"Operation":"Color replacement"}""", ProcessingOperations.ReplaceColor),
-                ("""{"Operation":"Локальные цвета"}""", ProcessingOperations.Cleanup),
-                ("""{"Operation":"Квантование"}""", ProcessingOperations.Colors),
-                ("""{"Operation":"ASCII"}""", ProcessingOperations.Ascii),
-                ("""{"IsAlignment":true}""", ProcessingOperations.Align),
-                ("""{"IsGridReduction":true}""", ProcessingOperations.Reduce),
+                ("""{"Operation":"Замена цвета"}""", null),
+                ("""{"IsAlignment":true}""", null),
+                ("""{"IsGridReduction":true}""", null),
                 ("""{"Operation":"Замена цвета","OperationId":"image.resize"}""", ProcessingOperations.Resize),
                 ("""{"AppliedRecipe":{"Steps":[{"OperationId":"image.trim"}]}}""", ProcessingOperations.Trim),
                 ("""{"Operation":"Unrecognized operation"}""", null)

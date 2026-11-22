@@ -9,11 +9,17 @@
   </PropertyGroup>
   <ItemGroup>
     <Using Include="Tessera.Models" />
+    <Using Include="Tessera.WpfStyles.Controls.IntegerInput" Alias="IntegerInput" />
+    <Using Include="Tessera.WpfStyles.Controls.NotificationDisplay" Alias="NotificationDisplay" />
+    <Using Include="Tessera.WpfStyles.Controls.NotificationCard" Alias="NotificationCard" />
+    <Using Include="Tessera.WpfStyles.Controls.NotificationKind" Alias="NotificationKind" />
+    <Using Include="Tessera.WpfStyles.Controls.ColorTreemap" Alias="ColorTreemap" />
+    <Using Include="Tessera.WpfStyles.Controls.TesseraDialog" Alias="TesseraDialog" />
     <Compile Include="..\Tessera.Aseprite.Tests\Fixtures.cs" Link="AsepriteFixtures.cs" />
     <Using Include="System.Drawing" />
     <Using Include="System.IO" />
     <ProjectReference Include="..\Tessera.Core\Tessera.Core.csproj" />
     <ProjectReference Include="..\Tessera.Desktop\Tessera.Desktop.csproj" />
-    <PackageReference Include="Tessera.WpfStyles" Version="0.2.0" />
+    <PackageReference Include="Tessera.WpfStyles" Version="0.3.0" />
   </ItemGroup>
 </Project>

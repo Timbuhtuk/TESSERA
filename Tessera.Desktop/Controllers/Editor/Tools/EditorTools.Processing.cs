@@ -223,7 +223,7 @@ internal sealed partial class EditorTools
         var basis = useResult ? _editor._downscaledResult! : _editor._sourceImage;
         if (options.TargetWidth > basis.Width || options.TargetHeight > basis.Height)
         {
-            Host.statusLabel.Text = Localization.Text("ReduceOutputDimensionsTheyCannotExceed");
+            Host.Notify(Localization.Text("ReduceOutputDimensionsTheyCannotExceed"), NotificationKind.Warning);
             return;
         }
         string mode = CurrentModeName;
@@ -254,13 +254,13 @@ internal sealed partial class EditorTools
                 finally { result.CroppedSource.Dispose(); result.Downscaled.Dispose(); }
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Format("ResultSavedToHistory", generation.Width, generation.Height);
+            Host.Notify(Localization.Format("ResultSavedToHistory", generation.Width, generation.Height), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Text("ProcessingOrHistorySavingStillProgress");
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("ProcessingError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            Host.Notify(Localization.Text("ProcessingOrHistorySavingStillProgress"), NotificationKind.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("ProcessingError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }
@@ -378,13 +378,13 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Format("GridAlignmentSaved", generation.CellSize);
+            Host.Notify(Localization.Format("GridAlignmentSaved", generation.CellSize), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Text("AlignmentOrHistorySavingStillProgress");
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("GridAlignment"), MessageBoxButton.OK, MessageBoxImage.Information);
+            Host.Notify(Localization.Text("AlignmentOrHistorySavingStillProgress"), NotificationKind.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("GridAlignment"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

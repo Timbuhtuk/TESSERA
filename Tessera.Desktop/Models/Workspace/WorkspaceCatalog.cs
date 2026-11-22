@@ -14,9 +14,6 @@ public sealed class WorkspaceAsset : INotifyPropertyChanged
     public EWorkspaceAssetKind Kind { get; set; }
     public string Name { get; set; } = "";
     public string ContentFile { get; set; } = "";
-    // TESSERA_LEGACY Preserve the former asset Tags property when rewriting a catalog.
-    [JsonInclude, JsonPropertyName("Tags"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    internal List<string>? LegacyTags { get; set; }
     public DateTimeOffset ModifiedAt { get; set; } = DateTimeOffset.Now;
     public DateTimeOffset OpenedAt { get; set; }
     public int Width { get; set; }
@@ -78,9 +75,7 @@ public sealed class WorkspaceAsset : INotifyPropertyChanged
                 ? Name.Remove(end - extension.Length, extension.Length) : Name;
         }
     }
-    // TESSERA_LEGACY Recognize kind 3 records from the retired .ttiles collection editor.
-    [JsonIgnore] public bool IsLegacyTileArchive => (int)Kind == 3 && LegacyTileArchive.IsArchive(ContentFile);
-    [JsonIgnore] public string KindLabel => IsLegacyTileArchive ? Localization.Text("TtilesArchive") : Kind switch
+    [JsonIgnore] public string KindLabel => Kind switch
     {
         EWorkspaceAssetKind.Animation => Localization.Text("Animation"),
         EWorkspaceAssetKind.Board => Localization.Text("Board"),
@@ -192,7 +187,6 @@ public sealed partial class WorkspaceCatalog
         State = _storage.Load();
         if (State.Assets.Select(a => a.Id).Distinct().Count() != State.Assets.Count)
             throw new InvalidDataException(Localization.Text("DuplicateAssetsInCatalog"));
-        ArchiveDuplicateMaterialSessions();
     }
 
     public void Save() => _storage.Save(State);
@@ -344,9 +338,6 @@ public sealed partial class WorkspaceCatalog
         RequireProject(projectId);
         var link = State.Links.Single(l => l.AssetId == assetId && l.ProjectId == projectId);
         var original = State.Assets.Single(a => a.Id == assetId);
-        // TESSERA_LEGACY Keep archived .ttiles entries out of the normal asset-copy path.
-        if (original.IsLegacyTileArchive)
-            throw new InvalidOperationException(Localization.Text("OpenTtilesArchiveExtractItsPngs"));
         var copy = JsonSerializer.Deserialize<WorkspaceAsset>(JsonSerializer.Serialize(original))!;
         copy.Unreal = null;
         copy.Id = Guid.NewGuid(); copy.Name = original.Name + Localization.Text("Copy"); copy.OpenedAt = default; copy.ModifiedAt = DateTimeOffset.Now;
@@ -399,7 +390,7 @@ public sealed partial class WorkspaceCatalog
     public IReadOnlyList<WorkspaceAsset> Query(string view, Guid? project, Guid? folder, string search, int kind, string width, string height, int transparency)
     {
         var mapAssetIds = MaterialMapAssetIds();
-        IEnumerable<WorkspaceAsset> assets = State.Assets.Where(asset => !mapAssetIds.Contains(asset.Id));
+        IEnumerable<WorkspaceAsset> assets = State.Assets.Where(asset => Enum.IsDefined(asset.Kind) && !mapAssetIds.Contains(asset.Id));
         var locations = State.Links.ToLookup(l => l.AssetId);
         if (view == "unassigned") assets = assets.Where(a => !locations.Contains(a.Id));
         else if (project is { } projectId)
@@ -419,7 +410,7 @@ public sealed partial class WorkspaceCatalog
         var result = (view == "recent" ? assets.OrderByDescending(a => a.OpenedAt) : assets.OrderByDescending(a => a.ModifiedAt)).ToList();
         var folderIndex = State.Folders.ToDictionary(f => f.Id);
         var projectIndex = State.Projects.ToDictionary(p => p.Id, p => p.Name);
-        var sourcesWithMaps = State.MaterialSessions.Where(session => !session.Archived && File.Exists(MaterialSessionPath(session)))
+        var sourcesWithMaps = State.MaterialSessions.Where(session => File.Exists(MaterialSessionPath(session)))
             .Select(session => session.SourceId).ToHashSet();
         foreach (var asset in result)
         {

@@ -327,8 +327,8 @@ public partial class MaterialMapsWindow : Window
         var paths = Enum.GetValues<EMaterialMapKind>().Select(kind => (Kind: kind, Path: prefix + "_" + kind.ToString().ToLowerInvariant() + ".png")).ToArray();
         foreach (var item in paths) ValidateExportPath?.Invoke(item.Path);
         string[] existing = paths.Where(item => File.Exists(item.Path)).Select(item => Path.GetFileName(item.Path)).ToArray();
-        if (existing.Length > 0 && TesseraDialog.Show(this, Localization.Text("ReplaceExistingMaps") + string.Join("\n", existing), "Tessera",
-            MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+        if (existing.Length > 0 && TesseraDialogs.Show(this, Localization.Text("ReplaceExistingMaps") + string.Join("\n", existing), "Tessera",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
         foreach (var item in paths) ExportMap(item.Kind, item.Path);
         statusLabel.Text = Localization.Text("HeightNormalAndAOSavedPrefix") + Path.GetDirectoryName(dialog.FileName);
     });
@@ -342,7 +342,7 @@ public partial class MaterialMapsWindow : Window
         FlushGeneration();
         if (_saveWorkspace is not null) { SaveWorkspace(); return true; }
         if (Document?.HasChanges != true) return true;
-        var answer = TesseraDialog.Show(this, Localization.Text("SaveMapProjectItsManualLayersConfirmation"), "Tessera",
+        var answer = TesseraDialogs.Show(this, Localization.Text("SaveMapProjectItsManualLayersConfirmation"), "Tessera",
             MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
         return answer == MessageBoxResult.No || answer == MessageBoxResult.Yes && SaveProjectDialog();
     }

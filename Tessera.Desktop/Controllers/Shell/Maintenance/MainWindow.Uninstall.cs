@@ -15,7 +15,8 @@ public partial class MainWindow
         string title = Localization.Text("UninstallTesseraLabel");
         if (WorkspaceBusy || _installingUpdate)
         {
-            TesseraDialog.Show(owner, Localization.Text("WaitCurrentOperationFinishBeforeUninstalling"), title);
+            TesseraDialogs.Show(owner, Localization.Text("WaitCurrentOperationFinishBeforeUninstalling"), title,
+                MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -25,7 +26,7 @@ public partial class MainWindow
             var plan = TesseraUninstaller.Prepare(_library.DirectoryPath);
             string message = Localization.Text("TesseraWillClose") +
                 "\n\n" + string.Join("\n", plan.Targets);
-            if (TesseraDialog.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning,
+            if (TesseraDialogs.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Warning,
                     Localization.Text("UninstallTessera"), Localization.Text("Cancel"), confirmByDefault: false) != MessageBoxResult.Yes) return;
             using var process = Process.GetCurrentProcess();
             if (!TryCloseWithHelper(() =>
@@ -36,7 +37,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            TesseraDialog.Show(owner, Localization.Text("CouldNotStartUninstallingTessera") + "\n\n" + ex.Message,
+            TesseraDialogs.Show(owner, Localization.Text("CouldNotStartUninstallingTessera") + "\n\n" + ex.Message,
                 title, MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _uninstalling = false; }

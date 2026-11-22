@@ -7,7 +7,7 @@
         Width="460" Height="740" MinWidth="390" MinHeight="540"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False" Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
-        FontFamily="{DynamicResource UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
+        FontFamily="{DynamicResource Ts.UiFont}" FontSize="13" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6" CornerRadius="0"
                             GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
@@ -46,9 +46,9 @@
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Grid Height="38" Background="{DynamicResource Ts.Raised}">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock x:Name="dialogTitle" Text="{local:Translate ColorReplacement}" FontFamily="{StaticResource DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
+            <TextBlock x:Name="dialogTitle" Text="{local:Translate ColorReplacement}" FontFamily="{StaticResource Ts.DisplayFont}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="16,0,0,0"/>
             <Button Grid.Column="1" Content="×" Width="42" Height="38" FontSize="19"
-                    Style="{StaticResource CloseCaptionButton}" ToolTip="{local:Translate Close}"
+                    Style="{StaticResource Ts.CloseCaptionButton}" ToolTip="{local:Translate Close}"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseWindow"/>
         </Grid>
         <Grid Grid.Row="1" Background="{DynamicResource Ts.Canvas}">

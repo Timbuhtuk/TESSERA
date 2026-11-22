@@ -91,7 +91,7 @@ internal sealed class PalettePreviewTooltips
         toolTip.SetResourceReference(Control.BackgroundProperty, "Ts.Raised");
         toolTip.SetResourceReference(Control.ForegroundProperty, "Ts.Text");
         toolTip.SetResourceReference(Control.BorderBrushProperty, "Ts.BorderStrong");
-        toolTip.SetResourceReference(Control.FontFamilyProperty, "UiFont");
+        toolTip.SetResourceReference(Control.FontFamilyProperty, "Ts.UiFont");
         var preview = new PreviewTip(owner, toolTip, title, image, loading, resultLabel, settings);
         _tips.Add(preview);
         owner.ToolTip = toolTip;

@@ -36,13 +36,13 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Format("TrimSavedToHistoryFormat", generation.Width, generation.Height);
+            Host.Notify(Localization.Format("TrimSavedToHistoryFormat", generation.Width, generation.Height), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Text("CouldNotTrimTransparentEdges");
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("TrimError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            Host.Notify(Localization.Text("CouldNotTrimTransparentEdges"), NotificationKind.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("TrimError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

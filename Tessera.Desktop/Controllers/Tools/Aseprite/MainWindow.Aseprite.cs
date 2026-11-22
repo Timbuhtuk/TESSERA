@@ -8,7 +8,7 @@ public partial class MainWindow
     private void InitializeAseprite()
     {
         asepriteWorkspace.BackRequested += (_, _) => ShowHome();
-        asepriteWorkspace.StatusChanged += message => statusLabel.Text = message;
+        asepriteWorkspace.StatusChanged += Notify;
         asepriteWorkspace.BusyChanged += (_, _) => UpdateBusyIndicator();
         Closed += (_, _) => asepriteWorkspace.Dispose();
     }

@@ -26,7 +26,7 @@
                     <Grid Height="220">
                         <StackPanel x:Name="backgroundBannerArt" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,46,0" IsHitTestVisible="False">
                             <Border Width="126" Height="126" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" Background="{DynamicResource Ts.TextSecondary}">
-                                <TextBlock Text="T" FontFamily="{StaticResource UiFont}" FontWeight="Black" FontSize="100" Foreground="{DynamicResource Ts.Raised}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <TextBlock Text="T" FontFamily="{StaticResource Ts.UiFont}" FontWeight="Black" FontSize="100" Foreground="{DynamicResource Ts.Raised}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <TextBlock Text="→" FontSize="34" Foreground="{DynamicResource Ts.TextMuted}" VerticalAlignment="Center" Margin="22,0" />
                             <Border Width="126" Height="126" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1">
@@ -36,7 +36,7 @@
                                         <GeometryDrawing Brush="{DynamicResource Ts.Hover}" Geometry="M0,0 H10 V10 H0 Z M10,10 H20 V20 H10 Z" />
                                     </DrawingGroup></DrawingBrush.Drawing>
                                 </DrawingBrush></Border.Background>
-                                <TextBlock Text="T" FontFamily="{StaticResource UiFont}" FontWeight="Black" FontSize="100" Foreground="{DynamicResource Ts.Text}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <TextBlock Text="T" FontFamily="{StaticResource Ts.UiFont}" FontWeight="Black" FontSize="100" Foreground="{DynamicResource Ts.Text}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                         </StackPanel>
                         <StackPanel x:Name="backgroundBannerCopy" Margin="32,28" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="500">
@@ -66,7 +66,7 @@
                         <Canvas x:Name="moodboardBannerArt" Width="340" Height="170" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,55,0" IsHitTestVisible="False">
                             <Border Canvas.Left="20" Canvas.Top="18" Width="176" Height="130" Background="#242424" BorderBrush="{DynamicResource Ts.BorderStrong}" BorderThickness="1" />
                             <Border Canvas.Left="42" Canvas.Top="33" Width="116" Height="84" Background="#8D8D8D" BorderBrush="#E6E6E6" BorderThickness="1" RenderTransformOrigin="0.5,0.5"><Border.RenderTransform><RotateTransform Angle="-9" /></Border.RenderTransform>
-                                <TextBlock Text="T" FontFamily="{StaticResource UiFont}" FontWeight="Black" FontSize="63" Foreground="#202020" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <TextBlock Text="T" FontFamily="{StaticResource Ts.UiFont}" FontWeight="Black" FontSize="63" Foreground="#202020" HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <Border Canvas.Left="166" Canvas.Top="53" Width="127" Height="89" Background="#4B4B4B" BorderBrush="{DynamicResource Ts.TextSecondary}" BorderThickness="1" RenderTransformOrigin="0.5,0.5"><Border.RenderTransform><RotateTransform Angle="12" /></Border.RenderTransform>
                                 <TextBlock Text="▧" FontSize="65" Foreground="#D0D0D0" HorizontalAlignment="Center" VerticalAlignment="Center" />

@@ -42,8 +42,8 @@ internal static class InfoPickerChecks
             var source = Get<PixelPreview>(window, "sourcePreview");
             var result = Get<PixelPreview>(window, "resultPreview");
             var treemap = Get<ColorTreemap>(window, "infoColorTreemap");
-            ToolImprovementsChecks.Require(treemap.Areas.Count == 2, "Info color map did not populate in " + (docked ? "docked" : "floating") + " host");
-            treemap.SelectColor(Color.Red);
+            ToolImprovementsChecks.Require(treemap.ItemsSource!.Count() == 2, "Info color map did not populate in " + (docked ? "docked" : "floating") + " host");
+            InfoWorkspaceChecks.SelectColor(treemap, System.Windows.Media.Colors.Red);
             var dialog = (ColorReplaceWindow)Field(window, "_replaceWindow")!;
             ToolImprovementsChecks.Require(dialog.IsVisible && source.HighlightRgb == 0xFF0000 && result.HighlightRgb is null,
                 "Selecting a swatch did not highlight its exact current source basis");

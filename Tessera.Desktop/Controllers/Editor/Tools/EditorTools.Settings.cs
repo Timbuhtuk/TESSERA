@@ -68,8 +68,6 @@ internal sealed partial class EditorTools
                 options.IndependentColorMode == EIndependentColorMode.Combined && options.Palette != EPaletteKind.None;
             _editor.quantizationColorModeInput.IsChecked = _editor.paletteColorModeInput.IsChecked != true;
             _editor.localColorPassesInput.Value = options.LocalColorPasses;
-            // TESSERA_LEGACY Use current cleanup defaults when an old history record only stores target brightness and contrast.
-            // They open with safe cleanup defaults; their old values are never reinterpreted as tolerances.
             var cleanup = options.Cleanup ?? new ColorCleanupOptions();
             _editor.localBrightnessInput.Value = cleanup.ColorTolerance / .4;
             _editor.localContrastInput.Value = cleanup.Strength * 100;

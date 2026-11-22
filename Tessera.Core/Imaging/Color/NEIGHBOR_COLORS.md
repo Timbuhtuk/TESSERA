@@ -6,9 +6,8 @@ without quantization, a color-count limit, preset palettes or dithering.
 
 Each pass compares a pixel with visible colors in its 3×3 neighborhood. The
 transition cost considers LAB color distance and the number of neighbors with
-each color. Optional `DownscaleOptions.LocalColorCriteria` adds preferences for
-brightness, contrast, saturation and edges. These preferences select existing
-colors; they do not recolor the finished image.
+each color. `DownscaleOptions.Cleanup` controls color tolerance, strength,
+detail protection and edge protection.
 
 Each completed pass becomes the input for the next. A pixel keeps its color if
 no candidate improves the cost. Processing stops early if a pass changes nothing.

@@ -23,7 +23,7 @@ public partial class BackgroundWorkspace
             {
                 if (_result is null || IsRendering || _busy || _workspaceApply is not { } applyToAsset) return;
                 try { await applyToAsset((Bitmap)_result.Clone()); }
-                catch (Exception ex) { TesseraDialog.Show(Window.GetWindow(this), ex.Message, "Tessera"); }
+                catch (Exception ex) { TesseraDialogs.Show(Window.GetWindow(this), ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Error); }
             };
         }
         _workspaceApplyButton.Visibility = Visibility.Visible;

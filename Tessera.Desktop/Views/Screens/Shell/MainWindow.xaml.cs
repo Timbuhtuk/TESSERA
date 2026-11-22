@@ -24,7 +24,7 @@ public partial class MainWindow : Window
 
     private readonly OpenFileDialog openDialog = new() { Multiselect = true };
 
-    public MainWindow() : this(LibraryLocation.PrepareDefault(), AppearanceSettings.DefaultPath) { _autoCheckUpdates = true; }
+    public MainWindow() : this(ImageLibrary.DefaultDirectory, AppearanceSettings.DefaultPath) { _autoCheckUpdates = true; }
 
     public MainWindow(string libraryDirectory, string? appearancePath = null, bool startInWorkspace = false)
     {
@@ -35,7 +35,6 @@ public partial class MainWindow : Window
         openDialog.Title = Localization.Text("AddImages");
         AppearanceResources.Apply(_appearanceSettings.Theme);
         _library = new ImageLibrary(libraryDirectory);
-        _unrealSync = new UnrealSyncBridge(Path.Combine(libraryDirectory, "unreal-sync.json"));
         InitializeComponent();
         Editor = new ImageEditorPage(this, libraryDirectory);
         LibraryPage = new LibraryPage(this);
@@ -52,7 +51,7 @@ public partial class MainWindow : Window
         Closing += (_, e) =>
         {
             if (e.Cancel) return;
-            if (WorkspaceBusy) { e.Cancel = true; statusLabel.Text = Localization.Text("WaitForProcessingToFinish"); }
+            if (WorkspaceBusy) { e.Cancel = true; Notify(Localization.Text("WaitForProcessingToFinish"), NotificationKind.Warning); }
             else if (!moodboardWorkspace.CanLeave() || !Editor.Atlas.CanCloseAtlas()) e.Cancel = true;
         };
         Closed += (_, _) =>
@@ -69,8 +68,6 @@ public partial class MainWindow : Window
         InitializeMoodboard();
         Editor.InitializePresentation();
         InitializeUpdates();
-        if (LibraryLocation.MigrationWarning is { } warning)
-            statusLabel.Text = Localization.Format("CouldNotMigrateTheEntirePreviousFormat", warning);
     }
 
     internal static void SetVisible(UIElement control, bool visible) => control.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;

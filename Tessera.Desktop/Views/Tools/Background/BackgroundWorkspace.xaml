@@ -43,16 +43,16 @@
                                 <TextBlock x:Name="backgroundSelectedColorText" VerticalAlignment="Center"/>
                             </DockPanel>
                         </Button>
-                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="backgroundPickColorToggle" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,14"/>
+                        <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" x:Name="backgroundPickColorToggle" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,14"/>
                         <DockPanel Margin="0,0,0,6">
                             <TextBlock Text="{local:Translate Tolerance}"/>
                             <TextBlock Text="{Binding Value, ElementName=backgroundToleranceInput, StringFormat={}{0}%}" HorizontalAlignment="Right"/>
                         </DockPanel>
                         <Slider x:Name="backgroundToleranceInput" Minimum="0" Maximum="100" Value="8" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="TopLeft" AutomationProperties.Name="{local:Translate BackgroundRemovalTolerance}"/>
-                        <TextBlock Text="{local:Translate At0MeansAnExactMatch}" Style="{StaticResource Hint}"/>
+                        <TextBlock Text="{local:Translate At0MeansAnExactMatch}" Style="{StaticResource Ts.Hint}"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="0,1,0,0" Margin="0,10,0,12"/>
                         <TextBlock x:Name="backgroundManualTitle" Style="{StaticResource CardTitle}" Margin="0,0,0,10"/>
-                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="backgroundEraserToggle" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,10"/>
+                        <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" x:Name="backgroundEraserToggle" ToolTipService.ShowOnDisabled="True" Margin="0,0,0,10"/>
                         <DockPanel Margin="0,0,0,6">
                             <TextBlock x:Name="backgroundBrushSizeTitle"/>
                             <TextBlock Text="{Binding Value, ElementName=backgroundBrushSizeInput, StringFormat={}{0} px}" HorizontalAlignment="Right"/>
@@ -62,7 +62,7 @@
                             <Button x:Name="backgroundUndoEraseButton" Margin="0,0,6,6"/>
                             <Button x:Name="backgroundResetEraseButton" Margin="0,0,0,6"/>
                         </WrapPanel>
-                        <TextBlock x:Name="backgroundManualHint" Style="{StaticResource Hint}"/>
+                        <TextBlock x:Name="backgroundManualHint" Style="{StaticResource Ts.Hint}"/>
                         <TextBlock x:Name="backgroundZoomTitle" Margin="0,14,0,6"/>
                         <ComboBox x:Name="backgroundZoomInput" SelectedIndex="0" Margin="0,0,0,8">
                             <ComboBoxItem x:Name="backgroundFitZoomOption"/>
@@ -79,13 +79,13 @@
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
                     <StackPanel x:Name="backgroundSourcePanel">
-                        <TextBlock Text="{local:Translate Input}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{local:Translate Input}" Style="{StaticResource Ts.Caption}" Margin="0,0,0,8"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Thumbnail}" Height="355">
                             <local:PixelPreview x:Name="backgroundSourcePreview" EmptyText="{local:Translate DropAnImage}" PreviewBackground="0"/>
                         </Border>
                     </StackPanel>
                     <StackPanel x:Name="backgroundResultPanel" Grid.Column="2">
-                        <TextBlock Text="{local:Translate Result}" Style="{StaticResource Caption}" Margin="0,0,0,8"/>
+                        <TextBlock Text="{local:Translate Result}" Style="{StaticResource Ts.Caption}" Margin="0,0,0,8"/>
                         <Border BorderBrush="{DynamicResource Ts.Border}" BorderThickness="1" Background="{DynamicResource Ts.Thumbnail}" Height="355">
                             <local:PixelPreview x:Name="backgroundResultPreview" EmptyText="{local:Translate TheResultWillAppearHereLabel}" PreviewBackground="0"/>
                         </Border>

@@ -9,7 +9,7 @@ public partial class MainWindow
         backgroundWorkspace.ValidateExportPath = EnsureExportPathAllowed;
         backgroundWorkspace.BackRequested += (_, _) => ShowHome();
         backgroundWorkspace.MaterialRequested += UseEditorMaterialForBackground;
-        backgroundWorkspace.StatusChanged += message => statusLabel.Text = message;
+        backgroundWorkspace.StatusChanged += Notify;
         backgroundWorkspace.BusyChanged += (_, _) => UpdateBusyIndicator();
         Closed += (_, _) => backgroundWorkspace.Dispose();
     }
@@ -34,7 +34,7 @@ public partial class MainWindow
         SetVisible(moodboardWorkspace, false);
         backgroundWorkspace.SetEditorMaterials(GetEditorMaterials());
         HideWorkspaceBrowser();
-        statusLabel.Text = Localization.Text("Done");
+        Notify(Localization.Text("Done"), NotificationKind.Success);
     }
 
     private void UseEditorMaterialForBackground(EditorMaterial material)
@@ -45,7 +45,7 @@ public partial class MainWindow
             using var image = ImageLibrary.ReadBitmap(material.SnapshotPath);
             backgroundWorkspace.SetImage(image, material.FileLabel, material.OriginalPath ?? material.SnapshotPath);
         }
-        catch (Exception ex) { statusLabel.Text = Localization.Format("CouldNotOpenMaterialFormat", ex.Message); }
+        catch (Exception ex) { Notify(Localization.Format("CouldNotOpenMaterialFormat", ex.Message), NotificationKind.Error); }
     }
 
     private bool IsBackgroundDropTarget(DependencyObject? target)
@@ -78,6 +78,6 @@ public partial class MainWindow
                 if (path is not null) await backgroundWorkspace.LoadFileAsync(path);
             }
         }
-        catch (Exception ex) { statusLabel.Text = Localization.Format("CouldNotOpenImageFormat", ex.Message); }
+        catch (Exception ex) { Notify(Localization.Format("CouldNotOpenImageFormat", ex.Message), NotificationKind.Error); }
     }
 }

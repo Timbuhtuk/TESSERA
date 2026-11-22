@@ -1,3 +1,3 @@
-import tessera_sync
+import tessera_project
 
-tessera_sync.start()
+tessera_project.start()

@@ -2,9 +2,11 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
 using System.Windows.Threading;
 using Tessera.Desktop;
 using Color = System.Drawing.Color;
+using MediaColor = System.Windows.Media.Color;
 
 namespace Tessera.RegressionTests;
 
@@ -17,6 +19,32 @@ internal static class InfoWorkspaceChecks
         thread.SetApartmentState(ApartmentState.STA); thread.Start();
         if (!thread.Join(TimeSpan.FromSeconds(35))) throw new Exception("Image information verification timed out");
         if (failure is not null) { Console.Error.WriteLine(failure); throw new Exception("Image information verification failed", failure); }
+    }
+
+    internal static void SelectColor(ColorTreemap treemap, MediaColor color)
+    {
+        var areas = treemap.ItemsSource!.Where(area => area.Color.HasValue).ToArray();
+        int index = Array.FindIndex(areas, area => area.Color == color);
+        Require(index >= 0, "Requested color is missing from the treemap");
+        var source = PresentationSource.FromVisual(treemap)!;
+        Press(Key.Right);
+        for (int q = 0; q < areas.Length; q++) Press(Key.Left);
+        for (int q = 0; q < index; q++) Press(Key.Right);
+        Press(Key.Enter);
+
+        void Press(Key key) => treemap.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, source, 0, key)
+        {
+            RoutedEvent = Keyboard.KeyDownEvent
+        });
+    }
+
+    private static double RenderedAreaFraction(ColorTreemap treemap, MediaColor color)
+    {
+        var drawing = VisualTreeHelper.GetDrawing(treemap);
+        double area = drawing?.Children.OfType<GeometryDrawing>()
+            .Where(item => item.Brush is SolidColorBrush brush && brush.Color == color)
+            .Sum(item => item.Geometry.GetArea()) ?? 0;
+        return area / (treemap.RenderSize.Width * treemap.RenderSize.Height);
     }
 
     private static void Verify()
@@ -42,14 +70,14 @@ internal static class InfoWorkspaceChecks
             var asset = window.Workspace!.State.Assets.Single();
             Wait(window.OpenWorkspaceAssetAsync(asset));
             NavigationTest.Click(window, "infoMenuItem");
-            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("4 × 2") && Get<ColorTreemap>(window, "infoColorTreemap").Areas.Count == 3,
+            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("4 × 2") && Get<ColorTreemap>(window, "infoColorTreemap").ItemsSource!.Count() == 3,
                 "Docked information does not see the image opened in the workspace editor");
             var treemap = Get<ColorTreemap>(window, "infoColorTreemap");
-            Require(treemap.Areas.Sum(area => area.Pixels) == 7 && treemap.Areas.Single(area => area.Color?.ToArgb() == Color.Red.ToArgb()).Pixels == 2,
+            Require(treemap.ItemsSource!.Sum(area => area.Weight) == 7 && treemap.ItemsSource!.Single(area => area.Color == Colors.Red).Weight == 2,
                 "Color map did not count visible RGB pixels");
-            var redBounds = treemap.BoundsFor(Color.Red)!.Value;
-            Require(Math.Abs(redBounds.Width * redBounds.Height / (treemap.ActualWidth * treemap.ActualHeight) - 2.0 / 7) < .01,
-                "Color map area is not proportional to the red pixel count");
+            double redFraction = RenderedAreaFraction(treemap, Colors.Red);
+            Require(Math.Abs(redFraction - 2.0 / 7) < .01,
+                $"Color map area is not proportional to the red pixel count: {redFraction:P2}");
             Require(Window.GetWindow(Get<TextBlock>(window, "infoSourceSummary")) == window, "Information did not use the docked workspace");
             Require(Get<TextBlock>(window, "infoResultSummary").Text == "Пока нет результата", "Source-only image pretends to have a result");
             string details = Get<TextBlock>(window, "infoSourceDetails").Text;
@@ -65,7 +93,7 @@ internal static class InfoWorkspaceChecks
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 1;
             Until(() => Get<TextBlock>(window, "infoResultSummary").Text.Contains("8 × 4") &&
                 ReferenceEquals(Field<Bitmap>(window, "_infoBasisShown"), Field<Bitmap>(window, "_downscaledResult")), "Result information or selected basis did not update");
-            treemap.SelectColor(Color.Red); Pump();
+            SelectColor(treemap, Colors.Red); Pump();
             var dialog = window.OwnedWindows.OfType<ColorReplaceWindow>().Single();
             Require(dialog.Owner == window, "Docked replacement dialog has the wrong owner");
             Get<TextBox>(dialog, "newHexInput").Text = "#112233";
@@ -81,8 +109,8 @@ internal static class InfoWorkspaceChecks
             Require(File.ReadAllBytes(path).SequenceEqual(original) && Field<Bitmap>(window, "_sourceImage").GetPixel(2, 0).ToArgb() == Color.Red.ToArgb(), "Replacement modified the original");
 
             Get<ListBox>(window, "generationStrip").SelectedItem = parent; Pump();
-            Until(() => treemap.Areas.Any(c => c.Color?.ToArgb() == Color.Red.ToArgb()), "History selection did not refresh the palette");
-            treemap.SelectColor(Color.Red); Pump();
+            Until(() => treemap.ItemsSource!.Any(c => c.Color == Colors.Red), "History selection did not refresh the palette");
+            SelectColor(treemap, Colors.Red); Pump();
             dialog = window.OwnedWindows.OfType<ColorReplaceWindow>().Single();
             NavigationTest.Select(window, "ProcessingBasis").SelectedIndex = 0; Pump();
             Require(!dialog.IsVisible, "Changing the processing basis left a stale replacement dialog open");
@@ -121,10 +149,10 @@ internal static class InfoWorkspaceChecks
             Wait(window.OpenWorkspaceAssetAsync(manyAsset));
             Require(!Get<MenuItem>(window, "infoMenuItem").IsChecked, "Switching images retained the previous information tool");
             NavigationTest.Click(window, "infoMenuItem");
-            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("33 × 32") && treemap.Areas.Count == 1025,
+            Until(() => Get<TextBlock>(window, "infoSourceSummary").Text.Contains("33 × 32") && treemap.ItemsSource!.Count() == 1025,
                 "Large color map did not refresh");
-            Require(treemap.Areas[^1].Color is null && treemap.Areas[^1].Pixels == 32 &&
-                treemap.Areas.Sum(area => area.Pixels) == 1056 && Get<Button>(window, "infoManualReplaceButton").IsVisible,
+            Require(treemap.ItemsSource!.Last().Color is null && treemap.ItemsSource!.Last().Weight == 32 &&
+                treemap.ItemsSource!.Sum(area => area.Weight) == 1056 && Get<Button>(window, "infoManualReplaceButton").IsVisible,
                 "Large color map did not group the tail or keep manual replacement available");
             Get<Button>(window, "infoManualReplaceButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             var manual = Window.GetWindow(Get<GroupBox>(window, "infoToolGroup"))!.OwnedWindows.OfType<ColorReplaceWindow>().Single();

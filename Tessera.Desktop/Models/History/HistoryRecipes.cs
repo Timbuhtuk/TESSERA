@@ -11,8 +11,7 @@ internal static class HistoryRecipes
 
     public static bool TryGetLocal(SourceEntry source, GenerationEntry entry, out ProcessingRecipe? recipe, out string reason)
     {
-        // TESSERA_LEGACY Recover the local step for a history record written before AppliedRecipe.
-        recipe = entry.AppliedRecipe ?? RestoreLegacy(entry);
+        recipe = entry.AppliedRecipe;
         reason = "";
         if (recipe is null && entry.RecipeSnapshot is { } snapshot)
         {
@@ -80,8 +79,7 @@ internal static class HistoryRecipes
                 break;
             }
             if (!string.IsNullOrEmpty(current.RecipeUnavailableReason)) { reason = Localization.StoredText(current.RecipeUnavailableReason); return false; }
-            // TESSERA_LEGACY Recover an old chain whose generation records predate saved recipes.
-            var operation = current.AppliedRecipe ?? RestoreLegacy(current);
+            var operation = current.AppliedRecipe;
             if (operation is null)
             {
                 reason = Localization.Format("ResultThisOperationHasNoSavedFormat", current.Label);
@@ -101,65 +99,5 @@ internal static class HistoryRecipes
         try { WorkflowExecutor.Validate(recipe); return true; }
         catch (Exception ex) when (ex is WorkflowStepException or InvalidDataException or ArgumentException)
         { reason = ex.Message; recipe = null; return false; }
-    }
-
-    // TESSERA_LEGACY Rebuild recipes from exact operation labels, flags and persisted settings in pre-recipe history.
-    // Logs and captions are presentation, never an executable format.
-    private static ProcessingRecipe? RestoreLegacy(GenerationEntry entry)
-    {
-        if (!string.IsNullOrEmpty(entry.OperationId)) return null;
-        string? kind = LegacyOperationId(entry);
-        if (kind is null) return null;
-        // An old auto-align result records DetectGrid. Its reducer records only the resolved size;
-        // interpreting that size literally is the only unambiguous legacy behavior.
-        return Single(kind switch
-        {
-            ProcessingOperations.Align => new ProcessingStep { OperationId = kind, CellSize = entry.Settings.DetectGrid ? null : entry.CellSize },
-            ProcessingOperations.Reduce => new ProcessingStep { OperationId = kind, CellSize = entry.CellSize },
-            ProcessingOperations.Monochrome => new ProcessingStep { OperationId = kind },
-            _ => new ProcessingStep { OperationId = kind, Downscale = entry.Settings.Downscale }
-        });
-    }
-
-    // TESSERA_LEGACY Map historical RU/EN operation labels and the alignment/reduction flags to current IDs.
-    internal static string? LegacyOperationId(GenerationEntry entry) =>
-        entry.IsAlignment ? ProcessingOperations.Align : entry.IsGridReduction ? ProcessingOperations.Reduce : entry.Operation switch
-        {
-            "" => ProcessingOperations.Profile,
-            "Размер" or "Увеличение" or "Size" or "Upscale" => ProcessingOperations.Resize,
-            "Очистка цветов" or "Cleanup Colors" => ProcessingOperations.Cleanup,
-            "Квантование" or "Палитра" or "Цвет" or "Quantization" or "Palette" or "Color" => ProcessingOperations.Colors,
-            "Монохром" or "Monochrome" => ProcessingOperations.Monochrome,
-            _ => null
-        };
-
-    // TESSERA_LEGACY Use raw pre-recipe JSON field presence to reject incomplete replay instead of accepting deserialization defaults.
-    public static void ValidateLegacyRecord(GenerationEntry entry, string path)
-    {
-        if (entry.RecipeSnapshot is not null || entry.AppliedRecipe is not null || !string.IsNullOrEmpty(entry.RecipeUnavailableReason)) return;
-        var restored = RestoreLegacy(entry);
-        if (restored is null) return;
-        using var document = JsonDocument.Parse(File.ReadAllText(path));
-        JsonElement Find(JsonElement value, string name)
-            => value.ValueKind == JsonValueKind.Object ? value.EnumerateObject().FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).Value : default;
-        bool Has(JsonElement value, string name) => Find(value, name).ValueKind != JsonValueKind.Undefined;
-        string kind = restored.Steps[0].OperationId;
-        var settings = Find(document.RootElement, "Settings"); var downscale = Find(settings, "Downscale");
-        var required = new List<string>();
-        if (kind is ProcessingOperations.Profile or ProcessingOperations.Resize)
-            required.AddRange(["TargetWidth", "TargetHeight", "SpriteMode", "AlphaThreshold", "CropHorizontal", "CropVertical", "BlockMode", "ManualCriteria"]);
-        if (kind is ProcessingOperations.Profile or ProcessingOperations.Colors)
-            required.AddRange(["Palette", "PaletteStep", "EnableDithering", "QuantizationColors", "Quantization", "UseColorWeights"]);
-        if (kind == ProcessingOperations.Colors) required.Add("IndependentColorMode");
-        if (kind == ProcessingOperations.Cleanup) required.AddRange(["Cleanup", "LocalColorPasses"]);
-        string? missing = required.FirstOrDefault(name => !Has(downscale, name));
-        if (missing is null && kind == ProcessingOperations.Cleanup)
-        {
-            var cleanup = Find(downscale, "Cleanup");
-            missing = new[] { "ColorTolerance", "Strength", "DetailProtection", "EdgeProtection" }.FirstOrDefault(name => !Has(cleanup, name));
-        }
-        if (kind == ProcessingOperations.Align && !Has(settings, "DetectGrid")) missing = "DetectGrid";
-        if (kind == ProcessingOperations.Reduce && !Has(document.RootElement, "CellSize")) missing = "CellSize";
-        if (missing is not null) entry.RecipeUnavailableReason = Localization.Format("LegacyResultHasNoSavedValueFormat", missing);
     }
 }

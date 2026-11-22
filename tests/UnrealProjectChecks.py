@@ -1,6 +1,5 @@
 """Mailbox mutation checks with a small stand-in for Unreal Editor's asset API."""
 
-import hashlib
 import importlib.util
 import os
 import pathlib
@@ -64,21 +63,17 @@ class UnrealProjectChecks(unittest.TestCase):
             save_loaded_asset=lambda texture, only_if_is_dirty=False: True,
         )
         unreal = types.SimpleNamespace(
-            Paths=types.SimpleNamespace(project_content_dir=lambda: str(self.content), convert_relative_path_to_full=lambda p: p),
+            Paths=types.SimpleNamespace(project_saved_dir=lambda: str(self.root / "Saved"), project_content_dir=lambda: str(self.content), convert_relative_path_to_full=lambda p: p),
             AssetRegistryHelpers=types.SimpleNamespace(get_asset_registry=lambda: types.SimpleNamespace(is_loading_assets=lambda: False)),
             EditorAssetLibrary=editor,
             EditorLoadingAndSavingUtils=types.SimpleNamespace(get_dirty_content_packages=lambda: [types.SimpleNamespace(get_path_name=lambda: "/Game/A/Stone")] if self.dirty else []),
             Texture2D=Texture2D,
         )
-        legacy = types.SimpleNamespace(
-            ROOT=str(self.root / "Saved"),
-            _hash=lambda path: hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest(),
-            _export_texture=lambda texture, path: pathlib.Path(path).write_bytes(b"exported") or True,
-        )
-        with patch.dict(sys.modules, {"unreal": unreal, "tessera_sync": legacy}):
+        with patch.dict(sys.modules, {"unreal": unreal}):
             spec = importlib.util.spec_from_file_location("tessera_project_check", SCRIPT)
             self.plugin = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self.plugin)
+        self.plugin._export_texture = lambda texture, path: bool(pathlib.Path(path).write_bytes(b"exported"))
         filename("/Game/A/Stone").parent.mkdir(parents=True)
         filename("/Game/A/Stone").write_bytes(b"source")
         self.source = "/Game/A/Stone.Stone"

@@ -57,7 +57,7 @@ public partial class MainWindow
             try { await WorkspaceActionAsync(action, asset); }
             catch (Exception ex) { WorkspaceError(ex); }
         };
-        _workspaceBrowser.StatusChanged += text => statusLabel.Text = text;
+        _workspaceBrowser.StatusChanged += Notify;
         _workspaceBrowser.ScopeChanging = ChangeWorkspaceScope;
         _workspaceBrowser.ScopeChanged = () =>
         {
@@ -109,15 +109,16 @@ public partial class MainWindow
 
     internal bool WorkspaceBusy => Editor._processing || _workspaceImporting || iconWorkspace.IsBusy || asepriteWorkspace.IsBusy || backgroundWorkspace.IsBusy || moodboardWorkspace.IsBusy;
 
-    internal void WorkspaceError(Exception ex) { statusLabel.Text = ex.Message; TesseraDialog.Show(this, ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Warning); }
+    internal void WorkspaceError(Exception ex)
+    {
+        Notify(ex.Message, NotificationKind.Error);
+        TesseraDialogs.Show(this, ex.Message, "Tessera", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
 
     public async Task ImportWorkspaceFilesAsync(IReadOnlyList<string> paths)
     {
         if (_workspaceCatalog is null || WorkspaceBusy) return;
-        // TESSERA_LEGACY Extract retired .ttiles files on import without adding them as new workspace documents.
-        foreach (string archive in paths.Where(LegacyTileArchive.IsArchive).Distinct(StringComparer.OrdinalIgnoreCase))
-            await ExtractLegacyTileArchiveAsync(archive);
-        string[] progressFiles = paths.Where(path => !LegacyTileArchive.IsArchive(path)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        string[] progressFiles = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         if (progressFiles.Length == 0) return;
         using var operation = BeginOperationProgress(this, Localization.Text("AddingImagesAction"));
         int progressDone = 0;
@@ -163,7 +164,10 @@ public partial class MainWindow
             RefreshWorkspaceSources();
             _workspaceCatalog.Save(); _workspaceBrowser!.Refresh(imported.LastOrDefault()?.Id);
             if (failures.Count == 0) operation.Complete();
-            statusLabel.Text = Localization.Format("AddedFormat", imported.Count) + (failures.Count > 0 ? Localization.Text("ErrorsPrefix") + string.Join("; ", failures) : Localization.Text("SelectAMaterialToStart"));
+            string summary = Localization.Format("AddedFormat", imported.Count) + (failures.Count > 0
+                ? Localization.Text("ErrorsPrefix") + string.Join("; ", failures)
+                : Localization.Text("SelectAMaterialToStart"));
+            Notify(summary, BatchNotificationKind(imported.Count, failures.Count));
         }
         finally { _workspaceImporting = false; _workspaceBrowser.IsEnabled = true; UpdateBusyIndicator(); }
     }
@@ -174,7 +178,6 @@ public partial class MainWindow
         {
             Title = Localization.Text("AddMaterials"),
             Multiselect = true,
-            // TESSERA_LEGACY Offer the archived .ttiles type alongside current document formats in the open dialog.
             Filter = Localization.Text("TesseraMaterialsFileFilterLabel")
         };
         if (dialog.ShowDialog(this) == true) await ImportWorkspaceFilesAsync(dialog.FileNames);
@@ -182,13 +185,7 @@ public partial class MainWindow
 
     public async Task OpenWorkspaceAssetAsync(WorkspaceAsset asset)
     {
-        if (_workspaceCatalog is null || WorkspaceBusy) return;
-        // TESSERA_LEGACY Extract PNGs when opening an old catalog tile-collection record.
-        if (asset.IsLegacyTileArchive)
-        {
-            await ExtractLegacyTileArchiveAsync(_workspaceCatalog.ContentPath(asset), asset.DisplayName);
-            return;
-        }
+        if (_workspaceCatalog is null || WorkspaceBusy || !Enum.IsDefined(asset.Kind)) return;
         bool sameAsset = _workspaceActive?.Id == asset.Id;
         if (!sameAsset && !moodboardWorkspace.CanLeave()) return;
         try
@@ -371,7 +368,7 @@ public partial class MainWindow
             _workspaceCatalog.Save();
             if (_workspaceBrowser?.Visibility == Visibility.Visible) _workspaceBrowser.Refresh();
         }
-        catch (Exception ex) { statusLabel.Text = Localization.Text("CatalogPrefix") + ex.Message; }
+        catch (Exception ex) { Notify(Localization.Text("CatalogPrefix") + ex.Message, NotificationKind.Error); }
         finally { _workspaceSyncing = false; }
     }
 

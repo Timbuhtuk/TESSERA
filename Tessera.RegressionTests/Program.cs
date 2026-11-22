@@ -1,5 +1,15 @@
 using Tessera.RegressionTests;
 
+bool backgroundWorker;
+try { backgroundWorker = TestDesktop.IsWorker(ref args); }
+catch (InvalidOperationException ex) { Console.Error.WriteLine(ex.Message); return 1; }
+bool backgroundRequested = args is ["--background", ..];
+if (backgroundRequested) args = args[1..];
+bool useBackgroundDesktop = backgroundRequested && !backgroundWorker;
+
+if (useBackgroundDesktop && args is ["--uninstall"] or ["--progress"] or ["--finalists-ui", _])
+    return RunOnBackgroundDesktop();
+
 if (args is ["--uninstall"])
 {
     try { UninstallChecks.Run(); Console.WriteLine("PASS Tessera uninstall"); return 0; }
@@ -26,6 +36,7 @@ if (args is ["--progress"])
 if (args is ["--help"] or ["-h"])
 {
     Console.WriteLine("Tessera.RegressionTests: --progress, --window-chrome, --unreal-sync, --contours, --lenses, --sharpen, --channels, --palette-dock, --result-icons, --ascii-preview, --clipboard, --size-factor, --project-notes, --detail-protection, --local-grid, --updates, --history-macros, --history-edits, --invariants, --ui, --ui-core, --aseprite-ui, --alpha, --material-maps, --release-notes, --tool-improvements, --moodboard, --tiles, --info, --workspace, --localization, --navigation, --benchmark [--holdout | --fresh]");
+    Console.WriteLine("Put --background before the suite flags to run WPF checks on a separate Windows desktop. Native mouse capture requires an interactive run.");
     Console.WriteLine("Compare with a known reference: --evaluate actual.png reference.png --cell-size 8");
     Console.WriteLine("No arguments: evaluator checks, invariants and development benchmark. Exit: 0 pass, 1 fail, 2 usage.");
     return 0;
@@ -57,6 +68,9 @@ if (args.Any(a => a is not ("--window-chrome" or "--unreal-sync" or "--contours"
     return 2;
 }
 if (args.Length == 0) args = ["--invariants", "--benchmark"];
+if (useBackgroundDesktop && args.Any(a => a is not ("--invariants" or "--benchmark" or "--holdout" or "--fresh")))
+    return RunOnBackgroundDesktop();
+
 // Written before the alignment implementation. Scores are 0..100, with a fixed 90 gate.
 // Color recall is macro-averaged: large backgrounds cannot hide missing small colors.
 int failed = 0;
@@ -180,3 +194,13 @@ void Check(string name, Action action)
     catch (Exception e) { failed++; Console.WriteLine($"FAIL {name}: {e.Message}"); }
 }
 void Require(bool condition, string message) { if (!condition) throw new Exception(message); }
+
+static int RunOnBackgroundDesktop()
+{
+    try { return TestDesktop.Run(); }
+    catch (System.ComponentModel.Win32Exception ex)
+    {
+        Console.Error.WriteLine($"Cannot start the WPF checks on a background Windows desktop: {ex.Message}");
+        return 1;
+    }
+}

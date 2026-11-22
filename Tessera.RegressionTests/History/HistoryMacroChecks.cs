@@ -1,7 +1,6 @@
 using System.Reflection;
 using System.Collections.ObjectModel;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -26,7 +25,7 @@ internal static class HistoryMacroChecks
     public static void Run(Action<string, Action> check)
     {
         check("Branch forest: siblings, promotion, deletion, cycles and 30,000 nodes", VerifyBranches);
-        check("Editor history: legacy migration and independent branch and scroll records", VerifyTrayStorage);
+        check("Editor history: independent branch and scroll records", VerifyTrayStorage);
         Exception? failure = null;
         var thread = new Thread(() =>
         {
@@ -54,27 +53,21 @@ internal static class HistoryMacroChecks
         string manifest = Path.Combine(directory, "editor-history.json");
         Guid first = Guid.NewGuid(), second = Guid.NewGuid(), folder = Guid.NewGuid(), result = Guid.NewGuid();
         string firstScroll = "results:" + first, secondScroll = "results:" + second;
-        var state = new HistoryTrayState
-        {
-            Height = 244, CollapsedFolders = [folder],
-            Branches = new() { [first] = new() { Roots = [result] }, [second] = new() { Detached = [result] } },
-            Scroll = new() { [firstScroll] = new Point(130, 4), [secondScroll] = new Point(54, 12) }
-        };
-        File.WriteAllText(manifest, JsonSerializer.Serialize(state));
-        using (File.Open(manifest, FileMode.Open, FileAccess.Read, FileShare.Read))
-        {
-            try { new HistoryTrayStore(directory).Load(); throw new InvalidOperationException("Migration ignored a locked manifest"); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
-        }
-        Require(LibraryJson.Read<HistoryTrayState>(manifest).Version == 1, "A failed history migration replaced the legacy data");
-
         var store = new HistoryTrayStore(directory);
+        var state = new HistoryTrayState { Height = 244, CollapsedFolders = [folder] };
+        store.SavePreferences(state);
+        store.SaveBranch(first, new() { Roots = [result] });
+        store.SaveBranch(second, new() { Detached = [result] });
+        store.SaveScroll(firstScroll, new Point(130, 4));
+        store.SaveScroll(secondScroll, new Point(54, 12));
+
+        store = new HistoryTrayStore(directory);
         var preferences = store.Load();
-        Require(preferences.Version == 2 && preferences.Branches is null && preferences.Scroll is null &&
-            preferences.Height == state.Height && preferences.CollapsedFolders.Contains(folder), "History preferences were not migrated");
+        Require(preferences.Version == 2 && preferences.Height == state.Height &&
+            preferences.CollapsedFolders.Contains(folder), "History preferences did not roundtrip");
         Require(store.ReadBranch(first).Roots.Single() == result && store.ReadBranch(second).Detached.Contains(result) &&
             store.ReadScroll(firstScroll) == new Point(130, 4) && store.ReadScroll(secondScroll) == new Point(54, 12),
-            "Migration lost branches or scroll positions");
+            "History branches or scroll positions did not roundtrip");
         string settingsBefore = File.ReadAllText(manifest);
         new HistoryTrayStore(directory).SaveBranch(first, new());
         store.SaveScroll(firstScroll, new Point(128, 0));
@@ -145,18 +138,11 @@ internal static class HistoryMacroChecks
         var independentResult = library.SaveGeneration(independent, gray, null, new GenerationEntry { OperationId = mono.OperationId, AppliedRecipe = HistoryRecipes.Single(mono) });
         Require(independentResult.RecipeSnapshot!.Steps.Count == 1, "Independent source traversed its origin history.");
         var incomplete = new GenerationEntry { Operation = "ASCII" };
-        Require(!HistoryRecipes.TryBuild(source, incomplete, out _, out string reason) && reason.Contains("параметры"), "Incomplete legacy ASCII was silently guessed.");
+        Require(!HistoryRecipes.TryBuild(source, incomplete, out _, out string reason) && reason.Contains("параметры"), "An ASCII result without a recipe was replayed.");
         var manual = new GenerationEntry { RecipeUnavailableReason = "Ручной ластик" };
         Require(!HistoryRecipes.TryBuild(source, manual, out _, out reason) && reason.Contains("ластик"), "Manual step was silently skipped.");
         using var original = ImageLibrary.ReadBitmap(library.SourcePath(source)); Equal(fixture, original);
-        var legacy = library.SaveGeneration(source, fixture, null, new GenerationEntry()); source.Generations.Add(legacy);
-        string legacyPath = Path.Combine(Path.GetDirectoryName(library.ResultPath(source, legacy))!, "generation.json");
-        var record = JsonNode.Parse(File.ReadAllText(legacyPath))!;
-        record.AsObject().Remove("RecipeSnapshot"); record.AsObject().Remove("AppliedRecipe"); record.AsObject().Remove("OperationId");
-        record["Settings"]!["Downscale"]!.AsObject().Remove("TargetWidth"); File.WriteAllText(legacyPath, record.ToJsonString());
-        var incompleteDimensions = library.Load().Single(s => s.Id == source.Id).Generations.Single(g => g.Id == legacy.Id);
-        Require(!HistoryRecipes.TryBuild(source, incompleteDimensions, out _, out reason) && reason.Contains("TargetWidth"), "Missing legacy dimensions were replaced by defaults.");
-        Console.WriteLine("  Recipes: exact resize, alpha, ancestor deletion, independent source, macro rename/delete and legacy refusal passed.");
+        Console.WriteLine("  Recipes: exact resize, alpha, ancestor deletion, independent source, macro rename/delete and missing-recipe rejection passed.");
     }
 
     private static void VerifyEditor()

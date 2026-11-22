@@ -34,22 +34,23 @@ internal static class ProgressUiChecks
             status.Text = "";
             Pump();
             double contentHeight = layout.RowDefinitions[1].ActualHeight;
-            Require(!notifications.Cards.Any() && layout.RowDefinitions.Count == 2, "An empty status panel takes up a footer row");
+            Require(!Cards(notifications).Any() && layout.RowDefinitions.Count == 2, "An empty status panel takes up a footer row");
             status.Text = "Operation feedback";
             Pump();
-            var statusPanel = notifications.Cards.Single();
-            Require(statusPanel.IsVisible && statusPanel.Message.Text == status.Text && Grid.GetRow(notifications) == 1 &&
+            var statusPanel = Cards(notifications).Single();
+            Require(statusPanel.IsVisible && statusPanel.Message == status.Text && statusPanel.Kind == NotificationKind.Information &&
+                Grid.GetRow(notifications) == 1 &&
                 statusPanel.Parent is StackPanel { VerticalAlignment: VerticalAlignment.Top } && layout.RowDefinitions[1].ActualHeight == contentHeight,
                 "Operation feedback did not open above the content or resized the workspace");
             var countdownDeadline = DateTime.UtcNow.AddSeconds(1);
-            while (statusPanel.CountdownScale.ScaleX >= 0.98 && DateTime.UtcNow < countdownDeadline)
+            while (Countdown(statusPanel).ScaleX >= 0.98 && DateTime.UtcNow < countdownDeadline)
             {
                 Pump();
                 Thread.Sleep(15);
             }
-            Require(statusPanel.CountdownScale.ScaleX is > 0 and < 0.98, "Notification countdown is not decreasing");
+            Require(Countdown(statusPanel).ScaleX is > 0 and < 0.98, "Notification countdown is not decreasing");
             status.Text = "Updated operation feedback";
-            Require(ReferenceEquals(notifications.Cards.Single(), statusPanel), "Operation updates spawned duplicate cards");
+            Require(ReferenceEquals(Cards(notifications).Single(), statusPanel), "Operation updates spawned duplicate cards");
             status.Text = "";
             Require(!indicator.IsIndeterminate && panel.Visibility == Visibility.Collapsed, "Idle progress is visible or indeterminate");
             WindowTestAccess.Invoke(window, "ShowEditor", BindingFlags.Instance | BindingFlags.NonPublic, null);
@@ -112,54 +113,59 @@ internal static class ProgressUiChecks
             icons.SetImage(sourceImage, "progress fixture");
             Wait(icons.RefreshFramesAsync());
             Require(indicator.Value == 100, "Actual ICO preview did not complete its progress stream");
-            Require(((TextBlock)window.FindControl("statusLabel")).Text == Tessera.Desktop.Localization.Text("IconPreviewsAreReady"),
-                "Completed ICO preview retained the running status");
+            Require(status.Text == Tessera.Desktop.Localization.Text("IconPreviewsAreReady") && CurrentNotification().Kind == NotificationKind.Success,
+                "Completed ICO preview was not reported as success");
             Wait(icons.SaveAsync(Path.Combine(directory, "progress.ico"), true));
-            Require(File.Exists(Path.Combine(directory, "progress.ico")) && indicator.Value == 100, "Actual ICO export did not complete");
+            Require(File.Exists(Path.Combine(directory, "progress.ico")) && indicator.Value == 100 &&
+                CurrentNotification().Kind == NotificationKind.Success, "Actual ICO export was not reported as success");
             Capture(window, Path.Combine(directory, "icon-export.png"));
             WindowTestAccess.Invoke(window, "ShowBackgroundWorkspace", BindingFlags.Instance | BindingFlags.NonPublic, null);
             var background = (BackgroundWorkspace)window.FindControl("backgroundWorkspace");
             background.SetImage(sourceImage, "progress fixture");
             Wait(background.RefreshPreviewAsync());
             Require(background.HasResult && indicator.Value == 100, "Actual background removal did not complete its progress stream");
-            Require(((TextBlock)window.FindControl("statusLabel")).Text == Tessera.Desktop.Localization.Text("BackgroundRemovalIsReady"),
-                "Completed background preview retained the running status");
+            Require(status.Text == Tessera.Desktop.Localization.Text("BackgroundRemovalIsReady") && CurrentNotification().Kind == NotificationKind.Success,
+                "Completed background preview was not reported as success");
             Wait(background.SaveAsync(Path.Combine(directory, "progress-background.png"), true));
-            Require(File.Exists(Path.Combine(directory, "progress-background.png")) && indicator.Value == 100, "Actual PNG export did not complete");
+            Require(File.Exists(Path.Combine(directory, "progress-background.png")) && indicator.Value == 100 &&
+                CurrentNotification().Kind == NotificationKind.Success, "Actual PNG export was not reported as success");
             Capture(window, Path.Combine(directory, "background-removal.png"));
-            statusPanel = notifications.Cards.Single();
+            statusPanel = CurrentNotification();
             var deadline = DateTime.UtcNow.AddSeconds(6);
             bool slidOut = false;
             var offset = (TranslateTransform)statusPanel.RenderTransform;
             while (statusPanel.IsVisible && DateTime.UtcNow < deadline)
             {
                 Pump();
-                slidOut |= statusPanel.IsVisible && statusPanel.CountdownScale.ScaleX <= 0.01 && offset.X > 2;
+                slidOut |= statusPanel.IsVisible && Countdown(statusPanel).ScaleX <= 0.01 && offset.X > 2;
                 Thread.Sleep(20);
             }
             Require(!statusPanel.IsVisible, "The status notification did not expire");
             Require(!SystemParameters.ClientAreaAnimation || slidOut, "The expired notification did not slide out to its right edge");
 
+            notifications.Clear();
             notifications.Show("First", NotificationKind.Success);
             notifications.Show("Second notification", NotificationKind.Warning);
             notifications.Show("Third", NotificationKind.Error);
             Pump();
-            var cards = notifications.Cards.ToArray();
+            var cards = Cards(notifications).ToArray();
             Require(cards.Length == 3 && cards.All(card => card.IsVisible), "Separate notifications did not stack");
             Require(cards.All(card => card.ActualWidth == cards[0].ActualWidth), "Stacked cards have different widths");
             double firstBottom = cards[0].TranslatePoint(new System.Windows.Point(0, cards[0].ActualHeight), notifications).Y;
             double secondTop = cards[1].TranslatePoint(new System.Windows.Point(), notifications).Y;
             Require(secondTop > firstBottom, "Stacked notifications overlap vertically");
-            cards[1].DismissButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            ((Button)cards[1].FindName("dismiss")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             deadline = DateTime.UtcNow.AddSeconds(2);
             while (cards[1].IsVisible && DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(20); }
-            Require(notifications.Cards.SequenceEqual(new[] { cards[0], cards[2] }),
+            Require(Cards(notifications).SequenceEqual(new[] { cards[0], cards[2] }),
                 "Closing one card dismissed the other notifications");
             deadline = DateTime.UtcNow.AddSeconds(6);
             while (cards[0].IsVisible && DateTime.UtcNow < deadline) { Pump(); Thread.Sleep(20); }
-            Require(notifications.Cards.SequenceEqual(new[] { cards[2] }),
+            Require(Cards(notifications).SequenceEqual(new[] { cards[2] }),
                 "Automatic dismissal did not preserve the longer-running card");
             Console.WriteLine("  Progress WPF: actual values, 20 cells, three themes, narrow width, stale callbacks, cancel/error, priority, throttling and completion lifecycle passed.");
+
+            NotificationCard CurrentNotification() => Cards(notifications).Last(card => card.Message == status.Text);
 
             OperationProgressSession Begin(bool preview = false) => (OperationProgressSession)typeof(MainWindow)
                 .GetMethod("BeginOperationProgress", BindingFlags.Instance | BindingFlags.NonPublic)!
@@ -167,6 +173,11 @@ internal static class ProgressUiChecks
         }
         finally { window.Close(); Pump(); AppearanceResources.Apply(TesseraTheme.Dark); }
     }
+
+    internal static IEnumerable<NotificationCard> Cards(NotificationDisplay display) =>
+        display.Children.OfType<Panel>().SelectMany(panel => panel.Children.OfType<NotificationCard>());
+
+    private static ScaleTransform Countdown(NotificationCard card) => (ScaleTransform)card.FindName("countdownScale");
 
     private static void Capture(MainWindow window, string path)
     {

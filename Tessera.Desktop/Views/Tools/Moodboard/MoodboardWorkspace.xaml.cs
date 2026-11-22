@@ -41,35 +41,13 @@ public partial class MoodboardWorkspace : UserControl
 
     private readonly record struct LayerPose(double X, double Y, double Angle, double Scale);
 
-    // TESSERA_LEGACY Read the v1 .tboard JSON format with PNG layers embedded as base64.
-    private sealed class BoardFile
-    {
-        public int Version { get; set; } = 1;
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public List<LayerFile> Layers { get; set; } = [];
-    }
-
-    private sealed class LayerFile
-    {
-        public string Name { get; set; } = "";
-        public byte[] Png { get; set; } = [];
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Angle { get; set; }
-        public double Scale { get; set; } = 1;
-    }
-
     private sealed class BoardManifest
     {
         public int Version { get; set; } = 2;
         public int Width { get; set; }
         public int Height { get; set; }
-        // TESSERA_LEGACY Older v2 board manifests can omit background color and source paths.
-        public string BackgroundColor { get; set; } = "#FFFFFF";
-        public string[] SourcePaths { get; set; } = [];
+        public required string BackgroundColor { get; set; }
+        public required string[] SourcePaths { get; set; }
         public List<ManifestLayer> Layers { get; set; } = [];
     }
 
@@ -108,7 +86,7 @@ public partial class MoodboardWorkspace : UserControl
     private OperationProgressSession BeginProgress(string label, bool preview = false)
         => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
 
-    public event Action<string>? StatusChanged;
+    public event Action<string, NotificationKind>? StatusChanged;
     public bool HasBoard => editorPanel.Visibility == Visibility.Visible;
     public Action<string>? ValidateExportPath { get; set; }
     public IReadOnlyCollection<string> SourcePaths => _sourcePaths;
@@ -186,7 +164,7 @@ public partial class MoodboardWorkspace : UserControl
         UpdateSelectionControls();
     }
 
-    public bool CanLeave() => !IsBusy && (!_dirty || TesseraDialog.Show(Window.GetWindow(this),
+    public bool CanLeave() => !IsBusy && (!_dirty || TesseraDialogs.Show(Window.GetWindow(this),
         Localization.Text("TheBoardHasUnsavedChangesConfirmation"), Localization.Text("UnsavedBoard"),
         MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes);
 
@@ -216,7 +194,7 @@ public partial class MoodboardWorkspace : UserControl
     {
         widthInput.Commit(); heightInput.Commit();
         ResetBoard(widthInput.Value, heightInput.Value);
-        StatusChanged?.Invoke(Localization.Text("CanvasCreated"));
+        StatusChanged?.Invoke(Localization.Text("CanvasCreated"), NotificationKind.Success);
     }
 
     private void ResetBoard(int width, int height)
@@ -329,7 +307,7 @@ public partial class MoodboardWorkspace : UserControl
         string[] fileNames = paths.ToArray();
         SetBusy(true);
         using var operation = BeginProgress(Localization.Text("AddingImagesAction"));
-        StatusChanged?.Invoke(Localization.Text("AddingImagesAction"));
+        StatusChanged?.Invoke(Localization.Text("AddingImagesAction"), NotificationKind.Information);
         try
         {
             var prepared = await Task.Run(() => PrepareImages(fileNames, operation.Work));
@@ -405,7 +383,10 @@ public partial class MoodboardWorkspace : UserControl
             SelectLayer(lastAdded);
             emptyHint.Visibility = Visibility.Collapsed;
         }
-        StatusChanged?.Invoke(prepared.Errors.Count > 0 ? Localization.Format("AddedFormatLabel", added, string.Join("; ", prepared.Errors)) : Localization.Format("LayersAddedFormat", added));
+        string summary = prepared.Errors.Count > 0
+            ? Localization.Format("AddedFormatLabel", added, string.Join("; ", prepared.Errors))
+            : Localization.Format("LayersAddedFormat", added);
+        StatusChanged?.Invoke(summary, MainWindow.BatchNotificationKind(added, prepared.Errors.Count));
     }
 
     private static byte[] ReadImageData(string path, out int width, out int height)
@@ -803,7 +784,7 @@ public partial class MoodboardWorkspace : UserControl
         };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveToFileAsync(dialog.FileName); }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotSaveBoardFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotSaveBoardFormat", ex.Message), NotificationKind.Error); }
     }
 
     public async Task SaveToFileAsync(string path)
@@ -813,7 +794,7 @@ public partial class MoodboardWorkspace : UserControl
         var board = CaptureManifest(out var images);
         SetBusy(true);
         using var operation = BeginProgress(Localization.Text("SavingBoardAction"));
-        StatusChanged?.Invoke(Localization.Text("SavingBoardAction"));
+        StatusChanged?.Invoke(Localization.Text("SavingBoardAction"), NotificationKind.Information);
         try
         {
             await Task.Run(() => WriteProject(path, board, images, operation.Work));
@@ -899,7 +880,7 @@ public partial class MoodboardWorkspace : UserControl
         ProjectSaved?.Invoke(path);
         _projectPath = path;
         _dirty = false;
-        StatusChanged?.Invoke(Localization.Format("BoardSavedFormat", path));
+        StatusChanged?.Invoke(Localization.Format("BoardSavedFormat", path), NotificationKind.Success);
     }
 
     private async Task OpenProjectAsync()
@@ -909,7 +890,7 @@ public partial class MoodboardWorkspace : UserControl
         var dialog = new OpenFileDialog { Title = Localization.Text("OpenBoard"), Filter = Localization.Text("TesseraBoardFileFilter") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await LoadFromFileAsync(dialog.FileName); }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotOpenBoardFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotOpenBoardFormat", ex.Message), NotificationKind.Error); }
     }
 
     public async Task LoadFromFileAsync(string path)
@@ -918,7 +899,7 @@ public partial class MoodboardWorkspace : UserControl
         path = Path.GetFullPath(path);
         SetBusy(true);
         using var operation = BeginProgress(Localization.Text("LoadingBoard"));
-        StatusChanged?.Invoke(Localization.Text("OpeningBoardAction"));
+        StatusChanged?.Invoke(Localization.Text("OpeningBoardAction"), NotificationKind.Information);
         try
         {
             var loaded = await Task.Run(() => ReadProject(path, operation.Work));
@@ -949,79 +930,44 @@ public partial class MoodboardWorkspace : UserControl
     private static (int Width, int Height, Color Background, List<Layer> Layers, string[] SourcePaths) ReadProjectWithProgress(string path, ProcessingProgress tracking)
     {
         using var file = File.OpenRead(path);
-        bool zipped = file.ReadByte() == 'P' && file.ReadByte() == 'K';
-        file.Position = 0;
-        int width, height;
-        Color background = Colors.White;
-        var layers = new List<Layer>();
-        string[] sourcePaths = [];
-        if (zipped)
+        using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
+        using var manifestStream = archive.GetEntry("board.json")?.Open() ?? throw new InvalidDataException(Localization.Text("BoardDescriptionMissing"));
+        var board = JsonSerializer.Deserialize<BoardManifest>(manifestStream) ?? throw new InvalidDataException(Localization.Text("EmptyBoardFile"));
+        ValidateBoard(board.Version, board.Width, board.Height, board.Layers?.Count ?? -1);
+        Color background = ParseBackgroundColor(board.BackgroundColor);
+        if (board.SourcePaths is null) throw new InvalidDataException(Localization.Text("EmptyBoardFile"));
+        string[] sourcePaths = board.SourcePaths.Select(source => Path.GetFullPath(source)).ToArray();
+        var items = board.Layers ?? throw new InvalidDataException(Localization.Text("BoardLayersMissing"));
+        var layers = new List<Layer>(items.Count);
+        foreach (var item in items)
         {
-            using var archive = new ZipArchive(file, ZipArchiveMode.Read, leaveOpen: true);
-            using var manifestStream = archive.GetEntry("board.json")?.Open() ?? throw new InvalidDataException(Localization.Text("BoardDescriptionMissing"));
-            var board = JsonSerializer.Deserialize<BoardManifest>(manifestStream) ?? throw new InvalidDataException(Localization.Text("EmptyBoardFile"));
-            ValidateBoard(board.Version, board.Width, board.Height, board.Layers?.Count ?? -1, 2);
-            background = ParseBackgroundColor(board.BackgroundColor);
-            sourcePaths = (board.SourcePaths ?? []).Select(source => Path.GetFullPath(source)).ToArray();
-            var items = board.Layers ?? throw new InvalidDataException(Localization.Text("BoardLayersMissing"));
-            width = board.Width; height = board.Height;
-            foreach (var item in items)
+            ValidateLayer(item.Width, item.Height, item.X, item.Y, item.Angle, item.Scale);
+            if (!item.ImageEntry.StartsWith("images/", StringComparison.Ordinal) || item.ImageEntry.Contains("..", StringComparison.Ordinal))
+                throw new InvalidDataException(Localization.Text("InvalidImageEntry"));
+            var entry = archive.GetEntry(item.ImageEntry) ?? throw new InvalidDataException(Localization.Text("LayerImageMissing"));
+            if (entry.Length is <= 0 or > 536870912) throw new InvalidDataException(Localization.Text("InvalidLayerImageDimensions"));
+            byte[] imageData = new byte[(int)entry.Length];
+            using (var image = entry.Open()) image.ReadExactly(imageData);
+            layers.Add(new Layer
             {
-                ValidateLayer(item.Width, item.Height, item.X, item.Y, item.Angle, item.Scale);
-                if (!item.ImageEntry.StartsWith("images/", StringComparison.Ordinal) || item.ImageEntry.Contains("..", StringComparison.Ordinal))
-                    throw new InvalidDataException(Localization.Text("InvalidImageEntry"));
-                var entry = archive.GetEntry(item.ImageEntry) ?? throw new InvalidDataException(Localization.Text("LayerImageMissing"));
-                if (entry.Length is <= 0 or > 536870912) throw new InvalidDataException(Localization.Text("InvalidLayerImageDimensions"));
-                byte[] imageData = new byte[(int)entry.Length];
-                using (var image = entry.Open()) image.ReadExactly(imageData);
-                layers.Add(new Layer
-                {
-                    Name = item.Name,
-                    ImageData = imageData,
-                    Image = DecodePreview(imageData, PreviewPixelLimit),
-                    Width = item.Width,
-                    Height = item.Height,
-                    X = item.X,
-                    Y = item.Y,
-                    Angle = item.Angle,
-                    Scale = item.Scale
-                });
-                tracking.Report((double)layers.Count / items.Count);
-            }
+                Name = item.Name,
+                ImageData = imageData,
+                Image = DecodePreview(imageData, PreviewPixelLimit),
+                Width = item.Width,
+                Height = item.Height,
+                X = item.X,
+                Y = item.Y,
+                Angle = item.Angle,
+                Scale = item.Scale
+            });
+            tracking.Report((double)layers.Count / items.Count);
         }
-        else
-        {
-            // TESSERA_LEGACY Open v1 .tboard projects written before ZIP packaging.
-            var board = JsonSerializer.Deserialize<BoardFile>(file) ?? throw new InvalidDataException(Localization.Text("EmptyBoardFile"));
-            ValidateBoard(board.Version, board.Width, board.Height, board.Layers?.Count ?? -1, 1);
-            var items = board.Layers ?? throw new InvalidDataException(Localization.Text("BoardLayersMissing"));
-            width = board.Width; height = board.Height;
-            foreach (var item in items)
-            {
-                ValidateLayer(item.Width, item.Height, item.X, item.Y, item.Angle, item.Scale);
-                if (item.Png is null || item.Png.Length == 0) throw new InvalidDataException(Localization.Text("EmptyLayerImage"));
-                layers.Add(new Layer
-                {
-                    Name = item.Name,
-                    ImageData = item.Png,
-                    Image = DecodePreview(item.Png, PreviewPixelLimit),
-                    Width = item.Width,
-                    Height = item.Height,
-                    X = item.X,
-                    Y = item.Y,
-                    Angle = item.Angle,
-                    Scale = item.Scale
-                });
-                tracking.Report((double)layers.Count / items.Count);
-            }
-        }
-        return (width, height, background, layers, sourcePaths);
+        return (board.Width, board.Height, background, layers, sourcePaths);
     }
 
     private static Color ParseBackgroundColor(string? hex)
     {
-        if (string.IsNullOrEmpty(hex)) return Colors.White;
-        if (hex.Length != 7 || hex[0] != '#' ||
+        if (hex is null || hex.Length != 7 || hex[0] != '#' ||
             !uint.TryParse(hex.AsSpan(1), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint rgb))
             throw new InvalidDataException(Localization.Text("InvalidBoardBackgroundColor"));
         return Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
@@ -1036,12 +982,12 @@ public partial class MoodboardWorkspace : UserControl
         _projectPath = path;
         _dirty = false;
         RebuildLayers();
-        StatusChanged?.Invoke(Localization.Format("BoardOpenedFormat", path));
+        StatusChanged?.Invoke(Localization.Format("BoardOpenedFormat", path), NotificationKind.Success);
     }
 
-    private static void ValidateBoard(int version, int width, int height, int layerCount, int expectedVersion)
+    private static void ValidateBoard(int version, int width, int height, int layerCount)
     {
-        if (version != expectedVersion || width is < 128 or > MaxBoardSize || height is < 128 or > MaxBoardSize || layerCount is < 0 or > 500)
+        if (version != 2 || width is < 128 or > MaxBoardSize || height is < 128 or > MaxBoardSize || layerCount is < 0 or > 500)
             throw new InvalidDataException(Localization.Text("UnsupportedBoardFormatOrDimensions"));
     }
 
@@ -1058,7 +1004,7 @@ public partial class MoodboardWorkspace : UserControl
         var dialog = new SaveFileDialog { Title = Localization.Text("ExportBoardAsPNG"), Filter = "PNG|*.png", DefaultExt = ".png", AddExtension = true, FileName = Localization.Text("BoardPng") };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await ExportToPngAsync(dialog.FileName); }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotExportPNGFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotExportPNGFormat", ex.Message), NotificationKind.Error); }
     }
 
     public async Task ExportToPngAsync(string path)
@@ -1069,12 +1015,12 @@ public partial class MoodboardWorkspace : UserControl
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         SetBusy(true);
         using var operation = BeginProgress(Localization.Text("ExportPNGAction"));
-        StatusChanged?.Invoke(Localization.Text("ExportPNGAction"));
+        StatusChanged?.Invoke(Localization.Text("ExportPNGAction"), NotificationKind.Information);
         try
         {
             Color background = _backgroundColor;
             await Task.Run(() => MoodboardPngExporter.Export(path, width, height, background, layers, operation.Work));
-            StatusChanged?.Invoke(Localization.Format("PNGSavedFormat", path));
+            StatusChanged?.Invoke(Localization.Format("PNGSavedFormat", path), NotificationKind.Success);
             operation.Complete();
         }
         finally { SetBusy(false); }
@@ -1086,7 +1032,7 @@ public partial class MoodboardWorkspace : UserControl
         path = ValidateOutputPath(path, project: false);
         int width = (int)boardSurface.Width, height = (int)boardSurface.Height;
         MoodboardPngExporter.Export(path, width, height, _backgroundColor, CaptureRenderLayers());
-        StatusChanged?.Invoke(Localization.Format("PNGSavedFormat", path));
+        StatusChanged?.Invoke(Localization.Format("PNGSavedFormat", path), NotificationKind.Success);
     }
 
     private string ValidateOutputPath(string path, bool project)

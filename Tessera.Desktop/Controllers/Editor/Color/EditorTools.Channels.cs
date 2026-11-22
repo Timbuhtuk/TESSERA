@@ -147,9 +147,9 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Text("ChannelAdjustmentSavedToHistory");
+            Host.Notify(Localization.Text("ChannelAdjustmentSavedToHistory"), NotificationKind.Success);
         }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotAdjustChannelFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotAdjustChannelFormat", ex.Message), NotificationKind.Error); }
         finally { _editor.SetProcessingState(false); }
     }
 }

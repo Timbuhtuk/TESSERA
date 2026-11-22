@@ -57,8 +57,6 @@ public static class AsepriteConverter
                     document.Width,
                     document.Height,
                     depth = 32,
-                    // TESSERA_LEGACY Keep the single-layer field in Aseprite inspection JSON for existing consumers.
-                    layer = document.LayerName,
                     document.Layers,
                     profile = document.IsSrgb ? "srgb" : "unspecified",
                     frameCount = document.Frames.Count,
@@ -69,8 +67,6 @@ public static class AsepriteConverter
                     {
                         f.Index,
                         f.DurationMs,
-                        // TESSERA_LEGACY Keep the single-cel field in inspection JSON alongside the complete cels array.
-                        cel = f.Cel is { } first ? new { first.Type, first.X, first.Y, first.LinkedFrame, first.Image!.Width, first.Image.Height } : null,
                         cels = f.Cels.Select(cel => new { cel!.LayerIndex, cel.Type, cel.X, cel.Y, cel.LinkedFrame, cel.Image!.Width, cel.Image.Height })
                     })
                 }, JsonOptions);

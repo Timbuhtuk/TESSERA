@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
@@ -37,7 +36,6 @@ internal static class AtlasEditorChecks
                 bitmap.SetPixel(x, y, Color.FromArgb((x + y) % 256, x, y, 170));
         bitmap.Save(input, System.Drawing.Imaging.ImageFormat.Png);
         byte[] original = File.ReadAllBytes(input);
-        VerifyLegacyArchive(folder, original);
 
         string libraryPath = Path.Combine(folder, "library");
         var library = new ImageLibrary(libraryPath);
@@ -340,8 +338,8 @@ internal static class AtlasEditorChecks
         {
             if (window.OwnedWindows.OfType<TesseraDialog>().FirstOrDefault() is not { } dialog) return;
             dismiss.Stop();
-            var buttons = (StackPanel)dialog.FindName("dialogButtons");
-            buttons.Children.OfType<Button>().Single(button => Equals(button.Tag, MessageBoxResult.No))
+            var buttons = (Panel)dialog.FindName("ActionButtons");
+            buttons.Children.OfType<Button>().Last()
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         };
         dismiss.Start();
@@ -351,28 +349,6 @@ internal static class AtlasEditorChecks
             Require(window.IsVisible && Get<Button>(window, "_atlasApply").IsEnabled, "Canceling close discarded atlas edits");
         }
         finally { dismiss.Stop(); }
-    }
-
-    private static void VerifyLegacyArchive(string folder, byte[] png)
-    {
-        string path = Path.Combine(folder, "legacy.ttiles");
-        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
-        {
-            using (var manifest = new StreamWriter(archive.CreateEntry("collection.json").Open()))
-                manifest.Write("""{"Version":1,"Settings":{},"Assets":[{"Name":"../Saved tile","Image":"images/00000.png"}]}""");
-            using var pixels = archive.CreateEntry("images/00000.png").Open();
-            pixels.Write(png);
-        }
-        byte[] original = File.ReadAllBytes(path);
-        string destination = Path.Combine(folder, "recovered");
-        Require(LegacyTileArchive.Extract(path, destination) == 1 &&
-            File.ReadAllBytes(Directory.GetFiles(destination, "*.png").Single()).SequenceEqual(png) &&
-            File.ReadAllBytes(path).SequenceEqual(original), "Legacy extraction lost pixels or changed the archive");
-        var catalog = new WorkspaceCatalog(Path.Combine(folder, "legacy-library"));
-        catalog.State.Assets.Add(new WorkspaceAsset { Kind = (EWorkspaceAssetKind)3, ContentFile = "content.ttiles" });
-        catalog.Save();
-        Require(new WorkspaceCatalog(catalog.Root).State.Assets.Single().IsLegacyTileArchive &&
-            Enum.GetValues<EWorkspaceAssetKind>().Length == 3, "The catalog cannot read legacy archives or still exposes a Tiles kind");
     }
 
     private static T Get<T>(MainWindow window, string name) => (T)WindowTestAccess.GetField(window, name, Private)!;

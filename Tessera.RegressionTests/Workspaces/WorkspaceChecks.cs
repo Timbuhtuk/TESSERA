@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -29,7 +28,6 @@ internal static class WorkspaceChecks
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext());
         string root = Path.GetFullPath(Path.Combine("artifacts", "workspace-verification", "run-" + Guid.NewGuid().ToString("N")));
         Directory.CreateDirectory(root);
-        VerifyLibraryMigration(root);
         VerifyPagedCatalog(root);
         VerifyImageViewportInput();
         ResourceLifetimeChecks.Verify(root);
@@ -79,16 +77,8 @@ internal static class WorkspaceChecks
         Require(grass.ParentId is null && catalog.State.Links.Any(l => l.FolderId == grass.Id), "Deleting folder promotes children and preserves members");
         catalog.RemoveProject(projectB.Id); Require(catalog.State.Assets.Any(a => a.Id == clone.Id), "Deleting project preserves assets");
         catalog.Save();
-        string workspaceFile = Path.Combine(libraryRoot, "workspace.json");
-        var savedCatalog = System.Text.Json.JsonSerializer.SerializeToNode(catalog.State)!;
-        savedCatalog["Assets"]!.AsArray()[0]!["Tags"] = new JsonArray("legacy-only-tag");
-        File.WriteAllText(workspaceFile, savedCatalog.ToJsonString());
         catalog = new WorkspaceCatalog(libraryRoot);
         Require(catalog.State.Folders.Single().Name == "Лес", "Catalog persists structure");
-        Require(catalog.Query("all", null, null, "legacy-only-tag", 0, "", "", 0).Count == 0, "Search ignores legacy tags");
-        catalog.Save();
-        Require(new WorkspaceCatalog(libraryRoot).State.Assets[0].LegacyTags?.Single() == "legacy-only-tag",
-            "Catalog preserves previously saved metadata");
 
         string documentPath = Path.Combine(root, "copy-test.tboard");
         var copyFixture = new MoodboardWorkspace();
@@ -232,7 +222,7 @@ internal static class WorkspaceChecks
             var layout = Get<Grid>(window, "rootLayout");
             double editorHeight = layout.RowDefinitions[1].ActualHeight;
             NavigationTest.Click(window, "saveDocumentMenuItem"); Pump();
-            var notification = Get<NotificationDisplay>(window, "notificationDisplay").Cards.Last();
+            var notification = ProgressUiChecks.Cards(Get<NotificationDisplay>(window, "notificationDisplay")).Last();
             Require(Get<TextBlock>(window, "statusLabel").Text == Tessera.Desktop.Localization.Text("ProjectSaved") &&
                 notification.IsVisible && notification.Parent is StackPanel { VerticalAlignment: VerticalAlignment.Top } &&
                 Get<TextBlock>(notification, "heading").Text == Tessera.Desktop.Localization.Text("Done") &&
@@ -271,7 +261,7 @@ internal static class WorkspaceChecks
             Wait(Open(stone.Id)); Remove(stone.Id);
             Require(sources.SelectedItem is SourceEntry remaining && remaining.Id == asset.Id && images.Load().Count == 2, "Deleting a project neighbor keeps unrelated global sources intact");
             Wait(Open(asset.Id));
-            Get<Tessera.Desktop.IntegerInput>(window, "widthInput").Value = 4; Get<Tessera.Desktop.IntegerInput>(window, "heightInput").Value = 4;
+            Get<IntegerInput>(window, "widthInput").Value = 4; Get<IntegerInput>(window, "heightInput").Value = 4;
             Get<Button>(window, "scaleOnlyButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             WaitUntil(() => !(bool)WindowTestAccess.GetField(window, "_processing", BindingFlags.NonPublic | BindingFlags.Instance)!);
             Require(source.Id == asset.Id && images.Load().Single(s => s.Id == asset.Id).Generations.Count == 3, "Docked action adds persistent shared history");
@@ -386,18 +376,16 @@ internal static class WorkspaceChecks
             state.Assets.Add(new WorkspaceAsset { Name = "Asset " + q });
         var first = state.Assets[0];
         state.Links.Add(new WorkspaceLink { AssetId = first.Id, ProjectId = project.Id });
-        File.WriteAllText(manifest, System.Text.Json.JsonSerializer.Serialize(state));
-        long legacyBytes = new FileInfo(manifest).Length;
-
+        long catalogBytes = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(state).Length;
+        new WorkspaceStorage(library).Save(state);
         var catalog = new WorkspaceCatalog(library);
-        catalog.Save();
         var reopened = new WorkspaceCatalog(library);
         Require(reopened.State.Assets.Select(asset => asset.Id).SequenceEqual(state.Assets.Select(asset => asset.Id)) &&
             reopened.State.ProjectId == project.Id && reopened.State.Links.Single().AssetId == first.Id,
-            "Catalog migration lost assets, order, links or view settings");
+            "Catalog roundtrip lost assets, order, links or view settings");
         var initialPages = Directory.GetFiles(pages, "*.json").ToHashSet();
-        Require(initialPages.Count == 5 && new FileInfo(manifest).Length < legacyBytes / 10 &&
-            initialPages.All(path => new FileInfo(path).Length < legacyBytes / 2),
+        Require(initialPages.Count == 5 && new FileInfo(manifest).Length < catalogBytes / 10 &&
+            initialPages.All(path => new FileInfo(path).Length < catalogBytes / 2),
             "Catalog was not split into smaller metadata pages");
 
         catalog.State.Assets[WorkspaceStorage.PageSize].Name = "Edited";
@@ -456,94 +444,6 @@ internal static class WorkspaceChecks
             Require(scroll.HorizontalOffset == 70 && scroll.VerticalOffset == 90, "Image kept moving after middle release");
         }
         finally { window.Close(); Pump(); }
-    }
-
-    private static void VerifyLibraryMigration(string root)
-    {
-        string executable = Path.Combine(root, "installation");
-        string portable = Path.Combine(executable, "WorkspaceData", "Library");
-        string appData = Path.Combine(root, "appdata");
-        string profile = Path.Combine(appData, "Tessera");
-        string active = Path.Combine(profile, "Library");
-        string backup = Path.Combine(profile, "Library.before-portable-migration");
-        string ready = Path.Combine(profile, ".portable-library-ready");
-        string[] files =
-        [
-            "workspace.json", "appearance.json", "release-notes-state.json", "editor-history.json",
-            "macros/recipe.json", "documents/asset/content.aseprite", "documents/board/content.tboard",
-            "source/source.png", "source/generations/result/result.png", ".history-undo/objects/hash"
-        ];
-        foreach (string file in files) Write(portable, file, "portable " + file);
-        Write(active, "workspace.json", "previous AppData workspace");
-
-        using (File.Open(Path.Combine(portable, "workspace.json"), FileMode.Open, FileAccess.Read, FileShare.None))
-        {
-            try
-            {
-                PortableLibraryMigration.Prepare(executable, appData);
-                throw new Exception("Migration accepted a locked source file");
-            }
-            catch (IOException) { }
-        }
-        Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "previous AppData workspace" &&
-            !Directory.Exists(backup) && !Directory.Exists(ready), "Failed migration replaced or sealed the workspace");
-
-        Require(PortableLibraryMigration.Prepare(executable, appData) == active, "Migration selected the wrong profile path");
-        foreach (string file in files)
-        {
-            Require(File.ReadAllText(Path.Combine(portable, file)) == "portable " + file, "Migration altered original " + file);
-            Require(File.ReadAllBytes(Path.Combine(portable, file)).SequenceEqual(File.ReadAllBytes(Path.Combine(active, file))),
-                "Migrated file differs: " + file);
-        }
-        Require(File.ReadAllText(Path.Combine(backup, "workspace.json")) == "previous AppData workspace", "Previous AppData workspace was lost");
-
-        // Simulate termination after saving the previous library and before publishing the verified copy.
-        Directory.Move(active, ready);
-        Require(PortableLibraryMigration.Prepare(executable, appData) == active && File.Exists(Path.Combine(active, "workspace.json")) &&
-            !Directory.Exists(ready), "Verified staged library was not activated on retry");
-        Write(active, "workspace.json", "edited migrated workspace");
-        File.Delete(Path.Combine(active, "macros", "recipe.json"));
-        PortableLibraryMigration.Prepare(executable, appData);
-        Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "edited migrated workspace" &&
-            !File.Exists(Path.Combine(active, "macros", "recipe.json")), "Migration ran again and replaced AppData edits");
-        PortableLibraryMigration.Prepare(executable, appData, _ => throw new Exception("Known source prompted again"));
-
-        // A preview build already migrated an unrelated library before the first production launch.
-        File.Delete(Path.Combine(active, ".portable-library-source"));
-        PortableLibraryMigration.Prepare(executable, appData, path =>
-        {
-            Require(path == portable, "The replacement prompt identified the wrong portable source");
-            return true;
-        });
-        Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "portable workspace.json" &&
-            File.ReadAllText(Path.Combine(backup, "workspace.json")) == "previous AppData workspace" &&
-            File.ReadAllText(Path.Combine(backup + ".1", "workspace.json")) == "edited migrated workspace",
-            "Recovery failed to activate the selected library or preserve both AppData backups");
-        PortableLibraryMigration.Prepare(executable, appData, _ => throw new Exception("Recovered source prompted again"));
-
-        string otherInstallation = Path.Combine(root, "other-installation");
-        Write(Path.Combine(otherInstallation, "WorkspaceData", "Library"), "workspace.json", "unrelated library");
-        PortableLibraryMigration.Prepare(otherInstallation, appData, _ => false);
-        PortableLibraryMigration.Prepare(otherInstallation, appData, _ => throw new Exception("Declined source prompted again"));
-        Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "portable workspace.json" &&
-            !Directory.Exists(backup + ".2"), "Declining the replacement changed the active library");
-
-        string oldData = Path.Combine(root, "pixelizator-data");
-        string oldId = Guid.NewGuid().ToString("N");
-        Write(Path.Combine(oldData, "Pixelizator", "Library"), Path.Combine(oldId, "source.json"), "legacy source");
-        string emptyInstallation = Path.Combine(root, "empty-installation");
-        Write(Path.Combine(emptyInstallation, "WorkspaceData", "Library"), ".copied-library", "old empty portable marker");
-        string migratedLibrary = PortableLibraryMigration.Prepare(emptyInstallation, oldData);
-        Require(File.ReadAllText(Path.Combine(migratedLibrary, oldId, "source.json")) == "legacy source",
-            "Empty portable storage masked the older Pixelizator library");
-        Console.WriteLine("  Portable library: verified copy, original and AppData backup, locked-file retry, interrupted publish and one-time startup passed.");
-
-        static void Write(string directory, string relative, string text)
-        {
-            string path = Path.Combine(directory, relative);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, text);
-        }
     }
 
     private static IEnumerable<T> Descendants<T>(DependencyObject element) where T : DependencyObject

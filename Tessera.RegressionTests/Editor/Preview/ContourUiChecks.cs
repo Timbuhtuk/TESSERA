@@ -102,6 +102,8 @@ internal static class ContourUiChecks
             }
             Require(!Get<MenuItem>("saveMenuItem").IsEnabled, "Temporary map can be exported as a saved result");
             Capture(window, Path.Combine(folder, "preview-" + language + ".png"));
+            // Closing the contour tool can reactivate the palette tool. Isolate the saved map from its preview.
+            Get<CheckBox>("colorLivePreviewInput").IsChecked = false;
             NavigationTest.Click(window, "contourApplyButton");
             Until(() => document.Generations.Count == 1 && !Get<bool>("_processing"));
             var first = document.SelectedGeneration!;
@@ -109,7 +111,10 @@ internal static class ContourUiChecks
             Equal(expected, Get<Bitmap>("_downscaledResult"));
             Require(first.ParentGenerationId is null && window.ProcessingBasis == 1, "Contour result used an unselected input");
             Require(Get<ListBox>("sourceStrip").SelectedItem is null && ReferenceEquals(Get<ListBox>("generationStrip").SelectedItem, first), "Contour result is not the sole selected card");
-            Require(!Visible() && Get<Border>("livePreviewFrame").Visibility == Visibility.Collapsed, "Applied result remains a temporary preview");
+            Require(!Visible() && ReferenceEquals(Get<PixelPreview>("resultPreview").Image, Get<Bitmap>("_downscaledResult")) &&
+                Get<Border>("livePreviewFrame").Visibility == Visibility.Collapsed &&
+                Get<FrameworkElement>("livePreviewBadge").Visibility == Visibility.Collapsed,
+                "Applied result remains a temporary preview");
             string export = Path.Combine(folder, "map.png"); Invoke("SaveResult", export);
             using (var reopened = new Bitmap(export)) Equal(expected, reopened);
             using var basis = (Bitmap)Get<Bitmap>("_downscaledResult").Clone();

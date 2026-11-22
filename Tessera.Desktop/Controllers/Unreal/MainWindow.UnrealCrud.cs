@@ -43,7 +43,7 @@ public partial class MainWindow
         var mailbox = Mailbox(project);
         string message = Localization.Format("UnrealDeleteTextureConfirmation", link.Path) + "\n" +
             Localization.Text("UnrealDeleteTextureWarning");
-        if (TesseraDialog.Show(this, message, Localization.Text("DeleteFromUnreal"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        if (TesseraDialogs.Show(this, message, Localization.Text("DeleteFromUnreal"), MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
         string? revision = MutationRevision(asset, mailbox);
         if (revision is null) return;
@@ -70,7 +70,7 @@ public partial class MainWindow
         if (conflict is null) return asset.Unreal!.Revision;
         if (conflict.Response?.Revision is not { Length: > 0 } revision)
             throw new IOException(Localization.Text("TheUnrealResponseFailedVerification"));
-        if (TesseraDialog.Show(this, Localization.Text("UnrealTextureChangedConfirmation"),
+        if (TesseraDialogs.Show(this, Localization.Text("UnrealTextureChangedConfirmation"),
             "Unreal Engine", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return null;
         return revision;
     }

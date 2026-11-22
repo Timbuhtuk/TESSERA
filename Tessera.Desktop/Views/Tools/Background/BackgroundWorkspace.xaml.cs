@@ -37,7 +37,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
     private OperationProgressSession BeginProgress(string label, bool preview = false)
         => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
 
-    public event Action<string>? StatusChanged;
+    public event Action<string, NotificationKind>? StatusChanged;
 
     public BackgroundWorkspace()
     {
@@ -75,10 +75,10 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
             using var image = await Task.Run(() => IconWorkspace.ReadImage(path));
             if (_disposed) return;
             SetImage(image, Path.GetFileName(path), path);
-            StatusChanged?.Invoke(Localization.Text("BackgroundSourceOpenedHint"));
+            StatusChanged?.Invoke(Localization.Text("BackgroundSourceOpenedHint"), NotificationKind.Success);
             operation.Complete();
         }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotOpenImageFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotOpenImageFormat", ex.Message), NotificationKind.Error); }
         finally { SetBusy(false); }
     }
 
@@ -152,12 +152,12 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
             _renderedRecipe = new BackgroundSettings { Mode = options.Mode, Tolerance = options.Tolerance, ColorArgb = options.Color?.ToArgb() };
             RecomposeManualResult();
             operation.Complete();
-            if (IsVisible) StatusChanged?.Invoke(Localization.Text("BackgroundRemovalIsReady"));
+            if (IsVisible) StatusChanged?.Invoke(Localization.Text("BackgroundRemovalIsReady"), NotificationKind.Success);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("CouldNotRemoveBackgroundFormat", ex.Message));
+            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("CouldNotRemoveBackgroundFormat", ex.Message), NotificationKind.Error);
         }
         finally
         {
@@ -180,7 +180,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveAsync(dialog.FileName, true); }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotSavePNGFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotSavePNGFormat", ex.Message), NotificationKind.Error); }
     }
 
     public async Task SaveAsync(string path, bool overwrite = false)
@@ -196,7 +196,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
         using var image = (Bitmap)_result.Clone();
         SetBusy(true);
         using var operation = BeginProgress(Localization.Text("SavingPNGAction"));
-        StatusChanged?.Invoke(Localization.Text("SavingPNGAction"));
+        StatusChanged?.Invoke(Localization.Text("SavingPNGAction"), NotificationKind.Information);
         try
         {
             await Task.Run(() =>
@@ -210,7 +210,7 @@ public partial class BackgroundWorkspace : UserControl, IDisposable
                 finally { if (File.Exists(temporary)) File.Delete(temporary); }
             });
             operation.Complete();
-            StatusChanged?.Invoke(Localization.Format("SavedFormat", output));
+            StatusChanged?.Invoke(Localization.Format("SavedFormat", output), NotificationKind.Success);
         }
         finally { SetBusy(false); }
     }

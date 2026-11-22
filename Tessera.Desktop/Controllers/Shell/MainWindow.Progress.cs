@@ -42,24 +42,43 @@ public partial class MainWindow
     private void InitializeStatusFeedback()
     {
         RegisterName(statusLabel.Name, statusLabel);
-        notificationDisplay.Place(_appearanceSettings.NotificationAnchor);
+        notificationDisplay.Placement = _appearanceSettings.NotificationAnchor;
         var text = DependencyPropertyDescriptor.FromProperty(TextBlock.TextProperty, typeof(TextBlock));
         text.AddValueChanged(statusLabel, StatusChanged);
         Closed += (_, _) => text.RemoveValueChanged(statusLabel, StatusChanged);
 
         void StatusChanged(object? sender, EventArgs e)
         {
-            if (!_settingNotification) notificationDisplay.UpdateStatus(statusLabel.Text);
+            if (!_settingNotification) notificationDisplay.UpdateStatus(statusLabel.Text, Localization.Text("Notification"));
         }
     }
 
     internal void Notify(string message, NotificationKind kind)
     {
+        if (kind == NotificationKind.Information)
+        {
+            statusLabel.Text = message;
+            return;
+        }
+
         _settingNotification = true;
         try { statusLabel.Text = message; }
         finally { _settingNotification = false; }
-        notificationDisplay.UpdateStatus("");
-        notificationDisplay.Show(message, kind);
+        notificationDisplay.UpdateStatus(null);
+        string heading = kind switch
+        {
+            NotificationKind.Success => "Done",
+            NotificationKind.Warning => "Warning",
+            NotificationKind.Error => "Error",
+            _ => "Notification"
+        };
+        notificationDisplay.Show(message, kind, Localization.Text(heading));
+    }
+
+    internal static NotificationKind BatchNotificationKind(int succeeded, int failed)
+    {
+        if (failed == 0) return succeeded > 0 ? NotificationKind.Success : NotificationKind.Information;
+        return succeeded == 0 ? NotificationKind.Error : NotificationKind.Warning;
     }
 
     internal OperationProgressSession BeginOperationProgress(object owner, string? label = null, bool preview = false)
@@ -121,7 +140,9 @@ public partial class MainWindow
                 finally { if (System.IO.File.Exists(temporary)) System.IO.File.Delete(temporary); }
             });
             CompleteProcessingProgress();
-            Notify(Localization.Format("SavedFormat", output) + (Editor._resultStale ? Localization.Text("ResultFromPreviousSettings") : ""), NotificationKind.Success);
+            bool stale = Editor._resultStale;
+            Notify(Localization.Format("SavedFormat", output) + (stale ? Localization.Text("ResultFromPreviousSettings") : ""),
+                stale ? NotificationKind.Warning : NotificationKind.Success);
         }
         finally { Editor.SetProcessingState(false); }
     }

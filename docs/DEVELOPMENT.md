@@ -46,7 +46,7 @@ The [architecture guide](ARCHITECTURE.md) defines ownership and dependency direc
 - `Tessera.Desktop`: WPF views, UI controllers and workspace state. `Views`, `Controllers` and `Models` separate rendering, action orchestration and stored state.
 - `Tessera.Cli`: [command-line interface](CLI.md) to the same core services.
 - `Tessera.Aseprite.Tests`, `Tessera.RegressionTests` and `Tessera.Cli.Tests`: format, algorithm, desktop and CLI checks.
-- `Tessera.WpfStyles` 0.2.0: restored from NuGet.org. If your cache contains the older local build with the same version, restore into a fresh package cache. Font licenses remain in `Tessera.Desktop/Assets/Fonts`.
+- `Tessera.WpfStyles` 0.3.0: restored from NuGet.org. If your cache contains the older local build with the same version, restore into a fresh package cache. Font licenses remain in `Tessera.Desktop/Assets/Fonts`.
 - `plugins/tessera`: [local ChatGPT plugin and skill](CHATGPT.md); `.agents/plugins/marketplace.json` registers the repository marketplace.
 - `artifacts`: ignored local builds, test output and archives.
 
@@ -66,37 +66,15 @@ Run `--project-notes` (also included in `--ui`) for RU/EN docked/floating previe
 
 The local ScrollViewer template fills the corner between simultaneous horizontal and vertical scrollbars with the theme canvas brush, so it follows the dark palette.
 
-## Tile seam inspector
+## Tile atlas
 
-Library PNG writes use .NET file streams rather than GDI+ filename APIs, which fail at legacy MAX_PATH lengths. The UI suite includes source/result/crop pixel and alpha round trips plus history reopening in a library whose root exceeds 270 characters. Editor regression tests fail on unexpected owned error dialogs instead of waiting invisibly for user input.
+`TileAtlasPage` owns atlas editing in `Tessera.Desktop/Views/Pages/Atlas`. Pointer and repeat behavior lives in `Tessera.Desktop/Controllers/Tools/Tiles`. `TileSetSlicer` calculates tile rectangles and ranks candidate layouts. `TileSeamAnalyzer` compares the opposite BGRA edge strips using OKLab distance after compositing transparent pixels over both black and white.
 
-`TileInspectorWindow.Zoom.cs` handles unmodified wheel input with the main editor's 6.25–6400% scale steps, using the current fitted scale for the first wheel step. The deferred scroll adjustment retains the source point under the cursor and ignores stale zoom requests. `ImageViewportInput` handles modified wheel scrolling and middle-button panning. Collection settings use an optional `ZoomScale` value and retain the original `Zoom` index for compatibility; old projects keep their original Fit/100–3200% zoom. WPF checks cover cursor anchoring, limits, multi-notch/small deltas, Fit transitions and old/new project zoom round trips.
-
-Holding either Alt key temporarily enables the heatmap without changing the saved checkbox state or marking the project dirty. Preview key-up and window deactivation restore the selected mode; only the preview is invalidated, so holding Alt does not rerun edge analysis. Seam statistics are below the preview, while drawing/smoothing stays above it. The WPF checks exercise rendered press/release behavior, repeated keydown, both Alt keys, focus loss, persistent visibility, project settings and panel order at normal/minimum sizes.
-
-`Tessera.Desktop/Views/Tools/Tiles/TilePreview.cs` draws repeated tiles and heat strips without allocating a full repeated bitmap. `TileAtlasPage` owns atlas editing. Its layout and code-behind are in `Tessera.Desktop/Views/Pages/Atlas`, and pointer and repeat behavior is in `Tessera.Desktop/Controllers/Tools/Tiles`. The `--tiles image-or-collection` startup option opens images in the atlas editor and offers PNG extraction for collections created by the retired standalone inspector.
-
-`Tessera.Core/Imaging/Tiles/TileSeamAnalyzer.cs` compares four straight-alpha BGRA32 edge strips in O(width + height). It uses 100 × Euclidean OKLab distance after linear-sRGB compositing over black and white, keeping the larger difference. `Horizontal[y]` joins left/right at row y; `Vertical[x]` joins top/bottom at column x. The configurable threshold classifies edge differences and does not claim to certify visual seamlessness.
-
-`TileAsset.cs` keeps BGRA pixels, a WPF bitmap, edit state and bounded per-asset undo/redo snapshots (up to 20 entries / 64 MiB, retaining at least one). `TileAsset.Compare(A, B)` compares A.right/B.left and A.bottom/B.top; reverse joins are computed independently. The checkerboard arrangement alternates A/B. Pair candidates require equal dimensions; incompatible assets remain available in the collection. `TileAssetProcessing.Smooth` delegates to `IndependentImageProcessor.ApplyNeighborColors`, preserving its color selection and alpha behavior, then optionally restores pixels outside the selected edge strip. It does not synthesize colors across asset boundaries.
-
-`TileCollectionFile.cs` stores version-1 `.ttiles` ZIP projects containing `collection.json` and embedded PNGs. It reads and validates all images before replacing session state. Project and PNG writes use adjacent temporary files and atomic replacement; exports reject imported source paths. Embedded local-edit protection survives reopening. Original source paths serve only for optional watching/reloading; portable project images remain usable without originals.
-
-Build the tests, then run `dotnet run --project Tessera.RegressionTests -c Release --no-build -- --tiles`. This checks known distances, alpha, axis mapping, the home entry, repetition modes, rendered heatmap toggling/opacity/direction, fit and fixed zoom, the minimum layout, failed loads, file writes, atomic replacement and disabling the watcher. Collection checks cover pair selection, pencil/eraser/eyedropper, stroke isolation, undo/redo, local-edit protection, portable project round trips, failed project loads, export protection and smoothing parity with the shared algorithm. Rendered captures are written under `artifacts/wpf/verification/tiles-*`. These checks also run with `--ui`.
-
-Painting and both fills use straight-alpha source-over, with color alpha multiplied by `PaintOpacity`. Brush dabs read the stroke's original snapshot, avoiding buildup within a stroke. Flood fill uses an iterative four-neighbor traversal over the pre-edit pixels; fully transparent pixels compare equal regardless of hidden RGB. It stays within one asset and creates one undo entry. Version-1 collections accept the optional `PaintOpacity` setting (default 100, finite range 0–100). `TilePaintChecks` and the inspector WPF checks cover blending over opaque/partial/zero alpha, overlapping dabs, separate strokes, boundaries, no-op history, A/B targeting, project compatibility and translated controls.
-
-### Tileset slicing
-
-`Tessera.Core/Imaging/Tiles/TileSetSlicer.cs` validates tile-size/grid-count conversions, exact coverage, symmetric margins and gutters, and enumerates row-major cell rectangles. Automatic suggestions rank valid common-size layouts with a geometric prior and sampled color/alpha changes at candidate cut lines. This is a proposal, not unique grid detection; ambiguous images retain alternatives and require confirmation.
-
-`TileSetImportWindow.xaml(.cs)` provides manual/automatic layout controls and an outlined pixel preview in `TileSetPreview.cs`. The `TileInspectorWindow.TileSet.cs` partial adds the confirmed batch to the collection. Each slice keeps an optional `AtlasSourcePath` instead of an ordinary single-image watcher path. Version-1 `.ttiles` manifests accept this optional field, retain embedded pixels, and protect the original atlas from PNG/project overwrite. Existing projects without the field remain supported.
-
-`TileSetChecks.cs` runs with `--tiles` and `--ui`: 96×192 → 3×6 × 32×32, rectangular cells, margins/gutters, malformed grids, ambiguous automatic suggestions, byte-exact crops including alpha, optional empty-cell filtering, minimum dialog layout, collection integration, project round trips and source protection.
+Run `dotnet run --project Tessera.RegressionTests -c Release --no-build -- --tiles` for the atlas, slicing and seam checks.
 
 ## Compatibility
 
-Tessera was previously named Pixelizator. The repository is Timbuhtuk/TESSERA. Startup uses %LOCALAPPDATA%\Tessera\Library. PortableLibraryMigration verifies a copy from WorkspaceData/Library beside the executable before making it active. It keeps the source library and backs up an existing profile library.
+Tessera uses `%LOCALAPPDATA%/Tessera/Library` as its default workspace path.
 
 Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are `Tessera-win-x64.zip` and `Tessera-cli-win-x64.zip`. Update external scripts that call the old executable name.
 
@@ -104,7 +82,7 @@ Published executables are now `Tessera.exe` and `tessera.exe`. Archive names are
 
 The [Build and release workflow](../.github/workflows/release.yml) runs on pushes to `main`, including merged pull requests. Pull requests targeting `main` run the build and checks without publishing a release.
 
-The Windows job sets up .NET 8 and Python 3.13, builds and tests the solution, publishes both executables, and packages the app, CLI, plugin and skill. Integration checks run all 18 command/alias helps and actual image operations through the plugin launcher, inspect the archives, and reject the desktop executable without starting it. SHA256SUMS.txt covers the desktop executable and all four distributable ZIPs. A separate job with `contents: write` publishes the seven release assets:
+The Windows job sets up .NET 8 and Python 3.13, builds and tests the solution, publishes both executables, and packages the app, CLI, plugin and skill. Integration checks run CLI and macro help output and actual image operations through the plugin launcher, inspect the archives, and reject the desktop executable without starting it. SHA256SUMS.txt covers the desktop executable and all four distributable ZIPs. A separate job with `contents: write` publishes the seven release assets:
 
 - `Tessera.exe`
 - `Tessera-win-x64.zip`
@@ -114,7 +92,7 @@ The Windows job sets up .NET 8 and Python 3.13, builds and tests the solution, p
 - `Tessera-chatgpt-plugin.zip` (local plugin)
 - `Tessera-skill.zip` (standalone skill)
 
-The current release series starts at `3.0.0` in `release-version.txt`. `Get-ReleaseVersion.ps1` selects the next patch after the highest tag in that major/minor series merged into the current commit; a rerun of a tagged commit keeps its version. PR builds do not consume version numbers. Change the version floor to start a new major/minor series. The workflow passes one resolved version to both the build and publication jobs, so tags, executable versions and embedded notes agree. `tests/ReleaseVersion.Checks.ps1` covers numbering with real isolated Git histories. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
+The release series starts at `2.0.0` in `release-version.txt`. `Get-ReleaseVersion.ps1` selects the next patch after the highest tag in that major/minor series merged into the current commit; a rerun of a tagged commit keeps its version. PR builds do not consume version numbers. Change the version floor to start a new major/minor series. The workflow passes one resolved version to both the build and publication jobs, so tags, executable versions and embedded notes agree. `tests/ReleaseVersion.Checks.ps1` covers numbering with real isolated Git histories. Release descriptions are in English and use the same current change notes as the bundled desktop catalog.
 
 ### Patch notes for every release
 
@@ -132,12 +110,12 @@ The release stays a draft until all assets are uploaded. Rerunning a completed p
 
 Manual publication is available through **Actions → Build and release → Run workflow**, selecting `main`. The workflow uses the built-in `GITHUB_TOKEN`; no additional secret is required. The latest-release link follows the most recent published release.
 
-The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, falling back to `SHA256SUMS.txt`, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory; `WorkspaceData` remains in place.
+The desktop app checks the latest public GitHub release on startup and on demand. It reads the `Tessera.exe` asset digest from the release API, using the public release page and `SHA256SUMS.txt` if the API is rate-limited, then verifies the downloaded file before replacing the standalone executable after exit. The running app never embeds a GitHub token. Auto-install requires a writable executable directory.
 
 See also the [desktop guide](USAGE.md) and [CLI reference](CLI.md).
 # Workspace experiment
 
-`WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with profile storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
+`WorkspaceCatalog` and `WorkspaceBrowser` connect the image history and processors. App startup enables the workspace with portable storage and updates; `MainWindow(libraryDirectory)` remains available for isolated UI regression tests. `--workspace-library <path>` selects an explicit test library. `Build-Standalone.ps1` includes `--navigation --workspace --localization --ui --invariants` in its required checks. See the [workspace guide](WORKSPACE_PROTOTYPE.md).
 
 The tool-improvement checks run with `Tessera.RegressionTests --tool-improvements`. They cover palette dithering and comparison hints, preview geometry/theme colors, replacement masks, manual background edits, cleanup/ASCII quality and project-scoped tile history. Native desktop interaction remains a separate QA gate; a build or in-process render alone does not establish it.
 

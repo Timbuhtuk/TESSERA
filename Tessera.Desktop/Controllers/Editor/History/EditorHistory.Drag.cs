@@ -89,9 +89,9 @@ internal sealed partial class EditorHistory
             if (!Host._sources.Contains(imported)) Host._sources.Add(imported);
             if (Host._workspaceReady && Host._workspaceCatalog!.State.Assets.FirstOrDefault(a => a.Id == imported.Id) is { } asset) Host.AddNewWorkspaceAsset(asset);
             _editor.SelectSource(imported);
-            Host.statusLabel.Text = Localization.Text("ResultAddedAsASeparateSource");
+            Host.Notify(Localization.Text("ResultAddedAsASeparateSource"), NotificationKind.Success);
         }
-        catch (Exception ex) { Host.statusLabel.Text = Localization.Format("CouldNotAddResultFormat", ex.Message); }
+        catch (Exception ex) { Host.Notify(Localization.Format("CouldNotAddResultFormat", ex.Message), NotificationKind.Error); }
         finally { _editor.SetProcessingState(false); }
     }
 }

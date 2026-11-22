@@ -36,8 +36,7 @@ internal sealed class WorkspaceStorage(string root)
 
     private sealed class Index
     {
-        // TESSERA_LEGACY Recognize monolithic workspace.json files with an omitted version as v1.
-        public int Version { get; init; } = 1;
+        public int Version { get; init; }
         public Guid Revision { get; init; }
         public ViewSettings? Settings { get; init; }
         public string[] AssetPages { get; init; } = [];
@@ -56,8 +55,6 @@ internal sealed class WorkspaceStorage(string root)
         Index? index = ReadIndex();
         _saved = index;
         if (index is null) return new();
-        // TESSERA_LEGACY Read the v1 monolithic workspace.json before the next save writes the paged v2 index.
-        if (index.Version == 1) return LibraryJson.Read<WorkspaceState>(_path);
 
         var state = new WorkspaceState();
         index.Settings!.Apply(state);
@@ -106,8 +103,7 @@ internal sealed class WorkspaceStorage(string root)
     {
         if (!File.Exists(_path)) return null;
         var index = LibraryJson.Read<Index>(_path);
-        // TESSERA_LEGACY Accept the v1 catalog header, which has no v2 revision or view settings block.
-        if (index.Version != 1 && (index.Version != CurrentVersion || index.Revision == Guid.Empty || index.Settings is null))
+        if (index.Version != CurrentVersion || index.Revision == Guid.Empty || index.Settings is null)
             throw new InvalidDataException(Localization.Text("UnknownWorkspaceVersion"));
         return index;
     }

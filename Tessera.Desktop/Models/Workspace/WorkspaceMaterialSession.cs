@@ -9,7 +9,6 @@ public sealed class WorkspaceMaterialSession
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SourceId { get; set; }
     public Guid? GenerationId { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool Archived { get; set; }
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] public bool AlternateDocument { get; set; }
     public Guid HeightId { get; set; } = Guid.NewGuid();
     public Guid NormalId { get; set; } = Guid.NewGuid();
@@ -26,22 +25,10 @@ public sealed partial class WorkspaceCatalog
         => Path.Combine(Root, "material-maps", session.Id.ToString("N"), alternate ? "layers-next.tmaps" : "layers.tmaps");
 
     internal WorkspaceMaterialSession? FindMaterialSession(Guid sourceId) =>
-        State.MaterialSessions.FirstOrDefault(session => session.SourceId == sourceId && !session.Archived);
+        State.MaterialSessions.SingleOrDefault(session => session.SourceId == sourceId);
 
     internal HashSet<Guid> MaterialMapAssetIds() => State.MaterialSessions
         .SelectMany(session => new[] { session.AoId, session.NormalId, session.HeightId }).ToHashSet();
-
-    // TESSERA_LEGACY Archive duplicate material sessions from the former per-result workflow while preserving their .tmaps files.
-    private void ArchiveDuplicateMaterialSessions()
-    {
-        foreach (var group in State.MaterialSessions.Where(session => !session.Archived).GroupBy(session => session.SourceId))
-        {
-            if (group.Count() < 2) continue;
-            var newest = group.MaxBy(session => File.GetLastWriteTimeUtc(MaterialSessionPath(session)));
-            foreach (var session in group)
-                session.Archived = session != newest;
-        }
-    }
 
     internal void SaveMaterialDocument(WorkspaceMaterialSession session, MaterialMapDocument document, Guid? generationId, bool rebuild = false)
     {

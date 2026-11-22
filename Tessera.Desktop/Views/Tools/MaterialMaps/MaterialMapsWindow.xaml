@@ -1,7 +1,7 @@
 <Window x:Class="Tessera.Desktop.MaterialMapsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:Tessera.Desktop"
+        xmlns:local="clr-namespace:Tessera.Desktop" xmlns:ts="clr-namespace:Tessera.WpfStyles.Controls;assembly=Tessera.WpfStyles"
         Title="Height · Normal · AO — TESSERA" Icon="pack://application:,,,/Tessera.Desktop;component/Assets/Brand/app.ico"
         Width="1460" Height="900" MinWidth="860" MinHeight="620" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{DynamicResource Ts.Canvas}" Foreground="{DynamicResource Ts.Text}"
@@ -47,7 +47,7 @@
                             <ComboBoxItem Content="{local:Translate BrushLabel}"/><ComboBoxItem Content="{local:Translate Eraser}"/><ComboBoxItem Content="{local:Translate Eyedropper}"/>
                         </ComboBox>
                         <TextBlock Text="{local:Translate SizePx}" Style="{StaticResource MapLabel}"/>
-                        <local:IntegerInput x:Name="brushSizeInput" Minimum="1" Maximum="256" Value="1" AutomationProperties.Name="{local:Translate BrushSize}"/>
+                        <ts:IntegerInput x:Name="brushSizeInput" Minimum="1" Maximum="256" Value="1" AutomationProperties.Name="{local:Translate BrushSize}"/>
                         <TextBlock Text="{local:Translate BrushStrength}" Style="{StaticResource MapLabel}"/>
                         <Slider x:Name="brushStrengthInput" Minimum="0.01" Maximum="1" Value="1" AutomationProperties.Name="{local:Translate BrushStrength}"/>
                         <TextBlock Text="{local:Translate Softness0PixelBrush}" Style="{StaticResource MapLabel}" TextWrapping="Wrap"/>
@@ -68,7 +68,7 @@
                         <TextBlock Text="{local:Translate AOStrength}" Style="{StaticResource MapLabel}"/>
                         <Slider x:Name="aoStrengthInput" Minimum="0" Maximum="8" Value="2" ValueChanged="GenerationChanged" AutomationProperties.Name="{local:Translate AOStrength}"/>
                         <TextBlock Text="{local:Translate AORadiusPx}" Style="{StaticResource MapLabel}"/>
-                        <local:IntegerInput x:Name="aoRadiusInput" Minimum="1" Maximum="64" Value="8" AutomationProperties.Name="{local:Translate AORadius}"/>
+                        <ts:IntegerInput x:Name="aoRadiusInput" Minimum="1" Maximum="64" Value="8" AutomationProperties.Name="{local:Translate AORadius}"/>
                         <ComboBox x:Name="conventionInput" SelectedIndex="0" Margin="0,12,0,0" SelectionChanged="ConventionChanged" AutomationProperties.Name="{local:Translate NormalConvention}">
                             <ComboBoxItem Content="DirectX · −Y"/><ComboBoxItem Content="OpenGL · +Y"/>
                         </ComboBox>
@@ -85,7 +85,7 @@
                     <ComboBox x:Name="zoomInput" Width="100" SelectedIndex="0" SelectionChanged="ViewChanged" AutomationProperties.Name="{local:Translate MapZoom}">
                         <ComboBoxItem Content="{local:Translate Fit}"/><ComboBoxItem Content="100%"/><ComboBoxItem Content="200%"/><ComboBoxItem Content="400%"/><ComboBoxItem Content="800%"/><ComboBoxItem Content="1600%"/><ComboBoxItem Content="3200%"/>
                     </ComboBox>
-                    <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="gridInput" Content="{local:Translate Grid}" IsChecked="True" Checked="ViewChanged" Unchecked="ViewChanged" Margin="12,0" VerticalAlignment="Center" ToolTip="{local:Translate ShowPixelGrid600ZoomOr}"/>
+                    <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" x:Name="gridInput" Content="{local:Translate Grid}" IsChecked="True" Checked="ViewChanged" Unchecked="ViewChanged" Margin="12,0" VerticalAlignment="Center" ToolTip="{local:Translate ShowPixelGrid600ZoomOr}"/>
                     <TextBlock Text="{local:Translate SourceOverlay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <Slider x:Name="overlayInput" Width="110" Minimum="0" Maximum="0.8" Value="0" ValueChanged="ViewChanged" AutomationProperties.Name="{local:Translate SourceOverlayOpacity}"/>
                 </WrapPanel>
@@ -117,9 +117,9 @@
                     <Grid.RowDefinitions><RowDefinition Height="Auto" SharedSizeGroup="MapHeader"/><RowDefinition/></Grid.RowDefinitions>
                     <WrapPanel Margin="10,6">
                         <TextBlock Text="{local:Translate Preview}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="useNormalInput" Content="Normal" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="{local:Translate UseNormalsInTheLightingPreview}"/>
-                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="useAoInput" Content="AO" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="{local:Translate UseAOInThePreviewAmbient}"/>
-                        <CheckBox Style="{StaticResource Ts.SwitchBox}" x:Name="compareInput" Content="{local:Translate SourceLabel}" Checked="LightingChanged" Unchecked="LightingChanged" ToolTip="{local:Translate ShowOriginalImageWithoutLightingComparison}"/>
+                        <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" x:Name="useNormalInput" Content="Normal" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="{local:Translate UseNormalsInTheLightingPreview}"/>
+                        <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" x:Name="useAoInput" Content="AO" IsChecked="True" Checked="LightingChanged" Unchecked="LightingChanged" Margin="0,0,12,0" ToolTip="{local:Translate UseAOInThePreviewAmbient}"/>
+                        <CheckBox Style="{StaticResource Ts.CompactSwitchBox}" x:Name="compareInput" Content="{local:Translate SourceLabel}" Checked="LightingChanged" Unchecked="LightingChanged" ToolTip="{local:Translate ShowOriginalImageWithoutLightingComparison}"/>
                     </WrapPanel>
                     <local:MaterialMapView x:Name="litView" Grid.Row="1" DrawingEnabled="False" AutomationProperties.Name="{local:Translate LightingPreview}" ToolTip="{local:Translate MoveMouseOverImageMoveLight}"/>
                 </Grid></Border>

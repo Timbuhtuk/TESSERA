@@ -109,7 +109,7 @@ internal static class HistoryEditChecks
             {
                 var modal = window.OwnedWindows.OfType<TesseraDialog>().LastOrDefault();
                 if (modal is null) return;
-                modalMessage = ((TextBlock)modal.FindName("dialogMessage")).Text;
+                modalMessage = (string)((ContentPresenter)modal.FindName("DialogBody")).Content;
                 modal.Close();
             }));
             Require(!(bool)Invoke(window, "CommitGeneration", active, failedInsert, true)!, "Unreplayable descendant was silently accepted.");

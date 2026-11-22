@@ -239,7 +239,7 @@ internal sealed partial class EditorToolDock
             ShowInTaskbar = false;
             SetResourceReference(BackgroundProperty, "Ts.Canvas");
             SetResourceReference(ForegroundProperty, "Ts.Text");
-            FontFamily = (FontFamily)owner.FindResource("UiFont");
+            FontFamily = (FontFamily)owner.FindResource("Ts.UiFont");
             FontSize = 13;
             UseLayoutRounding = true;
             SnapsToDevicePixels = true;
@@ -280,7 +280,7 @@ internal sealed partial class EditorToolDock
             titleBar.Children.Add(new TextBlock
             {
                 Text = title,
-                FontFamily = (FontFamily)owner.FindResource("DisplayFont"),
+                FontFamily = (FontFamily)owner.FindResource("Ts.DisplayFont"),
                 Margin = new Thickness(16, 0, 0, 0),
                 FontWeight = FontWeights.SemiBold,
                 VerticalAlignment = VerticalAlignment.Center
@@ -289,7 +289,7 @@ internal sealed partial class EditorToolDock
             {
                 Content = "⇤", Width = 38, Height = 38, FontSize = 17,
                 ToolTip = Localization.Text("DragToTheDock"),
-                Style = (Style)FindResource("CaptionButton")
+                Style = (Style)FindResource("Ts.CaptionButton")
             };
             dock.PreviewMouseLeftButtonDown += (_, e) =>
             {
@@ -323,7 +323,7 @@ internal sealed partial class EditorToolDock
                 Height = 38,
                 FontSize = 19,
                 ToolTip = Localization.Text("Close"),
-                Style = (Style)FindResource("CloseCaptionButton")
+                Style = (Style)FindResource("Ts.CloseCaptionButton")
             };
             close.Click += (_, _) => Close();
             WindowChrome.SetIsHitTestVisibleInChrome(close, true);

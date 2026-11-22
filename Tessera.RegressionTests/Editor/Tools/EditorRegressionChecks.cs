@@ -43,7 +43,7 @@ internal static class EditorRegressionChecks
             {
                 foreach (var dialog in window.OwnedWindows.OfType<TesseraDialog>().ToArray())
                 {
-                    dialogFailure = ((TextBlock)dialog.FindName("dialogMessage")).Text;
+                    dialogFailure = (string)((ContentPresenter)dialog.FindName("DialogBody")).Content;
                     Console.WriteLine($"  Editor regression: unexpected dialog: {dialogFailure}");
                     dialog.Close();
                 }

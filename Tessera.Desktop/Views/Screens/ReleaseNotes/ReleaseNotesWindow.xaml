@@ -13,7 +13,7 @@
         <Grid>
             <Grid.RowDefinitions><RowDefinition Height="40" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
             <DockPanel Background="{DynamicResource Ts.Raised}">
-                <Button x:Name="closeNotesButton" DockPanel.Dock="Right" Content="×" Style="{StaticResource CloseCaptionButton}" Click="CloseNotes" shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+                <Button x:Name="closeNotesButton" DockPanel.Dock="Right" Content="×" Style="{StaticResource Ts.CloseCaptionButton}" Click="CloseNotes" shell:WindowChrome.IsHitTestVisibleInChrome="True" />
                 <TextBlock x:Name="notesTitle" Margin="16,0,0,0" FontWeight="SemiBold" VerticalAlignment="Center" />
             </DockPanel>
             <local:ReleaseNotesView x:Name="notesView" Grid.Row="1" Margin="20,20,20,0" />

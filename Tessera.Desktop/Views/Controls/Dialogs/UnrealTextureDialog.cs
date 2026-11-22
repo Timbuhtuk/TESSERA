@@ -30,7 +30,7 @@ internal sealed class UnrealTextureDialog : Window
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         if (confirmText is not null) Confirm.Content = confirmText;
         Resources.MergedDictionaries.Add(new AppearanceResources());
-        SetResourceReference(FontFamilyProperty, "UiFont");
+        SetResourceReference(FontFamilyProperty, "Ts.UiFont");
         SetResourceReference(ForegroundProperty, "Ts.Text");
         var panel = new StackPanel();
         var heading = new TextBlock { Text = Title, FontSize = 20, Margin = new Thickness(0, 0, 0, 18) };

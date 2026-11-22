@@ -105,14 +105,14 @@ internal sealed partial class EditorHistory
         _macroApply.IsEnabled = _macroList.SelectedItem is MacroDefinition && !_editor._processing;
         _macroApplyVideo.IsEnabled = _macroList.SelectedItem is MacroDefinition && !_editor._processing;
         if (_macroStore.LoadWarnings.Count > 0)
-        { Host.statusLabel.Text = Localization.Text("CouldNotReadMacrosPrefix") + string.Join("; ", _macroStore.LoadWarnings); }
+        { Host.Notify(Localization.Text("CouldNotReadMacrosPrefix") + string.Join("; ", _macroStore.LoadWarnings), NotificationKind.Warning); }
     }
 
     private void CreateMacro(GenerationEntry generation)
     {
         if (_editor._processing || _editor._activeSource is null) return;
         if (!HistoryRecipes.TryBuild(_editor._activeSource, generation, out var recipe, out string reason))
-        { ShowMacroError(reason); return; }
+        { ShowMacroError(reason, NotificationKind.Warning); return; }
         string? name = PromptMacroName(Localization.Text("CreateMacro"));
         if (name is null) return;
         try
@@ -120,7 +120,7 @@ internal sealed partial class EditorHistory
             var macro = _macroStore.Save(new MacroDefinition { Name = name, Steps = recipe!.Steps });
             RefreshMacros(macro.Id);
             _editor.Dock.OpenEditorTool("macros", Localization.Text("Macros"), 460, _macrosGroup);
-            Host.statusLabel.Text = Localization.Text("MacroSavedPrefix") + macro.Name;
+            Host.Notify(Localization.Text("MacroSavedPrefix") + macro.Name, NotificationKind.Success);
         }
         catch (Exception ex) { ShowMacroError(ex.Message); }
     }
@@ -139,10 +139,11 @@ internal sealed partial class EditorHistory
         catch (Exception ex) { ShowMacroError(ex.Message); }
     }
 
-    private void ShowMacroError(string reason)
+    private void ShowMacroError(string reason, NotificationKind kind = NotificationKind.Error)
     {
-        Host.statusLabel.Text = reason;
-        TesseraDialog.Show(Host, reason, Localization.Text("Macros"), MessageBoxButton.OK, MessageBoxImage.Warning);
+        Host.Notify(reason, kind);
+        TesseraDialogs.Show(Host, reason, Localization.Text("Macros"), MessageBoxButton.OK,
+            kind == NotificationKind.Warning ? MessageBoxImage.Warning : MessageBoxImage.Error);
     }
 
     private async Task ApplySelectedMacroAsync()
@@ -183,7 +184,7 @@ internal sealed partial class EditorHistory
                 Log = string.Join(Environment.NewLine, macro.Steps.Select((step, q) => $"{q + 1}. {StepName(step.OperationId)}"))
             });
             if (!CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Text("MacroAppliedPrefix") + macro.Name;
+            Host.Notify(Localization.Text("MacroAppliedPrefix") + macro.Name, NotificationKind.Success);
         }
         catch (WorkflowCanceledException ex) { Host.statusLabel.Text = Localization.Format("MacroCancelledAtStepFormat", ex.StepIndex, StepName(ex.OperationId)); }
         catch (OperationCanceledException) { Host.statusLabel.Text = Localization.Text("MacroCancelled"); }
@@ -225,7 +226,7 @@ internal sealed partial class EditorHistory
         {
             VideoMacroResult result = await Task.Run(() => new VideoMacroProcessor().Apply(inputDialog.FileName,
                 outputDialog.FileName, recipe, overwrite: true, cancellationToken: cancellation.Token, progress: progress));
-            Host.statusLabel.Text = Localization.Format("VideoSaved", result.Frames, outputDialog.FileName);
+            Host.Notify(Localization.Format("VideoSaved", result.Frames, outputDialog.FileName), NotificationKind.Success);
         }
         catch (OperationCanceledException) { Host.statusLabel.Text = Localization.Text("VideoProcessingCanceled"); }
         catch (Exception ex) { ShowMacroError(ex.Message); }

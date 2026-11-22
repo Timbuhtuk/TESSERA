@@ -78,17 +78,17 @@ def main():
         passed.append(label)
         print("PASS " + label, flush=True)
 
-    # Byte-for-byte forwarding covers every canonical command and alias.
-    helps = [[], ["align"], ["reduce-grid"], ["compact-grid"], ["resize"], ["colors"],
-             ["smooth-colors"], ["smooth"], ["monochrome"], ["mono"], ["ascii"], ["palette-info"],
-             ["replace-color"], ["remove-background"], ["remove-bg"], ["ico"], ["icon"], ["aseprite"],
+    # Byte-for-byte forwarding covers the supported commands.
+    helps = [[], ["align"], ["reduce-grid"], ["resize"], ["colors"],
+             ["smooth-colors"], ["monochrome"], ["ascii"], ["palette-info"],
+             ["replace-color"], ["remove-background"], ["ico"], ["aseprite"],
              ["macro"], ["macro", "list"], ["macro", "apply"]]
     for command in helps:
         arguments = [*command, "--help"]
         direct = process([str(executable), *arguments])
         wrapped = run(*arguments)
         assert (direct.stdout, direct.stderr) == (wrapped.stdout, wrapped.stderr)
-    check(f"help output preserved for all {len(helps)} commands, aliases and macro subcommands")
+    check(f"help output preserved for all {len(helps)} commands and macro subcommands")
 
     process([*base, "--configure", str(executable)])
     located = json.loads(process([*base, "--locate"]).stdout)
@@ -145,8 +145,8 @@ def main():
     ascii_text = directory / "ascii.txt"
     ascii_image = directory / "ascii.png"
     replaced = directory / "replaced.png"
-    run("smooth", source, "-o", smoothed, "--passes", "2", "--json")
-    run("mono", source, "-o", monochrome, "--json")
+    run("smooth-colors", source, "-o", smoothed, "--passes", "2", "--json")
+    run("monochrome", source, "-o", monochrome, "--json")
     run("ascii", source, "--text-output", ascii_text, "--image-output", ascii_image,
         "--preset", "minimal", "--json")
     palette = json.loads(run("palette-info", source, "--json").stdout)
@@ -222,15 +222,15 @@ def main():
 
     aligned = directory / "aligned.png"
     report = json.loads(run("align", source, "-o", aligned, "--cell-size", "4", "--rigid", "--json").stdout)
-    run("compact-grid", aligned, "-o", directory / "pixels.png", "--cell-size", str(report["cellSize"]), "--json")
+    run("reduce-grid", aligned, "-o", directory / "pixels.png", "--cell-size", str(report["cellSize"]), "--json")
     assert dimensions(aligned) == (16, 16) and dimensions(directory / "pixels.png") == (4, 4)
     check("alignment and reduction pipeline uses reported cell size")
 
     transparent = directory / "transparent.png"
-    run("remove-bg", source, "-o", transparent, "--mode", "edges", "--background-color", "#FFFFFF",
+    run("remove-background", source, "-o", transparent, "--mode", "edges", "--background-color", "#FFFFFF",
         "--tolerance", "0", "--json")
     icon = directory / "test.ico"
-    run("icon", transparent, "-o", icon, "--sizes", "16,32", "--resize", "nearest-neighbor", "--fit", "contain", "--json")
+    run("ico", transparent, "-o", icon, "--sizes", "16,32", "--resize", "nearest-neighbor", "--fit", "contain", "--json")
     assert dimensions(transparent) == (16, 16)
     assert struct.unpack("<HHH", icon.read_bytes()[:6]) == (0, 1, 2)
     check("edge-connected background removal and multi-size ICO")

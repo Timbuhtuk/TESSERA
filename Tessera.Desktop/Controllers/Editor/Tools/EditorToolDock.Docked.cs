@@ -54,7 +54,7 @@ internal sealed partial class EditorToolDock
     private void InitializeToolDock()
     {
         if (_workspaceDock is null) return;
-        _workspaceTabs = new TabControl { Style = (Style)_editor.FindResource("ToolDockTabs") };
+        _workspaceTabs = new TabControl { Style = (Style)_editor.FindResource("Ts.ToolDockTabs") };
         _workspaceTabs.SelectionChanged += (_, e) =>
         {
             if (!ReferenceEquals(e.Source, _workspaceTabs)) return;
@@ -122,7 +122,7 @@ internal sealed partial class EditorToolDock
         };
         cross.SetResourceReference(Shape.StrokeProperty, "Ts.TextSecondary");
         string closeLabel = Localization.Text("CloseTool");
-        var close = new Button { Content = cross, Style = (Style)_editor.FindResource("CaptionButton"),
+        var close = new Button { Content = cross, Style = (Style)_editor.FindResource("Ts.CaptionButton"),
             Width = 20, Height = 20, FocusVisualStyle = null, ToolTip = closeLabel };
         AutomationProperties.SetName(close, closeLabel);
         close.Click += (_, e) => { e.Handled = true; CloseDockedTool(key); };
@@ -208,7 +208,7 @@ internal sealed partial class EditorToolDock
         // Keep control styles in scope during reparenting so sliders retain their ranges and values.
         if (!group.Resources.MergedDictionaries.Contains(_editor.Resources)) group.Resources.MergedDictionaries.Add(_editor.Resources);
         DetachToolGroup(group);
-        group.Style = (Style)_editor.FindResource(showHeader ? "ToolSection" : "ToolGroup");
+        group.Style = (Style)_editor.FindResource(showHeader ? "Ts.ToolSection" : "Ts.ToolGroup");
     }
 
     private static void DetachToolGroup(GroupBox group)

@@ -12,7 +12,6 @@ namespace Tessera.Desktop;
 public partial class IconWorkspace : UserControl, IDisposable
 {
     private Bitmap? _image;
-    private readonly FittedImageViewport _sourceViewport;
     private string? _inputPath;
     private readonly HashSet<string> _sourcePaths = new(StringComparer.OrdinalIgnoreCase);
     public Action<string>? ValidateExportPath { get; set; }
@@ -32,7 +31,7 @@ public partial class IconWorkspace : UserControl, IDisposable
     private OperationProgressSession BeginProgress(string label, bool preview = false)
         => ProgressFactory?.Invoke(label, preview) ?? new OperationProgressSession(Dispatcher);
 
-    public event Action<string>? StatusChanged;
+    public event Action<string, NotificationKind>? StatusChanged;
     public sealed record FramePreview(int Size, BitmapSource Image)
     {
         public string Label => $"{Size} × {Size}";
@@ -41,13 +40,12 @@ public partial class IconWorkspace : UserControl, IDisposable
     public IconWorkspace()
     {
         InitializeComponent();
-        _sourceViewport = new FittedImageViewport(iconSourceScroll, iconSourceImage, () => iconSourceImage.Source as BitmapSource);
         _ = new ImageViewportInput(iconScroll);
         foreach (int size in new[] { 16, 24, 32, 48, 64, 96, 128, 256 })
         {
             var check = new CheckBox
             {
-                Style = (Style)FindResource("Ts.SwitchBox"),
+                Style = (Style)FindResource("Ts.CompactSwitchBox"),
                 Content = $"{size} × {size}",
                 Tag = size,
                 IsChecked = size != 96,
@@ -101,10 +99,10 @@ public partial class IconWorkspace : UserControl, IDisposable
             using var image = await Task.Run(() => ReadImage(path));
             if (_disposed) return;
             SetImage(image, Path.GetFileName(path), path);
-            StatusChanged?.Invoke(Localization.Text("IconSourceOpenedHint"));
+            StatusChanged?.Invoke(Localization.Text("IconSourceOpenedHint"), NotificationKind.Success);
             operation.Complete();
         }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotOpenImageFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotOpenImageFormat", ex.Message), NotificationKind.Error); }
         finally { SetBusy(false); }
     }
 
@@ -141,7 +139,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         _image = copy;
         _inputPath = inputPath is null ? null : Path.GetFullPath(inputPath);
         if (_inputPath is not null) _sourcePaths.Add(_inputPath);
-        _sourceViewport.Reset();
+        iconSourceImage.Reset();
         iconSourceImage.Source = preview;
         iconFileLabel.Text = label;
         iconFileLabel.ToolTip = label;
@@ -220,14 +218,17 @@ public partial class IconWorkspace : UserControl, IDisposable
             iconSourceImage.Source = frames.Preview;
             iconPreviewHint.Text = options.Sizes.Count == 0 ? Localization.Text("SelectAtLeastOneSize") : Localization.Text("SelectedSizesWillSavedOneICO");
             operation.Complete();
-            if (IsVisible) StatusChanged?.Invoke(options.Sizes.Count == 0
-                ? Localization.Text("SelectAtLeastOneSize")
-                : Localization.Text("IconPreviewsAreReady"));
+            if (IsVisible)
+            {
+                bool hasSizes = options.Sizes.Count > 0;
+                StatusChanged?.Invoke(Localization.Text(hasSizes ? "IconPreviewsAreReady" : "SelectAtLeastOneSize"),
+                    hasSizes ? NotificationKind.Success : NotificationKind.Warning);
+            }
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("CouldNotBuildPreviewFormat", ex.Message));
+            if (revision == _revision) StatusChanged?.Invoke(Localization.Format("CouldNotBuildPreviewFormat", ex.Message), NotificationKind.Error);
         }
         finally
         {
@@ -252,7 +253,7 @@ public partial class IconWorkspace : UserControl, IDisposable
         };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
         try { await SaveAsync(dialog.FileName, true); }
-        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotSaveICOFormat", ex.Message)); }
+        catch (Exception ex) { StatusChanged?.Invoke(Localization.Format("CouldNotSaveICOFormat", ex.Message), NotificationKind.Error); }
     }
 
     public async Task SaveAsync(string path, bool overwrite = false)
@@ -266,12 +267,12 @@ public partial class IconWorkspace : UserControl, IDisposable
         using var image = (Bitmap)_image.Clone();
         SetBusy(true);
         using var operation = BeginProgress(Localization.Text("SavingICOAction"));
-        StatusChanged?.Invoke(Localization.Text("SavingICOAction"));
+        StatusChanged?.Invoke(Localization.Text("SavingICOAction"), NotificationKind.Information);
         try
         {
             await Task.Run(() => IconExporter.Save(image, path, options, overwrite, progress: operation.Work));
             operation.Complete();
-            StatusChanged?.Invoke(Localization.Format("SavedFormat", path));
+            StatusChanged?.Invoke(Localization.Format("SavedFormat", path), NotificationKind.Success);
         }
         finally { SetBusy(false); }
     }

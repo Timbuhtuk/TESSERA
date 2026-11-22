@@ -107,13 +107,13 @@ internal sealed partial class EditorTools
                 });
             });
             if (!_editor.History.CommitGeneration(document, generation)) return;
-            Host.statusLabel.Text = Localization.Format("ResultSavedToHistory", generation.Width, generation.Height);
+            Host.Notify(Localization.Format("ResultSavedToHistory", generation.Width, generation.Height), NotificationKind.Success);
         }
         catch (Exception ex)
         {
             Host._mainProgress?.Dispose();
-            Host.statusLabel.Text = Localization.Text("ProcessingOrHistorySavingStillProgress");
-            TesseraDialog.Show(Host, ex.Message, Localization.Text("ProcessingError"), MessageBoxButton.OK, MessageBoxImage.Error);
+            Host.Notify(Localization.Text("ProcessingOrHistorySavingStillProgress"), NotificationKind.Error);
+            TesseraDialogs.Show(Host, ex.Message, Localization.Text("ProcessingError"), MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally { _editor.SetProcessingState(false); }
     }

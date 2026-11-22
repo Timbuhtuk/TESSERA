@@ -152,10 +152,8 @@ while retaining their manual edits. Save editable .tmaps projects or export
 the maps as transparent PNGs; Normal supports DirectX and OpenGL.
 
 Your library is in %LOCALAPPDATA%\Tessera\Library.
-When upgrading from portable storage, launch Tessera.exe from the same folder
-as WorkspaceData. Tessera copies and verifies the old library, leaving those
-source files in place. An existing AppData library is saved separately in
-%LOCALAPPDATA%\Tessera\Library.before-portable-migration.
+To migrate an older portable library, first run Tessera 3.0.1 beside
+WorkspaceData. Open the library and let it save before upgrading to 3.1.0.
 
 Tessera checks GitHub Releases at startup and every six hours. A newer version
 offers Update or Later after processing and other dialogs finish. Later hides
@@ -169,7 +167,7 @@ release history offline in Settings > Patch notes.
     [IO.File]::WriteAllText((Join-Path $output 'README.txt'), $guide, [Text.UTF8Encoding]::new($true))
     $archive = Join-Path $artifactsRoot 'Tessera-win-x64.zip'
     Compress-Archive -LiteralPath (Join-Path $output 'Tessera.exe'),(Join-Path $output 'README.txt'),(Join-Path $output 'Assets/Fonts/Cascadia-Code-OFL.txt'),(Join-Path $output 'Assets/Fonts/Science-Gothic-OFL.txt') -DestinationPath $archive -Force
-    $unrealFiles = @('TesseraSync.uplugin', 'Content/Python/init_unreal.py', 'Content/Python/tessera_sync.py', 'Content/Python/tessera_project.py')
+    $unrealFiles = @('TesseraSync.uplugin', 'Content/Python/init_unreal.py', 'Content/Python/tessera_project.py')
     $desktopZip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Update)
     try {
         foreach ($file in $unrealFiles) {

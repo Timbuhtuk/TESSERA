@@ -30,7 +30,7 @@ internal sealed partial class EditorPreview
         _tileHeatmapY.Content = Localization.Text("TopAndBottomSeam");
         foreach (var input in new[] { _tileHeatmapX, _tileHeatmapY })
         {
-            input.Style = (Style)_editor.FindResource("Ts.SwitchBox");
+            input.Style = (Style)_editor.FindResource("Ts.CompactSwitchBox");
             input.Margin = new Thickness(0, 0, 0, 8);
             input.Checked += (_, _) => UpdateTileHeatmapLens();
             input.Unchecked += (_, _) => UpdateTileHeatmapLens();

@@ -34,7 +34,7 @@ flowchart LR
 
 `Tessera.Desktop/Services` contains update and uninstall code, progress support and the Unreal integration. Runtime artwork is grouped under `Tessera.Desktop/Assets`. Images used only for QA live under `docs/images`.
 
-Existing `.tboard`, `.ttiles`, `.tmaps`, recipe and library formats retain their fields and operation IDs. The executable names remain `Tessera.exe` and `tessera.exe`. Project and namespace names changed; user data paths did not.
+The desktop and CLI use version 2 ZIP `.tboard` files. The workspace catalog and editor-history index use version 2. The executable names are `Tessera.exe` and `tessera.exe`, and the default library is `%LOCALAPPDATA%/Tessera/Library`.
 
 Source integrations that reference the former assemblies or namespaces need updated project references and `using` directives. Model enum type names now begin with `E`; serialized enum values and existing option property names remain the same. The public model contracts are under `Tessera.Models`; processing APIs are under `Tessera.Core.Imaging`, `Tessera.Core.Alignment` and `Tessera.Core.Workflows`.
 

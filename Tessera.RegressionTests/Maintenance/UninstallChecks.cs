@@ -36,13 +36,12 @@ internal static class UninstallChecks
             Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "test.txt"), "fixture");
         }
-        File.WriteAllText(Path.Combine(portable, ".copied-library"), "fixture");
         string orphan = Path.Combine(temp, "tessera-map-" + Guid.NewGuid().ToString("N") + ".png");
         string unrelatedTemp = Path.Combine(temp, "tessera-map-keep.png");
         File.WriteAllText(orphan, "fixture"); File.WriteAllText(unrelatedTemp, "keep");
         File.Copy(typeof(TesseraUninstaller).Assembly.Location, executable);
         var plan = TesseraUninstaller.Prepare(executable, external, local, temp, customBundleBase, renamedBundle);
-        Require(plan.Directories.ToHashSet().SetEquals([tessera, legacy, temporary, bundle, renamedBundle]) &&
+        Require(plan.Directories.ToHashSet().SetEquals([tessera, temporary, bundle, renamedBundle]) &&
             plan.Files.SequenceEqual([orphan]) && plan.Executable == executable, "Uninstall selected an unexpected path");
 
         string otherInstall = Path.Combine(root, "Other Installation");
@@ -53,9 +52,9 @@ internal static class UninstallChecks
         File.WriteAllText(Path.Combine(otherLibrary, "workspace.json"), "{}");
         Require(!TesseraUninstaller.Prepare(otherExecutable, external, local, temp).Directories.Contains(otherLibrary),
             "A generic neighboring library was marked for deletion");
-        File.WriteAllText(Path.Combine(otherLibrary, ".copied-library"), "fixture");
+        File.WriteAllText(Path.Combine(otherLibrary, "appearance.json"), "{}");
         Require(TesseraUninstaller.Prepare(otherExecutable, external, local, temp).Directories.Contains(otherLibrary),
-            "The old portable Tessera library was not detected");
+            "The Tessera library was not detected");
 
         var keeper = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, "WindowsPowerShell", "v1.0", "powershell.exe"))
             { UseShellExecute = false, CreateNoWindow = true };
@@ -76,7 +75,8 @@ internal static class UninstallChecks
             Require(helper.ExitCode == 0, "Uninstall helper failed: " + helper.StandardError.ReadToEnd());
             Require(!File.Exists(executable) && !File.Exists(orphan) && plan.Directories.All(path => !Directory.Exists(path)),
                 "Uninstall left app files behind");
-            Require(File.Exists(Path.Combine(external, "test.txt")) && File.Exists(Path.Combine(unrelated, "test.txt")) && File.Exists(unrelatedTemp),
+            Require(File.Exists(Path.Combine(external, "test.txt")) && File.Exists(Path.Combine(unrelated, "test.txt")) && File.Exists(unrelatedTemp) &&
+                File.Exists(Path.Combine(legacy, "test.txt")),
                 "Uninstall removed files outside the plan");
         }
         finally
@@ -98,9 +98,9 @@ internal static class UninstallChecks
         var button = (Button)settings.FindName("uninstallButton");
         Require(ReferenceEquals(((Panel)button.Parent).Children[^1], button) &&
             button.Background is SolidColorBrush { Color: { R: > 140, G: < 60, B: < 60 } }, "The red uninstall button is missing from the bottom of Settings");
-        var dialog = new TesseraDialog("Fixture", "Uninstall", MessageBoxButton.YesNo, confirmByDefault: false);
-        var actions = ((Panel)dialog.FindName("dialogButtons")).Children.OfType<Button>().ToArray();
-        Require(actions.Single(action => action.IsDefault).Tag is MessageBoxResult.No, "Enter would confirm uninstall by default");
+        var dialog = TesseraDialogs.Create("Fixture", "Uninstall", MessageBoxButton.YesNo, confirmByDefault: false);
+        var actions = ((Panel)dialog.FindName("ActionButtons")).Children.OfType<Button>().ToArray();
+        Require(Equals(actions.Single(action => action.IsDefault).Content, Tessera.Desktop.Localization.Text("No")), "Enter would confirm uninstall by default");
         dialog.Close(); settings.Close();
     }
 

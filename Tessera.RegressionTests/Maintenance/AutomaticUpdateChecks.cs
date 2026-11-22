@@ -130,13 +130,13 @@ internal static class AutomaticUpdateChecks
                 try
                 {
                     Require(invoking && dialog.Owner == owner && dialog.IsVisible, "Update offer did not block the owner action until dismissed");
-                    Require(((TextBlock)dialog.FindName("dialogMessage")).Text.Contains(Get<TesseraRelease>(owner, "_availableRelease").Tag), "Offer lost the release version");
-                    var buttons = ((StackPanel)dialog.FindName("dialogButtons")).Children.OfType<Button>().ToArray();
-                    Require(buttons.Single(b => Equals(b.Tag, MessageBoxResult.No)).Content.Equals(later), "Dismiss label is not localized");
-                    Require(buttons.Single(b => Equals(b.Tag, MessageBoxResult.Yes)).IsDefault, "Accept action lost keyboard default");
+                    Require(((string)((ContentPresenter)dialog.FindName("DialogBody")).Content).Contains(Get<TesseraRelease>(owner, "_availableRelease").Tag), "Offer lost the release version");
+                    var buttons = ((Panel)dialog.FindName("ActionButtons")).Children.OfType<Button>().ToArray();
+                    Require(buttons.Last().Content.Equals(later), "Dismiss label is not localized");
+                    Require(buttons.First().IsDefault, "Accept action lost keyboard default");
                 }
                 catch (Exception ex) { failure = ex; }
-                ((StackPanel)dialog.FindName("dialogButtons")).Children.OfType<Button>().Single(b => Equals(b.Tag, MessageBoxResult.No))
+                ((Panel)dialog.FindName("ActionButtons")).Children.OfType<Button>().Last()
                     .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             }
         };

@@ -82,7 +82,7 @@ public partial class AppearanceWindow : Window
         notificationPositionLabel.Text = Localization.Text("NotificationPosition");
         AutomationProperties.SetName(notificationPositions, notificationPositionLabel.Text);
         notificationPreviewButton.Content = Localization.Text("ShowANotification");
-        notificationPreview.Place(position);
+        notificationPreview.Placement = position;
         RadioButton? selected = null;
         foreach (var choice in choices)
         {
@@ -119,7 +119,7 @@ public partial class AppearanceWindow : Window
                 selected = button;
                 _notificationPosition = anchor;
                 notificationPositionValue.Text = label;
-                notificationPreview.Place(anchor);
+                notificationPreview.Placement = anchor;
             };
             notificationPositions.Children.Add(button);
         }
@@ -132,7 +132,7 @@ public partial class AppearanceWindow : Window
 
     private void PreviewNotification(object sender, RoutedEventArgs e)
     {
-        notificationPreview.Show(Localization.Text("NotificationsWillAppearThisPartWindow"));
+        notificationPreview.Show(Localization.Text("NotificationsWillAppearThisPartWindow"), heading: Localization.Text("Notification"));
     }
 
     internal void AddLensShortcuts(AppearanceSettings settings, Func<string, Key, AppearanceSettings?> apply)

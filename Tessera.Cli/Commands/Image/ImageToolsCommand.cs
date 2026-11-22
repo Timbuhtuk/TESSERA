@@ -19,7 +19,7 @@ internal static partial class ImageToolsCommand
           --json                 Отчёт JSON.
           -h, --help             Эта справка.
 
-        Размер и альфа сохраняются. Команда mono является псевдонимом.
+        Размер и альфа сохраняются.
         """;
 
     internal const string SmoothHelp = """
@@ -39,7 +39,6 @@ internal static partial class ImageToolsCommand
           -h, --help             Эта справка.
 
         Выбираются только цвета видимых соседей; размер и альфа сохраняются.
-        Команда smooth является псевдонимом.
         """;
 
     internal const string ContourHelp = """

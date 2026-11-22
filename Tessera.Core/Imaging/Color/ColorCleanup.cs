@@ -37,8 +37,6 @@ public static class ColorCleanup
         Span<Features> labs = stackalloc Features[9];
         double toleranceSquared = cleanup.ColorTolerance * cleanup.ColorTolerance;
         double anchor = 1 + (1 - cleanup.Strength) * 8;
-        // TESSERA_LEGACY Apply directional LocalColorCriteria when callers or saved recipes predate Cleanup options.
-        ManualBlockCriteria? legacy = options.Cleanup is null ? options.LocalColorCriteria : null;
         for (int pass = 0; pass < options.LocalColorPasses; pass++)
         {
             int[] output = (int[])input.Clone();
@@ -93,8 +91,6 @@ public static class ColorCleanup
                         double edgeThreshold = cleanup.ColorTolerance * (1 - cleanup.EdgeProtection * .8);
                         if (same >= 3 && cleanup.EdgeProtection > 0 && distance > edgeThreshold * edgeThreshold) continue;
                         double cost = Cost(labs[e], original, labs[..count], weights[..count], localAnchor, toleranceSquared);
-                        if (legacy is not null)
-                            cost += LegacyPreference(colors[e], current, legacy) * toleranceSquared * (totalWeight + centerWeight);
                         // Sequential updates strictly lower symmetric, bounded pairwise LAB energy.
                         // Normalized resistance is nonnegative, so it cannot create a cycle.
                         if (cost >= bestCost - Math.Max(.0001, toleranceSquared * .002 * (1 - cleanup.Strength))) continue;
@@ -153,15 +149,6 @@ public static class ColorCleanup
             return true;
         }
     }
-
-    // TESSERA_LEGACY Convert pre-Cleanup directional preferences to the local color cost.
-    private static double LegacyPreference(int candidate, int current, ManualBlockCriteria criteria)
-        => 4 * criteria.BrightnessImportance * (Math.Abs(ColorWeights.GetNormalizedBrightness(candidate) - criteria.TargetBrightness) -
-                Math.Abs(ColorWeights.GetNormalizedBrightness(current) - criteria.TargetBrightness)) +
-            .5 * criteria.ContrastImportance * (Math.Abs(ColorWeights.GetContrastWeight(candidate) - criteria.TargetContrast) -
-                Math.Abs(ColorWeights.GetContrastWeight(current) - criteria.TargetContrast)) +
-            .5 * criteria.SaturationImportance * (Math.Abs(ColorWeights.GetSaturationWeight(candidate) - criteria.TargetSaturation) -
-                Math.Abs(ColorWeights.GetSaturationWeight(current) - criteria.TargetSaturation));
 
     private static Features GetFeatures(int rgb, Dictionary<int, Features> cache)
     {

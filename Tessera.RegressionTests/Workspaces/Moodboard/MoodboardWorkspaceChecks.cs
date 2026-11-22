@@ -155,14 +155,7 @@ internal static class MoodboardWorkspaceChecks
             GetBoard<Button>(board, "deleteButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
             Require(LayerNames(layers).SequenceEqual(["green.png"]) && GetBoard<Canvas>(board, "boardSurface").Children.Count == 1,
                 "Deleting a selection removed an unselected layer");
-
-            string legacy = Path.Combine(folder, "legacy.tboard");
-            File.WriteAllText(legacy, JsonSerializer.Serialize(new { Version = 1, Width = 1200, Height = 800,
-                Layers = new[] { new { Name = "legacy.png", Png = File.ReadAllBytes(bluePath), Width = 80, Height = 60,
-                    X = 560, Y = 370, Angle = 0, Scale = 1.0 } } }));
-            board.LoadFromFile(legacy); Pump();
-            Require(layers.Items.Count == 1 && board.BackgroundColor == Colors.White,
-                "Existing JSON boards no longer open with a white background");
+            board.SaveToFile(Path.Combine(folder, "edited.tboard"));
 
             zoom.SelectedIndex = 6;
             GetBoard<Button>(board, "newButton").RaiseEvent(new RoutedEventArgs(Button.ClickEvent)); Pump();
@@ -290,19 +283,16 @@ internal static class MoodboardWorkspaceChecks
                 using var output = archive.CreateEntry("board.json").Open();
                 JsonSerializer.Serialize(output, manifest);
             }
-            reopened.LoadFromFile(olderProject);
-            Require(GetBoard<ListBox>(reopened, "layerList").Items.Count == 1, "Existing v2 project without source metadata no longer opens");
-            Reject(() => reopened.ExportToPng(source));
-            Reject(() => AwaitWithPump(reopened.ExportToPngAsync(source)));
-            string legacyProject = Path.Combine(folder, "older-v1.tboard");
-            File.WriteAllText(legacyProject, JsonSerializer.Serialize(new { Version = 1, Width = 1200, Height = 800,
-                Layers = new[] { new { Name = "source.png", Png = sourceBytes, Width = 24, Height = 16,
-                    X = 0, Y = 0, Angle = 0, Scale = 1 } } }));
-            reopened.LoadFromFile(legacyProject);
-            Reject(() => reopened.ExportToPng(source));
+            try
+            {
+                reopened.LoadFromFile(olderProject);
+                throw new Exception("A board without source metadata was accepted.");
+            }
+            catch (JsonException) { }
+
             Require(File.ReadAllBytes(source).SequenceEqual(sourceBytes), "Protected source bytes changed");
             Require(!Directory.EnumerateFiles(folder, "*.tmp").Any(), "Rejected write left temporary files");
-            Console.WriteLine("  Board protection: source/project bytes preserved, sync/async paths rejected, dirty state intact, reopen and old formats passed.");
+            Console.WriteLine("  Board protection: source/project bytes preserved, sync/async paths rejected, dirty state intact, and reopen passed.");
         }
         finally
         {
