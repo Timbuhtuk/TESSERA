@@ -21,7 +21,7 @@ public partial class App : Application
         {
             library = e.Args is ["--workspace-library", var requestedLibrary]
                 ? Path.GetFullPath(requestedLibrary)
-                : PortableLibraryMigration.Prepare();
+                : PortableLibraryMigration.Prepare(confirmReplacement: ConfirmPortableLibraryReplacement);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -43,6 +43,15 @@ public partial class App : Application
         // TESSERA_LEGACY Retain the standalone tile inspector's --tiles startup option for the atlas and archive extraction.
         if (e.Args.Length >= 2 && e.Args[0] == "--tiles")
             _ = prototype.OpenAtlasFromCommandLineAsync(e.Args[1]);
+    }
+
+    private static bool ConfirmPortableLibraryReplacement(string source)
+    {
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var settings = AppearanceSettings.Load(Path.Combine(profile, "Tessera", "Library", "appearance.json"));
+        Localization.Initialize(settings.Language);
+        return TesseraDialog.Show(Localization.Format("ConfirmPortableLibraryReplacementFormat", source),
+            "Tessera", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes;
     }
 
     private async Task ApplyUpdateAsync(string target, int processId, string digest)

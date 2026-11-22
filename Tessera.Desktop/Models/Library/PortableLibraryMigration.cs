@@ -8,8 +8,11 @@ public static class PortableLibraryMigration
 {
     private const string CompleteMarker = ".portable-library-migrated";
     private const string Verification = "Portable library copy verified with SHA-256.";
+    private const string SourceMarker = ".portable-library-source";
+    private const string IgnoredSourceMarker = ".portable-library-ignored-source";
 
-    public static string Prepare(string? applicationDirectory = null, string? appDataDirectory = null)
+    public static string Prepare(string? applicationDirectory = null, string? appDataDirectory = null,
+        Func<string, bool>? confirmReplacement = null)
     {
         string appData = appDataDirectory ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         if (string.IsNullOrWhiteSpace(appData)) throw new IOException(Localization.Text("CurrentUserSLocalAppdataFolder"));
@@ -27,7 +30,7 @@ public static class PortableLibraryMigration
         PlainAttributes(lockPath);
         using var migrationLock = new FileStream(lockPath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.None);
         bool existingLibrary = IsPlainDirectory(library);
-        if (existingLibrary && IsVerified(library)) return library;
+        bool migrated = existingLibrary && IsVerified(library);
 
         if (IsPlainDirectory(staging))
         {
@@ -41,11 +44,26 @@ public static class PortableLibraryMigration
             if (!hasPortableData)
             {
                 if (!existingLibrary && IsPlainDirectory(backup)) Directory.Move(backup, library);
-                return LibraryLocation.Prepare(appData);
+                return migrated ? library : LibraryLocation.Prepare(appData);
             }
 
             if (Overlaps(portable, library) || Overlaps(portable, staging) || Overlaps(portable, backup))
                 throw new IOException(Localization.Text("TheLibraryMigrationFoldersOverlap"));
+
+            if (migrated)
+            {
+                // Older markers did not identify the source. The user can recover another library
+                // while preserving the active copy and any edits made since the first migration.
+                if (MatchesSource(Path.Combine(library, SourceMarker), portable)) return library;
+                string ignored = Path.Combine(library, IgnoredSourceMarker);
+                if (MatchesSource(ignored, portable)) return library;
+                if (confirmReplacement is null) return library;
+                if (!confirmReplacement(portable))
+                {
+                    File.WriteAllText(ignored, portable);
+                    return library;
+                }
+            }
 
             string working = Path.Combine(profile, ".portable-library-copy-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(working);
@@ -53,6 +71,7 @@ public static class PortableLibraryMigration
             {
                 CopyTree(portable, working);
                 VerifyTree(portable, working);
+                File.WriteAllText(Path.Combine(working, SourceMarker), portable);
                 using (var marker = new FileStream(Path.Combine(working, CompleteMarker), FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
                     marker.Write(System.Text.Encoding.UTF8.GetBytes(Verification));
@@ -71,7 +90,13 @@ public static class PortableLibraryMigration
         }
 
         // The directory already contains its completion marker when it becomes the active library.
-        if (existingLibrary) Directory.Move(library, backup);
+        if (existingLibrary)
+        {
+            string defaultBackup = backup;
+            for (int suffix = 1; PlainAttributes(backup) is not null; suffix++)
+                backup = defaultBackup + "." + suffix.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Directory.Move(library, backup);
+        }
         try { Directory.Move(staging, library); }
         catch
         {
@@ -139,6 +164,10 @@ public static class PortableLibraryMigration
         return PlainAttributes(path) is { } attributes && (attributes & FileAttributes.Directory) == 0 &&
             File.ReadAllText(path) == Verification;
     }
+
+    private static bool MatchesSource(string marker, string source) =>
+        PlainAttributes(marker) is { } attributes && (attributes & FileAttributes.Directory) == 0 &&
+        string.Equals(File.ReadAllText(marker), source, StringComparison.OrdinalIgnoreCase);
 
     private static FileAttributes? PlainAttributes(string path)
     {

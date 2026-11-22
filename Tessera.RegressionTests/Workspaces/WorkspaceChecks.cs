@@ -506,6 +506,27 @@ internal static class WorkspaceChecks
         PortableLibraryMigration.Prepare(executable, appData);
         Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "edited migrated workspace" &&
             !File.Exists(Path.Combine(active, "macros", "recipe.json")), "Migration ran again and replaced AppData edits");
+        PortableLibraryMigration.Prepare(executable, appData, _ => throw new Exception("Known source prompted again"));
+
+        // A preview build already migrated an unrelated library before the first production launch.
+        File.Delete(Path.Combine(active, ".portable-library-source"));
+        PortableLibraryMigration.Prepare(executable, appData, path =>
+        {
+            Require(path == portable, "The replacement prompt identified the wrong portable source");
+            return true;
+        });
+        Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "portable workspace.json" &&
+            File.ReadAllText(Path.Combine(backup, "workspace.json")) == "previous AppData workspace" &&
+            File.ReadAllText(Path.Combine(backup + ".1", "workspace.json")) == "edited migrated workspace",
+            "Recovery failed to activate the selected library or preserve both AppData backups");
+        PortableLibraryMigration.Prepare(executable, appData, _ => throw new Exception("Recovered source prompted again"));
+
+        string otherInstallation = Path.Combine(root, "other-installation");
+        Write(Path.Combine(otherInstallation, "WorkspaceData", "Library"), "workspace.json", "unrelated library");
+        PortableLibraryMigration.Prepare(otherInstallation, appData, _ => false);
+        PortableLibraryMigration.Prepare(otherInstallation, appData, _ => throw new Exception("Declined source prompted again"));
+        Require(File.ReadAllText(Path.Combine(active, "workspace.json")) == "portable workspace.json" &&
+            !Directory.Exists(backup + ".2"), "Declining the replacement changed the active library");
 
         string oldData = Path.Combine(root, "pixelizator-data");
         string oldId = Guid.NewGuid().ToString("N");

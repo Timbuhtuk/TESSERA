@@ -130,7 +130,7 @@ if (args.Contains("--invariants")) ImageColorToolsChecks.Run(Check);
 if (args.Contains("--invariants") || args.Contains("--channels")) ChannelAdjustmentChecks.Run(Check);
 if (args.Contains("--invariants")) ImageFilterChecks.Run(Check);
 if (args.Contains("--invariants")) BackgroundRemovalChecks.Run(Check);
-if (args.Contains("--invariants")) GitHubUpdaterChecks.Run(Check);
+if (args.Contains("--invariants") || args.Contains("--updates")) GitHubUpdaterChecks.Run(Check);
 if (args.Contains("--release-notes")) Check("Bundled patch notes, first launch and settings history", ReleaseNotesChecks.Run);
 if (args.Contains("--tool-improvements")) ToolImprovementsChecks.Run(Check);
 if (args.Contains("--history-macros")) HistoryMacroChecks.Run(Check);
